@@ -1,0 +1,12 @@
+# Go
+coverage.out
+*.test
+
+# Node
+node_modules/
+dist/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

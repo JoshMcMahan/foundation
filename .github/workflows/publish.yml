@@ -1,0 +1,48 @@
+name: Publish
+
+# Merging a version bump to canary is the release: each package whose version
+# is not yet on npm is published. Go modules are released by tagging.
+on:
+  push:
+    branches: [canary]
+    paths: ['packages/*/package.json']
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # npm trusted publishing and provenance.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - name: Publish unreleased versions
+        run: |
+          set -euo pipefail
+          for pkg in packages/*/package.json; do
+            dir=$(dirname "$pkg")
+            name=$(node -p "require('./$pkg').name")
+            version=$(node -p "require('./$pkg').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published."
+              continue
+            fi
+            echo "Publishing $name@$version"
+            (cd "$dir" && pnpm publish --provenance --access public --no-git-checks)
+          done

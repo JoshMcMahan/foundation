@@ -1,0 +1,38 @@
+language js
+
+// An error's own message is English, meant for developers and logs. Show
+// errors through useErrorMessage() from @parallelworks/problem/react, and keep
+// literal text out of error state.
+or {
+  // {error.message} and {err?.message}, alone or inside an expression.
+  JsxExpressionChild(expression=$text) where {
+    // Nested elements have their own JsxExpressionChild, reported there.
+    $text <: contains or {
+      `$_.message`,
+      `$_?.message`
+    } until or {
+      JsxElement(),
+      JsxSelfClosingElement()
+    },
+    register_diagnostic(span=$text, message="An error's message is English: show it with useErrorMessage() from @parallelworks/problem/react.", severity="error")
+  },
+  // toast(err.message), toast.error(`Failed: ${err.message}`).
+  or {
+    `toast($args)`,
+    `toast.$_($args)`
+  } as $call where {
+    $args <: contains or {
+      `$_.message`,
+      `$_?.message`
+    },
+    register_diagnostic(span=$call, message="An error's message is English: show it with useErrorMessage() from @parallelworks/problem/react.", severity="error")
+  },
+  `$setter($text)` where {
+    $setter <: r"^set\w*(?:Error|Failure|Message|Notice)$",
+    // A string or template literal with a letter in it.
+    $text <: r"(?s)^['\"`].*\p{L}.*",
+    // A lowercase identifier such as 'loadFailed' is a code, not text.
+    $text <: not r"^['\"][a-z][A-Za-z0-9_]*['\"]$",
+    register_diagnostic(span=$text, message="User-facing text must come from the locale catalog: add a message and render it with useTranslations().", severity="error")
+  }
+}

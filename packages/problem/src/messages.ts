@@ -1,0 +1,16 @@
+import en from './messages/en.json' with { type: 'json' }
+import es from './messages/es.json' with { type: 'json' }
+import ja from './messages/ja.json' with { type: 'json' }
+import ko from './messages/ko.json' with { type: 'json' }
+import zh from './messages/zh.json' with { type: 'json' }
+
+/** The shared codes' messages, by language. */
+export const sharedMessages = { en, es, ja, ko, zh } as const
+
+type Language = keyof typeof sharedMessages
+
+/** The shared catalog for a locale such as `zh-CN`, falling back to English. */
+export function sharedMessagesFor(locale: string): typeof en {
+  const language = locale.toLowerCase().split('-')[0] as Language
+  return sharedMessages[language] ?? en
+}

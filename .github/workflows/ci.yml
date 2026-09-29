@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [canary]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Verify go.mod is tidy
+        run: go mod tidy -diff && (cd tools && go mod tidy -diff)
+      - name: Lint
+        run: go tool -modfile=tools/go.mod golangci-lint run ./...
+      - name: Test
+        env:
+          # go.mod also sets fips140=only; the environment makes the mode explicit
+          # so that a future go.mod edit cannot silently drop it.
+          GODEBUG: fips140=only
+        run: go test -race -shuffle=on -cover ./...
+
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

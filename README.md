@@ -1,0 +1,179 @@
+# foundation
+
+Shared building blocks for web services: Go packages and npm
+packages that several applications use the same way.
+
+| Package | What it is |
+| --- | --- |
+| [`problem`](problem) (Go) | RFC 9457 problem details with stable, localizable codes, and the pages their type URIs resolve to |
+| [`problem/humaproblem`](problem/humaproblem) (Go) | Makes [huma](https://huma.rocks) produce problems, including for request validation |
+| [`problem/problemtest`](problem/problemtest) (Go) | Checks that a web app's catalog has a message for every code |
+| [`problem/problemrules`](problem/problemrules) (Go) | go-ruleguard rules that keep internal errors out of responses |
+| [`@parallelworks/problem`](packages/problem) (npm) | `ApiError`, `useErrorMessage()`, the shared codes' messages in five languages, and a Biome lint rule |
+
+## Problem details
+
+Every error response is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+problem, served as `application/problem+json`. Its `type` says what kind of
+problem it is, and resolves to a page documenting it. Clients show a message
+for its `code` in the reader's language; `title` and `detail` are English, for
+developers and logs, and never shown to people.
+
+There are three kinds of type:
+
+| `type` | Code | Example |
+| --- | --- | --- |
+| `about:blank` | none sent: the client derives it from the status | 404 → `not_found` |
+| `/problems/validation` | `validation`; each entry in `errors` has its rule's `type` and `code` | 422 from a form |
+| `/problems/<app>/<code>` | the application's own | `/problems/shop/name_taken` |
+
+```http
+HTTP/1.1 422 Unprocessable Content
+Content-Type: application/problem+json
+
+{
+  "type": "/problems/validation",
+  "title": "Invalid request",
+  "status": 422,
+  "detail": "validation failed",
+  "code": "validation",
+  "errors": [
+    {"type": "/problems/too_long", "code": "too_long", "pointer": "#/name",
+     "params": {"max": 64}, "detail": "expected length <= 64"},
+    {"type": "/problems/required", "code": "required", "parameter": "team", "in": "query",
+     "detail": "required query parameter is missing"}
+  ]
+}
+```
+
+Type URIs are relative, with the full path, so each deployment documents the
+types it actually sends. Namespacing them by application means a host that
+mounts several applications serves every page without collisions, wherever
+each one is mounted.
+
+Codes are part of the API contract: never rename a code, a rule or a param.
+
+### Server (Go)
+
+Define an application's types once, in package variables:
+
+```go
+var (
+	problems  = problem.NewRegistry("shop")
+	NameTaken = problems.Define(problem.Type{
+		Code:   "name_taken",
+		Status: http.StatusConflict,
+		Title:  "Name taken",
+		Doc:    "Another item in the workspace already has this name. Choose a different one.",
+		Params: []string{"name"},
+	})
+)
+```
+
+Return them from handlers, and use `problem.Status` for a failure the status
+fully describes:
+
+```go
+return nil, NameTaken.New("a product named Lamp exists").With("name", "Lamp")
+return nil, problem.Status(http.StatusNotFound, "no order 1042")
+return nil, problem.ValidationFailed(problem.TooLong.At(problem.Pointer("name"), "too long").With("max", 64))
+```
+
+With huma, install the error builder before registering operations, document
+the codes after, and serve the type pages:
+
+```go
+humaproblem.Install(humaproblem.Options{
+	// Domain errors that are not problems, mapped in one place.
+	Map: func(err error) *problem.Problem {
+		if errors.Is(err, store.ErrNotFound) {
+			return problem.Status(http.StatusNotFound, "not found")
+		}
+		return nil
+	},
+	Debug: cfg.Development, // send a 5xx's cause as its detail
+})
+cfg.Transformers = append(cfg.Transformers, humaproblem.Report(func(ctx context.Context, p *problem.Problem) {
+	if p.Status >= 500 {
+		logger.FromContext(ctx).Error("request failed", "error", p.Unwrap())
+	}
+}))
+// ... huma.Register(...)
+humaproblem.Document(api, problems)
+mux.Handle("/problems/", problem.Handler(problems))
+```
+
+huma's request validation then becomes a validation problem whose entries name
+the rule each field failed (`required`, `too_long`, `below_minimum`, ...).
+
+### Internal errors never reach the client
+
+A problem's `detail` and `params` are sent, so they hold only what the client
+may see. Everything else stays on the server:
+
+- Attach the underlying error with `WithCause(err)`. It is never sent; `Report`
+  hands it to you with the request's context, to log.
+- An error a handler returns that is not a problem, and that `Map` does not
+  recognize, becomes a 500 `about:blank` with no detail.
+- `AsDenial()` marks a problem as a refusal to authorize, and `problem.Denied(err)`
+  finds it, so a caller never mistakes an unreachable database for "you may not".
+  The marker is not sent either.
+- [`problemrules`](problem/problemrules) fails lint on an error, or its
+  `Error()` text, passed to `New`, `Newf`, `At`, `AtParameter`, `Status` or
+  `With`. Import it into your go-ruleguard rules file:
+
+```go
+//go:build ruleguard
+
+package gorules
+
+import (
+	"github.com/parallelworks/foundation/problem/problemrules"
+	"github.com/quasilyte/go-ruleguard/dsl"
+)
+
+func init() { dsl.ImportRules("", problemrules.Bundle) }
+```
+
+Test that the web app has a message for every code:
+
+```go
+func TestEveryCodeHasAMessage(t *testing.T) {
+	problemtest.CheckCatalog(t, "../web/src/i18n/locales/en.json", problems)
+}
+```
+
+### Web (TypeScript)
+
+```ts
+import { toApiError, problemMiddleware } from '@parallelworks/problem'
+import { useErrorMessage } from '@parallelworks/problem/react'
+
+api.use(problemMiddleware) // openapi-fetch: ask for problem details
+
+const errorMessage = useErrorMessage()
+{save.isError && <p role="alert">{errorMessage(save.error)}</p>}
+```
+
+`useErrorMessage()` shows the message for the error's code: the app's own at
+`apiErrors.<code>` in its use-intl catalog, otherwise the shared message
+shipped with this package (English, Spanish, Japanese, Korean and Chinese). A
+validation problem with one invalid field shows that field's rule; `network`
+and `unknown` cover failures that never reached the server. `toApiError()`
+turns anything thrown into an `ApiError` with `status`, `code`, `params` and
+`fields`, whose `path` (`items[0].name`) matches form field names.
+
+### Lint
+
+`lint/error-text.grit` in `@parallelworks/problem` is a Biome plugin. It fails on an
+error's `.message` rendered in JSX or passed to `toast`, and on text passed to
+setters such as `setError` (a lowercase identifier like `'loadFailed'` is a
+code and passes):
+
+```json
+{ "plugins": ["./node_modules/@parallelworks/problem/lint/error-text.grit"] }
+```
+
+## Development
+
+`make check` runs every linter and test. See [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -1,0 +1,28 @@
+{
+  "apiErrors": {
+    "invalid_request": "La solicitud no es válida. Revisa los datos e inténtalo de nuevo.",
+    "unauthenticated": "Tu sesión ha terminado. Inicia sesión de nuevo para continuar.",
+    "forbidden": "No tienes permiso para hacer esto.",
+    "not_found": "No existe o se eliminó.",
+    "conflict": "Esto cambió desde que lo cargaste. Recarga e inténtalo de nuevo.",
+    "rate_limited": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
+    "internal": "Algo salió mal por nuestra parte. Inténtalo de nuevo.",
+    "unavailable": "El servicio no está disponible temporalmente. Inténtalo en unos momentos.",
+    "network": "No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+    "unknown": "Algo salió mal. Inténtalo de nuevo.",
+    "validation": "Algunos campos no son válidos. Corrígelos e inténtalo de nuevo.",
+    "invalid": "Este valor no es válido.",
+    "required": "Este campo es obligatorio.",
+    "too_short": "Debe tener al menos {min, plural, one {# carácter} other {# caracteres}}.",
+    "too_long": "Debe tener como máximo {max, plural, one {# carácter} other {# caracteres}}.",
+    "too_few": "Necesita al menos {min, plural, one {# elemento} other {# elementos}}.",
+    "too_many": "Puede tener como máximo {max, plural, one {# elemento} other {# elementos}}.",
+    "below_minimum": "Debe ser {exclusive, select, true {mayor que} other {al menos}} {min, number}.",
+    "above_maximum": "Debe ser {exclusive, select, true {menor que} other {como máximo}} {max, number}.",
+    "invalid_format": "No tiene el formato esperado.",
+    "invalid_choice": "Debe ser uno de estos valores: {allowed}.",
+    "invalid_type": "Este valor es de un tipo incorrecto.",
+    "unexpected_field": "Este campo no se admite.",
+    "duplicate_items": "Cada elemento debe ser único."
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "apiErrors": {
+    "invalid_request": "The request wasn't valid. Check what you entered and try again.",
+    "unauthenticated": "Your session has ended. Sign in again to continue.",
+    "forbidden": "You don't have permission to do that.",
+    "not_found": "This doesn't exist or was deleted.",
+    "conflict": "This changed since you loaded it. Reload and try again.",
+    "rate_limited": "Too many requests. Wait a moment and try again.",
+    "internal": "Something went wrong on our side. Try again.",
+    "unavailable": "The service is temporarily unavailable. Try again shortly.",
+    "network": "Couldn't reach the server. Check your connection and try again.",
+    "unknown": "Something went wrong. Try again.",
+    "validation": "Some fields aren't valid. Fix them and try again.",
+    "invalid": "This value isn't valid.",
+    "required": "This field is required.",
+    "too_short": "Must be at least {min, plural, one {# character} other {# characters}}.",
+    "too_long": "Must be at most {max, plural, one {# character} other {# characters}}.",
+    "too_few": "Needs at least {min, plural, one {# item} other {# items}}.",
+    "too_many": "Can have at most {max, plural, one {# item} other {# items}}.",
+    "below_minimum": "Must be {exclusive, select, true {greater than} other {at least}} {min, number}.",
+    "above_maximum": "Must be {exclusive, select, true {less than} other {at most}} {max, number}.",
+    "invalid_format": "This isn't in the expected format.",
+    "invalid_choice": "Must be one of: {allowed}.",
+    "invalid_type": "This value has the wrong type.",
+    "unexpected_field": "This field isn't accepted.",
+    "duplicate_items": "Each item must be unique."
+  }
+}
