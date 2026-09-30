@@ -9,6 +9,7 @@ packages that several applications use the same way.
 | [`problem/humaproblem`](problem/humaproblem) (Go) | Makes [huma](https://huma.rocks) produce problems, including for request validation |
 | [`problem/problemtest`](problem/problemtest) (Go) | Checks that a web app's catalog has a message for every code |
 | [`problem/problemrules`](problem/problemrules) (Go) | go-ruleguard rules that keep internal errors out of responses |
+| [`server`](server) (Go) | A service's HTTP handler and server: health probes, security headers, CSRF protection, logging, panic recovery, graceful shutdown |
 | [`spa`](spa) (Go) | Serves a Vite app from the Go server: the embedded build in production, the Vite dev server in development |
 | [`@parallelworks/problem`](packages/problem) (npm) | `ApiError`, `useErrorMessage()`, the shared codes' messages in five languages, and a Biome lint rule |
 
@@ -173,6 +174,41 @@ code and passes):
 
 ```json
 { "plugins": ["./node_modules/@parallelworks/problem/lint/error-text.grit"] }
+```
+
+## Running a service
+
+`server.New` assembles a service's handler around its own routes, and
+`server.Serve` runs it until the context ends:
+
+```go
+handler := server.New(server.Options{
+	Logger:    logger,
+	Routes:    func(mux *http.ServeMux) { api.Register(mux, deps) },
+	Problems:  []*problem.Registry{problems},
+	Ready:     map[string]server.Pinger{"database": pool},
+	Web:       web.FS(),
+	DevServer: cfg.ViteURL, // development: proxy the app from Vite until a build is embedded
+	HSTS:      cfg.Production,
+	Wrap:      sessions.Middleware, // the application's own authentication
+})
+return server.Serve(ctx, server.Listen{Addr: ":8080", ShutdownTimeout: 20 * time.Second}, handler, logger)
+```
+
+Besides the application's routes it serves `/healthz`, `/readyz` (the `Ready`
+pingers), `/problems/`, a 404 problem for unknown paths under `/api/`, and the
+single-page app. Every response gets security headers with a strict CSP, and a
+state-changing request a browser sent from another site is refused. Requests
+are logged; a panic is logged and answered with a 500, a problem under `/api/`.
+
+In development the CSP accepts `spa.DevNonce`, which Vite puts on the scripts
+and styles it injects when `vite.config.ts` sets it:
+
+```ts
+export default defineConfig(({ command }) => ({
+  ...(command === 'serve' && { html: { cspNonce: 'vite-dev' } }),
+  build: { assetsDir: '_build' },
+}))
 ```
 
 ## Serving a Vite app

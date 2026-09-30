@@ -22,6 +22,12 @@ import (
 // their names, and cached forever they could never change.
 const BuildDir = "_build"
 
+// DevNonce is the CSP nonce Vite puts on the scripts and styles it injects in
+// development, such as React's refresh preamble, when vite.config.ts sets
+// html.cspNonce to it. A server's development CSP accepts it (see
+// server.New), so its policy can stay strict while it proxies Vite.
+const DevNonce = "vite-dev"
+
 // Options configure Handler.
 type Options struct {
 	// Index rewrites index.html for a request, for example to set <html lang>
