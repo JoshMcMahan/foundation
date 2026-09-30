@@ -148,6 +148,20 @@ func TestRejectsOtherMethods(t *testing.T) {
 
 var placeholder = fstest.MapFS{".gitkeep": {Data: nil}}
 
+func TestBuilt(t *testing.T) {
+	if !spa.Built(build()) {
+		t.Error("Built(build) = false")
+	}
+	for name, fsys := range map[string]fstest.MapFS{
+		"empty":       placeholder,
+		"placeholder": {"index.html": {Data: []byte("placeholder")}},
+	} {
+		if spa.Built(fsys) {
+			t.Errorf("Built(%s) = true", name)
+		}
+	}
+}
+
 func TestNoBuildNeedsDevServer(t *testing.T) {
 	if _, err := spa.Handler(placeholder, spa.Options{}); err == nil {
 		t.Error("no build and no DevServer: no error")

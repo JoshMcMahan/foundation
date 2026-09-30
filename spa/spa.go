@@ -48,7 +48,7 @@ type Options struct {
 // WebSocket. It returns an error if there is neither a build nor a dev server.
 func Handler(dist fs.FS, opts Options) (http.Handler, error) {
 	index, err := fs.ReadFile(dist, "index.html")
-	if err != nil || !bytes.Contains(index, []byte("<html")) {
+	if !built(index, err) {
 		if opts.DevServer == "" {
 			return nil, fmt.Errorf("spa: no build in dist and no DevServer: %w", errors.Join(err, errNoBuild))
 		}
@@ -62,6 +62,18 @@ func Handler(dist fs.FS, opts Options) (http.Handler, error) {
 }
 
 var errNoBuild = errors.New("index.html is missing or a placeholder")
+
+// Built reports whether dist holds a Vite build rather than the placeholder
+// that lets the Go module build before the web app has: whether Handler serves
+// it or proxies to the dev server. Use it for anything else that differs in
+// development, such as where generated files are read from.
+func Built(dist fs.FS) bool {
+	return built(fs.ReadFile(dist, "index.html"))
+}
+
+func built(index []byte, err error) bool {
+	return err == nil && bytes.Contains(index, []byte("<html"))
+}
 
 type handler struct {
 	dist  fs.FS
