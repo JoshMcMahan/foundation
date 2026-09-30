@@ -9,6 +9,7 @@ packages that several applications use the same way.
 | [`problem/humaproblem`](problem/humaproblem) (Go) | Makes [huma](https://huma.rocks) produce problems, including for request validation |
 | [`problem/problemtest`](problem/problemtest) (Go) | Checks that a web app's catalog has a message for every code |
 | [`problem/problemrules`](problem/problemrules) (Go) | go-ruleguard rules that keep internal errors out of responses |
+| [`spa`](spa) (Go) | Serves a Vite app from the Go server: the embedded build in production, the Vite dev server in development |
 | [`@parallelworks/problem`](packages/problem) (npm) | `ApiError`, `useErrorMessage()`, the shared codes' messages in five languages, and a Biome lint rule |
 
 ## Problem details
@@ -173,6 +174,44 @@ code and passes):
 ```json
 { "plugins": ["./node_modules/@parallelworks/problem/lint/error-text.grit"] }
 ```
+
+## Serving a Vite app
+
+`spa.Handler` serves the app from the Go server, so it has one origin in
+development and production: the same cookies, CSP and routes, no CORS, and no
+proxy list in `vite.config.ts`.
+
+```go
+//go:embed all:dist
+var dist embed.FS
+
+build, _ := fs.Sub(dist, "dist")
+app, err := spa.Handler(build, spa.Options{DevServer: "http://localhost:5173"})
+if err != nil {
+	return err
+}
+mux.Handle("/", app) // after the API routes
+```
+
+With a build embedded, it serves each file (preferring a `.br` or `.gz`
+sibling the client accepts), then a
+prerendered `<path>/index.html`, then `index.html` for client-side routes.
+When `dist` holds only a placeholder, as it does before `pnpm build`, it
+proxies everything to the Vite dev server, including the HMR WebSocket. Open
+the Go server's address in development, not Vite's.
+
+Put Vite's content-hashed output in `/_build/`, which `spa.Handler` caches as
+immutable; files copied from `public/` keep their names and stay revalidatable,
+so a changed logo or font is never stuck in a browser cache:
+
+```ts
+// vite.config.ts
+build: { assetsDir: '_build' }
+```
+
+`Options.Index` rewrites `index.html` for each request (in development too),
+for example to set `<html lang>` or `<base href>`; `Options.NotFound` sends the
+shell with a 404 for paths the app does not know.
 
 ## Development
 
