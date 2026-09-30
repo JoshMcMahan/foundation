@@ -135,6 +135,10 @@ func TestOptions(t *testing.T) {
 	if rec := get(t, h, "/nope"); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "<html") {
 		t.Errorf("/nope = %d %q, want the shell with a 404", rec.Code, rec.Body)
 	}
+	// A prerendered site's index.html is its home page: the root is never unknown.
+	if rec := get(t, h, "/"); rec.Code != http.StatusOK {
+		t.Errorf("/ = %d, want 200 whatever NotFound says", rec.Code)
+	}
 }
 
 func TestRejectsOtherMethods(t *testing.T) {

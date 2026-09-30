@@ -33,10 +33,11 @@ type Options struct {
 	// Index rewrites index.html for a request, for example to set <html lang>
 	// from Accept-Language or add <base href>. It applies in development too.
 	Index func(r *http.Request, html []byte) []byte
-	// NotFound reports whether a path that matches no file and no prerendered
-	// page is unknown to the app. Its shell is then sent with a 404, so
-	// crawlers see an honest status while the router renders its own page.
-	// By default every such path is a client-side route, sent with a 200.
+	// NotFound reports whether a path other than the root that matches no
+	// file and no prerendered page is unknown to the app. Its shell is then
+	// sent with a 404, so crawlers see an honest status while the router
+	// renders its own page. By default every such path is a client-side
+	// route, sent with a 200.
 	NotFound func(r *http.Request) bool
 	// DevServer is the Vite dev server's URL, such as "http://localhost:5173".
 	// When dist holds no build, Handler proxies to it.
@@ -111,7 +112,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := http.StatusOK
-	if h.opts.NotFound != nil && h.opts.NotFound(r) {
+	// The root is the app itself, never an unknown path.
+	if name != "" && h.opts.NotFound != nil && h.opts.NotFound(r) {
 		status = http.StatusNotFound
 	}
 	body := h.index
