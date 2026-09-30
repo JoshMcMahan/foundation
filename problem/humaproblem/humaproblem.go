@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/validation"
@@ -28,17 +30,30 @@ type Options struct {
 	Debug bool
 }
 
-var options Options
+var (
+	options   atomic.Pointer[Options]
+	installed sync.Once
+)
 
-// Install makes huma build its errors with NewError. Call it once at startup,
+// Install makes huma build its errors with NewError. Call it at startup,
 // before registering operations: huma also reads the error type from it to
-// document error responses.
+// document error responses. Calling it again, as tests do, only replaces the
+// options, so it is safe while other goroutines serve requests.
 func Install(opts Options) {
-	options = opts
-	huma.NewError = NewError
-	huma.NewErrorWithContext = func(_ huma.Context, status int, msg string, errs ...error) huma.StatusError {
-		return NewError(status, msg, errs...)
+	options.Store(&opts)
+	installed.Do(func() {
+		huma.NewError = NewError
+		huma.NewErrorWithContext = func(_ huma.Context, status int, msg string, errs ...error) huma.StatusError {
+			return NewError(status, msg, errs...)
+		}
+	})
+}
+
+func current() Options {
+	if o := options.Load(); o != nil {
+		return *o
 	}
+	return Options{}
 }
 
 // NewError converts an error huma reports into a problem. A problem among errs
@@ -53,12 +68,13 @@ func NewError(status int, msg string, errs ...error) huma.StatusError {
 			return p
 		}
 	}
-	if options.Map != nil {
+	opts := current()
+	if opts.Map != nil {
 		for _, err := range errs {
 			if err == nil {
 				continue
 			}
-			if p := options.Map(err); p != nil {
+			if p := opts.Map(err); p != nil {
 				if p.Unwrap() == nil {
 					p = p.WithCause(err)
 				}
@@ -75,7 +91,7 @@ func NewError(status int, msg string, errs ...error) huma.StatusError {
 		if cause == nil {
 			return p
 		}
-		if options.Debug {
+		if opts.Debug {
 			p.Detail = cause.Error()
 		}
 		return p.WithCause(cause)

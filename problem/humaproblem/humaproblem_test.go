@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -301,4 +302,23 @@ func TestDebugSendsServerErrorCause(t *testing.T) {
 	if p := decode(t, resp.Body.String()); !strings.Contains(p.Detail, "10.0.0.5") {
 		t.Errorf("detail = %q", p.Detail)
 	}
+}
+
+// Tests install in their setup while other tests run in parallel, so Install
+// must not race with NewError.
+func TestInstallIsSafeConcurrently(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := range 8 {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			humaproblem.Install(humaproblem.Options{Debug: i%2 == 0})
+		}()
+		go func() {
+			defer wg.Done()
+			_ = humaproblem.NewError(http.StatusInternalServerError, "", errors.New("x"))
+		}()
+	}
+	wg.Wait()
+	humaproblem.Install(humaproblem.Options{})
 }
