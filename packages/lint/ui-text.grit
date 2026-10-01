@@ -2,7 +2,8 @@ language js
 
 // Text a person reads comes from the locale catalog, rendered with
 // useTranslations(). Complements Biome's style/noJsxLiterals, which covers
-// JSX text but not string children in braces, display props or toasts.
+// JSX text but not string children in braces, display props, display
+// properties of objects (columns, options, form fields) or toasts.
 or {
   // {'Hello'} and {`Welcome ${name}`} as a JSX child.
   JsxExpressionChild(expression=$text) where {
@@ -29,6 +30,20 @@ or {
       $text <: not r"^['\"`](?:\S*(?:://|…)\S*|[~.]\S*|[a-z][a-z0-9.\-_/]*)['\"`]$"
     },
     register_diagnostic(span=$init, message="Text a person reads must come from the locale catalog: render it with useTranslations().", severity="error")
+  },
+  // { label: 'Name' }, { title: 'Details' } in column, option and form definitions.
+  JsPropertyObjectMember(name=$key, value=$text) where {
+    $key <: r"^['\"]?(?:label|title|placeholder|tooltip|description|helpText|helperText|emptyText|emptyMessage|heading|subheading|subtitle|header|confirmLabel)['\"]?$",
+    $text <: or {
+      JsStringLiteralExpression(),
+      JsTemplateExpression()
+    },
+    $text <: r"(?s).*\p{L}\p{L}.*",
+    // CSS classes: 'mb-1.5 flex items-center'.
+    $text <: not r"^['\"`][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*[-:\[][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*['\"`]$",
+    // Sample values: '1Gi', 'user@example.com', 'https://example.com'.
+    $text <: not r"^['\"`][^\s'\"`]*(?:[0-9]|@|://)[^\s'\"`]*['\"`]$",
+    register_diagnostic(span=$text, message="Text a person reads must come from the locale catalog: render it with useTranslations().", severity="error")
   },
   // toast('Saved'), toast.success(`Saved ${name}`).
   or {

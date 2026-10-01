@@ -6,6 +6,18 @@ declare const t: (k: string, v?: Record<string, string>) => string
 declare const name: string
 declare const Field: (p: { label?: string; className?: string }) => null
 
+export const columns = [
+  { key: 'cpus', label: t('totalCpus') },
+  { key: 'state', variant: 'success' },
+]
+export const classNames = { label: 'form-label', root: 'mb-1.5 flex items-center' }
+export const samples = { placeholder: '1Gi', email: 'user@example.com', url: 'https://example.com' }
+export const titled = { title: t('details') }
+export const named = {
+  // biome-ignore lint/plugin: product name
+  label: 'Debian',
+}
+
 export function Good() {
   toast.success(t('saved'))
   toast(t('copied', { name }))

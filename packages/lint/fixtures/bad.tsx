@@ -7,6 +7,15 @@ declare const toast: ((m: string) => void) & {
 declare const name: string
 declare const Field: (p: { label?: string; description?: string }) => null
 
+export const columns = [
+  { key: 'cpus', label: 'Total CPUs' }, // expect
+  { key: 'name', header: `Cluster name` }, // expect
+]
+export const field = {
+  description: 'Use realtime data to calculate the threshold', // expect
+  'tooltip': 'Leave empty for none', // expect
+}
+
 export function Bad() {
   toast.success('Saved the cluster') // expect
   toast.error(`Couldn't save ${name}`) // expect

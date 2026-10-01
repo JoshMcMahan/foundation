@@ -2,10 +2,11 @@
 
 Biome rules for React apps localized with `use-intl`: text a person reads comes from the locale catalog, never a string literal.
 
-- `ui-text.json` (`@parallelworks/lint/biome`): turns on Biome's [`style/noJsxLiterals`](https://biomejs.dev/linter/rules/no-jsx-literals/) as an error, allowing punctuation such as `·`, `/` and `→`. It catches JSX text: `<p>Hello</p>`.
+- `ui-text.json` (`@parallelworks/lint/biome`): turns on Biome's [`style/noJsxLiterals`](https://biomejs.dev/linter/rules/no-jsx-literals/) as an error, allowing separators such as `·`, `/`, `—` and `→` and their HTML entities. It catches JSX text: `<p>Hello</p>`.
 - `ui-text.grit`: a Biome plugin for what that rule leaves out:
   - string children in braces: `{'Hello'}`, `` {`Welcome ${name}`} ``
   - display props: `label`, `title`, `placeholder`, `aria-label`, `alt`, `tooltip`, `description` and similar (example placeholders such as `https://example.com` or `localhost` are fine)
+  - display properties of objects, as in column, option and form definitions: `{ label: 'Name' }`, `{ header: 'Status' }`, `{ description: '...' }` (CSS class strings such as `'mb-1 flex'` and sample values such as `'1Gi'` or `'user@example.com'` are fine)
   - toasts: `toast('Saved')`, `toast.success(...)`, `.info`, `.warning`, `.error`, `.loading`
 
 ## Use
