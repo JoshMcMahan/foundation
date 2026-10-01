@@ -1,6 +1,6 @@
 {
   "name": "@parallelworks/lint",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Biome rules for web apps: text a person reads comes from the locale catalog",
   "license": "Apache-2.0",
   "repository": {
