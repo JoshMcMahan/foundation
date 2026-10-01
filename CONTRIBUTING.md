@@ -17,6 +17,7 @@
 
 ## Releasing
 
-- npm: bump `version` in the package's `package.json` in a `chore(<package>): release x.y.z`
-  PR. Merging it publishes every package whose version is not yet on npm.
-- Go: tag the merge commit `vX.Y.Z` and push the tag.
+release-please keeps a release PR open for the Go module (`chore: release x.y.z`) and
+for each npm package (`chore(<package>): release x.y.z`), built from merged PR titles.
+Merging one tags the Go module, or bumps the package's version, which publishes it to
+npm. Don't bump versions or push tags by hand.

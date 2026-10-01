@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "bump-minor-pre-major": true,
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "component": "foundation",
+      "include-component-in-tag": false,
+      "exclude-paths": ["packages"],
+      "pull-request-title-pattern": "chore: release ${version}"
+    },
+    "packages/problem": {
+      "release-type": "node",
+      "component": "problem",
+      "pull-request-title-pattern": "chore(problem): release ${version}"
+    }
+  }
+}

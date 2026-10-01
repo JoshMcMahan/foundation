@@ -1,7 +1,7 @@
 name: Publish
 
-# Merging a version bump to canary is the release: each package whose version
-# is not yet on npm is published. Go modules are released by tagging.
+# Merging a release-please PR that bumps a package's version publishes each
+# package whose version is not yet on npm.
 on:
   push:
     branches: [canary]

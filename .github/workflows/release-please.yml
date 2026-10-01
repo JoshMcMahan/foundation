@@ -1,0 +1,47 @@
+name: release-please
+
+# Opens a release PR per module from the conventional-commit titles. Merging it
+# tags the Go module (vX.Y.Z) or bumps an npm package, which publish.yml ships.
+on:
+  push:
+    branches: [canary]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: canary
+      # The Go module's releases keep the "Latest" badge; npm package releases
+      # would otherwise take it.
+      - name: Keep package releases out of the "Latest" badge
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PATHS: ${{ steps.release.outputs.paths_released }}
+          OUTPUTS: ${{ toJSON(steps.release.outputs) }}
+        run: |
+          set -euo pipefail
+          for pkg_path in $(jq -r '.[] | select(. != ".")' <<<"$PATHS"); do
+            tag=$(jq -er --arg key "$pkg_path--tag_name" '.[$key]' <<<"$OUTPUTS")
+            gh release edit "$tag" --latest=false
+          done
+          module=$(gh release list --exclude-pre-releases --exclude-drafts --limit 200 --json tagName \
+            --jq '[.[] | .tagName | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))][0] // empty')
+          if [ -n "$module" ]; then
+            gh release edit "$module" --latest
+          fi
