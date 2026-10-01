@@ -19,6 +19,11 @@
       "release-type": "node",
       "component": "i18n",
       "pull-request-title-pattern": "chore(i18n): release ${version}"
+    },
+    "packages/lint": {
+      "release-type": "node",
+      "component": "lint",
+      "pull-request-title-pattern": "chore(lint): release ${version}"
     }
   }
 }

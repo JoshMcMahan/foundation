@@ -1,0 +1,32 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "root": false,
+  "linter": {
+    "rules": {
+      "style": {
+        "noJsxLiterals": {
+          "level": "error",
+          "options": {
+            "allowedStrings": [
+              "·",
+              "/",
+              "|",
+              "-",
+              "–",
+              "→",
+              "←",
+              "×",
+              "•",
+              "…",
+              "%",
+              ":",
+              "(",
+              ")",
+              "&nbsp;"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@parallelworks/lint",
+  "version": "0.1.0",
+  "description": "Biome rules for web apps: text a person reads comes from the locale catalog",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parallelworks/foundation.git",
+    "directory": "packages/lint"
+  },
+  "type": "module",
+  "exports": {
+    "./biome": "./ui-text.json",
+    "./ui-text.grit": "./ui-text.grit"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "files": [
+    "ui-text.json",
+    "ui-text.grit"
+  ],
+  "scripts": {
+    "test": "node check.mjs"
+  },
+  "peerDependencies": {
+    "@biomejs/biome": "^2.2.4"
+  }
+}
