@@ -7,16 +7,7 @@
       "release-type": "go",
       "component": "foundation",
       "include-component-in-tag": false,
-      "exclude-paths": [
-        "packages",
-        ".github",
-        "package.json",
-        "pnpm-lock.yaml",
-        "pnpm-workspace.yaml",
-        "biome.json",
-        "release-please-config.json",
-        ".release-please-manifest.json"
-      ],
+      "exclude-paths": ["packages", ".github"],
       "pull-request-title-pattern": "chore: release ${version}"
     },
     "packages/problem": {
@@ -27,12 +18,14 @@
     "packages/i18n": {
       "release-type": "node",
       "component": "i18n",
-      "pull-request-title-pattern": "chore(i18n): release ${version}"
+      "pull-request-title-pattern": "chore(i18n): release ${version}",
+      "initial-version": "0.1.0"
     },
     "packages/lint": {
       "release-type": "node",
       "component": "lint",
-      "pull-request-title-pattern": "chore(lint): release ${version}"
+      "pull-request-title-pattern": "chore(lint): release ${version}",
+      "initial-version": "0.1.0"
     }
   }
 }
