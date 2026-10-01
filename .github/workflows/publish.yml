@@ -25,13 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: packages/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: packages/pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
+        working-directory: packages
       - run: pnpm test
+        working-directory: packages
       - name: Publish unreleased versions
         run: |
           set -euo pipefail

@@ -22,10 +22,12 @@ for each npm package (`chore(<package>): release x.y.z`), built from merged PR t
 Merging one tags the Go module, or bumps the package's version, which publishes it to
 npm. Don't bump versions or push tags by hand.
 
-A new npm package goes in `release-please-config.json` with `"initial-version": "0.1.0"`, and in
-`.release-please-manifest.json` at `0.0.0`, so its first release PR is `0.1.0` (without
+The npm packages' workspace is `packages/` (its `package.json`, lockfile and Biome config live
+there; run pnpm from that directory, or use `make`). The repository root is the Go module, so only
+Go changes release it. Release-please's files are in `.github/`.
+
+A new npm package goes in `.github/release-please-config.json` with `"initial-version": "0.1.0"`, and in
+`.github/.release-please-manifest.json` at `0.0.0`, so its first release PR is `0.1.0` (without
 `initial-version`, release-please starts a new package at 1.0.0). npm trusted publishing needs the package to
 exist, so publish that first version by hand (`npm publish` from the package, at the release
-PR's commit) before merging the release PR. `exclude-paths` matches directories only, so a
-`feat` or `fix` that touches a root file (`pnpm-lock.yaml`, `release-please-config.json`) also
-proposes a Go release; close that release PR if no Go code changed.
+PR's commit) before merging the release PR.

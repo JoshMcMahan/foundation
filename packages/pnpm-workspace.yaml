@@ -1,5 +1,5 @@
 packages:
-  - packages/*
+  - '*'
 
 minimumReleaseAge: 1440
 blockExoticSubdeps: true

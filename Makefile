@@ -5,6 +5,8 @@ SHELL := /bin/bash
 
 # Development tools are pinned in tools/go.mod and run with `go tool`.
 GOTOOL := go tool -modfile=tools/go.mod
+# The npm packages' workspace is packages/, so the Go module at the root only sees Go.
+PNPM := cd packages && pnpm
 
 .PHONY: help
 help: ## Show this help
@@ -16,14 +18,14 @@ check: lint test ## Run all linters and tests
 .PHONY: lint
 lint: ## Lint Go and TypeScript
 	$(GOTOOL) golangci-lint run ./...
-	pnpm lint
-	pnpm typecheck
+	$(PNPM) lint
+	$(PNPM) typecheck
 
 .PHONY: test
 test: ## Run Go and TypeScript tests
 	go test -race -shuffle=on ./...
-	pnpm test
+	$(PNPM) test
 
 .PHONY: build
 build: ## Build the npm packages
-	pnpm build
+	$(PNPM) build

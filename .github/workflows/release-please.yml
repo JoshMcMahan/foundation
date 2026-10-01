@@ -22,8 +22,8 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
           target-branch: canary
       # The Go module's releases keep the "Latest" badge; npm package releases
       # would otherwise take it.
