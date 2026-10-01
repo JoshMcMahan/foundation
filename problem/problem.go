@@ -82,6 +82,7 @@ type Problem struct { //nolint:errname // RFC 9457 calls it a problem details ob
 
 	cause  error
 	denied bool
+	needs  []string
 }
 
 // Status returns an about:blank problem: one the status fully describes.
@@ -116,6 +117,34 @@ func (p *Problem) AsDenial() *Problem {
 func Denied(err error) bool {
 	p, ok := errors.AsType[*Problem](err)
 	return ok && p.denied
+}
+
+// Resolve returns p as clients receive it. A problem missing a param its
+// type's message needs is sent as the about:blank problem for its status, so a
+// client never shows a message with a placeholder it cannot fill. MarshalJSON
+// sends the resolved problem.
+func (p *Problem) Resolve() *Problem {
+	if hasAll(p.Params, p.needs) {
+		return p
+	}
+	q := Status(p.Status, p.Detail)
+	q.Instance, q.cause, q.denied = p.Instance, p.cause, p.denied
+	return q
+}
+
+// MarshalJSON encodes the problem as Resolve returns it.
+func (p Problem) MarshalJSON() ([]byte, error) {
+	type wire Problem
+	return json.Marshal((*wire)((&p).Resolve()))
+}
+
+func hasAll(params map[string]any, names []string) bool {
+	for _, name := range names {
+		if _, ok := params[name]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // Key is the code clients localize on: Code, or for an about:blank problem,

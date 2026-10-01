@@ -1,6 +1,7 @@
 package problem
 
 import (
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,18 +19,20 @@ type FieldError struct {
 	Parameter string         `json:"parameter,omitempty" doc:"Name of the invalid request parameter."`
 	In        string         `json:"in,omitempty" enum:"query,path,header,cookie" doc:"Where parameter is."`
 	Params    map[string]any `json:"params,omitempty" doc:"Values the rule's localized message shows."`
+
+	needs []string
 }
 
 // At returns a field error of this type for the body field at pointer, which
 // Pointer builds.
 func (t *Type) At(pointer, detail string) *FieldError {
-	return &FieldError{Type: t.uri, Code: t.Code, Detail: detail, Pointer: pointer}
+	return &FieldError{Type: t.uri, Code: t.Code, Detail: detail, Pointer: pointer, needs: t.Params}
 }
 
 // AtParameter returns a field error of this type for a request parameter. in
 // is "query", "path", "header" or "cookie", as in OpenAPI.
 func (t *Type) AtParameter(in, name, detail string) *FieldError {
-	return &FieldError{Type: t.uri, Code: t.Code, Detail: detail, Parameter: name, In: in}
+	return &FieldError{Type: t.uri, Code: t.Code, Detail: detail, Parameter: name, In: in, needs: t.Params}
 }
 
 // Error makes a FieldError an error, so a huma Resolver can return one.
@@ -39,6 +42,17 @@ func (e *FieldError) Error() string {
 		loc = e.In + " " + e.Parameter
 	}
 	return loc + ": " + e.Detail
+}
+
+// MarshalJSON encodes a field error missing a param its type's message needs
+// as Invalid, so a client never shows a message with a placeholder it cannot
+// fill.
+func (e FieldError) MarshalJSON() ([]byte, error) {
+	type wire FieldError
+	if !hasAll(e.Params, e.needs) {
+		e.Type, e.Code, e.Params = Invalid.uri, Invalid.Code, nil
+	}
+	return json.Marshal(wire(e))
 }
 
 // With adds a value the field error's localized message shows.

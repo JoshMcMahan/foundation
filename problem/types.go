@@ -27,7 +27,7 @@ func (t *Type) URI() string { return t.uri }
 
 // New returns a problem of this type.
 func (t *Type) New(detail string) *Problem {
-	return &Problem{Type: t.uri, Title: t.Title, Status: t.Status, Detail: detail, Code: t.Code}
+	return &Problem{Type: t.uri, Title: t.Title, Status: t.Status, Detail: detail, Code: t.Code, needs: t.Params}
 }
 
 // Newf returns a problem of this type with a formatted detail.

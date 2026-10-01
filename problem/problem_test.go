@@ -252,3 +252,46 @@ func TestDeniedSurvivesWrappingAndIsNotSent(t *testing.T) {
 		t.Error("the denial marker changed the response")
 	}
 }
+
+func sent(t *testing.T, p *problem.Problem) problem.Problem {
+	t.Helper()
+	raw, err := json.Marshal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got problem.Problem
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func TestMissingParamIsSentAsStatusProblem(t *testing.T) {
+	p := nameTaken.New("an item named Lamp exists")
+	if got := sent(t, p); got.Type != problem.Blank || got.Code != "" || got.Params != nil || got.Status != http.StatusConflict {
+		t.Errorf("without its param = %+v", got)
+	}
+	if r := p.Resolve(); r.Key() != problem.Conflict || r.Params != nil {
+		t.Errorf("Resolve() = %+v", r)
+	}
+
+	p = p.With("name", "Lamp")
+	if got := sent(t, p); got.Code != "name_taken" || got.Params["name"] != "Lamp" {
+		t.Errorf("with its param = %+v", got)
+	}
+	if p.Resolve() != p {
+		t.Error("Resolve() copied a complete problem")
+	}
+}
+
+func TestFieldMissingParamIsSentAsInvalid(t *testing.T) {
+	got := sent(t, problem.ValidationFailed(problem.TooLong.At("#/name", "too long")))
+	if len(got.Errors) != 1 || got.Errors[0].Code != problem.Invalid.Code || got.Errors[0].Pointer != "#/name" || got.Errors[0].Params != nil {
+		t.Errorf("without its param = %+v", got.Errors)
+	}
+
+	got = sent(t, problem.ValidationFailed(problem.TooLong.At("#/name", "too long").With("max", 64)))
+	if len(got.Errors) != 1 || got.Errors[0].Code != problem.TooLong.Code {
+		t.Errorf("with its param = %+v", got.Errors)
+	}
+}

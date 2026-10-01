@@ -81,8 +81,12 @@ return nil, problem.Status(http.StatusNotFound, "no order 1042")
 return nil, problem.ValidationFailed(problem.TooLong.At(problem.Pointer("name"), "too long").With("max", 64))
 ```
 
-With huma, install the error builder before registering operations, document
-the codes after, and serve the type pages:
+A problem missing a param its type declares is sent as the about:blank problem
+for its status (a field error, as `invalid`), so clients never show a message
+with an unfilled placeholder. `Resolve` returns a problem as it will be sent.
+
+With huma, install the error builder before registering operations and serve
+the type pages:
 
 ```go
 humaproblem.Install(humaproblem.Options{
