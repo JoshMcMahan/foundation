@@ -7,7 +7,16 @@
       "release-type": "go",
       "component": "foundation",
       "include-component-in-tag": false,
-      "exclude-paths": ["packages"],
+      "exclude-paths": [
+        "packages",
+        ".github",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "biome.json",
+        "release-please-config.json",
+        ".release-please-manifest.json"
+      ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
     "packages/problem": {

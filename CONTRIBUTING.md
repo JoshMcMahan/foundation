@@ -21,3 +21,9 @@ release-please keeps a release PR open for the Go module (`chore: release x.y.z`
 for each npm package (`chore(<package>): release x.y.z`), built from merged PR titles.
 Merging one tags the Go module, or bumps the package's version, which publishes it to
 npm. Don't bump versions or push tags by hand.
+
+A new npm package goes in `release-please-config.json` and in `.release-please-manifest.json`
+at `0.0.0`, so its first release PR is `0.1.0`. npm trusted publishing needs the package to
+exist, so publish that first version by hand (`npm publish` from the package, at the release
+PR's commit) before merging the release PR. The Go module ignores the root's JavaScript and
+release files (`exclude-paths`), so changes to them don't release it.
