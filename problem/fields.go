@@ -12,7 +12,7 @@ import (
 // parameter instead.
 type FieldError struct {
 	Type      string         `json:"type" format:"uri-reference" doc:"The rule's problem type."`
-	Code      Code           `json:"code" doc:"Stable name of the rule, for clients to show a localized message."`
+	Code      Code           `json:"code" doc:"Stable name of the rule, for clients to show a localized message. New codes can appear: fall back to a generic message for one you don't know."`
 	Detail    string         `json:"detail,omitempty" doc:"English explanation, for developers and logs."`
 	Pointer   string         `json:"pointer,omitempty" doc:"JSON Pointer to the invalid body field, as a URI fragment such as #/items/0/name."`
 	Parameter string         `json:"parameter,omitempty" doc:"Name of the invalid request parameter."`

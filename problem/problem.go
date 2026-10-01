@@ -21,7 +21,9 @@ const MediaType = "application/problem+json"
 const Blank = "about:blank"
 
 // Code is a problem type's stable, machine-readable name. Clients key their
-// messages on it, so a code is part of the API contract: never rename one.
+// messages on it, so a code is part of the API contract: never rename one. The
+// set is open: a client that meets a code it doesn't know falls back to the
+// one for the status.
 type Code string
 
 // The codes clients derive from the status of an about:blank problem. They are
@@ -74,7 +76,7 @@ type Problem struct { //nolint:errname // RFC 9457 calls it a problem details ob
 	Status   int            `json:"status,omitempty" doc:"The HTTP status code."`
 	Detail   string         `json:"detail,omitempty" doc:"English explanation of this occurrence, for developers and logs."`
 	Instance string         `json:"instance,omitempty" format:"uri-reference" doc:"Identifies this occurrence of the problem."`
-	Code     Code           `json:"code,omitempty" doc:"Stable name of the problem type, for clients to show a localized message. Absent for about:blank: derive it from the status."`
+	Code     Code           `json:"code,omitempty" doc:"Stable name of the problem type, for clients to show a localized message. New codes can appear: fall back to the status for one you don't know. Absent for about:blank: derive it from the status."`
 	Params   map[string]any `json:"params,omitempty" doc:"Values the code's localized message shows."`
 	Errors   []*FieldError  `json:"errors,omitempty" doc:"For a validation problem, each invalid field and the rule it failed."`
 

@@ -64,7 +64,6 @@ func newAPIWith(t *testing.T, opts humaproblem.Options, transformers ...huma.Tra
 			}
 			return nil, nil
 		})
-	humaproblem.Document(api, registry)
 	return api
 }
 
@@ -205,38 +204,23 @@ func TestMalformedBodyIsBlank(t *testing.T) {
 	}
 }
 
-func TestDocumentListsCodes(t *testing.T) {
+func TestSchemaLeavesCodesOpen(t *testing.T) {
 	api := newAPI(t)
 	schemas := api.OpenAPI().Components.Schemas.Map()
 	prob, fe := schemas["Problem"], schemas["FieldError"]
 	if prob == nil || fe == nil {
 		t.Fatalf("schemas: %v", keys(schemas))
 	}
-	if !contains(prob.Properties["code"].Enum, "validation", "name_taken") || contains(prob.Properties["code"].Enum, "too_long") {
-		t.Errorf("Problem.code enum = %v", prob.Properties["code"].Enum)
+	if e := prob.Properties["code"].Enum; e != nil {
+		t.Errorf("Problem.code enum = %v", e)
 	}
-	if !contains(fe.Properties["code"].Enum, "too_long", "required", "name_taken") {
-		t.Errorf("FieldError.code enum = %v", fe.Properties["code"].Enum)
+	if e := fe.Properties["code"].Enum; e != nil {
+		t.Errorf("FieldError.code enum = %v", e)
 	}
 	op := api.OpenAPI().Paths["/items"].Post
 	if _, ok := op.Responses["default"].Content[problem.MediaType]; !ok {
 		t.Errorf("default response is not %s", problem.MediaType)
 	}
-}
-
-func contains(enum []any, want ...string) bool {
-	for _, w := range want {
-		found := false
-		for _, e := range enum {
-			if e == w {
-				found = true
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
 }
 
 func keys[V any](m map[string]V) []string {

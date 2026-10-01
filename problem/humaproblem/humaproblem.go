@@ -8,7 +8,6 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -308,38 +307,4 @@ func classify(msg string) classification {
 		}
 	}
 	return classification{rule: problem.Invalid}
-}
-
-// Document lists every code the API can return in api's OpenAPI document:
-// on the Problem schema, validation and the registries' types; on
-// FieldError, the shared rules and the registries' types, since a field can
-// fail an application's own check. Call it after registering operations.
-func Document(api huma.API, registries ...*problem.Registry) {
-	var app []*problem.Type
-	for _, r := range registries {
-		app = append(app, r.Types()...)
-	}
-	schemas := api.OpenAPI().Components.Schemas.Map()
-	if s := schemas["Problem"]; s != nil {
-		enumerate(s.Properties["code"], append([]*problem.Type{problem.Validation}, app...))
-	}
-	if s := schemas["FieldError"]; s != nil {
-		enumerate(s.Properties["code"], append(slices.Clone(problem.Rules), app...))
-	}
-}
-
-func enumerate(s *huma.Schema, types []*problem.Type) {
-	if s == nil {
-		return
-	}
-	s.Enum = make([]any, len(types))
-	titles := make(map[string]string, len(types))
-	for i, t := range types {
-		s.Enum[i] = string(t.Code)
-		titles[string(t.Code)] = t.Title
-	}
-	if s.Extensions == nil {
-		s.Extensions = map[string]any{}
-	}
-	s.Extensions["x-enumDescriptions"] = titles
 }

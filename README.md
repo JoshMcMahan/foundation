@@ -101,9 +101,12 @@ cfg.Transformers = append(cfg.Transformers, humaproblem.Report(func(ctx context.
 	}
 }))
 // ... huma.Register(...)
-humaproblem.Document(api, problems)
 mux.Handle("/problems/", problem.Handler(problems))
 ```
+
+The OpenAPI document types `code` as an open string, not an enum: new codes
+are not a breaking change, and clients fall back to the status for codes they
+don't know. The catalog at `/problems/` lists them.
 
 huma's request validation then becomes a validation problem whose entries name
 the rule each field failed (`required`, `too_long`, `below_minimum`, ...).
