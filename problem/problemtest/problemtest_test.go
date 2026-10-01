@@ -43,7 +43,7 @@ func TestMessageArgs(t *testing.T) {
 	}
 }
 
-// recorder captures what CheckCatalog reports.
+// recorder captures what CheckCatalog and CheckMessages report.
 type recorder struct {
 	testing.TB
 	errs []string
@@ -80,5 +80,17 @@ func TestCheckCatalog(t *testing.T) {
 		!strings.Contains(r.errs[0], "apiErrors.last_admin") || !strings.Contains(r.errs[0], "{name}") ||
 		!strings.Contains(r.errs[1], "no apiErrors.quota") {
 		t.Errorf("CheckCatalog reported %q", r.errs)
+	}
+}
+
+func TestCheckMessages(t *testing.T) {
+	reg := problem.NewRegistry("app")
+	reg.Define(problem.Type{Code: "slug_taken", Status: http.StatusConflict, Title: "Slug taken", Params: []string{"slug"}})
+	reg.Define(problem.Type{Code: "quota", Status: http.StatusForbidden, Title: "Quota"})
+
+	r := &recorder{TB: t}
+	problemtest.CheckMessages(r, map[string]string{"slug_taken": "{slug} is taken."}, reg)
+	if len(r.errs) != 1 || !strings.Contains(r.errs[0], "no apiErrors.quota") {
+		t.Errorf("CheckMessages reported %q", r.errs)
 	}
 }

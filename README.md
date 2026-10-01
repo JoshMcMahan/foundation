@@ -145,6 +145,8 @@ Test that the web app has a message for every code:
 ```go
 func TestEveryCodeHasAMessage(t *testing.T) {
 	problemtest.CheckCatalog(t, "../web/src/i18n/locales/en.json", problems)
+	// or, with apiErrors in its own file, load the map and call
+	// problemtest.CheckMessages(t, messages, problems)
 }
 ```
 

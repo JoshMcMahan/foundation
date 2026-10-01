@@ -30,15 +30,27 @@ func CheckCatalog(tb testing.TB, path string, registries ...*problem.Registry) {
 	if err := json.Unmarshal(raw, &catalog); err != nil {
 		tb.Fatalf("parse %s: %v", path, err)
 	}
+	check(tb, path, catalog.APIErrors, registries)
+}
+
+// CheckMessages is CheckCatalog for an apiErrors map the caller has already
+// loaded, such as a catalog split into one file per namespace.
+func CheckMessages(tb testing.TB, messages map[string]string, registries ...*problem.Registry) {
+	tb.Helper()
+	check(tb, "catalog", messages, registries)
+}
+
+func check(tb testing.TB, where string, messages map[string]string, registries []*problem.Registry) {
+	tb.Helper()
 	for _, r := range registries {
 		for _, typ := range r.Types() {
-			msg, ok := catalog.APIErrors[string(typ.Code)]
+			msg, ok := messages[string(typ.Code)]
 			if !ok || msg == "" {
-				tb.Errorf("%s has no apiErrors.%s message", path, typ.Code)
+				tb.Errorf("%s has no apiErrors.%s message", where, typ.Code)
 				continue
 			}
 			if err := CheckArgs(msg, typ.Params); err != nil {
-				tb.Errorf("%s apiErrors.%s: %v", path, typ.Code, err)
+				tb.Errorf("%s apiErrors.%s: %v", where, typ.Code, err)
 			}
 		}
 	}
