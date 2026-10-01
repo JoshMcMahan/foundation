@@ -1,0 +1,90 @@
+{
+  "name": "@parallelworks/i18n",
+  "version": "0.1.0",
+  "description": "Localization for React apps on use-intl: locale negotiation, a provider, lazily loaded catalogs and catalog checks",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parallelworks/foundation.git",
+    "directory": "packages/i18n"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx",
+    "./vite": "./src/vite.ts",
+    "./node": "./src/node.ts",
+    "./client": {
+      "types": "./client.d.ts"
+    }
+  },
+  "bin": {
+    "parallelworks-i18n": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./react": {
+        "types": "./dist/react.d.ts",
+        "import": "./dist/react.js"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "import": "./dist/vite.js"
+      },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "import": "./dist/node.js"
+      },
+      "./client": {
+        "types": "./client.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "client.d.ts"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@formatjs/icu-messageformat-parser": "^3.5.20"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "use-intl": "^4.0.0",
+    "vite": ">=6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "use-intl": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "use-intl": "^4.13.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.8"
+  }
+}

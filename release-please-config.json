@@ -14,6 +14,11 @@
       "release-type": "node",
       "component": "problem",
       "pull-request-title-pattern": "chore(problem): release ${version}"
+    },
+    "packages/i18n": {
+      "release-type": "node",
+      "component": "i18n",
+      "pull-request-title-pattern": "chore(i18n): release ${version}"
     }
   }
 }
