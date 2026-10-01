@@ -4,3 +4,6 @@ packages:
 minimumReleaseAge: 1440
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
+
+# pnpm publish checks the branch; releases come from canary.
+publishBranch: canary
