@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/parallelworks/foundation/compare/lint-v0.2.0...lint-v0.3.0) (2026-10-02)
+
+
+### Features
+
+* **lint:** text in conditional branches, && and parentheses, and aria-description, come from the catalog too ([#27](https://github.com/parallelworks/foundation/issues/27)) ([9b917b1](https://github.com/parallelworks/foundation/commit/9b917b188264299f56d9295383cda6250d45074b))
+
 ## [0.2.0](https://github.com/parallelworks/foundation/compare/lint-v0.1.0...lint-v0.2.0) (2026-10-01)
 
 
