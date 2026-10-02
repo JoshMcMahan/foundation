@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/parallelworks/foundation/compare/v0.9.0...v0.10.0) (2026-10-02)
+
+
+### Features
+
+* **pgdb:** an application's own Postgres schema, with hopper's tables and goose migrations in it ([#40](https://github.com/parallelworks/foundation/issues/40)) ([84a00f8](https://github.com/parallelworks/foundation/commit/84a00f8bfd5005d014a95495821063d27ed2797f))
+
 ## [0.9.0](https://github.com/parallelworks/foundation/compare/v0.8.0...v0.9.0) (2026-10-02)
 
 
