@@ -132,6 +132,47 @@ describe('problemMiddleware', () => {
     expect(json.headers.get('Accept')).toBe('application/json, application/problem+json')
   })
 
+  it("copies a localized problem's Content-Language into its body", async () => {
+    const res = await problemMiddleware.onResponse({
+      response: new Response(
+        JSON.stringify({ type: 'about:blank', status: 404, detail: 'ありません。' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/problem+json', 'Content-Language': 'ja' },
+        },
+      ),
+    })
+    const body: unknown = await res.json()
+    expect(body).toMatchObject({ detail: 'ありません。', language: 'ja' })
+    expect(toApiError(body).language).toBe('ja')
+    expect(res.status).toBe(404)
+  })
+
+  it('leaves responses without Content-Language, and successes, alone', async () => {
+    const plain = new Response('{"status":404}', {
+      status: 404,
+      headers: { 'Content-Type': 'application/problem+json' },
+    })
+    expect(await problemMiddleware.onResponse({ response: plain })).toBe(plain)
+    const ok = new Response('{}', { status: 200, headers: { 'Content-Language': 'ja' } })
+    expect(await problemMiddleware.onResponse({ response: ok })).toBe(ok)
+  })
+
+  it("sends the page's language as Accept-Language, unless the request has one", () => {
+    const doc = { documentElement: { lang: 'ja' } }
+    Object.defineProperty(globalThis, 'document', { value: doc, configurable: true })
+    try {
+      const req = problemMiddleware.onRequest({ request: new Request('https://x.test/') })
+      expect(req.headers.get('Accept-Language')).toBe('ja')
+      const own = problemMiddleware.onRequest({
+        request: new Request('https://x.test/', { headers: { 'Accept-Language': 'es' } }),
+      })
+      expect(own.headers.get('Accept-Language')).toBe('es')
+    } finally {
+      Reflect.deleteProperty(globalThis, 'document')
+    }
+  })
+
   it('leaves an Accept that already asks for problems', () => {
     const req = problemMiddleware.onRequest({
       request: new Request('https://x.test/', { headers: { Accept: 'application/problem+json' } }),

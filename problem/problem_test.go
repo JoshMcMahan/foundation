@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -201,34 +199,16 @@ func TestSharedCatalogsCoverSharedCodes(t *testing.T) {
 		params[string(typ.Code)] = typ.Params
 	}
 
-	paths, err := filepath.Glob("../packages/problem/src/messages/*.json")
-	if err != nil || len(paths) == 0 {
-		t.Fatalf("no catalogs found: %v", err)
-	}
-	for _, path := range paths {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var catalog struct {
-			APIErrors map[string]string `json:"apiErrors"`
-		}
-		if err := json.Unmarshal(raw, &catalog); err != nil {
-			t.Fatalf("%s: %v", path, err)
-		}
+	for _, lang := range problem.Shared.Languages() {
+		msgs := problem.Shared.Messages(lang)
 		for code, p := range params {
-			msg := catalog.APIErrors[code]
+			msg := msgs[problem.Code(code)]
 			if msg == "" {
-				t.Errorf("%s has no apiErrors.%s", path, code)
+				t.Errorf("%s has no message for %s", lang, code)
 				continue
 			}
 			if err := problemtest.CheckArgs(msg, p); err != nil {
-				t.Errorf("%s apiErrors.%s: %v", path, code, err)
-			}
-		}
-		for code := range catalog.APIErrors {
-			if _, ok := params[code]; !ok {
-				t.Errorf("%s has apiErrors.%s, which is not a shared code", path, code)
+				t.Errorf("%s %s: %v", lang, code, err)
 			}
 		}
 	}

@@ -14,7 +14,7 @@ import (
 type FieldError struct {
 	Type      string         `json:"type" format:"uri-reference" doc:"The rule's problem type."`
 	Code      Code           `json:"code" doc:"Stable name of the rule, for clients to show a localized message. New codes can appear: fall back to a generic message for one you don't know."`
-	Detail    string         `json:"detail,omitempty" doc:"English explanation, for developers and logs."`
+	Detail    string         `json:"detail,omitempty" doc:"Explanation, in the language the Content-Language header names; English without it."`
 	Pointer   string         `json:"pointer,omitempty" doc:"JSON Pointer to the invalid body field, as a URI fragment such as #/items/0/name."`
 	Parameter string         `json:"parameter,omitempty" doc:"Name of the invalid request parameter."`
 	In        string         `json:"in,omitempty" enum:"query,path,header,cookie" doc:"Where parameter is."`
@@ -49,10 +49,16 @@ func (e *FieldError) Error() string {
 // fill.
 func (e FieldError) MarshalJSON() ([]byte, error) {
 	type wire FieldError
+	return json.Marshal(wire(e.resolve()))
+}
+
+// resolve returns e as clients receive it: Invalid when it lacks a param its
+// type's message needs.
+func (e FieldError) resolve() FieldError {
 	if !hasAll(e.Params, e.needs) {
 		e.Type, e.Code, e.Params = Invalid.uri, Invalid.Code, nil
 	}
-	return json.Marshal(wire(e))
+	return e
 }
 
 // With adds a value the field error's localized message shows.

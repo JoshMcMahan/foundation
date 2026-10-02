@@ -84,8 +84,9 @@ export class FieldError {
 
 /**
  * A failed request. `code` and `params` pick its localized message (see
- * `useErrorMessage`); `message` is the server's English detail, for logs.
- * `status` is 0 for a failure that never got a response.
+ * `useErrorMessage`). `message` is the server's detail: in `language` when
+ * the server localized it, and otherwise English, for logs. `status` is 0 for
+ * a failure that never got a response.
  */
 export class ApiError extends Error {
   readonly status: number
@@ -93,6 +94,7 @@ export class ApiError extends Error {
   readonly type: string
   readonly params: Params
   readonly fields: readonly FieldError[]
+  readonly language: string | undefined
 
   constructor(init: {
     status: number
@@ -101,6 +103,7 @@ export class ApiError extends Error {
     type?: string
     params?: Params
     fields?: readonly FieldError[]
+    language?: string
   }) {
     super(init.message ?? init.code)
     this.name = 'ApiError'
@@ -109,6 +112,7 @@ export class ApiError extends Error {
     this.type = init.type ?? 'about:blank'
     this.params = init.params ?? {}
     this.fields = init.fields ?? []
+    this.language = init.language
   }
 
   /** The form path of the first invalid field, when there is one. */
@@ -170,6 +174,7 @@ export function fromResponseBody(body: unknown, status: number): ApiError {
   const s = typeof b['status'] === 'number' ? b['status'] : status
   const type = str(b['type'])
   const message = str(b['detail']) ?? str(b['message']) ?? str(b['title'])
+  const language = str(b['language'])
   return new ApiError({
     status: s,
     code: str(b['code']) ?? codeForStatus(s),
@@ -177,6 +182,7 @@ export function fromResponseBody(body: unknown, status: number): ApiError {
     fields: fieldErrors(b['errors']),
     ...(type !== undefined && { type }),
     ...(message !== undefined && { message }),
+    ...(language !== undefined && { language }),
   })
 }
 
@@ -231,10 +237,40 @@ export function pointerToPath(pointer: string): string {
 
 /**
  * An openapi-fetch middleware that asks for problem details, for servers
- * that still send an older error shape to clients that do not.
+ * that still send an older error shape to clients that do not, in the page's
+ * language (`<html lang>`) when it has one. A problem the
+ * server wrote in the reader's language comes with Content-Language, which it
+ * copies into the body as `language`, so `useErrorMessage` can show the
+ * server's detail.
  */
 export const problemMiddleware = {
+  async onResponse({ response }: { response: Response }): Promise<Response> {
+    const language = response.headers.get('Content-Language')
+    if (
+      response.ok ||
+      !language ||
+      !response.headers.get('Content-Type')?.includes(problemMediaType)
+    ) {
+      return response
+    }
+    const body: unknown = await response
+      .clone()
+      .json()
+      .catch(() => undefined)
+    if (!isObject(body)) return response
+    return new Response(JSON.stringify({ ...body, language }), {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    })
+  },
   onRequest({ request }: { request: Request }): Request {
+    // The page's language, which LocaleProvider keeps current, so a server
+    // that localizes writes problems in the language the reader sees.
+    const lang = globalThis.document?.documentElement.lang
+    if (lang && !request.headers.has('Accept-Language')) {
+      request.headers.set('Accept-Language', lang)
+    }
     const accept = request.headers.get('Accept')
     if (!accept?.includes(problemMediaType)) {
       request.headers.set(

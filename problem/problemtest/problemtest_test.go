@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/parallelworks/foundation/problem"
 	"github.com/parallelworks/foundation/problem/problemtest"
@@ -92,5 +93,26 @@ func TestCheckMessages(t *testing.T) {
 	problemtest.CheckMessages(r, map[string]string{"slug_taken": "{slug} is taken."}, reg)
 	if len(r.errs) != 1 || !strings.Contains(r.errs[0], "no apiErrors.quota") {
 		t.Errorf("CheckMessages reported %q", r.errs)
+	}
+}
+
+func TestCheckGoCatalog(t *testing.T) {
+	r := problem.NewRegistry("gocat")
+	r.Define(problem.Type{Code: "name_taken", Status: 409, Title: "Name taken", Doc: "x", Params: []string{"name"}})
+	good := problem.MustCatalog(fstest.MapFS{
+		"en.json": {Data: []byte(`{"name_taken": "{name} is taken."}`)},
+		"ja.json": {Data: []byte(`{"name_taken": "{name}は使われています。"}`)},
+	})
+	problemtest.CheckGoCatalog(t, good, r)
+
+	for name, fsys := range map[string]fstest.MapFS{
+		"missing en": {"en.json": {Data: []byte(`{}`)}},
+		"stray arg":  {"en.json": {Data: []byte(`{"name_taken": "x"}`)}, "ja.json": {Data: []byte(`{"name_taken": "{who}"}`)}},
+	} {
+		rec := &recorder{TB: t}
+		problemtest.CheckGoCatalog(rec, problem.MustCatalog(fsys), r)
+		if len(rec.errs) == 0 {
+			t.Errorf("%s: no failure", name)
+		}
 	}
 }

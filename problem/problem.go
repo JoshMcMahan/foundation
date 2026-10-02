@@ -67,14 +67,15 @@ func CodeForStatus(status int) Code {
 	}
 }
 
-// Problem is an RFC 9457 problem details object. Title, Detail and each
-// FieldError's Detail are English, for developers and logs; clients show the
-// message for Code instead.
+// Problem is an RFC 9457 problem details object. Title is English. Detail and
+// each FieldError's Detail are English as written; a Localizer rewrites them
+// in the reader's language and says which with Content-Language. Clients
+// that get no Content-Language show their own message for Code instead.
 type Problem struct { //nolint:errname // RFC 9457 calls it a problem details object
 	Type     string         `json:"type" format:"uri-reference" doc:"Identifies the problem type and resolves to its documentation. about:blank means nothing beyond the status."`
 	Title    string         `json:"title,omitempty" doc:"Short English summary of the problem type, for developers."`
 	Status   int            `json:"status,omitempty" doc:"The HTTP status code."`
-	Detail   string         `json:"detail,omitempty" doc:"English explanation of this occurrence, for developers and logs."`
+	Detail   string         `json:"detail,omitempty" doc:"Explanation of this occurrence, in the language the Content-Language header names. Without that header it is English, for developers and logs: show your own message for code instead."`
 	Instance string         `json:"instance,omitempty" format:"uri-reference" doc:"Identifies this occurrence of the problem."`
 	Code     Code           `json:"code,omitempty" doc:"Stable name of the problem type, for clients to show a localized message. New codes can appear: fall back to the status for one you don't know. Absent for about:blank: derive it from the status."`
 	Params   map[string]any `json:"params,omitempty" doc:"Values the code's localized message shows."`

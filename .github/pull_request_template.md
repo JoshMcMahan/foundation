@@ -9,5 +9,5 @@
 ## Checklist
 
 - [ ] `make check` passes
-- [ ] A new or changed shared message is in every language in `packages/problem/src/messages/`
+- [ ] A new or changed shared message is in every language in `problem/messages/`
 - [ ] No code, rule or param was renamed (they are API contract)

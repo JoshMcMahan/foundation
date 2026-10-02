@@ -20,8 +20,11 @@ packages that several applications use the same way.
 Every error response is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
 problem, served as `application/problem+json`. Its `type` says what kind of
 problem it is, and resolves to a page documenting it. Clients show a message
-for its `code` in the reader's language; `title` and `detail` are English, for
-developers and logs, and never shown to people.
+for its `code` in the reader's language: a server with a `problem.Localizer`
+writes `detail` in that language itself and says which with `Content-Language`,
+so every client, a CLI as much as a web app, can show it. Without
+`Content-Language`, `detail` is English, for developers and logs, and clients
+show their own message for `code` instead.
 
 There are three kinds of type:
 
@@ -116,6 +119,26 @@ don't know. The catalog at `/problems/` lists them.
 
 huma's request validation then becomes a validation problem whose entries name
 the rule each field failed (`required`, `too_long`, `below_minimum`, ...).
+
+### Messages in the reader's language
+
+`problem.Shared` holds the messages for the shared codes in English, Spanish,
+Japanese, Korean and Chinese; `problem.NewCatalog` reads an app's own from one
+JSON file per language (`en.json`, `ja.json`, ...), ICU MessageFormat strings
+keyed by code. A `problem.Localizer` picks the reader's language with `Locale`
+(such as `spa.Locales.NegotiateHeader`, the cookie then `Accept-Language`) and
+rewrites each problem's `detail`, and each field error's, as its code's
+message:
+
+```go
+l := &problem.Localizer{Locale: locales.NegotiateHeader, Catalogs: []*problem.Catalog{catalog}}
+cfg.Transformers = append(cfg.Transformers, humaproblem.Report(logProblem), humaproblem.Localize(l))
+l.Write(w, r, p) // in a raw handler
+```
+
+An `about:blank` problem keeps the detail the server wrote for English readers,
+so specific text still reaches them; other languages get the status's message.
+`problemtest.CheckGoCatalog` checks that a catalog covers a registry.
 
 ### Internal errors never reach the client
 

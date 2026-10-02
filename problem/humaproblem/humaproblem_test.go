@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/fstest"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -305,4 +306,34 @@ func TestInstallIsSafeConcurrently(t *testing.T) {
 	}
 	wg.Wait()
 	humaproblem.Install(humaproblem.Options{})
+}
+
+func TestLocalizeWritesTheReadersLanguage(t *testing.T) {
+	catalog := problem.MustCatalog(fstest.MapFS{
+		"en.json": {Data: []byte(`{"name_taken": "{name} is taken."}`)},
+		"ja.json": {Data: []byte(`{"name_taken": "{name}は使われています。"}`)},
+	})
+	l := &problem.Localizer{Catalogs: []*problem.Catalog{catalog}}
+	var logged string
+	api := newAPIWith(t, humaproblem.Options{},
+		humaproblem.Report(func(_ context.Context, p *problem.Problem) { logged = p.Detail }),
+		humaproblem.Localize(l))
+
+	resp := api.Post("/items?mode=x", "Accept-Language: ja", map[string]any{"name": "taken", "count": 1})
+	if p := decode(t, resp.Body.String()); p.Detail != "takenは使われています。" || p.Code != "name_taken" {
+		t.Errorf("ja: %+v", p)
+	}
+	if resp.Header().Get("Content-Language") != "ja" {
+		t.Errorf("Content-Language = %q", resp.Header().Get("Content-Language"))
+	}
+	if logged != "an item named taken exists" {
+		t.Errorf("Report saw %q, want the original detail", logged)
+	}
+
+	// Validation: each field error gets its rule's message.
+	resp = api.Post("/items?mode=x&limit=0", "Accept-Language: es", map[string]any{"name": "ok", "count": 1})
+	p := decode(t, resp.Body.String())
+	if len(p.Errors) != 1 || p.Errors[0].Detail == "" || strings.Contains(p.Errors[0].Detail, "minimum") {
+		t.Errorf("es validation: %s", resp.Body)
+	}
 }

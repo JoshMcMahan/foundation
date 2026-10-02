@@ -134,3 +134,13 @@ func TestDevServerLang(t *testing.T) {
 		t.Errorf("body = %s, Vary %q", body, resp.Header.Get("Vary"))
 	}
 }
+
+func TestNegotiateHeader(t *testing.T) {
+	l := spa.Locales{Available: []string{"en", "ja", "es"}, Cookie: "locale"}
+	if got := l.NegotiateHeader(http.Header{"Cookie": {"locale=es-MX"}, "Accept-Language": {"ja"}}); got != "es" {
+		t.Errorf("cookie: %q, want es", got)
+	}
+	if got := l.NegotiateHeader(http.Header{"Accept-Language": {"ja-JP"}}); got != "ja" {
+		t.Errorf("Accept-Language: %q, want ja", got)
+	}
+}

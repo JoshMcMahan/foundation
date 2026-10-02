@@ -117,6 +117,23 @@ func Report(fn func(ctx context.Context, p *problem.Problem)) huma.Transformer {
 	}
 }
 
+// Localize returns a huma Transformer that writes every problem the API
+// sends in the reader's language with l, and says which in Content-Language.
+// Add it to huma.Config.Transformers after Report, which logs the original.
+func Localize(l *problem.Localizer) huma.Transformer {
+	return func(ctx huma.Context, _ string, v any) (any, error) {
+		p, ok := v.(*problem.Problem)
+		if !ok {
+			return v, nil
+		}
+		h := http.Header{}
+		ctx.EachHeader(func(name, value string) { h.Add(name, value) })
+		lang := l.Language(h)
+		ctx.SetHeader("Content-Language", lang)
+		return l.Localize(lang, p), nil
+	}
+}
+
 func detail(msg string, errs []error) string {
 	parts := make([]string, 0, len(errs)+1)
 	if msg != "" {

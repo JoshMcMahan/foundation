@@ -63,6 +63,48 @@ describe('useErrorMessage', () => {
   })
 })
 
+describe('useErrorMessage with a server that localizes', () => {
+  const localized = {
+    type: 'about:blank',
+    status: 404,
+    detail: 'クラスタ gpu-1 はありません。',
+    language: 'ja',
+  }
+
+  it("shows the server's detail when it is in the active language", () => {
+    expect(render(localized, 'ja-JP')).toBe('クラスタ gpu-1 はありません。')
+  })
+
+  it('falls back to the catalog when the server wrote another language', () => {
+    expect(render(localized, 'es')).toBe(sharedMessages.es.apiErrors.not_found)
+  })
+
+  it('ignores a detail with no language, as from a server that does not localize', () => {
+    expect(render({ type: 'about:blank', status: 404, detail: 'no such cluster' }, 'en')).toBe(
+      sharedMessages.en.apiErrors.not_found,
+    )
+  })
+
+  it("shows a single invalid field's localized detail", () => {
+    const body = {
+      type: '/problems/validation',
+      status: 422,
+      code: 'validation',
+      detail: 'Revisa los campos.',
+      language: 'es',
+      errors: [
+        {
+          code: 'too_long',
+          pointer: '#/name',
+          params: { max: 64 },
+          detail: 'Máximo 64 caracteres.',
+        },
+      ],
+    }
+    expect(render(body, 'es')).toBe('Máximo 64 caracteres.')
+  })
+})
+
 describe('sharedMessages', () => {
   it('has the same keys in every language', () => {
     const keys = Object.keys(sharedMessages.en.apiErrors).sort()

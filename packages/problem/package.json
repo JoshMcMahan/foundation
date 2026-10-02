@@ -33,10 +33,11 @@
     "lint/error-text.grit"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run && node lint/check.mjs",
-    "prepublishOnly": "pnpm build"
+    "build": "pnpm messages && rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "pnpm messages && tsc -p tsconfig.json",
+    "test": "pnpm messages && vitest run && node lint/check.mjs",
+    "prepublishOnly": "pnpm build",
+    "messages": "node scripts/messages.mjs"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

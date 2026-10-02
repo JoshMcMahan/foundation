@@ -45,6 +45,12 @@ func (l Locales) Negotiate(r *http.Request) string {
 	return NegotiateLocale(acceptLanguage(r.Header.Get("Accept-Language")), l.Available, fallback)
 }
 
+// NegotiateHeader is Negotiate for a request's headers alone, as a
+// problem.Localizer's Locale.
+func (l Locales) NegotiateHeader(h http.Header) string {
+	return l.Negotiate(&http.Request{Header: h})
+}
+
 // NegotiateLocale picks the locale for the first preferred tag that has one:
 // an exact match, ignoring case, else a locale with the same base language, so
 // es-MX gets es. It returns fallback when nothing matches. It is the server's
