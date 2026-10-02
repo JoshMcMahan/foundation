@@ -4,45 +4,98 @@ language js
 // useTranslations(). Complements Biome's style/noJsxLiterals, which covers
 // JSX text but not string children in braces, display props, display
 // properties of objects (columns, options, form fields) or toasts.
+
+// A template counts by its literal parts, not the code in ${...}.
+pattern words() {
+  or {
+    JsStringLiteralExpression() as $s where { $s <: r"(?s).*\p{L}\p{L}.*" },
+    JsTemplateExpression(elements=contains JsTemplateChunkElement() as $c where {
+      $c <: r"(?s).*\p{L}\p{L}.*"
+    })
+  }
+}
+
+// Example values in placeholders: https://example.com, localhost, ~/data.
+pattern example_value() {
+  r"^['\"`](?:\S*(?:://|…)\S*|[~.]\S*|[a-z][a-z0-9.\-_/]*)['\"`]$"
+}
+
+pattern placeholder_words() {
+  words() as $s where { $s <: not example_value() }
+}
+
+// CSS classes ('mb-1.5 flex items-center') and sample values ('1Gi',
+// 'user@example.com', 'https://example.com') in object definitions.
+pattern property_words() {
+  words() as $s where {
+    $s <: not r"^['\"`][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*[-:\[][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*['\"`]$",
+    $s <: not r"^['\"`][^\s'\"`]*(?:[0-9]|@|://)[^\s'\"`]*['\"`]$"
+  }
+}
+
+// A literal with a word in it, alone or as a branch of `c ? a : b`, the right
+// side of `&&`/`||`, or inside parentheses. Grit can't recurse through a
+// pattern parameter (Biome overflows its stack), hence one per leaf kind, and
+// `text` is a built-in, hence display_text.
+pattern display_text() {
+  or {
+    words(),
+    JsConditionalExpression(consequent=display_text()),
+    JsConditionalExpression(alternate=display_text()),
+    JsLogicalExpression(right=display_text()),
+    JsParenthesizedExpression(expression=display_text())
+  }
+}
+
+pattern placeholder_text() {
+  or {
+    placeholder_words(),
+    JsConditionalExpression(consequent=placeholder_text()),
+    JsConditionalExpression(alternate=placeholder_text()),
+    JsLogicalExpression(right=placeholder_text()),
+    JsParenthesizedExpression(expression=placeholder_text())
+  }
+}
+
+pattern property_text() {
+  or {
+    property_words(),
+    JsConditionalExpression(consequent=property_text()),
+    JsConditionalExpression(alternate=property_text()),
+    JsLogicalExpression(right=property_text()),
+    JsParenthesizedExpression(expression=property_text())
+  }
+}
+
 or {
   // {'Hello'} and {`Welcome ${name}`} as a JSX child.
   JsxExpressionChild(expression=$text) where {
-    $text <: or {
-      JsStringLiteralExpression(),
-      JsTemplateExpression()
-    },
-    $text <: r"(?s).*\p{L}\p{L}.*",
+    $text <: display_text(),
     register_diagnostic(span=$text, message="Text a person reads must come from the locale catalog: render it with useTranslations().", severity="error")
   },
   // label='Display name', title={'Details'}.
   JsxAttribute(name=$name, initializer=$init) where {
-    $name <: r"^(?:label|title|placeholder|aria-label|alt|tooltip|description|helpText|helperText|emptyText|emptyMessage|heading|subheading|subtitle|confirmLabel|enabledTooltip|disabledTooltip)$",
-    $init <: JsxAttributeInitializerClause(value=or {
-      JsxString() as $text,
-      JsxExpressionAttributeValue(expression=or {
-        JsStringLiteralExpression(),
-        JsTemplateExpression()
-      } as $text)
-    }),
-    $text <: r"(?s).*\p{L}\p{L}.*",
-    // Example values in placeholders: https://example.com, localhost, ~/data.
+    $name <: r"^(?:label|title|placeholder|aria-label|aria-description|alt|tooltip|description|helpText|helperText|emptyText|emptyMessage|heading|subheading|subtitle|confirmLabel|enabledTooltip|disabledTooltip)$",
     if ($name <: r"^placeholder$") {
-      $text <: not r"^['\"`](?:\S*(?:://|…)\S*|[~.]\S*|[a-z][a-z0-9.\-_/]*)['\"`]$"
+      $init <: JsxAttributeInitializerClause(value=or {
+        JsxString() as $text where {
+          $text <: r"(?s).*\p{L}\p{L}.*",
+          $text <: not example_value()
+        },
+        JsxExpressionAttributeValue(expression=placeholder_text())
+      })
+    } else {
+      $init <: JsxAttributeInitializerClause(value=or {
+        JsxString() as $text where { $text <: r"(?s).*\p{L}\p{L}.*" },
+        JsxExpressionAttributeValue(expression=display_text())
+      })
     },
     register_diagnostic(span=$init, message="Text a person reads must come from the locale catalog: render it with useTranslations().", severity="error")
   },
   // { label: 'Name' }, { title: 'Details' } in column, option and form definitions.
   JsPropertyObjectMember(name=$key, value=$text) where {
     $key <: r"^['\"]?(?:label|title|placeholder|tooltip|description|helpText|helperText|emptyText|emptyMessage|heading|subheading|subtitle|header|confirmLabel)['\"]?$",
-    $text <: or {
-      JsStringLiteralExpression(),
-      JsTemplateExpression()
-    },
-    $text <: r"(?s).*\p{L}\p{L}.*",
-    // CSS classes: 'mb-1.5 flex items-center'.
-    $text <: not r"^['\"`][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*[-:\[][a-z0-9 _.:/\[\]()%!#&>~*,=+@-]*['\"`]$",
-    // Sample values: '1Gi', 'user@example.com', 'https://example.com'.
-    $text <: not r"^['\"`][^\s'\"`]*(?:[0-9]|@|://)[^\s'\"`]*['\"`]$",
+    $text <: property_text(),
     register_diagnostic(span=$text, message="Text a person reads must come from the locale catalog: render it with useTranslations().", severity="error")
   },
   // toast('Saved'), toast.success(`Saved ${name}`).

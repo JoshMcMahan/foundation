@@ -4,6 +4,7 @@ declare const toast: ((m: string) => void) & {
 }
 declare const t: (k: string, v?: Record<string, string>) => string
 declare const name: string
+declare const open: boolean
 declare const Field: (p: { label?: string; className?: string }) => null
 
 export const columns = [
@@ -13,6 +14,7 @@ export const columns = [
 export const classNames = { label: 'form-label', root: 'mb-1.5 flex items-center' }
 export const samples = { placeholder: '1Gi', email: 'user@example.com', url: 'https://example.com' }
 export const titled = { title: t('details') }
+export const toggle = { label: open ? t('enabled') : t('disabled'), placeholder: open ? '1Gi' : '2Gi' }
 export const named = {
   // biome-ignore lint/plugin: product name
   label: 'Debian',
@@ -29,6 +31,12 @@ export function Good() {
       {' '}
       {'·'}
       {'/'}
+      {open ? '▲' : '▼'}
+      {open ? `${name}/${name.length}` : t('none')}
+      {`${name.toUpperCase()}`}
+      {open && ' '}
+      {open ? t('open') : name}
+      <input placeholder={open ? 'localhost' : 'https://example.com'} />
       <a href='/clusters/new'>{t('new')}</a>
       <input placeholder='https://example.com' type='url' />
       <input placeholder='localhost' />

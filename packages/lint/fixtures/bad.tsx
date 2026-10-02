@@ -5,6 +5,8 @@ declare const toast: ((m: string) => void) & {
   info: (m: string) => void
 }
 declare const name: string
+declare const open: boolean
+declare const t: (k: string) => string
 declare const Field: (p: { label?: string; description?: string }) => null
 
 export const columns = [
@@ -15,6 +17,7 @@ export const field = {
   description: 'Use realtime data to calculate the threshold', // expect
   'tooltip': 'Leave empty for none', // expect
 }
+export const toggle = { label: open ? 'Enabled' : 'Disabled' } // expect
 
 export function Bad() {
   toast.success('Saved the cluster') // expect
@@ -29,6 +32,14 @@ export function Bad() {
       <button type='button' aria-label='Close dialog' /> {/* expect */}
       <Field label='Display name' /> {/* expect */}
       <Field description={'Shown to everyone'} /> {/* expect */}
+      {open ? 'Open now' : 'Closed now' /* expect */}
+      {open ? t('open') : 'Closed now' /* expect */}
+      {open && 'Shown when open' /* expect */}
+      {open ? `${name} items` : name /* expect */}
+      {(`Count ${name}`) /* expect */}
+      <Field label={open ? 'Yes please' : t('no')} /> {/* expect */}
+      <button type='button' aria-description='Opens the dialog' /> {/* expect */}
+      <input placeholder={open ? 'Search clusters' : 'localhost'} /> {/* expect */}
     </div>
   )
 }
