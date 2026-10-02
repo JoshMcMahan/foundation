@@ -36,6 +36,10 @@ export default defineConfig({
     rollupOptions: {
       external: (id) => external.some((dep) => id === dep || id.startsWith(`${dep}/`)),
       output: {
+        // One file per source module, so a consumer's bundler keeps only the
+        // components it imports instead of the shared chunks a library build merges.
+        preserveModules: true,
+        preserveModulesRoot: 'src',
         entryFileNames: '[name].js',
         chunkFileNames: 'chunks/[name]-[hash].js',
       },
