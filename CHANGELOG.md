@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.11.0](https://github.com/parallelworks/foundation/compare/v0.10.0...v0.11.0) (2026-10-02)
+
+
+### Features
+
+* **problem:** error code pages explain why a problem happens and how to fix it, in the reader's language ([#43](https://github.com/parallelworks/foundation/issues/43)) ([dd74cef](https://github.com/parallelworks/foundation/commit/dd74cef4e23cf3acf0a0f894d5db6112697d06ca))
+* **problem:** servers write problems in the reader's language, so every client can show them ([#42](https://github.com/parallelworks/foundation/issues/42)) ([ab516d9](https://github.com/parallelworks/foundation/commit/ab516d91703b5404ac7d879ed100f14ed1e8f039))
+* **ui:** React components on one theme contract ([#44](https://github.com/parallelworks/foundation/issues/44)) ([5937c1e](https://github.com/parallelworks/foundation/commit/5937c1eaf975129090d78dfe33fe4ce5c1e2434e))
+
 ## [0.10.0](https://github.com/parallelworks/foundation/compare/v0.9.0...v0.10.0) (2026-10-02)
 
 
