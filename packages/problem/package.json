@@ -1,6 +1,6 @@
 {
   "name": "@parallelworks/problem",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "RFC 9457 problem details for web clients: errors with stable codes, shown in the reader's language",
   "license": "Apache-2.0",
   "repository": {
