@@ -92,7 +92,7 @@ func TestSetsHTMLLang(t *testing.T) {
 		if body := rec.Body.String(); !strings.Contains(body, tt.want) || !strings.Contains(body, `<base href="/">`) {
 			t.Errorf("%s: body = %s, want %s and Index applied", tt.shell, body, tt.want)
 		}
-		if vary := rec.Header().Values("Vary"); strings.Join(vary, ",") != "Accept-Language,Cookie" {
+		if vary := rec.Header().Values("Vary"); strings.Join(vary, ",") != "Accept-Language,Cookie,Accept-Encoding" {
 			t.Errorf("Vary = %q", vary)
 		}
 	}
@@ -101,8 +101,8 @@ func TestSetsHTMLLang(t *testing.T) {
 func TestNoLocalesLeavesLang(t *testing.T) {
 	h := newHandler(t, spa.Options{})
 	rec := get(t, h, "/", "Accept-Language", "es")
-	if rec.Body.String() != shell || rec.Header().Get("Vary") != "" {
-		t.Errorf("body = %s, Vary %q", rec.Body, rec.Header().Get("Vary"))
+	if rec.Body.String() != shell || rec.Header().Get("Vary") != "Accept-Encoding" {
+		t.Errorf("body = %s, Vary %q, want only Accept-Encoding", rec.Body, rec.Header().Get("Vary"))
 	}
 }
 

@@ -7,9 +7,12 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/parallelworks/foundation/spa"
 )
@@ -62,12 +65,97 @@ func TestServesFilesWithCaching(t *testing.T) {
 		t.Errorf("asset Content-Type = %q", ct)
 	}
 
-	// Files from public/ keep their names, so they must stay revalidatable.
+	// Files from public/ keep their names, so they must stay revalidatable:
+	// an embedded file has no modification time, so its ETag is the validator.
 	for _, p := range []string{"/robots.txt", "/assets/logo.svg"} {
 		rec = get(t, h, p)
-		if rec.Code != http.StatusOK || rec.Header().Get("Cache-Control") != "" {
-			t.Errorf("%s = %d, Cache-Control %q", p, rec.Code, rec.Header().Get("Cache-Control"))
+		etag := rec.Header().Get("ETag")
+		if rec.Code != http.StatusOK || rec.Header().Get("Cache-Control") != "" || etag == "" {
+			t.Errorf("%s = %d, Cache-Control %q, ETag %q", p, rec.Code, rec.Header().Get("Cache-Control"), etag)
+			continue
 		}
+		if again := get(t, h, p, "If-None-Match", etag); again.Code != http.StatusNotModified {
+			t.Errorf("%s with its ETag = %d, want 304", p, again.Code)
+		}
+	}
+}
+
+func TestShellIsCompressedAndRevalidated(t *testing.T) {
+	h := newHandler(t, spa.Options{Locales: spa.Locales{Available: []string{"en", "ja"}}})
+
+	en := get(t, h, "/", "Accept-Language", "en")
+	ja := get(t, h, "/runs", "Accept-Language", "ja")
+	etag := en.Header().Get("ETag")
+	if etag == "" || etag == ja.Header().Get("ETag") {
+		t.Fatalf("ETags en %q ja %q: want distinct, non-empty", etag, ja.Header().Get("ETag"))
+	}
+	for _, want := range []string{"Accept-Encoding", "Accept-Language"} {
+		if !strings.Contains(strings.Join(en.Header().Values("Vary"), ","), want) {
+			t.Errorf("Vary %q lacks %s", en.Header().Values("Vary"), want)
+		}
+	}
+
+	for _, inm := range []string{etag, "W/" + etag, `"other", ` + etag, "*"} {
+		rec := get(t, h, "/runs", "Accept-Language", "en", "If-None-Match", inm)
+		if rec.Code != http.StatusNotModified || rec.Body.Len() != 0 {
+			t.Errorf("If-None-Match %q = %d with %d bytes, want an empty 304", inm, rec.Code, rec.Body.Len())
+		}
+	}
+	if rec := get(t, h, "/", "Accept-Language", "ja", "If-None-Match", etag); rec.Code != http.StatusOK {
+		t.Errorf("another locale's ETag = %d, want 200", rec.Code)
+	}
+
+	gz := get(t, h, "/", "Accept-Language", "ja", "Accept-Encoding", "gzip, br")
+	if gz.Header().Get("Content-Encoding") != "gzip" || gz.Header().Get("ETag") != ja.Header().Get("ETag") {
+		t.Fatalf("gzip shell: encoding %q, ETag %q", gz.Header().Get("Content-Encoding"), gz.Header().Get("ETag"))
+	}
+	zr, err := gzip.NewReader(gz.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(zr)
+	if err != nil || string(body) != ja.Body.String() {
+		t.Errorf("gunzipped shell = %q, %v; want %q", body, err, ja.Body)
+	}
+	if rec := get(t, h, "/", "Accept-Encoding", "gzip;q=0"); rec.Header().Get("Content-Encoding") != "" {
+		t.Errorf("gzip;q=0 got Content-Encoding %q", rec.Header().Get("Content-Encoding"))
+	}
+}
+
+func TestShellETagFollowsIndex(t *testing.T) {
+	n := 0
+	h := newHandler(t, spa.Options{Index: func(_ *http.Request, html []byte) []byte {
+		n++
+		return []byte(strings.Replace(string(html), "<title>app</title>", "<title>app "+strings.Repeat("x", n)+"</title>", 1))
+	}})
+	first := get(t, h, "/").Header().Get("ETag")
+	if rec := get(t, h, "/", "If-None-Match", first); rec.Code != http.StatusOK || rec.Header().Get("ETag") == first {
+		t.Errorf("a page that changed answered %d with ETag %q", rec.Code, rec.Header().Get("ETag"))
+	}
+}
+
+func TestRevalidatesDiskFilesThatChange(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, data string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("index.html", shell)
+	write("robots.txt", "User-agent: *")
+	h, err := spa.Handler(os.DirFS(dir), spa.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	etag := get(t, h, "/robots.txt").Header().Get("ETag")
+	write("robots.txt", "User-agent: *\nDisallow: /admin")
+	future := time.Now().Add(time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "robots.txt"), future, future); err != nil {
+		t.Fatal(err)
+	}
+	if rec := get(t, h, "/robots.txt", "If-None-Match", etag); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Disallow") {
+		t.Errorf("changed file with its old ETag = %d %q, want the new file", rec.Code, rec.Body)
 	}
 }
 

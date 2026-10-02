@@ -5,6 +5,9 @@ package spa
 
 import (
 	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +16,9 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
+	"sync"
 )
 
 // BuildDir is where the app's content-hashed build output goes, set in
@@ -50,7 +55,9 @@ type Options struct {
 // order: the file at that path, preferring a precompressed .br or .gz sibling
 // the client accepts; a prerendered <path>/index.html; for a path with no
 // file extension, index.html, so client-side routes work on reload; and
-// otherwise a 404. Files under BuildDir are cached for a year.
+// otherwise a 404. Files under BuildDir are cached for a year; everything
+// else carries an ETag to revalidate with, and index.html is gzipped for
+// clients that accept it.
 //
 // When dist holds no build, as when the Go module is built before the web
 // app, Handler proxies every request to opts.DevServer, including Vite's HMR
@@ -67,7 +74,7 @@ func Handler(dist fs.FS, opts Options) (http.Handler, error) {
 		}
 		return devProxy(target, opts), nil
 	}
-	return &handler{dist: dist, index: index, opts: opts, rewrite: opts.rewrite()}, nil
+	return &handler{dist: dist, index: index, opts: opts, rewrite: opts.rewrite(), etags: map[string]string{}, gzipped: map[string][]byte{}}, nil
 }
 
 var errNoBuild = errors.New("index.html is missing or a placeholder")
@@ -89,7 +96,17 @@ type handler struct {
 	index   []byte
 	opts    Options
 	rewrite func(*http.Request, []byte) []byte
+
+	mu sync.Mutex
+	// etags caches each file's ETag by name, size and modification time, so a
+	// file changed on disk gets a new one.
+	etags map[string]string
+	// gzipped caches compressed shells by ETag. An Index that varies per request
+	// would fill it, so it is emptied when it grows past maxGzipped.
+	gzipped map[string][]byte
 }
+
+const maxGzipped = 64
 
 // rewrite combines Locales and Index, or is nil when there is nothing to do.
 func (o Options) rewrite() func(*http.Request, []byte) []byte {
@@ -138,12 +155,72 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body = h.rewrite(r, body)
 	}
 	h.opts.Locales.vary(w.Header())
+	w.Header().Add("Vary", "Accept-Encoding")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
+	etag := etagOf(body)
+	if status == http.StatusOK {
+		w.Header().Set("ETag", etag)
+		if etagMatches(r.Header.Get("If-None-Match"), etag) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	if accepts(r.Header.Get("Accept-Encoding"), "gzip") {
+		if gz, err := h.gzip(etag, body); err == nil {
+			w.Header().Set("Content-Encoding", "gzip")
+			body = gz
+		}
+	}
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
 	w.WriteHeader(status)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(body)
 	}
+}
+
+func (h *handler) gzip(etag string, body []byte) ([]byte, error) {
+	h.mu.Lock()
+	gz, ok := h.gzipped[etag]
+	h.mu.Unlock()
+	if ok {
+		return gz, nil
+	}
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := zw.Write(body); err != nil {
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	h.mu.Lock()
+	if len(h.gzipped) >= maxGzipped {
+		clear(h.gzipped)
+	}
+	h.gzipped[etag] = buf.Bytes()
+	h.mu.Unlock()
+	return buf.Bytes(), nil
+}
+
+func etagOf(data []byte) string {
+	sum := sha256.Sum256(data)
+	return `"` + hex.EncodeToString(sum[:16]) + `"`
+}
+
+// etagMatches compares weakly, as If-None-Match requires: a revalidation of a
+// gzipped response may come back with the ETag marked W/.
+func etagMatches(ifNoneMatch, etag string) bool {
+	for candidate := range strings.SplitSeq(ifNoneMatch, ",") {
+		candidate = strings.TrimPrefix(strings.TrimSpace(candidate), "W/")
+		if candidate == etag || candidate == "*" {
+			return true
+		}
+	}
+	return false
 }
 
 // serveFile serves the file name, or a precompressed sibling the client
@@ -180,6 +257,11 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, name string)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return true
 	}
+	// An embedded file has no modification time, so without an ETag a browser
+	// could not revalidate it and would download it again on every visit.
+	if etag, err := h.fileETag(served, info); err == nil {
+		w.Header().Set("ETag", etag)
+	}
 	if rs, ok := f.(io.ReadSeeker); ok {
 		http.ServeContent(w, r, name, info.ModTime(), rs)
 		return true
@@ -191,6 +273,25 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, name string)
 	}
 	http.ServeContent(w, r, name, info.ModTime(), bytes.NewReader(data))
 	return true
+}
+
+func (h *handler) fileETag(name string, info fs.FileInfo) (string, error) {
+	key := name + "\x00" + strconv.FormatInt(info.Size(), 10) + "\x00" + strconv.FormatInt(info.ModTime().UnixNano(), 10)
+	h.mu.Lock()
+	etag, ok := h.etags[key]
+	h.mu.Unlock()
+	if ok {
+		return etag, nil
+	}
+	data, err := fs.ReadFile(h.dist, name)
+	if err != nil {
+		return "", err
+	}
+	etag = etagOf(data)
+	h.mu.Lock()
+	h.etags[key] = etag
+	h.mu.Unlock()
+	return etag, nil
 }
 
 func isFile(fsys fs.FS, name string) bool {
