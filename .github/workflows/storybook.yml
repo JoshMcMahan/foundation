@@ -1,0 +1,50 @@
+name: Storybook
+
+# Publishes the ui workshop to GitHub Pages whenever ui changes on canary.
+on:
+  push:
+    branches: [canary]
+    paths: ['packages/ui/**', 'packages/pnpm-lock.yaml', '.github/workflows/storybook.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: packages/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: packages/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @parallelworks/ui build-storybook
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: packages/ui/storybook-static
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
