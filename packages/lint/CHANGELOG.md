@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/parallelworks/foundation/compare/lint-v0.3.0...lint-v0.4.0) (2026-10-02)
+
+
+### Features
+
+* **lint:** props named for what they show, like submitLabel or errorMessage, and every aria text attribute come from the catalog ([#31](https://github.com/parallelworks/foundation/issues/31)) ([f71e18b](https://github.com/parallelworks/foundation/commit/f71e18b2688288b97bbea5cb780074f2890927dc))
+
+
+### Bug Fixes
+
+* i18n and problem load from CommonJS too, such as a Vite config without type: module ([#30](https://github.com/parallelworks/foundation/issues/30)) ([c07bebf](https://github.com/parallelworks/foundation/commit/c07bebfa4f90d179f05c7a5caade34d97538bee3))
+
 ## [0.3.0](https://github.com/parallelworks/foundation/compare/lint-v0.2.0...lint-v0.3.0) (2026-10-02)
 
 
