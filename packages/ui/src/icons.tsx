@@ -1,0 +1,298 @@
+// Import icons from here, never from 'react-icons/*' directly.
+import cx from 'classnames'
+import type { IconBaseProps } from 'react-icons'
+import { BiError as ErrorIcon } from 'react-icons/bi'
+import {
+  BsZoomIn as ChartZoomIcon,
+  BsLayers as InfrastructureLayersIcon,
+  BsCurrencyDollar as MoneyIcon,
+} from 'react-icons/bs'
+import { FaInfoCircle as InfoIcon, FaCircleNotch as UnexportedLoaderIcon } from 'react-icons/fa'
+
+export type { IconType } from 'react-icons'
+export { AiOutlineRollback as RollbackIcon } from 'react-icons/ai'
+export {
+  BiBell as UnmuteIcon,
+  BiBellOff as MuteIcon,
+  BiBuildings as OrganizationIcon,
+  BiExpandVertical as ExpandVerticalIcon,
+  BiPause as PauseIcon,
+  BiPlay as StartIcon,
+  BiSolidCheckShield as ShieldIcon,
+  BiSolidTrashAlt as TrashIcon,
+  BiStop as StopIcon,
+} from 'react-icons/bi'
+export {
+  BsArrowsCollapse as CollapseIcon,
+  BsBucket as BucketIcon,
+  BsFileEarmarkZip as ZipIcon,
+  BsGrid as GridIcon,
+  BsMusicNoteBeamed as MusicIcon,
+  BsSearch as SearchOutlineIcon,
+  BsStar as PinIcon,
+  BsStarFill as PinFilledIcon,
+  BsStopCircle as StopCircleIcon,
+  BsTerminal as UserWorkspaceIcon,
+  BsTerminalFill as UserWorkspaceFillIcon,
+  BsThreeDots as MoreIcon,
+  BsThreeDotsVertical as MenuIcon,
+} from 'react-icons/bs'
+export {
+  FaAmazon as AmazonIcon,
+  FaAngleDown as AngleDownIcon,
+  FaAngleLeft as AngleLeftIcon,
+  FaAngleRight as AngleRightIcon,
+  FaAngleUp as AngleUpIcon,
+  FaArrowDown as ArrowDownIcon,
+  FaArrowLeft as ArrowLeftIcon,
+  FaArrowRight as ArrowRightIcon,
+  FaArrowUp as ArrowUpIcon,
+  FaCaretDown as CaretDownIcon,
+  FaCentos as CentOSIcon,
+  FaChartLine as ChartIcon,
+  FaChartPie as PieChartIcon,
+  FaCheck as CheckIcon,
+  FaChevronDown as ChevronDownIcon,
+  FaChevronUp as ChevronUpIcon,
+  FaChrome as ChromeIcon,
+  FaCloud as CloudIcon,
+  FaCloudDownloadAlt as DownloadIcon,
+  FaCog as CogIcon,
+  FaCogs as GearsIcon,
+  FaComments as ChatIcon,
+  FaCompress as ShrinkIcon,
+  FaDesktop as SnapshotIcon,
+  FaDocker as DockerIcon,
+  FaDollarSign as CostDashboardIcon,
+  FaEdge as EdgeIcon,
+  FaEdit as EditIcon,
+  FaExclamationTriangle as WarningTriangleIcon,
+  FaExpand as ExpandIcon,
+  FaEye as HiddenFalseIcon,
+  FaEyeSlash as HiddenTrueIcon,
+  FaFile as FileSolidIcon,
+  FaFilePdf as PdfSolidIcon,
+  FaFilter as FilterIcon,
+  FaFirefoxBrowser as FirefoxIcon,
+  FaFlask as FlaskIcon,
+  FaFolder as FolderSolidIcon,
+  FaGithub as GitHubIcon,
+  FaGitlab as GitLabIcon,
+  FaGlobe as GlobeIcon,
+  FaGlobeAmericas as MarketplaceIcon,
+  FaGlobeAmericas as PublishIcon,
+  FaImage as ImageSolidIcon,
+  FaKey as KeyIcon,
+  FaKey as PasswordIcon,
+  FaLayerGroup as ResourceGroupIcon,
+  FaLink as LinkIcon,
+  FaLinkedin as LinkedInIcon,
+  FaLinux as LinuxIcon,
+  FaList as SchedulerIcon,
+  FaLock as LockIcon,
+  FaOpenid as OIDCIcon,
+  FaOpera as OperaIcon,
+  FaPaperclip as AttachmentIcon,
+  FaPlus as AddIcon,
+  FaPowerOff as PowerIcon,
+  FaPrint as PrintIcon,
+  FaQrcode as QRCodeIcon,
+  FaQuestionCircle as UserGuideIcon,
+  FaRedhat as RedHatIcon,
+  FaRegCircle as NotRunningIcon,
+  FaRegFileImage as ImageIcon,
+  FaRegFolder as FolderIcon,
+  FaRobot as RobotIcon,
+  FaRocket as PartnerIcon,
+  FaRunning as ExecuteWorkflow,
+  FaSafari as SafariIcon,
+  FaSave as SaveIcon,
+  FaSearch as SearchIcon,
+  FaShieldAlt as ShieldAltIcon,
+  FaSlack as SlackIcon,
+  FaStar as FeaturedIcon,
+  FaStop as StopSolidIcon,
+  FaSuse as SuseIcon,
+  FaTerminal as TerminalIcon,
+  FaTimes as TimesIcon,
+  FaUbuntu as UbuntuIcon,
+  FaUndoAlt as RetryIcon,
+  FaUser as UserIcon,
+  FaUsers as AccessIcon,
+  FaUsers as SharingIcon,
+  FaUsers as UsersIcon,
+  FaWindows as WindowsIcon,
+} from 'react-icons/fa'
+export {
+  FaApple as AppleIcon,
+  FaArrowsRotate as RefreshArrowsIcon,
+  FaDebian as DebianIcon,
+  FaFilterCircleXmark as FilterClearIcon,
+  FaInbox as NotificationInboxIcon,
+  FaLocationDot as IpAddressIcon,
+  FaRegFilePdf as PdfIcon,
+  FaRegFolderOpen as FolderOpenIcon,
+  FaUpRightFromSquare as NewWindowIcon,
+  FaWandMagicSparkles as CustomizeIcon,
+  FaXTwitter as XTwitterIcon,
+} from 'react-icons/fa6'
+export {
+  FiActivity as HealthMonitoringIcon,
+  FiAlertCircle as AlertCircleIcon,
+  FiChevronDown as ChevronDownStrokeIcon,
+  FiClock as ClockIcon,
+  FiDownload as DownloadFileIcon,
+  FiFile as FileIcon,
+  FiFileText as FileTextIcon,
+  FiHardDrive as DiskIcon,
+  FiRotateCcw as HistoryIcon,
+  FiUpload as UploadIcon,
+  FiZap as ZapIcon,
+} from 'react-icons/fi'
+export { GiSpy as ImpersonateIcon } from 'react-icons/gi'
+export {
+  GoPlus as PlusOutlineIcon,
+  GoRepoForked as ForkIcon,
+  GoSignOut as SignOutIcon,
+  GoSkip as ForbiddenIcon,
+  GoVideo as VideoIcon,
+} from 'react-icons/go'
+export {
+  GrCloudComputer as ComputeIcon,
+  GrInbox as InboxIcon,
+  GrServerCluster as ClusterIcon,
+  GrStorage as StorageIcon,
+  GrTasks as MonitorIcon,
+} from 'react-icons/gr'
+export {
+  HiCog as GearIcon,
+  HiDuplicate as DuplicateIcon,
+  HiOutlineArchive as ArchiveIcon,
+  HiOutlineClipboardCopy as ClipboardIcon,
+  HiOutlineHome as HomeIcon,
+  HiQuestionMarkCircle as TooltipIcon,
+  HiServer as ServerIcon,
+} from 'react-icons/hi'
+
+import { HiMiniCheckCircle as SuccessIcon } from 'react-icons/hi2'
+
+export { FiCopy as CopyIcon, FiX as XIcon } from 'react-icons/fi'
+export {
+  HiMiniLanguage as LanguageIcon,
+  HiMiniMinusCircle as SkipIcon,
+  HiMiniXCircle as FailIcon,
+  HiSparkles as SparklesIcon,
+} from 'react-icons/hi2'
+export { ImSpinner5 as RunningIcon } from 'react-icons/im'
+export {
+  IoIosNotifications as NotificationFillIcon,
+  IoMdBuild as BuildWorkflowIcon,
+  IoMdClose as CloseIcon,
+} from 'react-icons/io'
+export {
+  IoCloudUploadOutline as CloudUploadIcon,
+  IoDocumentTextOutline as DocumentIcon,
+  IoFileTrayFullOutline as FilesystemIcon,
+  IoHeart as FavoriteIcon,
+  IoHeartDislike as UnfavoriteIcon,
+  IoHeartOutline as FavoriteOutlineIcon,
+  IoInformationCircleOutline as InfoCircleIcon,
+  IoSettingsOutline as SettingsIcon,
+  IoWarningOutline as WarningIcon,
+} from 'react-icons/io5'
+export {
+  LuArrowRight as ArrowRightStrokeIcon,
+  LuBadgeCheck as LicenseIcon,
+  LuBrainCircuit as MlIcon,
+  LuCalendar as CalendarIcon,
+  LuCheck as CheckStrokeIcon,
+  LuChevronLeft as ChevronLeftIcon,
+  LuChevronRight as ChevronRightIcon,
+  LuExternalLink as ExternalLink,
+  LuEye as EyeIcon,
+  LuEyeOff as EyeOffIcon,
+  LuFolderTree as FolderTreeIcon,
+  LuIdCard as IdCardIcon,
+  LuLogs as EventsIcon,
+  LuMail as MailIcon,
+  LuMegaphone as MegaphoneIcon,
+  LuMoon as MoonIcon,
+  LuSettings2 as DisplayIcon,
+  LuSheet as SpreadsheetIcon,
+  LuShield as ShieldOutlineIcon,
+  LuSun as SunIcon,
+  LuX as XStrokeIcon,
+  LuZoomIn as ZoomInIcon,
+  LuZoomOut as ZoomOutIcon,
+} from 'react-icons/lu'
+export {
+  MdClear as ClearIcon,
+  MdDragHandle as DragHandleIcon,
+  MdInstallDesktop as InstallIcon,
+  MdOutlineAttachMoney as EnableCostIcon,
+  MdOutlineMoneyOff as DisableCostIcon,
+  MdPieChart as QuotaIcon,
+  MdRefresh as RefreshIcon,
+  MdReplay as ReplayIcon,
+  MdSmartphone as MFA,
+} from 'react-icons/md'
+export {
+  PiArrowBendUpRightBold as OpenInNewGraphIcon,
+  PiPlugsConnectedFill as ConnectIcon,
+  PiRectangleDashed as KubernetesNamespaceIcon,
+  PiShareBold as ShareIcon,
+} from 'react-icons/pi'
+export {
+  SiAnthropic as AnthropicIcon,
+  SiHelm as HelmIcon,
+  SiKubernetes as KubernetesIcon,
+  SiOpenai as OpenAIIcon,
+} from 'react-icons/si'
+export {
+  TbAlertTriangle as AlertIcon,
+  TbAlertTriangleFilled as AlertFillIcon,
+  TbApi as APIIcon,
+  TbBrain as ThinkingIcon,
+  TbBuildingTunnel as TunnelIcon,
+  TbEdit as NewChatIcon,
+  TbLayoutSidebar as SidebarIcon,
+  TbLayoutSidebarLeftCollapse as SidebarOpenIcon,
+  TbLayoutSidebarRightCollapse as SidebarCloseIcon,
+  TbUser as EnableUserIcon,
+  TbUserOff as DisableUserIcon,
+  TbWorldShare as EndpointIcon,
+  TbWorldWww as SubdomainIcon,
+} from 'react-icons/tb'
+export {
+  TiArrowSortedDown as SortDownIcon,
+  TiArrowSortedUp as SortUpIcon,
+  TiArrowUnsorted as SortUnsortedIcon,
+  TiCancel as CancelIcon,
+} from 'react-icons/ti'
+export {
+  VscChromeMinimize as MinimizeIcon,
+  VscJson as JsonIcon,
+  VscLayoutSidebarLeft as EditorIcon,
+  VscPass as CheckMarkIcon,
+  VscSplitHorizontal as SplitIcon,
+  VscTerminalPowershell as PowershellIcon,
+  VscTerminalPowershell as RunWorkflowIcon,
+} from 'react-icons/vsc'
+export { ChartZoomIcon, ErrorIcon, InfoIcon, InfrastructureLayersIcon, MoneyIcon, SuccessIcon }
+
+interface IBaseCheckmarkProps {
+  className?: string
+  colored?: boolean
+}
+
+export function SuccessCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
+  return <SuccessIcon className={cx(colored && 'text-green-500', className)} />
+}
+
+export function ErrorCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
+  return <ErrorIcon className={cx(colored && 'text-red-400', className)} />
+}
+
+export function LoaderIcon({ className, ...props }: IconBaseProps & { className?: string }) {
+  return <UnexportedLoaderIcon className={cx('animate-spin', className)} {...props} />
+}

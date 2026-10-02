@@ -1,0 +1,325 @@
+/* Chat-specific styles: markdown rendering (streamdown output) and the
+ * streaming/thinking animations. */
+
+/* Answers are read at length, so their ink sits further from the page than
+ * the theme's UI text: pulled toward black on a light scheme and toward white
+ * on a dark one, from whatever ink the theme (or an org palette) supplies. */
+.chat-ink {
+  --chat-ink: light-dark(
+    color-mix(in oklab, var(--theme-panel, #000) 60%, black),
+    color-mix(in oklab, var(--theme-panel, #fff) 75%, white)
+  );
+  color: var(--chat-ink);
+  --tw-prose-body: var(--chat-ink);
+  --tw-prose-headings: var(--chat-ink);
+  --tw-prose-bold: var(--chat-ink);
+  --tw-prose-code: var(--chat-ink);
+}
+
+/* Links */
+.markdown a {
+  color: var(--theme-link, #428bca);
+  text-decoration: none;
+}
+.markdown a:hover {
+  text-decoration: underline;
+}
+
+/* Lists hang their markers in the gutter so a wrapped line lines up with the
+ * text above it, not with the number. Streamdown sets them inside. */
+.markdown ol,
+.markdown ul {
+  list-style-position: outside;
+  padding-left: 1.625em;
+}
+.markdown li {
+  padding-left: 0.25em;
+}
+
+/* Horizontal rules */
+.markdown hr {
+  display: block;
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--theme-border, #e5e7eb);
+  margin: 1.5em 0;
+  padding: 0;
+}
+
+/* Inline code — code blocks are styled by Streamdown. A tint of the ink and
+ * no border: a hard outline turns every identifier into a keycap. */
+.markdown code {
+  /* rem, not em: a table cell or list already sized down would size it twice. */
+  font-size: 0.875rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  padding: 0.125em 0.375em;
+  background-color: color-mix(in oklab, var(--theme-panel, #000) 8%, transparent);
+  border-radius: 0.25rem;
+  /* Identifiers carry a colour of their own so they read as code at a glance
+   * without the weight the plugin gives them: the theme's link blue, which
+   * every palette already keeps legible on its surfaces. */
+  color: var(--theme-link, #2f6fa8);
+  font-weight: 400;
+}
+/* Reset inline code styles when inside a pre (code block) */
+.markdown pre code {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* KaTeX overrides */
+.katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.katex {
+  font-size: 1.1em;
+}
+
+/* Subscript and superscript */
+.markdown sub,
+.markdown sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+.markdown sup {
+  top: -0.5em;
+}
+.markdown sub {
+  bottom: -0.25em;
+}
+
+/* Images */
+.markdown img {
+  border: 0;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  border-radius: 0.5rem;
+}
+
+/* Streamdown tables: the body's own type,
+ * hairlines at a tenth of the ink, a header on a five-percent tint, and the
+ * copy/download controls only while the pointer is over the table. */
+.markdown [data-streamdown="table-wrapper"] {
+  --table-line: color-mix(in oklab, var(--theme-panel, #000) 10%, transparent);
+  position: relative;
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+.markdown [data-streamdown="table-wrapper"] > div:first-child {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  z-index: 1;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border-radius: 0.375rem;
+  background: var(--theme-panel-bg, #fff);
+  border: 1px solid var(--table-line);
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.markdown [data-streamdown="table-wrapper"]:hover > div:first-child,
+.markdown [data-streamdown="table-wrapper"]:focus-within > div:first-child {
+  opacity: 1;
+}
+.markdown [data-streamdown="table-wrapper"] > div:last-child {
+  padding: 0;
+  border: 1px solid var(--table-line);
+  border-radius: 0.5rem;
+  background: transparent;
+}
+.markdown [data-streamdown="table-wrapper"] table {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.markdown [data-streamdown="table"] th {
+  padding: 0.4375rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: inherit;
+  background: color-mix(in oklab, var(--theme-panel, #000) 5%, transparent);
+  border-bottom: 1px solid var(--table-line);
+}
+.markdown [data-streamdown="table"] td {
+  padding: 0.4375rem 0.75rem;
+  /* Streamdown sizes cells down with its own class; the table is body type. */
+  font-size: 1rem;
+  line-height: 1.5;
+  vertical-align: top;
+  color: inherit;
+  /* A prose column keeps enough room to read; a wide table scrolls instead. */
+  min-width: 9rem;
+}
+.markdown [data-streamdown="table"] tbody tr {
+  border-bottom: 1px solid var(--table-line);
+}
+.markdown [data-streamdown="table"] tbody tr:last-child {
+  border-bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown [data-streamdown="table-wrapper"] > div:first-child {
+    transition: none;
+  }
+}
+
+/* Streamdown code blocks — tighten spacing, remove inner double-border */
+.markdown [data-streamdown="code-block"] {
+  padding: 0.375rem 0.5rem 0;
+  margin: 0.5em 0;
+  gap: 0;
+}
+.markdown [data-streamdown="code-block-header"] {
+  padding: 0.25rem 0.25rem;
+}
+.markdown [data-streamdown="code-block-body"] {
+  border: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+  padding: 0;
+}
+/* Remove prose pre margin and code block body inner pre margin */
+.markdown [data-streamdown="code-block-body"] pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  /* Code reads looser than prose; Streamdown's text-sm line is too tight. */
+  line-height: 1.6;
+}
+
+/* Shiki dual-theme color overrides (standard Shiki approach).
+   Streamdown uses Tailwind dark: arbitrary-value classes for theme switching,
+   but Tailwind v4's source scanner can misparse them from minified JS —
+   generating broken selectors that apply dark bg unconditionally while
+   missing the text color classes entirely. Override both light and dark
+   explicitly to ensure correct colors in all modes.
+   See: https://shiki.style/guide/dual-themes#class-based-dark-mode */
+
+/* Light mode: use the primary Shiki theme (--sdm-bg/--sdm-c) */
+.markdown [data-streamdown="code-block-body"] pre {
+  background-color: var(--sdm-bg, inherit) !important;
+  color: var(--sdm-fg, inherit);
+}
+.markdown [data-streamdown="code-block-body"] pre code > span > span {
+  color: var(--sdm-c, inherit);
+}
+
+/* Dark mode: switch to --shiki-dark variants */
+.dark .markdown [data-streamdown="code-block-body"] pre {
+  background-color: var(--shiki-dark-bg, var(--sdm-bg, inherit)) !important;
+  color: var(--shiki-dark, var(--sdm-fg, inherit));
+}
+.dark .markdown [data-streamdown="code-block-body"] pre code > span > span {
+  color: var(--shiki-dark, inherit);
+  font-style: var(--shiki-dark-font-style, inherit);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+  text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+.dark .markdown [data-streamdown="code-block-body"] pre code > span > span[style*="--sdm-tbg"] {
+  background-color: var(--shiki-dark-bg, var(--sdm-tbg));
+}
+
+/* Remove prose backtick pseudo-elements on inline code */
+.markdown code::before,
+.markdown code::after {
+  content: none !important;
+}
+
+/* Task lists (checkboxes) */
+.markdown input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+.markdown li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.5em;
+}
+
+/* Touch device: always show chat actions */
+@media (hover: none) {
+  .chat-actions,
+  .chat-meta {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Long finished replies clamp with a bottom fade; mask keeps the fade
+ * background-agnostic across themes. */
+.chat-message-clamp {
+  max-height: 600px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black calc(100% - 96px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 96px), transparent);
+}
+
+/* Theme-aware input styling (matches the host app's .theme-input; defined
+ * here too so the edit textarea is styled in standalone use) */
+.theme-input {
+  background-color: var(--theme-input-bg, #f9fafb);
+  border-color: var(--theme-border, #d1d5db);
+  color: var(--theme-app, #374151);
+}
+
+.theme-input:focus {
+  border-color: var(--theme-element, #3b82f6);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--theme-element, #3b82f6);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@utility animate-shimmer {
+  animation: shimmer 1.75s linear infinite;
+  background-size: 200% 100%;
+}
+
+@utility text-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--theme-muted-text-color, #6a7282) 0%,
+    var(--theme-app, #d1d5db) 20%,
+    var(--theme-muted-text-color, #6a7282) 40%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Entrance animation for chat messages (CSS replacement for a JS motion lib).
+ * Only `from` is defined so elements settle at their natural styles (queued
+ * messages render at reduced opacity). */
+@keyframes chat-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@utility animate-chat-enter {
+  animation: chat-fade-in-up 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-chat-enter {
+    animation: none;
+  }
+}

@@ -1,0 +1,57 @@
+/* Page defaults and native controls, kept out of theme.css so package
+ * entries can import them into their own cascade layer (theme.css's @utility
+ * rules cannot be layered). Base layer so utilities still win. */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--theme-app);
+    background-color: var(--theme-app-bg);
+  }
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--theme-border, currentColor);
+  }
+
+  input,
+  textarea {
+    border-radius: 0.25rem;
+    border: 1px solid var(--theme-border, #d1d5db);
+    padding: 0.25rem 0.5rem;
+    min-height: 1.25rem;
+    font-size: 14px;
+    background-color: var(--theme-input-bg, #f9fafb);
+    color: var(--theme-app, #000000);
+  }
+  input:disabled,
+  textarea:disabled,
+  input.disabled,
+  textarea.disabled {
+    cursor: not-allowed;
+    background-color: var(--theme-input-disabled-bg, #f3f4f6);
+    color: var(--theme-input-disabled-text, #9ca3af);
+  }
+  .form-label,
+  .form-label-compact,
+  .form-label-top {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    font-weight: 300;
+    height: 34px;
+    width: 13rem;
+  }
+  .form-label-compact {
+    width: fit-content;
+    margin-right: 0.5rem;
+  }
+  .form-label-top {
+    height: 20px;
+  }
+}

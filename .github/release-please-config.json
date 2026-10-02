@@ -7,7 +7,10 @@
       "release-type": "go",
       "component": "foundation",
       "include-component-in-tag": false,
-      "exclude-paths": ["packages", ".github"],
+      "exclude-paths": [
+        "packages",
+        ".github"
+      ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
     "packages/problem": {
@@ -24,6 +27,14 @@
       "release-type": "node",
       "component": "lint",
       "pull-request-title-pattern": "chore(lint): release ${version}"
+    },
+    "packages/ui": {
+      "release-type": "node",
+      "component": "ui",
+      "exclude-paths": [
+        "packages/ui/scripts"
+      ],
+      "pull-request-title-pattern": "chore(ui): release ${version}"
     }
   }
 }

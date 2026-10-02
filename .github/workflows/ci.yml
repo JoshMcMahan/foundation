@@ -64,3 +64,5 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # Installs the packed tarball into a fresh project, as a consumer would.
+      - run: pnpm -F @parallelworks/ui verify:pack

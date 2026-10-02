@@ -1,0 +1,5 @@
+dist/
+# publint and `pnpm pack` leave a tarball here
+*.tgz
+storybook-static/
+*storybook.log

@@ -2,8 +2,23 @@ packages:
   - '*'
 
 minimumReleaseAge: 1440
+# First-party packages publish from our own CI with provenance, so they skip the
+# delay and the trust check.
+minimumReleaseAgeExclude:
+  - '@parallelworks/*'
+trustPolicyExclude:
+  - '@parallelworks/*'
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 
 # pnpm publish checks the branch; releases come from canary.
 publishBranch: canary
+
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: false
+
+overrides:
+  # semver 6 predates provenance, so the trust policy refuses it; nothing in the
+  # tree needs the old major.
+  'semver@<7.0.0': '>=7.7.4'

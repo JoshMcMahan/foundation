@@ -1,0 +1,36 @@
+/* Self-contained stylesheet entry for consumers without their own Tailwind
+ * build: `pnpm build:css` compiles this to dist/styles.css. Tailwind v4
+ * consumers should instead import theme.css and base.css (plus ai.css for the
+ * chat surfaces) and add an `@source` for this package. */
+
+/* Rules nest in the pw-ui layer, declared up front, so the sheet's precedence
+ * comes from the layer order rather than from where a bundler emits it. */
+@layer pw-ui;
+
+@import "tailwindcss" layer(pw-ui);
+@import "streamdown/styles.css" layer(pw-ui);
+@import "./styles/theme.css";
+@import "./styles/base.css" layer(pw-ui);
+@import "./ai/ai.css";
+@source "../node_modules/streamdown/dist/*.js";
+@source "./**/*.{ts,tsx}";
+/* Storybook stories are a dev-only consumer; their classes must not ship. */
+@source not "./**/*.stories.tsx";
+@source not "./ai/stories/**";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Streamdown's markup uses semantic token classes (bg-background,
+ * divide-border, text-muted-foreground, ...). Tailwind only generates those
+ * utilities when the --color-* tokens exist in the theme, so bridge them to
+ * the --theme-* contract here — without this block the compiled components
+ * reference classes the stylesheet never defines. */
+@theme {
+  --color-background: var(--theme-app-bg, #ffffff);
+  --color-foreground: var(--theme-app, #111827);
+  --color-muted: var(--theme-muted-panel-bg, #f3f4f6);
+  --color-muted-foreground: var(--theme-muted-text-color, #6b7280);
+  --color-border: var(--theme-border, #e5e7eb);
+  --color-card: var(--theme-panel-bg, #ffffff);
+  --color-primary: var(--theme-link, #2563eb);
+  --color-primary-foreground: #ffffff;
+}

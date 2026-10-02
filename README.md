@@ -13,6 +13,7 @@ packages that several applications use the same way.
 | [`pgdb`](pgdb) (Go) | An application's own PostgreSQL schema: a pool scoped to it, hopper's job tables and goose migrations in it, and a fresh schema per test |
 | [`spa`](spa) (Go) | Serves a Vite app from the Go server: the embedded build in production, the Vite dev server in development |
 | [`@parallelworks/problem`](packages/problem) (npm) | `ApiError`, `useErrorMessage()`, the shared codes' messages in five languages, and a Biome lint rule |
+| [`@parallelworks/ui`](packages/ui) (npm) | React components on one theme contract: primitives, lists, forms, a job graph, a code editor, a log viewer, a file explorer and an AI chat, each on its own subpath |
 
 ## Problem details
 

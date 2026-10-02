@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    // Vite emits the JavaScript; tsc only contributes declarations.
+    "emitDeclarationOnly": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.stories.tsx",
+    "src/ai/stories",
+    "src/test",
+    ".storybook"
+  ]
+}

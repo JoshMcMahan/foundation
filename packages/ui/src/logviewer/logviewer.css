@@ -1,0 +1,70 @@
+/* Log viewer search highlighting */
+mark.search-highlight {
+  background-color: rgba(251, 191, 36, 0.4);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/*
+ * Scheme-aware ANSI colors for LogViewer.
+ *
+ * The `anser` library is invoked with { use_classes: true }, so ANSI codes
+ * become classes like `ansi-white-fg` / `ansi-black-bg` rather than inline
+ * styles. Rules below remap only the combinations that would be unreadable
+ * against the log surface — white/bright-white on a light surface, black on
+ * a dark surface, and a few low-contrast hues. Colors that already read well
+ * pass through as `currentcolor`/`transparent` so users still see the intent
+ * of their ANSI output. `light-dark()` follows the host's `color-scheme`, so
+ * no component ever branches on a scheme.
+ */
+.ansi-white-fg,
+.ansi-bright-white-fg {
+  color: light-dark(var(--theme-app, #111827), currentcolor);
+}
+.ansi-black-fg {
+  color: light-dark(currentcolor, var(--theme-muted-text-color, #9ca3af));
+}
+.ansi-red-fg {
+  color: light-dark(#991b1b, #f87171);
+}
+.ansi-bright-red-fg {
+  color: light-dark(#b91c1c, currentcolor);
+}
+.ansi-green-fg {
+  color: light-dark(#166534, #4ade80);
+}
+.ansi-bright-green-fg {
+  color: light-dark(#15803d, currentcolor);
+}
+.ansi-yellow-fg {
+  color: light-dark(#a16207, #fde047);
+}
+.ansi-bright-yellow-fg {
+  color: light-dark(#b45309, currentcolor);
+}
+.ansi-blue-fg {
+  color: light-dark(#1e40af, #60a5fa);
+}
+.ansi-bright-blue-fg {
+  color: light-dark(#1d4ed8, currentcolor);
+}
+.ansi-magenta-fg {
+  color: light-dark(#86198f, #e879f9);
+}
+.ansi-bright-magenta-fg {
+  color: light-dark(#a21caf, currentcolor);
+}
+.ansi-cyan-fg {
+  color: light-dark(#155e75, #67e8f9);
+}
+.ansi-bright-cyan-fg {
+  color: light-dark(#0e7490, currentcolor);
+}
+.ansi-white-bg,
+.ansi-bright-white-bg {
+  background-color: light-dark(#e5e7eb, transparent);
+}
+.ansi-black-bg {
+  background-color: light-dark(transparent, #374151);
+}

@@ -1,0 +1,248 @@
+/* The unified theme contract: `theme-*` utilities backed by a closed set of
+ * `--theme-*` CSS variables (see src/theme/index.ts for the full token list —
+ * every token is derivable from an {accent, background, contrast} seed per
+ * surface via deriveTheme()). Hosts override the variables at runtime (e.g.
+ * an org theme); the :root block only supplies defaults for standalone use.
+ *
+ * Sidebar tokens (--theme-bg, --theme-sidebar-*) are part of the contract but
+ * intentionally have no :root defaults: hosts supply per-site fallbacks at the
+ * use sites, and a global default here would override them. */
+
+:root {
+  --theme-app-bg: #ffffff;
+  --theme-app: #000000;
+  --theme-panel-bg: #ffffff;
+  --theme-panel: #000000;
+  --theme-muted-panel-bg: #f8f9fa;
+  --theme-muted-panel-color: #5f6b76;
+  --theme-muted-text-color: #5f6b76;
+  --theme-border: #d1d5db;
+  --theme-element: #06354f;
+  --theme-element-text: #ffffff;
+  --theme-element-hover: #053047;
+  --theme-hover: #f3f4f6;
+  --theme-hover-text: #000000;
+  --theme-link: #2f6fa8;
+  --theme-input-bg: #f9fafb;
+  --theme-input: #3b82f6;
+  --theme-input-disabled-bg: #f3f4f6;
+  --theme-input-disabled-text: #9ca3af;
+  --theme-card-bg: #ffffff;
+  --theme-card-border: rgba(0, 0, 0, 0.04);
+  --theme-card-hover: #fafafa;
+  --theme-accent: #06354f;
+  --theme-accent-text: #ffffff;
+  --theme-focus-ring: rgba(37, 99, 235, 0.2);
+  --theme-hover-overlay: rgba(0, 0, 0, 0.02);
+  --theme-success: #16a34a;
+  --theme-success-muted: rgba(22, 163, 74, 0.1);
+  --theme-error: #dc2626;
+  --theme-error-muted: rgba(220, 38, 38, 0.1);
+  --theme-warning: #d97706;
+  --theme-warning-muted: rgba(217, 119, 6, 0.1);
+  --theme-info: #2563eb;
+  --theme-info-muted: rgba(37, 99, 235, 0.1);
+  --theme-favorite: #e11d48;
+  --theme-favorite-muted: rgba(225, 29, 72, 0.1);
+  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --theme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --theme-auth-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.2), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+@utility theme-element {
+  background-color: var(--theme-element, #06354f);
+  color: var(--theme-element-text, #ffffff);
+}
+
+@utility theme-app {
+  background-color: var(--theme-app-bg, #ffffff);
+  color: var(--theme-app, #000000);
+}
+
+@utility theme-panel {
+  background-color: var(--theme-panel-bg, #fff);
+  color: var(--theme-panel, #000);
+}
+
+@utility theme-muted-panel {
+  background-color: var(--theme-muted-panel-bg, #f8f9fa);
+  color: var(--theme-muted-panel-color, #5f6b76);
+}
+
+@utility theme-muted-text {
+  color: var(--theme-muted-text-color, #5f6b76);
+}
+
+@utility theme-text {
+  color: var(--theme-app, #000000);
+}
+
+/* Utility for theme-aware hover states */
+@utility theme-hover {
+  transition:
+    background-color 0.15s ease-in-out,
+    color 0.15s ease-in-out;
+  background-color: var(--theme-hover, #f3f4f6);
+  color: var(--theme-hover-text, #000000);
+}
+
+/* Utility for theme-aware borders */
+.theme-border {
+  border-color: var(--theme-border, #d1d5db);
+}
+
+.theme-hover-text {
+  color: var(--theme-hover-text);
+}
+
+/* Utility for theme-aware input styling */
+.theme-input {
+  background-color: var(--theme-input-bg, #f9fafb);
+  border-color: var(--theme-border, #d1d5db);
+  color: var(--theme-app, #374151);
+}
+
+.theme-input:focus {
+  border-color: var(--theme-element, #3b82f6);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--theme-element, #3b82f6);
+}
+
+.theme-input:disabled,
+.theme-input.disabled {
+  cursor: not-allowed;
+  background-color: var(--theme-input-disabled-bg, #f3f4f6);
+  color: var(--theme-input-disabled-text, #9ca3af);
+}
+
+.tooltip {
+  color: var(--theme-muted-text-color, #5f6b76);
+}
+.tooltip:hover {
+  color: var(--theme-app, #000000);
+}
+
+.config-tips .multi-line {
+  text-align: left !important;
+}
+
+/* Theme-aware scrollbars */
+.theme-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border, #d1d5db) var(--theme-panel-bg, #ffffff);
+}
+
+.theme-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-track {
+  background: var(--theme-panel-bg, #ffffff);
+  border-radius: 4px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--theme-border, #d1d5db);
+  border-radius: 4px;
+  border: 1px solid var(--theme-panel-bg, #ffffff);
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-element, #3b82f6);
+}
+
+.theme-scrollbar::-webkit-scrollbar-corner {
+  background: var(--theme-panel-bg, #ffffff);
+}
+
+/* Small theme-aware scrollbars */
+.theme-scrollbar-small {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border, #d1d5db) var(--theme-panel-bg, #ffffff);
+}
+
+.theme-scrollbar-small::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.theme-scrollbar-small::-webkit-scrollbar-track {
+  background: var(--theme-panel-bg, #ffffff);
+  border-radius: 2px;
+}
+
+.theme-scrollbar-small::-webkit-scrollbar-thumb {
+  background: var(--theme-border, #d1d5db);
+  border-radius: 2px;
+}
+
+.theme-scrollbar-small::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-element, #3b82f6);
+}
+
+.theme-scrollbar-small::-webkit-scrollbar-corner {
+  background: var(--theme-panel-bg, #ffffff);
+}
+
+/* Button utilities matching the host app's .btn family, so packaged surfaces
+ * (workflow views, storage explorer) style identically for standalone
+ * consumers. A host that defines its own .btn family keeps its definitions. */
+@utility btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: all 0.15s ease-in-out;
+}
+@utility btn-info {
+  background-color: var(--theme-element, #06354f);
+  color: var(--theme-element-text, #ffffff);
+}
+@utility btn-neutral {
+  background-color: var(--theme-input-bg, #ffffff);
+  border: 1px solid var(--theme-border, #d1d5db);
+}
+@utility btn-destructive {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+@keyframes logo-loader-ripple {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+.logo-loader-ring {
+  animation: logo-loader-ripple 2.2s ease-in-out infinite backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader-ring {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Geist itself loads from fonts.css; without it these fall back to system-ui. */
+@theme {
+  --font-geist-sans: "Geist Sans";
+  --font-geist-mono: "Geist Mono";
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+    monospace;
+}
