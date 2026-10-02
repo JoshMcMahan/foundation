@@ -67,9 +67,12 @@ root.render(
 ```sh
 parallelworks-i18n check --dir src/i18n/locales      # in CI
 parallelworks-i18n add new-messages.json --dir src/i18n/locales
+parallelworks-i18n unused --dir src/i18n/locales --src src --keep apiErrors
 ```
 
 `check` fails when a locale is missing a key or has one the default doesn't, when a message isn't valid ICU, when a translation uses different arguments or rich-text tags than the default, or when a split layout's `index.ts` is stale. `add` merges messages without changing an existing one, and is safe to run from several processes at once. Its file is one locale's tree, or trees keyed by locale.
+
+`unused` fails when a message in the default locale is never referenced. It reads the source with a parser, not a search: a key is used when a `useTranslations('ns')` or `getTranslations('ns')` translator, or a parameter typed `TFunction<'ns'>`, calls it (`t('key')`, `t.rich`, `t.markup`, `t.has`); when it sits under a subtree read whole, by `t.raw('key')`, a template key such as `` t(`states.${s}`) ``, a fully dynamic `t(key)` or `useMessages().ns`; or when its full dotted path appears as a string literal. A translator passed to a helper untyped matches by key suffix. It would rather miss an unused key than report a used one. `--keep` names namespaces read by key outside the source.
 
 `@parallelworks/i18n/node` exports the same functions and the catalog reader for an app's own scripts.
 

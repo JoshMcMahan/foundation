@@ -58,6 +58,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@babel/parser": "^7.29.9",
     "@formatjs/icu-messageformat-parser": "^3.5.20"
   },
   "peerDependencies": {
