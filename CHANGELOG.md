@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/parallelworks/foundation/compare/v0.8.0...v0.9.0) (2026-10-02)
+
+
+### Features
+
+* **spa:** the app shell is gzipped and revalidates with an ETag, and public files revalidate too ([#38](https://github.com/parallelworks/foundation/issues/38)) ([eb58b0b](https://github.com/parallelworks/foundation/commit/eb58b0baf1f1b8835ce11b33c1578e10d13d4859))
+
 ## [0.8.0](https://github.com/parallelworks/foundation/compare/v0.7.0...v0.8.0) (2026-10-02)
 
 
