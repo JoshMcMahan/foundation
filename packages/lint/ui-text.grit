@@ -10,7 +10,9 @@ pattern words() {
   or {
     JsStringLiteralExpression() as $s where { $s <: r"(?s).*\p{L}\p{L}.*" },
     JsTemplateExpression(elements=contains JsTemplateChunkElement() as $c where {
-      $c <: r"(?s).*\p{L}\p{L}.*"
+      $c <: r"(?s).*\p{L}\p{L}.*",
+      // A path joined to a value: `${origin}/api/webhook`.
+      $c <: not r"^\S*/\S*$"
     })
   }
 }
@@ -75,7 +77,8 @@ or {
   },
   // label='Display name', title={'Details'}.
   JsxAttribute(name=$name, initializer=$init) where {
-    $name <: r"^(?:label|title|placeholder|aria-label|aria-description|alt|tooltip|description|helpText|helperText|emptyText|emptyMessage|heading|subheading|subtitle|confirmLabel|enabledTooltip|disabledTooltip)$",
+    // Named for what they show: label, submitLabel, emptyText, errorMessage, ...
+    $name <: r"^(?:label|title|placeholder|alt|tooltip|description|text|message|hint|heading|subheading|subtitle|helperText|aria-(?:label|description|placeholder|roledescription|valuetext)|[a-z][A-Za-z]*(?:Label|Text|Title|Description|Placeholder|Message|Tooltip|Heading|Hint))$",
     if ($name <: r"^placeholder$") {
       $init <: JsxAttributeInitializerClause(value=or {
         JsxString() as $text where {

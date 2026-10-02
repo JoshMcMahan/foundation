@@ -39,6 +39,13 @@ export function Bad() {
       {(`Count ${name}`) /* expect */}
       <Field label={open ? 'Yes please' : t('no')} /> {/* expect */}
       <button type='button' aria-description='Opens the dialog' /> {/* expect */}
+      <Field submitLabel='Save changes' /> {/* expect */}
+      <Field emptyStateText={open ? 'Nothing here yet' : t('none')} /> {/* expect */}
+      <Field errorMessage='Name is required' /> {/* expect */}
+      <Field message='Something went wrong' /> {/* expect */}
+      <Field hint='Use lowercase letters' /> {/* expect */}
+      <div role='slider' aria-valuetext='Half full' /> {/* expect */}
+      <div aria-roledescription='Slide carousel' /> {/* expect */}
       <input placeholder={open ? 'Search clusters' : 'localhost'} /> {/* expect */}
     </div>
   )

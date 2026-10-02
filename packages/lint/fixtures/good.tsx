@@ -5,6 +5,7 @@ declare const toast: ((m: string) => void) & {
 declare const t: (k: string, v?: Record<string, string>) => string
 declare const name: string
 declare const open: boolean
+declare const error: string | undefined
 declare const Field: (p: { label?: string; className?: string }) => null
 
 export const columns = [
@@ -43,6 +44,12 @@ export function Good() {
       <input placeholder={t('search')} />
       <img alt='' src='/logo.png' />
       <Field label={t('displayName')} className='w-full' />
+      <Field textColor='text-red-500' submitLabel={t('save')} variant='primary' />
+      <Field kind='warning' iconName='check-circle' />
+      <Field errorMessage={error ?? t('unknown')} />
+      <Field helperText={`${name}/api/integrations/github/webhook`} />
+      {'···'}
+      {'⋯'}
       <button type='button' aria-label={t('close')} />
       {/* biome-ignore lint/plugin: product name */}
       <img alt='ACTIVATE Platform' src='/logo.png' />
