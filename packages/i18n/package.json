@@ -1,6 +1,6 @@
 {
   "name": "@parallelworks/i18n",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Localization for React apps on use-intl: locale negotiation, a provider, lazily loaded catalogs and catalog checks",
   "license": "Apache-2.0",
   "repository": {
