@@ -1,0 +1,22 @@
+{
+  "allTypes": "모든 오류 코드",
+  "anyOther4xx": "기타 4xx",
+  "anyOther5xx": "기타 5xx",
+  "code": "코드",
+  "example": "응답 예시",
+  "fix": "해결 방법",
+  "intro": "이 API가 반환하는 모든 오류에는 고정된 코드가 있습니다. 메시지는 사용자의 언어로 작성되며, 코드는 프로그램이 확인하는 용도이고 이 페이지로 연결됩니다.",
+  "links": "자세히 알아보기",
+  "message": "표시되는 메시지",
+  "params": "매개변수",
+  "reference": "오류 참조",
+  "rules": "필드 규칙",
+  "rulesDoc": "유효성 검사 문제의 errors에 있는 각 항목은 해당 필드가 통과하지 못한 규칙을 나타냅니다.",
+  "status": "상태",
+  "statusOnly": "상태만",
+  "statusOnlyDoc": "type이 about:blank인 문제는 HTTP 상태 외에 다른 의미가 없습니다. 클라이언트는 상태에서 코드를 도출합니다.",
+  "technical": "기술 세부 정보",
+  "type": "유형",
+  "validation": "유효성 검사",
+  "why": "발생한 이유"
+}

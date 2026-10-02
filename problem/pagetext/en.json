@@ -1,0 +1,22 @@
+{
+  "allTypes": "All error codes",
+  "anyOther4xx": "any other 4xx",
+  "anyOther5xx": "any other 5xx",
+  "code": "Code",
+  "example": "Example response",
+  "fix": "How to fix it",
+  "intro": "Every error this API returns has a stable code. The message is written in your language; the code is for programs to check, and links here.",
+  "links": "Learn more",
+  "message": "What you see",
+  "params": "Params",
+  "reference": "Error reference",
+  "rules": "Field rules",
+  "rulesDoc": "Each entry in a validation problem's errors names the rule its field failed:",
+  "status": "Status",
+  "statusOnly": "Status only",
+  "statusOnlyDoc": "A problem whose type is about:blank means nothing beyond its HTTP status. Clients derive its code from the status:",
+  "technical": "Technical details",
+  "type": "Type",
+  "validation": "Validation",
+  "why": "Why this happened"
+}

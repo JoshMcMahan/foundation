@@ -66,7 +66,7 @@ func TestRoutes(t *testing.T) {
 		{"/api/v1/items", "items", "", 200},
 		{"/api/v1/nope", `"status":404`, problem.MediaType, 404},
 		{"/healthz", "", "", 200},
-		{"/problems/", "Problem types", "text/html", 200},
+		{"/problems/", "Error reference", "text/html", 200},
 		{"/issues/1", "<title>app</title>", "text/html", 200},
 		{"/_build/app-abc.js", "console.log", "", 200},
 	}

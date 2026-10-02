@@ -38,6 +38,11 @@ type Options struct {
 	APIPrefix string
 	// Problems are the application's problem types, documented at /problems/.
 	Problems []*problem.Registry
+	// Messages and Docs are the application's problem messages and page
+	// guidance; the /problems/ pages use them in the reader's language, which
+	// Locales picks.
+	Messages []*problem.Catalog
+	Docs     []*problem.Docs
 	// Ready is checked by /readyz. Nil pingers are skipped.
 	Ready map[string]Pinger
 	// Web is the built single-page app (see spa.Handler). Nil serves no app.
@@ -108,7 +113,11 @@ func New(opts Options) http.Handler {
 	mux.HandleFunc(opts.APIPrefix, func(w http.ResponseWriter, r *http.Request) {
 		problem.Write(w, problem.Status(http.StatusNotFound, "no API operation matches "+r.Method+" "+r.URL.Path))
 	})
-	mux.Handle("GET /problems/", problem.Handler(opts.Problems...))
+	mux.Handle("GET /problems/", problem.Pages(problem.PagesOptions{
+		Registries: opts.Problems,
+		Localizer:  &problem.Localizer{Locale: localeOf(opts.Locales), Catalogs: opts.Messages},
+		Docs:       opts.Docs,
+	}))
 	if opts.Web != nil {
 		mux.Handle("/", appHandler(opts))
 	}
@@ -220,4 +229,13 @@ func Serve(ctx context.Context, l Listen, handler http.Handler, logger *slog.Log
 		return err
 	}
 	return nil
+}
+
+// localeOf negotiates with locales, or with Accept-Language alone when the
+// application has none.
+func localeOf(locales spa.Locales) func(http.Header) string {
+	if len(locales.Available) == 0 {
+		return nil
+	}
+	return locales.NegotiateHeader
 }

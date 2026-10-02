@@ -1,0 +1,51 @@
+{
+  "invalid_request": {
+    "why": "The server couldn't act on the request as sent. Something in it, such as a value, a header or the order of steps, isn't something this operation accepts, and no more specific problem type applies.",
+    "fix": ["Read the problem's detail: it says what the server objected to.", "Compare the request with the operation's documentation in the API reference.", "Retrying the same request will fail the same way; change it first."]
+  },
+  "unauthenticated": {
+    "why": "The request didn't prove who is making it: there was no credential, or the session, token or API key has expired or been revoked.",
+    "fix": ["Sign in again, or for the CLI run the login command again.", "For an API key or token, check it hasn't expired or been revoked, and create a new one if it has.", "Send the credential in the Authorization header, or the session cookie, with every request."]
+  },
+  "forbidden": {
+    "why": "You are signed in, but your account doesn't have permission for this action on this resource.",
+    "fix": ["Check you are working with the right account and organization.", "Ask the resource's owner or an administrator to grant you access.", "If you shared access recently, sign out and back in so your session picks it up."]
+  },
+  "not_found": {
+    "why": "Nothing exists at this address: the resource was deleted, its name changed, it belongs to someone else you can't see, or the address has a typo.",
+    "fix": ["Check the name or ID in the address.", "List the resources you can see to find the right one.", "If someone shared it with you, ask them whether it still exists."]
+  },
+  "conflict": {
+    "why": "The request conflicts with the resource's current state: something else changed it first, or the action isn't possible in the state it's in.",
+    "fix": ["Fetch the resource again to see its current state.", "Wait for any operation already running on it to finish.", "Repeat your change against the current version."]
+  },
+  "rate_limited": {
+    "why": "Too many requests arrived in a short time, so the server is asking this client to slow down.",
+    "fix": ["Wait before retrying. When the response has a Retry-After header, wait that long.", "Retry with exponential backoff rather than immediately.", "Batch or cache requests that repeat."]
+  },
+  "internal": {
+    "why": "Something went wrong on the server while handling the request. It is not caused by anything in your request, and the details are in the server's logs.",
+    "fix": ["Retry in a moment: many of these are temporary.", "If it keeps happening, contact support with the time of the request and what you were doing."]
+  },
+  "unavailable": {
+    "why": "A service the request depends on is down or overloaded, or the platform is being updated.",
+    "fix": ["Retry in a minute or two.", "Check the platform's status page or announcements for maintenance.", "If it lasts, contact support."]
+  },
+  "validation": {
+    "why": "One or more values in the request don't meet the rules for this operation. Each entry in the problem's errors list names the field and the rule it failed.",
+    "fix": ["Read each entry in errors: its pointer or parameter says which value, and its code which rule.", "Correct those values and send the request again."]
+  },
+  "invalid": {"why": "The value isn't valid for this field.", "fix": ["Check the field's description in the API reference for what it accepts."]},
+  "required": {"why": "The field is required, and the request didn't include it or left it empty.", "fix": ["Provide a value for the field."]},
+  "too_short": {"why": "The value is shorter than the field allows; params.min is the minimum length.", "fix": ["Use a value at least params.min characters long."]},
+  "too_long": {"why": "The value is longer than the field allows; params.max is the maximum length.", "fix": ["Shorten the value to at most params.max characters."]},
+  "too_few": {"why": "The list has fewer items than the field allows; params.min is the minimum.", "fix": ["Add items until the list has at least params.min."]},
+  "too_many": {"why": "The list has more items than the field allows; params.max is the maximum.", "fix": ["Remove items until the list has at most params.max."]},
+  "below_minimum": {"why": "The number is below the lowest value the field allows, params.min; when params.exclusive is true, params.min itself isn't allowed either.", "fix": ["Use a larger number."]},
+  "above_maximum": {"why": "The number is above the highest value the field allows, params.max; when params.exclusive is true, params.max itself isn't allowed either.", "fix": ["Use a smaller number."]},
+  "invalid_format": {"why": "The value doesn't match the format the field requires, such as an email address, date, UUID or pattern.", "fix": ["Check the field's format in the API reference and correct the value."]},
+  "invalid_choice": {"why": "The value isn't one of the values the field allows; params.allowed lists them.", "fix": ["Use one of the values in params.allowed."]},
+  "invalid_type": {"why": "The value has the wrong JSON type, such as a string where a number is expected.", "fix": ["Send the value as the type the API reference shows."]},
+  "unexpected_field": {"why": "The request has a field this operation doesn't know. It may be misspelled, or belong to a different operation or API version.", "fix": ["Check the field's spelling.", "Remove fields the operation doesn't document."]},
+  "duplicate_items": {"why": "The list contains the same item more than once, and the field requires every item to be unique.", "fix": ["Remove the repeated items."]}
+}

@@ -1,0 +1,22 @@
+{
+  "allTypes": "Todos los códigos de error",
+  "anyOther4xx": "cualquier otro 4xx",
+  "anyOther5xx": "cualquier otro 5xx",
+  "code": "Código",
+  "example": "Respuesta de ejemplo",
+  "fix": "Cómo solucionarlo",
+  "intro": "Cada error que devuelve esta API tiene un código estable. El mensaje está en tu idioma; el código es para que lo comprueben los programas y enlaza aquí.",
+  "links": "Más información",
+  "message": "Lo que ves",
+  "params": "Parámetros",
+  "reference": "Referencia de errores",
+  "rules": "Reglas de campos",
+  "rulesDoc": "Cada entrada en errors de un problema de validación indica la regla que no cumplió su campo:",
+  "status": "Estado",
+  "statusOnly": "Solo estado",
+  "statusOnlyDoc": "Un problema cuyo tipo es about:blank no significa nada más que su estado HTTP. Los clientes deducen su código del estado:",
+  "technical": "Detalles técnicos",
+  "type": "Tipo",
+  "validation": "Validación",
+  "why": "Por qué ocurrió"
+}

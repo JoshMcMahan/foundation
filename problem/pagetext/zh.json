@@ -1,0 +1,22 @@
+{
+  "allTypes": "所有错误代码",
+  "anyOther4xx": "其他 4xx",
+  "anyOther5xx": "其他 5xx",
+  "code": "代码",
+  "example": "响应示例",
+  "fix": "解决方法",
+  "intro": "此 API 返回的每个错误都有一个固定的代码。信息以你的语言书写；代码供程序检查，并链接到此处。",
+  "links": "了解更多",
+  "message": "你看到的信息",
+  "params": "参数",
+  "reference": "错误参考",
+  "rules": "字段规则",
+  "rulesDoc": "验证问题的 errors 中的每一项都会指出该字段未通过的规则：",
+  "status": "状态",
+  "statusOnly": "仅状态",
+  "statusOnlyDoc": "type 为 about:blank 的问题除 HTTP 状态外没有其他含义。客户端根据状态推导出代码：",
+  "technical": "技术细节",
+  "type": "类型",
+  "validation": "验证",
+  "why": "发生原因"
+}
