@@ -9,7 +9,8 @@
       "include-component-in-tag": false,
       "exclude-paths": [
         "packages",
-        ".github"
+        ".github",
+        "README.md"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
