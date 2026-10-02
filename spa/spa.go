@@ -30,9 +30,11 @@ const DevNonce = "vite-dev"
 
 // Options configure Handler.
 type Options struct {
-	// Index rewrites index.html for a request, for example to set <html lang>
-	// from Accept-Language or add <base href>. It applies in development too.
+	// Index rewrites index.html for a request, for example to add
+	// <base href>. It applies in development too, after Locales.
 	Index func(r *http.Request, html []byte) []byte
+	// Locales sets index.html's <html lang> to the reader's language.
+	Locales Locales
 	// NotFound reports whether a path other than the root that matches no
 	// file and no prerendered page is unknown to the app. Its shell is then
 	// sent with a 404, so crawlers see an honest status while the router
@@ -63,9 +65,9 @@ func Handler(dist fs.FS, opts Options) (http.Handler, error) {
 		if err != nil || target.Host == "" {
 			return nil, fmt.Errorf("spa: invalid DevServer %q", opts.DevServer)
 		}
-		return devProxy(target, opts.Index), nil
+		return devProxy(target, opts), nil
 	}
-	return &handler{dist: dist, index: index, opts: opts}, nil
+	return &handler{dist: dist, index: index, opts: opts, rewrite: opts.rewrite()}, nil
 }
 
 var errNoBuild = errors.New("index.html is missing or a placeholder")
@@ -83,9 +85,24 @@ func built(index []byte, err error) bool {
 }
 
 type handler struct {
-	dist  fs.FS
-	index []byte
-	opts  Options
+	dist    fs.FS
+	index   []byte
+	opts    Options
+	rewrite func(*http.Request, []byte) []byte
+}
+
+// rewrite combines Locales and Index, or is nil when there is nothing to do.
+func (o Options) rewrite() func(*http.Request, []byte) []byte {
+	if len(o.Locales.Available) == 0 {
+		return o.Index
+	}
+	return func(r *http.Request, page []byte) []byte {
+		page = setLang(page, o.Locales.Negotiate(r))
+		if o.Index != nil {
+			page = o.Index(r, page)
+		}
+		return page
+	}
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -117,9 +134,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusNotFound
 	}
 	body := h.index
-	if h.opts.Index != nil {
-		body = h.opts.Index(r, body)
+	if h.rewrite != nil {
+		body = h.rewrite(r, body)
 	}
+	h.opts.Locales.vary(w.Header())
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(status)

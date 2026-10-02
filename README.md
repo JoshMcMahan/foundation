@@ -255,8 +255,29 @@ build: { assetsDir: '_build' }
 ```
 
 `Options.Index` rewrites `index.html` for each request (in development too),
-for example to set `<html lang>` or `<base href>`; `Options.NotFound` sends the
-shell with a 404 for paths the app does not know.
+for example to add `<base href>`; `Options.NotFound` sends the shell with a 404
+for paths the app does not know.
+
+`Options.Locales` sets `<html lang>` to the reader's language: the cookie's
+choice, then `Accept-Language`, negotiated against the app's locales exactly as
+`negotiateLocale` in `@parallelworks/i18n` does, so `es-MX` gets `es`. Pass it
+to the client so the first paint is already in that language:
+
+```go
+spa.Options{Locales: spa.Locales{Available: []string{"en", "es", "ja"}, Cookie: "locale"}}
+```
+
+```ts
+const locale = detectLocale(locales, {
+  fallback: defaultLocale,
+  injected: document.documentElement.lang,
+  cookie: 'locale',
+})
+```
+
+`server.Options.Locales` does the same for an app served by `server.New`.
+`Locales.Negotiate(r)` and `spa.NegotiateLocale` are there for a server that
+renders its own shell.
 
 ## Development
 

@@ -92,6 +92,14 @@ func TestBaseHref(t *testing.T) {
 	}
 }
 
+func TestLocales(t *testing.T) {
+	h := newHandler(t, server.Options{Locales: spa.Locales{Available: []string{"en", "es"}}})
+	body := do(t, h, http.MethodGet, "/x", "Accept-Language", "es-MX").Body.String()
+	if !strings.Contains(body, `<html lang="es"><head><base href="/">`) {
+		t.Errorf("body = %s", body)
+	}
+}
+
 func TestNoApp(t *testing.T) {
 	h := server.New(server.Options{Logger: slog.New(slog.DiscardHandler)})
 	if rec := do(t, h, http.MethodGet, "/x"); rec.Code != http.StatusNotFound {

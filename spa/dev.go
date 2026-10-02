@@ -13,7 +13,8 @@ import (
 
 // devProxy forwards every request to the Vite dev server. httputil's proxy
 // passes WebSocket upgrades through, so Vite's HMR works unchanged.
-func devProxy(target *url.URL, index func(*http.Request, []byte) []byte) http.Handler {
+func devProxy(target *url.URL, opts Options) http.Handler {
+	index := opts.rewrite()
 	rp := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.SetURL(target)
@@ -43,6 +44,7 @@ func devProxy(target *url.URL, index func(*http.Request, []byte) []byte) http.Ha
 				return err
 			}
 			body = index(resp.Request, body)
+			opts.Locales.vary(resp.Header)
 			resp.Body = io.NopCloser(bytes.NewReader(body))
 			resp.ContentLength = int64(len(body))
 			resp.Header.Set("Content-Length", strconv.Itoa(len(body)))

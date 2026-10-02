@@ -48,6 +48,8 @@ type Options struct {
 	// BasePath is where a host mounts the application, such as "/tandem".
 	// The app's index.html gets a matching <base href>. Defaults to "/".
 	BasePath string
+	// Locales sets the app's <html lang> to the reader's language.
+	Locales spa.Locales
 	// ContentSecurityPolicy replaces DefaultContentSecurityPolicy.
 	ContentSecurityPolicy string
 	// HSTS sends Strict-Transport-Security, for a service reached over HTTPS.
@@ -127,6 +129,7 @@ func appHandler(opts Options) http.Handler {
 	base := []byte(`<head><base href="` + html.EscapeString(strings.TrimRight(opts.BasePath, "/")+"/") + `">`)
 	app, err := spa.Handler(opts.Web, spa.Options{
 		DevServer: opts.DevServer,
+		Locales:   opts.Locales,
 		Index: func(_ *http.Request, index []byte) []byte {
 			return bytes.Replace(index, []byte("<head>"), base, 1)
 		},
