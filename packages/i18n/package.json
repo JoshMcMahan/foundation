@@ -28,19 +28,19 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
+        "default": "./dist/index.js"
       },
       "./react": {
         "types": "./dist/react.d.ts",
-        "import": "./dist/react.js"
+        "default": "./dist/react.js"
       },
       "./vite": {
         "types": "./dist/vite.d.ts",
-        "import": "./dist/vite.js"
+        "default": "./dist/vite.js"
       },
       "./node": {
         "types": "./dist/node.d.ts",
-        "import": "./dist/node.js"
+        "default": "./dist/node.js"
       },
       "./client": {
         "types": "./client.d.ts"
