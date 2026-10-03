@@ -48,6 +48,7 @@ type pages struct {
 type statusRow struct {
 	Code   Code
 	Status string
+	Title  string
 }
 
 type indexData struct {
@@ -155,7 +156,7 @@ func (h *pages) index(lang string) indexData {
 		if v, ok := text[label]; ok {
 			label = v
 		}
-		d.Status = append(d.Status, statusRow{Code: row.Code, Status: label})
+		d.Status = append(d.Status, statusRow{Code: row.Code, Status: label, Title: h.title(lang, statusType(row.Code))})
 	}
 	for _, t := range Rules {
 		d.Rules = append(d.Rules, h.entry(lang, t))
@@ -297,14 +298,14 @@ func statusType(c Code) *Type {
 }
 
 var statusRows = []statusRow{
-	{InvalidRequest, "anyOther4xx"},
-	{Unauthenticated, "401"},
-	{Forbidden, "403"},
-	{NotFound, "404"},
-	{Conflict, "409"},
-	{RateLimited, "429"},
-	{Internal, "anyOther5xx"},
-	{Unavailable, "503"},
+	{Code: InvalidRequest, Status: "anyOther4xx"},
+	{Code: Unauthenticated, Status: "401"},
+	{Code: Forbidden, Status: "403"},
+	{Code: NotFound, Status: "404"},
+	{Code: Conflict, Status: "409"},
+	{Code: RateLimited, Status: "429"},
+	{Code: Internal, Status: "anyOther5xx"},
+	{Code: Unavailable, Status: "503"},
 }
 
 func render(w http.ResponseWriter, lang string, t *template.Template, data any) {
@@ -372,7 +373,7 @@ var indexPage = template.Must(template.New("index").Parse(head + `<title>{{.T.re
 <h2>{{.T.statusOnly}}</h2>
 <p>{{.T.statusOnlyDoc}}</p>
 <ul class="rows">
-{{range .Status}}<li><a href="/problems/{{.Code}}"><code>{{.Code}}</code><span class="title"></span><span class="status">{{.Status}}</span></a></li>
+{{range .Status}}<li><a href="/problems/{{.Code}}"><code>{{.Code}}</code><span class="title">{{.Title}}</span><span class="status">{{.Status}}</span></a></li>
 {{end}}</ul>
 
 <h2>{{.T.validation}}</h2>

@@ -1,0 +1,60 @@
+{
+  "invalid_request": {
+    "title": "Solicitud incorrecta",
+    "why": "El servidor no pudo procesar la solicitud tal como se envió. Algo en ella, como un valor, un encabezado o el orden de los pasos, no es algo que esta operación acepte, y no hay un tipo de problema más específico que se aplique.",
+    "fix": ["Lee el detalle del problema: indica a qué se opuso el servidor.", "Compara la solicitud con la documentación de la operación en la referencia de la API.", "Repetir la misma solicitud fallará de la misma forma; cámbiala primero."]
+  },
+  "unauthenticated": {
+    "title": "No autenticado",
+    "why": "La solicitud no demostró quién la hace: no había ninguna credencial, o la sesión, el token o la clave de API caducó o se revocó.",
+    "fix": ["Vuelve a iniciar sesión o, en la CLI, ejecuta de nuevo el comando de inicio de sesión.", "Si usas una clave de API o un token, comprueba que no haya caducado ni se haya revocado, y crea uno nuevo si es así.", "Envía la credencial en el encabezado Authorization, o la cookie de sesión, con cada solicitud."]
+  },
+  "forbidden": {
+    "title": "Acceso prohibido",
+    "why": "Has iniciado sesión, pero tu cuenta no tiene permiso para esta acción sobre este recurso.",
+    "fix": ["Comprueba que estás usando la cuenta y la organización correctas.", "Pide al propietario del recurso o a un administrador que te dé acceso.", "Si te dieron acceso hace poco, cierra sesión y vuelve a iniciarla para que tu sesión lo reciba."]
+  },
+  "not_found": {
+    "title": "No encontrado",
+    "why": "No existe nada en esta dirección: el recurso se eliminó, cambió de nombre, pertenece a otra persona y no puedes verlo, o la dirección tiene un error.",
+    "fix": ["Comprueba el nombre o el ID en la dirección.", "Consulta la lista de recursos que puedes ver para encontrar el correcto.", "Si alguien lo compartió contigo, pregúntale si todavía existe."]
+  },
+  "conflict": {
+    "title": "Conflicto",
+    "why": "La solicitud entra en conflicto con el estado actual del recurso: otra cosa lo cambió antes, o la acción no es posible en el estado en que se encuentra.",
+    "fix": ["Vuelve a obtener el recurso para ver su estado actual.", "Espera a que termine cualquier operación que ya se esté ejecutando sobre él.", "Repite tu cambio sobre la versión actual."]
+  },
+  "rate_limited": {
+    "title": "Demasiadas solicitudes",
+    "why": "Llegaron demasiadas solicitudes en poco tiempo, así que el servidor pide a este cliente que vaya más despacio.",
+    "fix": ["Espera antes de reintentar. Si la respuesta tiene un encabezado Retry-After, espera ese tiempo.", "Reintenta con espera exponencial en lugar de hacerlo de inmediato.", "Agrupa o guarda en caché las solicitudes que se repiten."]
+  },
+  "internal": {
+    "title": "Error interno del servidor",
+    "why": "Algo salió mal en el servidor al procesar la solicitud. No lo causó nada de tu solicitud, y los detalles están en los registros del servidor.",
+    "fix": ["Inténtalo de nuevo en un momento: muchos de estos errores son temporales.", "Si sigue ocurriendo, contacta con soporte e indica la hora de la solicitud y lo que estabas haciendo."]
+  },
+  "unavailable": {
+    "title": "Servicio no disponible",
+    "why": "Un servicio del que depende la solicitud no funciona o está sobrecargado, o la plataforma se está actualizando.",
+    "fix": ["Inténtalo de nuevo en uno o dos minutos.", "Consulta la página de estado o los avisos de la plataforma por si hay mantenimiento.", "Si continúa, contacta con soporte."]
+  },
+  "validation": {
+    "title": "Solicitud no válida",
+    "why": "Uno o más valores de la solicitud no cumplen las reglas de esta operación. Cada entrada de la lista errors del problema indica el campo y la regla que no cumplió.",
+    "fix": ["Lee cada entrada de errors: su pointer o parameter indica qué valor es, y su code, qué regla.", "Corrige esos valores y vuelve a enviar la solicitud."]
+  },
+  "invalid": {"title": "Valor no válido", "why": "El valor no es válido para este campo.", "fix": ["Consulta la descripción del campo en la referencia de la API para ver qué acepta."]},
+  "required": {"title": "Valor obligatorio", "why": "El campo es obligatorio, y la solicitud no lo incluyó o lo dejó vacío.", "fix": ["Proporciona un valor para el campo."]},
+  "too_short": {"title": "Valor demasiado corto", "why": "El valor es más corto de lo que permite el campo; params.min es la longitud mínima.", "fix": ["Usa un valor de al menos params.min caracteres."]},
+  "too_long": {"title": "Valor demasiado largo", "why": "El valor es más largo de lo que permite el campo; params.max es la longitud máxima.", "fix": ["Acorta el valor a params.max caracteres como máximo."]},
+  "too_few": {"title": "Muy pocos elementos", "why": "La lista tiene menos elementos de los que permite el campo; params.min es el mínimo.", "fix": ["Añade elementos hasta que la lista tenga al menos params.min."]},
+  "too_many": {"title": "Demasiados elementos", "why": "La lista tiene más elementos de los que permite el campo; params.max es el máximo.", "fix": ["Quita elementos hasta que la lista tenga como máximo params.max."]},
+  "below_minimum": {"title": "Número demasiado pequeño", "why": "El número está por debajo del valor más bajo que permite el campo, params.min; cuando params.exclusive es true, tampoco se permite params.min.", "fix": ["Usa un número mayor."]},
+  "above_maximum": {"title": "Número demasiado grande", "why": "El número está por encima del valor más alto que permite el campo, params.max; cuando params.exclusive es true, tampoco se permite params.max.", "fix": ["Usa un número menor."]},
+  "invalid_format": {"title": "Formato no válido", "why": "El valor no coincide con el formato que exige el campo, como una dirección de correo electrónico, una fecha, un UUID o un patrón.", "fix": ["Consulta el formato del campo en la referencia de la API y corrige el valor."]},
+  "invalid_choice": {"title": "Valor no permitido", "why": "El valor no es uno de los que permite el campo; params.allowed los enumera.", "fix": ["Usa uno de los valores de params.allowed."]},
+  "invalid_type": {"title": "Tipo incorrecto", "why": "El valor tiene un tipo JSON incorrecto, como una cadena donde se espera un número.", "fix": ["Envía el valor con el tipo que indica la referencia de la API."]},
+  "unexpected_field": {"title": "Campo desconocido", "why": "La solicitud tiene un campo que esta operación no conoce. Puede estar mal escrito o pertenecer a otra operación o versión de la API.", "fix": ["Comprueba cómo se escribe el campo.", "Quita los campos que la operación no documenta."]},
+  "duplicate_items": {"title": "Elementos duplicados", "why": "La lista contiene el mismo elemento más de una vez, y el campo exige que cada elemento sea único.", "fix": ["Quita los elementos repetidos."]}
+}

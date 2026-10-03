@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -129,6 +130,48 @@ func TestSharedDocsCoverSharedCodes(t *testing.T) {
 		path := "/problems/" + string(c)
 		if body := getPage(t, path).Body.String(); !strings.Contains(body, "Why this happened") || !strings.Contains(body, "How to fix it") {
 			t.Errorf("%s lacks guidance", path)
+		}
+	}
+}
+
+// Every language with shared messages has shared guidance too, so no page
+// mixes the reader's language with English.
+func TestSharedDocsInEveryLanguage(t *testing.T) {
+	read := func(lang string) map[string]problem.Doc {
+		t.Helper()
+		b, err := os.ReadFile("docs/" + lang + ".json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var docs map[string]problem.Doc
+		if err := json.Unmarshal(b, &docs); err != nil {
+			t.Fatalf("%s.json: %v", lang, err)
+		}
+		return docs
+	}
+	en := read("en")
+	for _, lang := range problem.Shared.Languages() {
+		docs := read(lang)
+		for code, want := range en {
+			got := docs[code]
+			if (lang != "en" && got.Title == "") || got.Why == "" || len(got.Fix) != len(want.Fix) {
+				t.Errorf("%s.json %s: title %q, why %q, %d of %d fix steps", lang, code, got.Title, got.Why, len(got.Fix), len(want.Fix))
+			}
+		}
+	}
+}
+
+func TestSharedPagesInTheReadersLanguage(t *testing.T) {
+	body := getPage(t, "/problems/not_found?lang=ja").Body.String()
+	for _, want := range []string{"<h1>見つかりません</h1>", "アドレス内の名前または ID を確認してください。"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("ja not_found page lacks %q", want)
+		}
+	}
+	index := getPage(t, "/problems/?lang=ja").Body.String()
+	for _, want := range []string{"見つかりません", "無効なリクエスト", "値が長すぎます"} {
+		if !strings.Contains(index, want) {
+			t.Errorf("ja index lacks %q", want)
 		}
 	}
 }
