@@ -22,3 +22,9 @@ overrides:
   # semver 6 predates provenance, so the trust policy refuses it; nothing in the
   # tree needs the old major.
   'semver@<7.0.0': '>=7.7.4'
+  # monaco-editor 0.55 pins a dompurify with known XSS advisories; ui keeps
+  # 0.55 as its peer range, so the fix is lifted here.
+  'dompurify@<3.4.16': '^3.4.16'
+  # The tailwind CLI pins a watcher that pulls in braces, which has an
+  # unpatched denial-of-service advisory; 2.6 drops braces for picomatch.
+  '@parcel/watcher@<2.6.0': '^2.6.0'
