@@ -66,10 +66,10 @@ type registryData struct {
 
 // entry is a type as the index lists it: its code, link and title.
 type entry struct {
-	URI    string
-	Code   Code
-	Status int
-	Title  string
+	URI    string `json:"type"`
+	Code   Code   `json:"code"`
+	Status int    `json:"status,omitempty"`
+	Title  string `json:"title"`
 }
 
 type typeData struct {
@@ -95,12 +95,25 @@ func (h *pages) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	lang := h.language(r)
+	asJSON := wantsJSON(r.Header.Get("Accept"))
 	if rest == "" {
+		if asJSON {
+			writeJSON(w, lang, h.indexJSON(lang))
+			return
+		}
 		render(w, lang, indexPage, h.index(lang))
 		return
 	}
 	if t := h.lookup(rest); t != nil {
-		render(w, lang, typePage, h.typeData(lang, t))
+		d := h.typeData(lang, t)
+		if asJSON {
+			writeJSON(w, lang, typeJSON{
+				Type: t.URI(), Code: t.Code, Status: t.Status, Title: d.Title, Message: d.Message,
+				Why: d.Doc.Why, Fix: d.Doc.Fix, Links: d.Doc.Links, Language: lang,
+			})
+			return
+		}
+		render(w, lang, typePage, d)
 		return
 	}
 	Write(w, Status(http.StatusNotFound, "no problem type at "+r.URL.Path))
@@ -155,6 +168,54 @@ func (h *pages) index(lang string) indexData {
 		d.Registries = append(d.Registries, rd)
 	}
 	return d
+}
+
+// typeJSON is a type's page as data, for a client to show its guidance itself.
+type typeJSON struct {
+	Type     string   `json:"type"`
+	Code     Code     `json:"code"`
+	Status   int      `json:"status"`
+	Title    string   `json:"title"`
+	Message  string   `json:"message,omitempty"`
+	Why      string   `json:"why,omitempty"`
+	Fix      []string `json:"fix,omitempty"`
+	Links    []Link   `json:"links,omitempty"`
+	Language string   `json:"language"`
+}
+
+type indexJSON struct {
+	Language string  `json:"language"`
+	Types    []entry `json:"types"`
+}
+
+func (h *pages) indexJSON(lang string) indexJSON {
+	out := indexJSON{Language: lang}
+	for _, row := range statusRows {
+		out.Types = append(out.Types, h.entry(lang, statusType(row.Code)))
+	}
+	out.Types = append(out.Types, h.entry(lang, Validation))
+	for _, t := range Rules {
+		out.Types = append(out.Types, h.entry(lang, t))
+	}
+	for _, reg := range h.opts.Registries {
+		for _, t := range reg.Types() {
+			out.Types = append(out.Types, h.entry(lang, t))
+		}
+	}
+	return out
+}
+
+// wantsJSON reports whether an Accept header asks for JSON rather than a
+// page; a browser's, which lists text/html, never does.
+func wantsJSON(accept string) bool {
+	return strings.Contains(accept, "application/json") && !strings.Contains(accept, "text/html")
+}
+
+func writeJSON(w http.ResponseWriter, lang string, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Language", lang)
+	w.Header().Set("Vary", "Accept, Accept-Language, Cookie")
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func (h *pages) typeData(lang string, t *Type) typeData {
@@ -249,7 +310,7 @@ var statusRows = []statusRow{
 func render(w http.ResponseWriter, lang string, t *template.Template, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Language", lang)
-	w.Header().Set("Vary", "Accept-Language, Cookie")
+	w.Header().Set("Vary", "Accept, Accept-Language, Cookie")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src '"+styleHash+"'")
 	_ = t.Execute(w, data)
 }

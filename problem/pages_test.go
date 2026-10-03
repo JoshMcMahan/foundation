@@ -3,6 +3,7 @@ package problem_test
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -129,5 +130,67 @@ func TestSharedDocsCoverSharedCodes(t *testing.T) {
 		if body := getPage(t, path).Body.String(); !strings.Contains(body, "Why this happened") || !strings.Contains(body, "How to fix it") {
 			t.Errorf("%s lacks guidance", path)
 		}
+	}
+}
+
+func TestTypePageAsJSON(t *testing.T) {
+	rec := getPage(t, "/problems/shop/name_taken", "Accept", "application/json", "Accept-Language", "ja")
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("Content-Type %q", ct)
+	}
+	var got struct {
+		Type, Code, Title, Message, Why, Language string
+		Status                                    int
+		Fix                                       []string
+		Links                                     []problem.Link
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Type != "/problems/shop/name_taken" || got.Code != "name_taken" || got.Status != 409 || got.Language != "ja" {
+		t.Errorf("identity = %+v", got)
+	}
+	if got.Title != "その名前は使われています" || got.Message != "{name}は使われています。" || got.Why != "名前は一意です。" {
+		t.Errorf("localized text = %+v", got)
+	}
+	// Guidance falls back to English field by field, as on the page.
+	if len(got.Fix) != 2 || got.Fix[0] != "Pick another name." || len(got.Links) != 1 {
+		t.Errorf("fallback guidance = %+v", got)
+	}
+	if !strings.Contains(rec.Header().Get("Vary"), "Accept") {
+		t.Errorf("Vary %q lacks Accept", rec.Header().Get("Vary"))
+	}
+}
+
+func TestIndexAsJSON(t *testing.T) {
+	rec := getPage(t, "/problems/", "Accept", "application/json")
+	var got struct {
+		Language string
+		Types    []struct {
+			Type, Code, Title string
+			Status            int
+		}
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	codes := map[string]string{}
+	for _, e := range got.Types {
+		codes[e.Code] = e.Type
+	}
+	for code, uri := range map[string]string{"not_found": "/problems/not_found", "validation": "/problems/validation", "too_long": "/problems/too_long", "name_taken": "/problems/shop/name_taken"} {
+		if codes[code] != uri {
+			t.Errorf("%s -> %q, want %q", code, codes[code], uri)
+		}
+	}
+}
+
+func TestBrowsersStillGetHTML(t *testing.T) {
+	rec := getPage(t, "/problems/shop/name_taken", "Accept", "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8")
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type %q", ct)
+	}
+	if !strings.Contains(rec.Header().Get("Vary"), "Accept") {
+		t.Errorf("Vary %q lacks Accept", rec.Header().Get("Vary"))
 	}
 }

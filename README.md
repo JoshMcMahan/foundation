@@ -117,6 +117,11 @@ The OpenAPI document types `code` as an open string, not an enum: new codes
 are not a breaking change, and clients fall back to the status for codes they
 don't know. The catalog at `/problems/` lists them.
 
+Each page is also data: asked with `Accept: application/json` (and not
+`text/html`), `/problems/<...>/<code>` returns its `title`, `message`, `why`,
+`fix` and `links` in the reader's language, and `/problems/` the list of types,
+so a CLI can print how to fix a problem without a browser.
+
 huma's request validation then becomes a validation problem whose entries name
 the rule each field failed (`required`, `too_long`, `below_minimum`, ...).
 
