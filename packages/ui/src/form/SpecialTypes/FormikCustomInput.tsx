@@ -1,6 +1,6 @@
 import cx from 'classnames'
 import { useField, useFormikContext } from 'formik'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EyeIcon, EyeOffIcon } from '../../icons'
 import { useFieldControlProps, useFieldRequired } from '../fieldContext'
 
@@ -61,23 +61,26 @@ export default function FormikCustomInput({
     }
   }, [field.value, value])
 
+  // Global, so a pasted value loses every disallowed character, not just the
+  // first; typing hid this because each keystroke adds at most one.
+  const sanitizeRegexp = useMemo(() => {
+    if (sanitize === undefined) {
+      return undefined
+    }
+    try {
+      return new RegExp(sanitize, 'g')
+    } catch {
+      console.error('Invalid regex for sanitization:', sanitize)
+      return undefined
+    }
+  }, [sanitize])
+
   const sanitizeName = useCallback(
     (val: string) => {
-      if (sanitize === undefined) {
-        return lowercase ? val.toLowerCase() : val
-      }
-      try {
-        const regexp = new RegExp(sanitize)
-        if (lowercase) {
-          val = val.toLowerCase()
-        }
-        return val.replace(regexp, '')
-      } catch {
-        console.error('Invalid regex for sanitization:', sanitize)
-      }
-      return val
+      const cased = lowercase ? val.toLowerCase() : val
+      return sanitizeRegexp ? cased.replace(sanitizeRegexp, '') : cased
     },
-    [sanitize, lowercase],
+    [sanitizeRegexp, lowercase],
   )
 
   const flushToFormik = useCallback(

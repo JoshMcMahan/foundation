@@ -146,10 +146,26 @@ describe('FormikCustomInput', () => {
       expect(screen.getByRole('textbox')).toHaveValue('myname')
     })
 
+    it('still lowercases when the sanitize pattern is invalid', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+      renderWithFormik({ name: 'testInput', type: 'string', lowercase: true, sanitize: '[' })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'MyName' } })
+      expect(screen.getByRole('textbox')).toHaveValue('myname')
+      error.mockRestore()
+    })
+
     it('leaves the case alone when lowercase is not set', () => {
       renderWithFormik({ name: 'testInput', type: 'string' })
       fireEvent.change(screen.getByRole('textbox'), { target: { value: 'MyName' } })
       expect(screen.getByRole('textbox')).toHaveValue('MyName')
+    })
+  })
+
+  describe('sanitize', () => {
+    it('removes every disallowed character from a pasted value', () => {
+      renderWithFormik({ name: 'testInput', type: 'string', sanitize: '[^a-z0-9-]' })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'my name, here!' } })
+      expect(screen.getByRole('textbox')).toHaveValue('mynamehere')
     })
   })
 })
