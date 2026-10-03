@@ -88,9 +88,14 @@ export function UserHoverCard({
   const header = (
     <>
       <Avatar src={avatarSrc} name={displayName} size="lg" className="shrink-0" />
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-semibold text-(--theme-app)">{displayName}</span>
+      {/* The card is narrow, so the name wraps (even mid-word) rather than truncating:
+          a person's name stays readable in their own card. The badge sits beside the
+          name when it fits and wraps below it when it doesn't. */}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <span className="min-w-0 text-sm font-semibold leading-5 wrap-anywhere text-(--theme-app)">
+            {displayName}
+          </span>
           {badge && (
             <span className="shrink-0 rounded-full bg-(--theme-muted-panel-bg) px-1.5 py-0.5 text-[10px] font-medium leading-none text-(--theme-muted-text-color)">
               {badge}
@@ -112,11 +117,11 @@ export function UserHoverCard({
       onLeave={onLeave}
     >
       {href ? (
-        <Link to={href} className="flex items-center gap-3 transition-opacity hover:opacity-80">
+        <Link to={href} className="flex items-start gap-3 transition-opacity hover:opacity-80">
           {header}
         </Link>
       ) : (
-        <div className="flex items-center gap-3">{header}</div>
+        <div className="flex items-start gap-3">{header}</div>
       )}
       {loading ? (
         <div

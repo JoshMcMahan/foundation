@@ -119,3 +119,42 @@ export const OnHover: StoryObj = {
     await expect(await screen.findByText('Grace Hopper')).toBeVisible()
   },
 }
+
+const UNBROKEN_NAME = 'Bartholomewaloysiuswetheringtonfairweather'
+
+/** Names wrap instead of truncating: the badge drops below a name it no longer
+ * fits beside, and an unbroken name breaks mid-word. The username stays one
+ * truncated line. */
+export const LongNames: StoryObj = {
+  render: () => (
+    <>
+      <UserHoverCard
+        {...PLACEMENT}
+        username="kjohnson"
+        name="Katherine Johnson"
+        badge="Member"
+        href="/users/kjohnson"
+      >
+        <Rows />
+      </UserHoverCard>
+      <UserHoverCard
+        {...PLACEMENT}
+        x={304}
+        username="bartholomew.aloysius.wetherington.fairweather"
+        name={UNBROKEN_NAME}
+        avatarSrc={PHOTO}
+        badge="Admin"
+        href="/users/bwetherington"
+      >
+        <Rows />
+      </UserHoverCard>
+    </>
+  ),
+  play: async () => {
+    for (const name of ['Katherine Johnson', UNBROKEN_NAME]) {
+      const el = await screen.findByText(name)
+      await expect(el).toBeVisible()
+      await expect(el.scrollWidth).toBeLessThanOrEqual(el.clientWidth)
+    }
+  },
+}
