@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/parallelworks/foundation/compare/ui-v0.21.0...ui-v0.21.1) (2026-10-03)
+
+
+### Performance Improvements
+
+* **ui:** apps bundle each icon only where it renders instead of every icon up front ([#89](https://github.com/parallelworks/foundation/issues/89)) ([155d754](https://github.com/parallelworks/foundation/commit/155d754ba4f8ca6cf8651d3011cdc8a686b29431))
+
 ## [0.21.0](https://github.com/parallelworks/foundation/compare/ui-v0.20.0...ui-v0.21.0) (2026-10-03)
 
 
