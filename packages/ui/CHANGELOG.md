@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.21.0](https://github.com/parallelworks/foundation/compare/ui-v0.20.0...ui-v0.21.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** resetOnChange takes the path of the field whose change clears this one ([#79](https://github.com/parallelworks/foundation/issues/79))
+* props, options and interface members that were accepted but never read are removed from @parallelworks/ui: DependencyGraph initialScale, Dropdown onRangeChange, CollapsiblePanel shown/setShown, Table Item/Header props, CompactTable borderless/panel/theadClassName/isLoading/tableProps, editor options.theme, MultiSelectionDropdown className/secondaryField, FormikCustomDropdown parentValue/resetOnChange, ChatNavigation.toAttachments, ChatStrings.sidebar.moreOptions, SlashCommandOption.usage, the SET_THINKING and UPDATE_CURRENT_CONVERSATION_TITLE chat actions, IFileExplorerClient.getStorageName, IFileExplorerProvider.createClient, TStorage.region, and the wizard schema keys urlBased, navigation.showProgress and step canSkip.
+
+### Bug Fixes
+
+* **ui:** a depends_on dropdown lists the options for the value its parent field holds ([#83](https://github.com/parallelworks/foundation/issues/83)) ([020994a](https://github.com/parallelworks/foundation/commit/020994a8e5a902a42bdbf6500e694b468de7b9ba))
+* **ui:** a file cancelled before its upload starts no longer counts as uploaded ([#80](https://github.com/parallelworks/foundation/issues/80)) ([cca2933](https://github.com/parallelworks/foundation/commit/cca2933e448d3698bb7b536405455d0140e5cbcb))
+* **ui:** a form input's sanitize pattern removes every disallowed character, not just the first ([#85](https://github.com/parallelworks/foundation/issues/85)) ([b92b955](https://github.com/parallelworks/foundation/commit/b92b955bcdc8c28a3f7c9a87e1acd409761c8c0f))
+* **ui:** resetOnChange takes the path of the field whose change clears this one ([#79](https://github.com/parallelworks/foundation/issues/79)) ([031e2af](https://github.com/parallelworks/foundation/commit/031e2af8156fec82ba95b7e729b2bb5efedc201d))
+* **ui:** the package type-checks again under erasableSyntaxOnly ([#72](https://github.com/parallelworks/foundation/issues/72)) ([187ae36](https://github.com/parallelworks/foundation/commit/187ae364f72e0a5e8c9464ae6a7239be5a43633a))
+
+
+### Code Refactoring
+
+* drop props, options and code that did nothing, and merge duplicated helpers ([#74](https://github.com/parallelworks/foundation/issues/74)) ([7e56e1a](https://github.com/parallelworks/foundation/commit/7e56e1a3d331157f0c678f5c2feefa59988eb7de))
+
 ## [0.20.0](https://github.com/parallelworks/foundation/compare/ui-v0.19.1...ui-v0.20.0) (2026-10-03)
 
 
