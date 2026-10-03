@@ -51,6 +51,7 @@ import {
   useCopySubmenu,
   useRowMenu,
 } from '../list/index'
+import { safeUrl } from '../safeUrl'
 import { useFileExplorer } from './FileExplorerContext'
 import { FilePreview } from './FilePreview'
 import { FilePreviewInline } from './FilePreview/Inline'
@@ -840,8 +841,12 @@ export default function FileExplorer({
   }
 
   const triggerBrowserDownload = (url: string, filename: string) => {
+    const href = safeUrl(url)
+    if (!href) {
+      return
+    }
     const a = document.createElement('a')
-    a.href = url
+    a.href = href
     a.download = filename
     document.body.appendChild(a)
     a.click()

@@ -3,14 +3,19 @@ import { DateTime } from 'luxon'
 import { useCallback, useMemo, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'
 import { DownloadFileIcon, FileIcon, TrashIcon } from '../../icons'
+import { safeUrl } from '../../safeUrl'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { formatFileSize } from '../utils'
 import { ATTACHMENTS_PAGE_SIZE, attachmentsPageKey } from './attachmentKeys'
 
 function triggerDownload(url: string, filename: string) {
+  const href = safeUrl(url)
+  if (!href) {
+    return
+  }
   const a = document.createElement('a')
-  a.href = url
+  a.href = href
   a.download = filename
   document.body.appendChild(a)
   a.click()

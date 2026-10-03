@@ -17,6 +17,7 @@ import {
   MoreIcon,
   UserIcon,
 } from '../icons'
+import { safeUrl } from '../safeUrl'
 
 export type RowMenuItem =
   | {
@@ -407,7 +408,7 @@ function MenuRow({
     )
     if (item.reloadDocument) {
       return (
-        <a href={item.to} onClick={onClose} className={className}>
+        <a href={safeUrl(item.to)} onClick={onClose} className={className}>
           {item.icon}
           {item.label}
         </a>

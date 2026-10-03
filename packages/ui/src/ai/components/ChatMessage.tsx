@@ -13,6 +13,7 @@ import {
   RefreshIcon,
   RetryIcon,
 } from '../../icons'
+import { safeUrl } from '../../safeUrl'
 import { useChatConfig } from '../core/config'
 import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
 import { Avatar } from '../ui/Avatar'
@@ -65,8 +66,12 @@ function parseTimestamp(iso: string | undefined): DateTime | null {
 }
 
 function triggerDownload(url: string, filename: string) {
+  const href = safeUrl(url)
+  if (!href) {
+    return
+  }
   const a = document.createElement('a')
-  a.href = url
+  a.href = href
   a.download = filename
   document.body.appendChild(a)
   a.click()

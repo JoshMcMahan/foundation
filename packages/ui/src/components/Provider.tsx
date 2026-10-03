@@ -3,6 +3,7 @@ import { createContext, use, useCallback, useContext, useEffect, useMemo } from 
 import { useLocalStorage } from 'usehooks-ts'
 import type { WorkflowEngine } from '../engine'
 import type { RunLink } from '../graph/types'
+import { safeUrl } from '../safeUrl'
 
 export type UIToastId = string | number
 
@@ -436,7 +437,7 @@ export type UILinkComponent = React.ComponentType<{
 }>
 
 const DefaultLink: UILinkComponent = ({ to, onClick, className, children, ...rest }) => (
-  <a href={to} onClick={onClick} className={className} {...rest}>
+  <a href={safeUrl(to)} onClick={onClick} className={className} {...rest}>
     {children}
   </a>
 )
@@ -907,13 +908,24 @@ const DEFAULTS: UIProviderValue = {
     },
   },
   navigation: {
-    goTo: (to) => window.location.assign(to),
-    openStepSource: (_uses, sourceUrl) => {
-      if (sourceUrl) {
-        window.open(sourceUrl, '_blank')
+    goTo: (to) => {
+      const url = safeUrl(to)
+      if (url) {
+        window.location.assign(url)
       }
     },
-    openExternal: (href) => window.open(href, '_blank'),
+    openStepSource: (_uses, sourceUrl) => {
+      const url = safeUrl(sourceUrl)
+      if (url) {
+        window.open(url, '_blank')
+      }
+    },
+    openExternal: (href) => {
+      const url = safeUrl(href)
+      if (url) {
+        window.open(url, '_blank')
+      }
+    },
   },
   data: {
     useRunFile: defaultUseRunFile,
