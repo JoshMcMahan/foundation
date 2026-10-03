@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/parallelworks/foundation/compare/v0.12.0...v0.13.0) (2026-10-03)
+
+
+### Features
+
+* **problem:** shared problem pages read in every language ([#87](https://github.com/parallelworks/foundation/issues/87)) ([8b4a6f9](https://github.com/parallelworks/foundation/commit/8b4a6f96d90f048d5c664d12ed1697d05449fb51))
+
 ## [0.12.0](https://github.com/parallelworks/foundation/compare/v0.11.0...v0.12.0) (2026-10-03)
 
 
