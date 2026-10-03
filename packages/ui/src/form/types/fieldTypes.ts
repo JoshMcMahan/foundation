@@ -17,7 +17,8 @@ export interface RuntimeFieldExtensions {
   one_must_be_true?: boolean
   computeOn?: boolean
   labelPosition?: LabelPosition
-  resetOnChange?: boolean
+  /** Path of another field; when its value changes, this field's value is cleared. */
+  resetOnChange?: string
   options?: unknown // Runtime-provided options override
 }
 

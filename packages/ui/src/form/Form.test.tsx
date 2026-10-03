@@ -1860,6 +1860,49 @@ describe('defaultReferencesField', () => {
   })
 })
 
+describe('resetOnChange', () => {
+  it('clears the field when the field at its path changes, but not on first render', async () => {
+    const options = {
+      region: { type: 'string', label: 'Region' },
+      zone: { type: 'string', label: 'Zone', resetOnChange: 'region' },
+    }
+    const latest: { values: Record<string, unknown> } = { values: {} }
+
+    render(
+      <Formik initialValues={{ region: 'north', zone: 'north-1' }} onSubmit={vi.fn()}>
+        {({ values, setFieldValue, setFieldTouched }) => {
+          latest.values = values
+          return (
+            <Form>
+              <FieldsFromOptions
+                options={options}
+                values={values}
+                setFormDirty={vi.fn()}
+                setFieldValue={setFieldValue}
+                setFieldTouched={setFieldTouched}
+              />
+              <button
+                type="button"
+                data-testid="change-region"
+                onClick={() => setFieldValue('region', 'south')}
+              />
+            </Form>
+          )
+        }}
+      </Formik>,
+    )
+
+    expect(latest.values).toHaveProperty('zone', 'north-1')
+
+    fireEvent.click(screen.getByTestId('change-region'))
+
+    await waitFor(() => {
+      expect(latest.values).toHaveProperty('region', 'south')
+    })
+    expect(latest.values).not.toHaveProperty('zone')
+  })
+})
+
 describe('findSelfReferencingFieldNames', () => {
   it('returns self-referencing field paths from raw workflow inputs', () => {
     const inputs = {
