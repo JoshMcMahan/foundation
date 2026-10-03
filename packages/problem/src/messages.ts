@@ -9,8 +9,15 @@ export const sharedMessages = { en, es, ja, ko, zh } as const
 
 type Language = keyof typeof sharedMessages
 
+/**
+ * The language of a locale such as `zh-CN` or `zh_CN`: `zh`. Cut on both
+ * separators, as the server's Localizer does, so the two pick the same catalog.
+ */
+export function baseLanguage(locale: string): string {
+  return locale.trim().toLowerCase().split(/[-_]/)[0] ?? ''
+}
+
 /** The shared catalog for a locale such as `zh-CN`, falling back to English. */
 export function sharedMessagesFor(locale: string): typeof en {
-  const language = locale.toLowerCase().split('-')[0] as Language
-  return sharedMessages[language] ?? en
+  return sharedMessages[baseLanguage(locale) as Language] ?? en
 }

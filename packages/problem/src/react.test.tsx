@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server'
 import { IntlProvider } from 'use-intl'
 import { describe, expect, it } from 'vitest'
 import { ApiError, FieldError } from './index.js'
-import { sharedMessages } from './messages.js'
+import { sharedMessages, sharedMessagesFor } from './messages.js'
 import { useErrorMessage } from './react.js'
 
 function render(err: unknown, locale = 'en', messages: Record<string, unknown> = {}) {
@@ -102,6 +102,19 @@ describe('useErrorMessage with a server that localizes', () => {
       ],
     }
     expect(render(body, 'es')).toBe('Máximo 64 caracteres.')
+  })
+})
+
+describe('sharedMessagesFor', () => {
+  it('picks the catalog by base language, whichever separator the locale uses', () => {
+    expect(sharedMessagesFor('zh-CN')).toBe(sharedMessages.zh)
+    expect(sharedMessagesFor('zh_CN')).toBe(sharedMessages.zh)
+    expect(sharedMessagesFor('ES_mx')).toBe(sharedMessages.es)
+  })
+
+  it('falls back to English for a language it has no catalog for', () => {
+    expect(sharedMessagesFor('fr-FR')).toBe(sharedMessages.en)
+    expect(sharedMessagesFor('')).toBe(sharedMessages.en)
   })
 })
 

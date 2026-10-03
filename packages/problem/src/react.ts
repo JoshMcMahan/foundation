@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { createTranslator, useLocale, useTranslations } from 'use-intl'
 import { ApiError, FieldError, toApiError } from './index.js'
-import { sharedMessagesFor } from './messages.js'
+import { baseLanguage, sharedMessagesFor } from './messages.js'
 
 type Format = (key: string, values?: Record<string, string | number>) => string
 type Translator = Format & { has: (key: string) => boolean }
@@ -55,6 +55,5 @@ export function useErrorMessage(): (err: unknown) => string {
 }
 
 function sameLanguage(language: string | undefined, locale: string): boolean {
-  const base = (tag: string) => tag.toLowerCase().split(/[-_]/)[0]
-  return language !== undefined && base(language) === base(locale)
+  return language !== undefined && baseLanguage(language) === baseLanguage(locale)
 }
