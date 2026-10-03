@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
 import { makeStaticAdapter, StoryChat, StoryViewport } from '../stories/harness'
 import ChatEmptyState from './ChatEmptyState'
+import ChatThread from './ChatThread'
 
 const meta: Meta = {
   title: 'Chat/Empty state',
@@ -17,16 +19,23 @@ const STORY_PROMPTS = [
   'Draft a release note for a bug fix',
 ]
 
-export const SuggestedPrompts: StoryObj = {
-  render: () => (
+function EmptyStateToThread() {
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const adapter = useState(() => makeStaticAdapter({ conversations: [] }))[0]
+  return (
     <StoryChat
-      adapter={makeStaticAdapter()}
-      conversationId={null}
+      adapter={adapter}
+      conversationId={conversationId}
+      onNavigate={setConversationId}
       config={{ suggestedPrompts: STORY_PROMPTS }}
     >
       <StoryViewport>
-        <ChatEmptyState />
+        {conversationId ? <ChatThread conversationId={conversationId} /> : <ChatEmptyState />}
       </StoryViewport>
     </StoryChat>
-  ),
+  )
+}
+
+export const SuggestedPrompts: StoryObj = {
+  render: () => <EmptyStateToThread />,
 }

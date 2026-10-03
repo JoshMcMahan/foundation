@@ -7,7 +7,7 @@ import '../dist/styles.css'
 import '../dist/logviewer/logviewer.css'
 import { createWorkflowEngine } from '@parallelworks/workflow-parser'
 import type { Decorator, Preview } from '@storybook/react-vite'
-import { UIProvider } from '../src/components/Provider'
+import { type UILinkComponent, UIProvider } from '../src/components/Provider'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -17,6 +17,21 @@ import {
 } from '../src/theme/index'
 
 const engine = createWorkflowEngine()
+
+// Links render as anchors but never navigate away from the story.
+const StoryLink: UILinkComponent = ({ to, onClick, children, ...rest }) => (
+  <a
+    href={to}
+    {...rest}
+    onClick={(e) => {
+      e.preventDefault()
+      onClick?.()
+    }}
+  >
+    {children}
+  </a>
+)
+const storySlots = { link: StoryLink }
 
 const withTheme: Decorator = (Story, context) => {
   const preset = THEME_PRESETS.find((p) => p.name === context.globals.theme) ?? DEFAULT_PRESET
@@ -28,7 +43,7 @@ const withTheme: Decorator = (Story, context) => {
   root.style.colorScheme = dark ? 'dark' : 'light'
   root.classList.toggle('dark', dark)
   return (
-    <UIProvider engine={engine}>
+    <UIProvider engine={engine} slots={storySlots}>
       <Story />
     </UIProvider>
   )
@@ -52,6 +67,7 @@ const preview: Preview = {
   },
   parameters: {
     controls: { expanded: true },
+    options: { storySort: { order: ['Introduction', 'UI', 'Chat'] } },
   },
 }
 

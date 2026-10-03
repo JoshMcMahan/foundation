@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import type { ChatAdapter, StreamHandlers } from '../adapter/types'
 import { ChatProvider } from '../core/ChatProvider'
-import type { ChatUIConfig } from '../core/config'
+import type { ChatLinkProps, ChatUIConfig } from '../core/config'
 import type {
   ApprovalPart,
   ChatMessage,
@@ -562,6 +562,35 @@ export function makeHybridTurn(): ChatMessage {
 
 // ---- Provider harness ------------------------------------------------------
 
+/** A chat link that stays inside Storybook; external targets open in a new tab. */
+function storyChatLink(onNavigate?: (id: string | null) => void) {
+  return function StoryChatLink({ target, className, title, onClick, children }: ChatLinkProps) {
+    if (target.kind === 'external') {
+      return (
+        <a href={target.href} target="_blank" rel="noreferrer" className={className} title={title}>
+          {children}
+        </a>
+      )
+    }
+    return (
+      <a
+        href={target.kind === 'conversation' ? `#${target.id}` : `#${target.kind}`}
+        className={className}
+        title={title}
+        onClick={(e) => {
+          e.preventDefault()
+          onClick?.(e)
+          if (target.kind === 'conversation') {
+            onNavigate?.(target.id)
+          }
+        }}
+      >
+        {children}
+      </a>
+    )
+  }
+}
+
 const noopNavigation = {
   toConversation() {},
   toNewChat() {},
@@ -601,6 +630,10 @@ export function StoryChat({
   children: ReactNode
 }) {
   const resolved = useMemo(() => adapter ?? makeStaticAdapter(), [adapter])
+  const resolvedConfig = useMemo(
+    () => ({ LinkComponent: storyChatLink(onNavigate), ...config }),
+    [config, onNavigate],
+  )
   const navigation = useMemo(
     () =>
       onNavigate
@@ -619,7 +652,7 @@ export function StoryChat({
       navigation={navigation}
       notify={consoleNotify}
       activeConversationId={conversationId}
-      {...(config ? { config } : {})}
+      config={resolvedConfig}
     >
       {children}
     </ChatProvider>

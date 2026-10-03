@@ -1,0 +1,32 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Introduction" />
+
+# @parallelworks/ui
+
+React components built on one theme contract. Each surface is its own subpath, so an application
+ships only the components it imports.
+
+```bash
+npm install @parallelworks/ui
+```
+
+| Subpath | Contents |
+| --- | --- |
+| `@parallelworks/ui` | theme contract, primitives, `UIProvider` |
+| `@parallelworks/ui/theme`, `/icons` | `deriveTheme` and presets; the icon barrel |
+| `@parallelworks/ui/list` | list pages, tables, row menus and list controls |
+| `@parallelworks/ui/form` | `DynamicForm` and its field registry |
+| `@parallelworks/ui/graph` | job dependency graph and tree view |
+| `@parallelworks/ui/editor` | Monaco editor (optional peers) |
+| `@parallelworks/ui/logviewer` | log viewer with ANSI color and search |
+| `@parallelworks/ui/file-explorer` | object storage explorer over a host-supplied provider |
+| `@parallelworks/ui/ai`, `/ai/openai`, `/ai/mock` | chat interface and adapters |
+
+Hosts bind notifications, strings, navigation, data hooks and the workflow engine through
+`UIProvider`. Pick a theme from the toolbar above; every story derives its colors from that seed.
+
+The stories render the compiled stylesheet consumers receive, so what you see here is what ships.
+
+- [npm](https://www.npmjs.com/package/@parallelworks/ui)
+- [Source](https://github.com/parallelworks/foundation/tree/canary/packages/ui)

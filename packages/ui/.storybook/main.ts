@@ -3,7 +3,7 @@ import type { StorybookConfig } from '@storybook/react-vite'
 // Stories stay colocated with their components.
 const config: StorybookConfig = {
   framework: '@storybook/react-vite',
-  stories: ['../src/**/*.stories.tsx'],
+  stories: ['../src/**/*.mdx', '../src/**/*.stories.tsx'],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y'],
   core: { disableTelemetry: true },
   // shiki's textmate engine reads
