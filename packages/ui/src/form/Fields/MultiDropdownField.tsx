@@ -3,6 +3,7 @@ import { FieldWrapper } from '../FieldWrapper'
 import { MultiSelectionDropdown } from '../Form'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { dependentOptions } from '../utils/dependentOptions'
 
 export interface IMultiDropdownField extends BaseField {
   type: 'multi-dropdown'
@@ -41,20 +42,14 @@ export default function MultiDropdownField({
   missing,
   setFormDirty,
   onChange,
+  values,
 }: FieldComponentProps<IMultiDropdownField>) {
   // The form names every field before it renders one.
   const fieldName = field.name ?? ''
-  // Handle depends_on logic
-  let parentValue = field.parentValue
-  let options = field.options
-
-  if (field.depends_on) {
-    parentValue = field.depends_on
-
-    if (!Array.isArray(field.options)) {
-      options = field.options[parentValue as string] || []
-    }
-  }
+  const dependent = dependentOptions(field.options, field.depends_on, values)
+  const { options } = dependent
+  // A change of the value the options depend on clears the selection.
+  const parentValue = field.depends_on ? dependent.parentValue : field.parentValue
 
   return (
     <FieldWrapper
@@ -80,7 +75,7 @@ export default function MultiDropdownField({
             key={field.name}
             name={fieldName}
             label={field.label || label}
-            options={Array.isArray(options) ? options : []}
+            options={options}
             setFormDirty={setFormDirty}
             parentValue={parentValue}
             onChange={onChange}

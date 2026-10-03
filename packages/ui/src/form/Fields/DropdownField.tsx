@@ -2,6 +2,7 @@ import { FieldWrapper } from '../FieldWrapper'
 import { FormikCustomDropdown } from '../SpecialTypes'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { dependentOptions } from '../utils/dependentOptions'
 import { getPlaceholder } from '../utils/getPlaceholder'
 
 export interface IDropdownField extends BaseField {
@@ -50,13 +51,11 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
     setFieldValue,
     setFieldTouched,
     currentValue,
+    values,
   } = props
   // The form names every field before it renders one.
   const fieldName = field.name ?? ''
-  let options = (Array.isArray(field.options) && field.options) || []
-  if (field.depends_on && !Array.isArray(field.options)) {
-    options = field.options[field.depends_on] ?? []
-  }
+  const { options } = dependentOptions(field.options, field.depends_on, values)
 
   // Handle secondaryField - if it's an array, join with comma or pass first one
   const secondaryField = Array.isArray(field.secondaryField)
