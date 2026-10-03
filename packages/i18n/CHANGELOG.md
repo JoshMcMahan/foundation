@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/parallelworks/foundation/compare/i18n-v0.2.0...i18n-v0.3.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* props, options and interface members that were accepted but never read are removed from @parallelworks/ui: DependencyGraph initialScale, Dropdown onRangeChange, CollapsiblePanel shown/setShown, Table Item/Header props, CompactTable borderless/panel/theadClassName/isLoading/tableProps, editor options.theme, MultiSelectionDropdown className/secondaryField, FormikCustomDropdown parentValue/resetOnChange, ChatNavigation.toAttachments, ChatStrings.sidebar.moreOptions, SlashCommandOption.usage, the SET_THINKING and UPDATE_CURRENT_CONVERSATION_TITLE chat actions, IFileExplorerClient.getStorageName, IFileExplorerProvider.createClient, TStorage.region, and the wizard schema keys urlBased, navigation.showProgress and step canSkip.
+
+### Bug Fixes
+
+* **i18n:** add refuses a namespace name that would write outside the catalog ([#56](https://github.com/parallelworks/foundation/issues/56)) ([2c31a5f](https://github.com/parallelworks/foundation/commit/2c31a5f03a3a799c2b0820da24a5d78f0b13bcba))
+
+
+### Code Refactoring
+
+* drop props, options and code that did nothing, and merge duplicated helpers ([#74](https://github.com/parallelworks/foundation/issues/74)) ([7e56e1a](https://github.com/parallelworks/foundation/commit/7e56e1a3d331157f0c678f5c2feefa59988eb7de))
+
 ## [0.2.0](https://github.com/parallelworks/foundation/compare/i18n-v0.1.1...i18n-v0.2.0) (2026-10-02)
 
 
