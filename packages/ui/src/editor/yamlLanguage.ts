@@ -87,10 +87,12 @@ class WorkerConnection {
   >()
   private readonly notificationHandlers = new Map<string, (params: unknown) => void>()
 
-  constructor(
-    private readonly worker: Worker,
-    private readonly onRequest: (method: string, params: unknown) => unknown,
-  ) {
+  private readonly worker: Worker
+  private readonly onRequest: (method: string, params: unknown) => unknown
+
+  constructor(worker: Worker, onRequest: (method: string, params: unknown) => unknown) {
+    this.worker = worker
+    this.onRequest = onRequest
     worker.addEventListener('message', (event: MessageEvent<Message>) => this.receive(event.data))
   }
 
