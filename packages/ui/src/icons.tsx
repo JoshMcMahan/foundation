@@ -41,6 +41,7 @@ export {
   BsListUl as ListViewIcon,
   BsMortarboard as EducationIcon,
   BsMusicNoteBeamed as MusicIcon,
+  BsOpenai as OpenAIIcon,
   BsPersonPlus as AddUserIcon,
   BsSearch as SearchOutlineIcon,
   BsSend as SendIcon,
@@ -270,7 +271,6 @@ export {
   SiAnthropic as AnthropicIcon,
   SiHelm as HelmIcon,
   SiKubernetes as KubernetesIcon,
-  SiOpenai as OpenAIIcon,
 } from 'react-icons/si'
 export {
   TbAlertTriangle as AlertIcon,

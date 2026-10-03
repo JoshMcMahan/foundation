@@ -12,6 +12,6 @@
     "build": "pnpm -r build"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14"
+    "@biomejs/biome": "^2.5.15"
   }
 }
