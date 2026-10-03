@@ -1,44 +1,12 @@
 import cx from 'classnames'
 import * as monaco from 'monaco-editor'
-import { configureMonacoYaml, type SchemasSettings } from 'monaco-yaml'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useCssIsDark } from '../components/useCssIsDark'
 import { defineEditorThemes, getThemeName } from './themes'
 import { setupMonacoWorkers } from './workers'
-import { onYamlSchemas } from './yaml'
+import { ensureYamlLanguage } from './yamlLanguage'
 
 setupMonacoWorkers()
-
-const monacoWithWorkerBridge: typeof monaco = {
-  ...monaco,
-  editor: {
-    ...monaco.editor,
-    createWebWorker: <T extends object>(
-      opts: monaco.editor.IInternalWebWorkerOptions | monaco.IWebWorkerOptions,
-    ) =>
-      'worker' in opts ? monaco.editor.createWebWorker<T>(opts) : monaco.createWebWorker<T>(opts),
-  },
-}
-
-// Registered once on the global `monaco` singleton and never disposed: a per-editor
-// lifecycle let navigation tear the YAML service down, killing suggestions until reload.
-let monacoYamlConfigured = false
-function ensureMonacoYamlConfigured() {
-  if (monacoYamlConfigured) {
-    return
-  }
-  monacoYamlConfigured = true
-  const options = (schemas: SchemasSettings[]) => ({
-    enableSchemaRequest: true,
-    completion: true,
-    validate: true,
-    hover: true,
-    format: { enable: true },
-    schemas,
-  })
-  const monacoYaml = configureMonacoYaml(monacoWithWorkerBridge, options([]))
-  onYamlSchemas((schemas) => monacoYaml.update(options(schemas)))
-}
 
 export type ISchemaError = monaco.editor.IMarker
 
@@ -163,7 +131,7 @@ export default function MonacoEditor({
             onValidate(markers)
           })
 
-          ensureMonacoYamlConfigured()
+          ensureYamlLanguage()
           monacoRef.current = editor
         }
       }}

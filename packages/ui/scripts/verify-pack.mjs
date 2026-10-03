@@ -37,7 +37,6 @@ const CSS_ENTRYPOINTS = [
 
 const uiPkg = JSON.parse(readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
 const MONACO_EDITOR_VERSION = uiPkg.peerDependencies['monaco-editor']
-const MONACO_YAML_VERSION = uiPkg.peerDependencies['monaco-yaml']
 
 // npm force-includes README* and LICENSE* whatever `files` says, so a
 // contributor-facing doc left in the package root reaches consumers.
@@ -100,10 +99,9 @@ try {
           // React types — the package must not pin them for them.
           '@types/react': '19.2.17',
           '@types/react-dom': '19.2.3',
-          // Optional peers: installed in the fixture so the editor entrypoint
-          // type-resolves; consumers without them simply skip that subpath.
+          // Optional peer: installed in the fixture so the editor entrypoint
+          // type-resolves; consumers without it simply skip that subpath.
           'monaco-editor': MONACO_EDITOR_VERSION,
-          'monaco-yaml': MONACO_YAML_VERSION,
           // streamdown's public types (surfaced via ChatUIConfig's
           // markdownComponents) reference mermaid, whose declarations import
           // type-fest without declaring it; a strict consumer without
@@ -141,6 +139,23 @@ try {
   for (const [, url] of fontsCss.matchAll(/url\('\.\/([^']+)'\)/g)) {
     if (!existsSync(path.join(stylesDir, url))) {
       throw new Error(`dist/styles/fonts.css references missing ${url}`)
+    }
+  }
+
+  console.log('• asserting the editor ships the workers it references')
+  const editorDir = path.join(fixture, 'node_modules/@parallelworks/ui/dist/editor')
+  const workersJs = readFileSync(path.join(editorDir, 'workers.js'), 'utf8')
+  const workerUrls = [...workersJs.matchAll(/new URL\("([^"]+)", import\.meta\.url\)/g)].map(
+    ([, url]) => url,
+  )
+  // Editor, JSON and YAML. A root-absolute URL would resolve against the
+  // consumer's site, where the file was never copied.
+  if (workerUrls.length !== 3) {
+    throw new Error(`dist/editor/workers.js references ${workerUrls.length} workers, expected 3`)
+  }
+  for (const url of workerUrls) {
+    if (!url.startsWith('../') || !existsSync(path.join(editorDir, url))) {
+      throw new Error(`dist/editor/workers.js references missing or absolute ${url}`)
     }
   }
 

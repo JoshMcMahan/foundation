@@ -111,8 +111,7 @@
   },
   "peerDependencies": {
     "formik": "^2.4.9",
-    "monaco-editor": "^0.55.1",
-    "monaco-yaml": "^5.5.1",
+    "monaco-editor": "^0.57.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -158,22 +157,21 @@
     "@vitejs/plugin-react": "^6.0.2",
     "formik": "^2.4.9",
     "jsdom": "^26.1.0",
-    "monaco-editor": "^0.55.1",
-    "monaco-yaml": "^5.5.1",
+    "monaco-editor": "^0.57.0",
+    "path-browserify": "^1.0.1",
     "publint": "^0.3.14",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "storybook": "10.5.8",
     "tailwindcss": "^4.3.0",
     "typescript": "^7.0.0",
+    "url": "^0.11.4",
     "vite": "^8.0.16",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "yaml-language-server": "^1.24.0"
   },
   "peerDependenciesMeta": {
     "monaco-editor": {
-      "optional": true
-    },
-    "monaco-yaml": {
       "optional": true
     }
   }

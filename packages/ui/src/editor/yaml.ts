@@ -1,4 +1,12 @@
-import type { SchemasSettings } from 'monaco-yaml'
+/** A JSON schema for the YAML models whose URI matches one of `fileMatch`. */
+export interface SchemasSettings {
+  /** Identifies the schema; fetched from here when `schema` is not given. */
+  uri: string
+  /** Globs matched against model URIs, such as `**\/workflow.yaml`. */
+  fileMatch?: string[]
+  /** The schema itself, used instead of fetching `uri`. */
+  schema?: object
+}
 
 let schemas: SchemasSettings[] = []
 let apply: ((schemas: SchemasSettings[]) => void) | undefined

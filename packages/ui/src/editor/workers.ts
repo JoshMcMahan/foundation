@@ -4,15 +4,11 @@ import type { Environment } from 'monaco-editor'
 const monacoEnvironment: Environment = {
   getWorker(_moduleId, label) {
     if (label === 'json') {
-      return new Worker(
-        new URL('monaco-editor/esm/vs/language/json/json.worker.js', import.meta.url),
-        { type: 'module' },
-      )
+      return new Worker(new URL('monaco-editor/language/json/json.worker.js', import.meta.url), {
+        type: 'module',
+      })
     }
-    if (label === 'yaml') {
-      return new Worker(new URL('monaco-yaml/yaml.worker.js', import.meta.url), { type: 'module' })
-    }
-    return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {
+    return new Worker(new URL('monaco-editor/editor/editor.worker.js', import.meta.url), {
       type: 'module',
     })
   },
@@ -28,4 +24,12 @@ export function setupMonacoWorkers(): void {
     return
   }
   window.MonacoEnvironment = monacoEnvironment
+}
+
+/**
+ * Starts the YAML language server. It is not a Monaco worker, so a host's own
+ * MonacoEnvironment never has to provide it.
+ */
+export function createYamlWorker(): Worker {
+  return new Worker(new URL('./yaml.worker.ts', import.meta.url), { type: 'module' })
 }
