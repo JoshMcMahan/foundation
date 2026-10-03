@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'))
 
@@ -10,8 +10,26 @@ const external = [
   ...Object.keys(pkg.peerDependencies ?? {}),
 ]
 
+const WORKER_BASE = 'import.meta.__uiWorkerBase'
+
+// Vite would bundle each `new Worker(new URL(..., import.meta.url))` into an
+// absolute /assets path that only exists in this build. Hiding import.meta.url
+// from its scanner keeps the expression verbatim for the host's bundler.
+export const keepWorkerUrls: Plugin = {
+  name: 'keep-worker-urls',
+  enforce: 'pre',
+  transform(code, id) {
+    if (id.endsWith('/src/editor/workers.ts')) {
+      return code.replaceAll('import.meta.url', WORKER_BASE)
+    }
+  },
+  renderChunk(code) {
+    return code.replaceAll(WORKER_BASE, 'import.meta.url')
+  },
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), keepWorkerUrls],
   build: {
     outDir: 'dist',
     sourcemap: false,
@@ -31,6 +49,9 @@ export default defineConfig({
         'ai/index': 'src/ai/index.ts',
         'ai/adapter/openai/index': 'src/ai/adapter/openai/index.ts',
         'ai/adapter/mock/index': 'src/ai/adapter/mock/index.ts',
+        'editor/workers/editor.worker': 'src/editor/workers/editor.worker.js',
+        'editor/workers/json.worker': 'src/editor/workers/json.worker.js',
+        'editor/workers/yaml.worker': 'src/editor/workers/yaml.worker.js',
       },
     },
     rollupOptions: {

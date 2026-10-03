@@ -36,8 +36,16 @@ function ensureMonacoYamlConfigured() {
     format: { enable: true },
     schemas,
   })
-  const monacoYaml = configureMonacoYaml(monacoWithWorkerBridge, options([]))
-  onYamlSchemas((schemas) => monacoYaml.update(options(schemas)))
+  // Configured with the schemas already known, since each update restarts the
+  // YAML worker that configuring starts for any open model.
+  let monacoYaml: ReturnType<typeof configureMonacoYaml> | undefined
+  onYamlSchemas((schemas) => {
+    if (monacoYaml) {
+      monacoYaml.update(options(schemas))
+    } else {
+      monacoYaml = configureMonacoYaml(monacoWithWorkerBridge, options(schemas))
+    }
+  })
 }
 
 export type ISchemaError = monaco.editor.IMarker

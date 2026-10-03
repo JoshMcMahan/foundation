@@ -11,6 +11,10 @@ const config: StorybookConfig = {
   // throws wherever `process` exists without `env`.
   viteFinal: (config) => ({
     ...config,
+    // Storybook is an app, so its own build bundles the editor workers.
+    plugins: config.plugins
+      ?.flat()
+      .filter((plugin) => !(plugin && 'name' in plugin && plugin.name === 'keep-worker-urls')),
     define: { ...config.define, 'process.env': {} },
   }),
 }

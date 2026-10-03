@@ -1,20 +1,17 @@
 import type { Environment } from 'monaco-editor'
 
 // Shared by both Monaco editors so load order can't leave an inconsistent global.
+// The worker URLs ship verbatim so the host's bundler builds each worker from its own
+// monaco-editor and monaco-yaml.
 const monacoEnvironment: Environment = {
   getWorker(_moduleId, label) {
     if (label === 'json') {
-      return new Worker(
-        new URL('monaco-editor/esm/vs/language/json/json.worker.js', import.meta.url),
-        { type: 'module' },
-      )
+      return new Worker(new URL('./workers/json.worker.js', import.meta.url), { type: 'module' })
     }
     if (label === 'yaml') {
-      return new Worker(new URL('monaco-yaml/yaml.worker.js', import.meta.url), { type: 'module' })
+      return new Worker(new URL('./workers/yaml.worker.js', import.meta.url), { type: 'module' })
     }
-    return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {
-      type: 'module',
-    })
+    return new Worker(new URL('./workers/editor.worker.js', import.meta.url), { type: 'module' })
   },
 }
 
