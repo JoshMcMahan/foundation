@@ -151,6 +151,10 @@ function merged(dir: string, locale: string, tree: Messages): [string, Messages]
   return Object.entries(tree).map(([ns, value]) => {
     if (typeof value === 'string')
       throw new Error(`${locale}: ${ns}: a namespace must be an object`)
+    // The name becomes both a file name and an identifier in the index, and
+    // must not reach outside the locale's directory.
+    if (!/^[A-Za-z_$][\w$]*$/.test(ns))
+      throw new Error(`${locale}: ${JSON.stringify(ns)} is not a namespace name`)
     const file = path.join(dir, locale, `${ns}.json`)
     let existing: Messages = {}
     try {

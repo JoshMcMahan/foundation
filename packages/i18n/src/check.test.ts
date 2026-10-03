@@ -100,4 +100,8 @@ describe('add', () => {
     })
     expect(check(dir, 'en')).toEqual([])
   })
+  it.each(['../../escape', 'a/b', 'a\\b', '..', ''])('refuses the namespace %j', (ns) => {
+    split({ en: { nav: { home: 'Home' } } })
+    expect(() => add(dir, 'en', { en: { [ns]: { x: 'X' } } })).toThrow(/is not a namespace name/)
+  })
 })
