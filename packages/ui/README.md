@@ -64,6 +64,11 @@ import { AddIcon, LoaderIcon, TrashIcon } from '@parallelworks/ui/icons'
 The barrel re-exports a curated, stable set of icon names over `react-icons`
 so applications never depend on a specific icon pack directly.
 
+Each icon ships as its own module under `dist/icons/<set>/`, so an application
+bundles an icon only into the chunks that render it. Every module carries its
+icon's data, copied from its `react-icons` set at build time, and opens with that
+set's name and license.
+
 ## Workflow engine
 
 The workflow surfaces (`/form`'s `DynamicForm`, `/graph`'s `DependencyGraph`,

@@ -1,13 +1,4 @@
 // Import icons from here, never from 'react-icons/*' directly.
-import cx from 'classnames'
-import type { IconBaseProps } from 'react-icons'
-import { BiError as ErrorIcon } from 'react-icons/bi'
-import {
-  BsZoomIn as ChartZoomIcon,
-  BsLayers as InfrastructureLayersIcon,
-  BsCurrencyDollar as MoneyIcon,
-} from 'react-icons/bs'
-import { FaInfoCircle as InfoIcon, FaCircleNotch as UnexportedLoaderIcon } from 'react-icons/fa'
 
 export type { IconType } from 'react-icons'
 export { AiOutlineRollback as RollbackIcon } from 'react-icons/ai'
@@ -15,6 +6,7 @@ export {
   BiBell as UnmuteIcon,
   BiBellOff as MuteIcon,
   BiBuildings as OrganizationIcon,
+  BiError as ErrorIcon,
   BiExpandVertical as ExpandVerticalIcon,
   BiPause as PauseIcon,
   BiPlay as StartIcon,
@@ -32,11 +24,13 @@ export {
   BsChevronDoubleDown as ChevronDoubleDownIcon,
   BsChevronDoubleUp as ChevronDoubleUpIcon,
   BsClipboardCheck as ClipboardCheckIcon,
+  BsCurrencyDollar as MoneyIcon,
   BsDash as MinusIcon,
   BsFileEarmarkZip as ZipIcon,
   BsFiles as FilesIcon,
   BsGeoAlt as MapPinIcon,
   BsGrid as GridIcon,
+  BsLayers as InfrastructureLayersIcon,
   BsLayoutThreeColumns as ColumnsIcon,
   BsListUl as ListViewIcon,
   BsMortarboard as EducationIcon,
@@ -55,6 +49,7 @@ export {
   BsTerminalFill as UserWorkspaceFillIcon,
   BsThreeDots as MoreIcon,
   BsThreeDotsVertical as MenuIcon,
+  BsZoomIn as ChartZoomIcon,
 } from 'react-icons/bs'
 export {
   FaAmazon as AmazonIcon,
@@ -102,6 +97,7 @@ export {
   FaGlobeAmericas as MarketplaceIcon,
   FaGlobeAmericas as PublishIcon,
   FaImage as ImageSolidIcon,
+  FaInfoCircle as InfoIcon,
   FaKey as KeyIcon,
   FaKey as PasswordIcon,
   FaLayerGroup as ResourceGroupIcon,
@@ -162,12 +158,14 @@ export {
   FiAlertCircle as AlertCircleIcon,
   FiChevronDown as ChevronDownStrokeIcon,
   FiClock as ClockIcon,
+  FiCopy as CopyIcon,
   FiDownload as DownloadFileIcon,
   FiFile as FileIcon,
   FiFileText as FileTextIcon,
   FiHardDrive as DiskIcon,
   FiRotateCcw as HistoryIcon,
   FiUpload as UploadIcon,
+  FiX as XIcon,
   FiZap as ZapIcon,
 } from 'react-icons/fi'
 export { GiSpy as ImpersonateIcon } from 'react-icons/gi'
@@ -197,11 +195,8 @@ export {
   HiQuestionMarkCircle as TooltipIcon,
   HiServer as ServerIcon,
 } from 'react-icons/hi'
-
-import { HiMiniCheckCircle as SuccessIcon } from 'react-icons/hi2'
-
-export { FiCopy as CopyIcon, FiX as XIcon } from 'react-icons/fi'
 export {
+  HiMiniCheckCircle as SuccessIcon,
   HiMiniLanguage as LanguageIcon,
   HiMiniMinusCircle as SkipIcon,
   HiMiniXCircle as FailIcon,
@@ -302,21 +297,4 @@ export {
   VscTerminalPowershell as PowershellIcon,
   VscTerminalPowershell as RunWorkflowIcon,
 } from 'react-icons/vsc'
-export { ChartZoomIcon, ErrorIcon, InfoIcon, InfrastructureLayersIcon, MoneyIcon, SuccessIcon }
-
-interface IBaseCheckmarkProps {
-  className?: string
-  colored?: boolean
-}
-
-export function SuccessCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <SuccessIcon className={cx(colored && 'text-green-500', className)} />
-}
-
-export function ErrorCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <ErrorIcon className={cx(colored && 'text-red-400', className)} />
-}
-
-export function LoaderIcon({ className, ...props }: IconBaseProps & { className?: string }) {
-  return <UnexportedLoaderIcon className={cx('animate-spin', className)} {...props} />
-}
+export { ErrorCheckmark, LoaderIcon, SuccessCheckmark } from './components/StatusIcons'
