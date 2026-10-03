@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.12.0](https://github.com/parallelworks/foundation/compare/v0.11.0...v0.12.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* props, options and interface members that were accepted but never read are removed from @parallelworks/ui: DependencyGraph initialScale, Dropdown onRangeChange, CollapsiblePanel shown/setShown, Table Item/Header props, CompactTable borderless/panel/theadClassName/isLoading/tableProps, editor options.theme, MultiSelectionDropdown className/secondaryField, FormikCustomDropdown parentValue/resetOnChange, ChatNavigation.toAttachments, ChatStrings.sidebar.moreOptions, SlashCommandOption.usage, the SET_THINKING and UPDATE_CURRENT_CONVERSATION_TITLE chat actions, IFileExplorerClient.getStorageName, IFileExplorerProvider.createClient, TStorage.region, and the wizard schema keys urlBased, navigation.showProgress and step canSkip.
+
+### Features
+
+* **problem:** problem pages answer in JSON too, so a CLI can show how to fix a problem ([#70](https://github.com/parallelworks/foundation/issues/70)) ([616dafc](https://github.com/parallelworks/foundation/commit/616dafc6119f3bd529e40c0f044026dc54702469))
+
+
+### Bug Fixes
+
+* **server:** a zero ShutdownTimeout gives in-flight requests 10 seconds to finish ([#75](https://github.com/parallelworks/foundation/issues/75)) ([9243361](https://github.com/parallelworks/foundation/commit/92433614ea6a160a289b5cc6783acea09dc878b4))
+
+
+### Code Refactoring
+
+* drop props, options and code that did nothing, and merge duplicated helpers ([#74](https://github.com/parallelworks/foundation/issues/74)) ([7e56e1a](https://github.com/parallelworks/foundation/commit/7e56e1a3d331157f0c678f5c2feefa59988eb7de))
+
 ## [0.11.0](https://github.com/parallelworks/foundation/compare/v0.10.0...v0.11.0) (2026-10-02)
 
 
