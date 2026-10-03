@@ -10,16 +10,18 @@ concurrency:
   group: release-please
   cancel-in-progress: true
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+permissions: {}
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # tag releases, edit the "Latest" badge
+      pull-requests: write # open and update release PRs
+      issues: write # create the release labels
     steps:
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           config-file: .github/release-please-config.json
