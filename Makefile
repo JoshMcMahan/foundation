@@ -18,6 +18,7 @@ check: lint test ## Run all linters and tests
 .PHONY: lint
 lint: ## Lint Go and TypeScript
 	$(GOTOOL) golangci-lint run ./...
+	$(GOTOOL) govulncheck ./...
 	$(PNPM) lint
 	$(PNPM) typecheck
 

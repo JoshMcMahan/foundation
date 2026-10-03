@@ -38,14 +38,16 @@ export default function BranchNavigator({
   const hasNext = currentIndex < siblings.length - 1
 
   const handlePrev = () => {
-    if (hasPrev) {
-      onNavigate(siblings[currentIndex - 1]!.id)
+    const prev = siblings[currentIndex - 1]
+    if (hasPrev && prev) {
+      onNavigate(prev.id)
     }
   }
 
   const handleNext = () => {
-    if (hasNext) {
-      onNavigate(siblings[currentIndex + 1]!.id)
+    const next = siblings[currentIndex + 1]
+    if (hasNext && next) {
+      onNavigate(next.id)
     }
   }
 

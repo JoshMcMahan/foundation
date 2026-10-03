@@ -352,8 +352,8 @@ function computeGraphLayout(
     // BFS upstream (ancestors)
     const aDist = new Map<string, number>()
     const q1: [string, number][] = [[start, 0]]
-    while (q1.length > 0) {
-      const [job, d] = q1.shift()!
+    for (let next = q1.shift(); next; next = q1.shift()) {
+      const [job, d] = next
       for (const dep of filteredDeps[job] ?? []) {
         if (!aDist.has(dep)) {
           aDist.set(dep, d + 1)
@@ -365,8 +365,8 @@ function computeGraphLayout(
     // BFS downstream (descendants)
     const dDist = new Map<string, number>()
     const q2: [string, number][] = [[start, 0]]
-    while (q2.length > 0) {
-      const [job, d] = q2.shift()!
+    for (let next = q2.shift(); next; next = q2.shift()) {
+      const [job, d] = next
       for (const child of reverseDeps[job] ?? []) {
         if (!dDist.has(child)) {
           dDist.set(child, d + 1)
@@ -649,12 +649,16 @@ function Subgraph({
           return (
             <div key={col[0]?.[0]}>
               {col.map((jobNames) => {
-                const matrixGroup = displayJobs[jobNames[0]!]?._matrixGroup
+                const first = jobNames[0]
+                if (first === undefined) {
+                  return null
+                }
+                const matrixGroup = displayJobs[first]?._matrixGroup
 
                 if (matrixGroup) {
                   return (
                     <MatrixGroupNode
-                      key={'node_' + jobNames[0]}
+                      key={`node_${first}`}
                       matrixGroup={matrixGroup}
                       jobNames={jobNames}
                       idPrefix={pathPrefix}
@@ -662,7 +666,7 @@ function Subgraph({
                       onToggle={() => toggleMatrix(pathPrefix + matrixGroup.originaljob)}
                       jobs={jobs}
                       activeDists={activeDists}
-                      onMouseEnter={() => setHoveredJob(jobNames[0]!)}
+                      onMouseEnter={() => setHoveredJob(first)}
                       onMouseLeave={() => setHoveredJob(null)}
                       hoveredRelated={hoveredRelated}
                       animT={animT}
@@ -680,23 +684,23 @@ function Subgraph({
                 }
                 return (
                   <div
-                    key={'node_' + jobNames[0]}
-                    id={'node_' + pathPrefix + jobNames[0]}
+                    key={`node_${first}`}
+                    id={`node_${pathPrefix}${first}`}
                     role="none"
                     className="relative m-24"
                     style={{
-                      zIndex: (activeDists?.has(jobNames[0]!) ? 25 : 1) + zBase,
+                      zIndex: (activeDists?.has(first) ? 25 : 1) + zBase,
                     }}
-                    onMouseEnter={() => setHoveredJob(jobNames[0]!)}
+                    onMouseEnter={() => setHoveredJob(first)}
                     onMouseLeave={() => setHoveredJob(null)}
-                    onFocus={() => setHoveredJob(jobNames[0]!)}
+                    onFocus={() => setHoveredJob(first)}
                     onBlur={() => setHoveredJob(null)}
                   >
                     <div className="absolute inset-0 rounded-2xl bg-(--theme-panel-bg)" />
                     <div
                       className="relative border-solid shadow py-4 px-8 rounded-xl border-4 whitespace-nowrap bg-(--theme-panel-bg) text-2xl"
                       style={{
-                        opacity: hoveredRelated && !hoveredRelated.has(jobNames[0]!) ? 0.5 : 1,
+                        opacity: hoveredRelated && !hoveredRelated.has(first) ? 0.5 : 1,
                         transition: `opacity ${animT}s`,
                       }}
                     >
@@ -765,7 +769,7 @@ function Subgraph({
     <div ref={wrapperRef} className="relative">
       {(() => {
         const wrapper = wrapperRef.current
-        const gid = (name: string) => document.getElementById('node_' + pathPrefix + name)
+        const gid = (name: string) => document.getElementById(`node_${pathPrefix}${name}`)
         const ox = (el: HTMLElement) => offsetWithin(el, wrapper).x
         // Y position where connectors attach to a node
         const nodeConnectorY = (el: HTMLElement) => offsetWithin(el, wrapper).y + 37
@@ -785,9 +789,13 @@ function Subgraph({
         let minAdy = Number.POSITIVE_INFINITY
         for (const col of dependencyCols) {
           for (const jobNames of col) {
-            for (const dep of directDeps[jobNames[0]!] ?? []) {
+            const first = jobNames[0]
+            if (first === undefined) {
+              continue
+            }
+            for (const dep of directDeps[first] ?? []) {
               const s = gid(dep)
-              const e = gid(jobNames[0]!)
+              const e = gid(first)
               if (!s || !e) {
                 continue
               }
@@ -807,214 +815,212 @@ function Subgraph({
 
         return dependencyCols.map((col) => (
           <React.Fragment key={col[0]?.[0]}>
-            {col.map((jobNames) => (
-              <React.Fragment key={jobNames[0]}>
-                {(directDeps[jobNames[0]!] ?? []).map((dep) => {
-                  const isHighlighted =
-                    hoveredRelated?.has(jobNames[0]!) && hoveredRelated?.has(dep)
-                  const baseColor = 'var(--theme-border)'
-                  // Compute animation delay for this connector
-                  const depDist = activeDists?.get(dep) ?? 0
-                  const targetDist = activeDists?.get(jobNames[0]!) ?? 0
-                  const hopDelay = animT
-                  const closerDist = Math.min(depDist, targetDist)
-                  const connectorDelay = closerDist * hopDelay
-                  const retractDelay = (maxHoveredDistRef.current - closerDist) * hopDelay
-                  const drawRightToLeft = targetDist < depDist
-                  const start = gid(dep)
-                  const end = gid(jobNames[0]!)
-                  if (!start || !end) {
-                    return null
-                  }
-                  const x1 = ox(start) + start.offsetWidth - 2
-                  const y1 = nodeConnectorY(start)
-                  const x2 = ox(end) + 2
-                  const y2 = nodeConnectorY(end)
-                  const dy = y2 - y1
-                  const ady = Math.abs(dy)
+            {col.map(([first]) =>
+              first === undefined ? null : (
+                <React.Fragment key={first}>
+                  {(directDeps[first] ?? []).map((dep) => {
+                    const isHighlighted = hoveredRelated?.has(first) && hoveredRelated?.has(dep)
+                    const baseColor = 'var(--theme-border)'
+                    // Compute animation delay for this connector
+                    const depDist = activeDists?.get(dep) ?? 0
+                    const targetDist = activeDists?.get(first) ?? 0
+                    const hopDelay = animT
+                    const closerDist = Math.min(depDist, targetDist)
+                    const connectorDelay = closerDist * hopDelay
+                    const retractDelay = (maxHoveredDistRef.current - closerDist) * hopDelay
+                    const drawRightToLeft = targetDist < depDist
+                    const start = gid(dep)
+                    const end = gid(first)
+                    if (!start || !end) {
+                      return null
+                    }
+                    const x1 = ox(start) + start.offsetWidth - 2
+                    const y1 = nodeConnectorY(start)
+                    const x2 = ox(end) + 2
+                    const y2 = nodeConnectorY(end)
+                    const dy = y2 - y1
+                    const ady = Math.abs(dy)
 
-                  let pathD: string
-                  let pathLen: number
-                  let pathDReversed: string
-                  const r = arcR
-                  if (ady === 0) {
-                    // Straight horizontal line
-                    pathD = `M ${x1} ${y1} L ${x2} ${y2}`
-                    pathDReversed = `M ${x2} ${y2} L ${x1} ${y1}`
-                    pathLen = x2 - x1
-                  } else {
-                    // 5 components: horizontal + arc + vertical + arc + horizontal
-                    const s = dy > 0 ? 1 : -1
-                    // Trailing horizontal is fixed (colGap/2 - r from target)
-                    // Leading horizontal absorbs extra distance for multi-column spans
-                    const hTrail = colGap / 2 - r
-                    const ax2end = x2 - hTrail // where arc 2 ends
-                    const ax = ax2end - 2 * r // where arc 1 starts
-                    const sw1 = dy > 0 ? 1 : 0
-                    const sw2 = dy > 0 ? 0 : 1
-                    pathD = [
-                      `M ${x1} ${y1}`,
-                      `L ${ax} ${y1}`,
-                      `A ${r} ${r} 0 0 ${sw1} ${ax + r} ${y1 + s * r}`,
-                      `L ${ax + r} ${y2 - s * r}`,
-                      `A ${r} ${r} 0 0 ${sw2} ${ax2end} ${y2}`,
-                      `L ${x2} ${y2}`,
-                    ].join(' ')
-                    // Reversed: same points in reverse order, sweep flags flipped
-                    pathDReversed = [
-                      `M ${x2} ${y2}`,
-                      `L ${ax2end} ${y2}`,
-                      `A ${r} ${r} 0 0 ${sw1} ${ax + r} ${y2 - s * r}`,
-                      `L ${ax + r} ${y1 + s * r}`,
-                      `A ${r} ${r} 0 0 ${sw2} ${ax} ${y1}`,
-                      `L ${x1} ${y1}`,
-                    ].join(' ')
-                    const arcLen = (Math.PI * r) / 2
-                    const vSeg = Math.max(0, ady - 2 * r)
-                    pathLen = ax - x1 + arcLen + vSeg + arcLen + (x2 - ax2end)
-                  }
+                    let pathD: string
+                    let pathLen: number
+                    let pathDReversed: string
+                    const r = arcR
+                    if (ady === 0) {
+                      // Straight horizontal line
+                      pathD = `M ${x1} ${y1} L ${x2} ${y2}`
+                      pathDReversed = `M ${x2} ${y2} L ${x1} ${y1}`
+                      pathLen = x2 - x1
+                    } else {
+                      // 5 components: horizontal + arc + vertical + arc + horizontal
+                      const s = dy > 0 ? 1 : -1
+                      // Trailing horizontal is fixed (colGap/2 - r from target)
+                      // Leading horizontal absorbs extra distance for multi-column spans
+                      const hTrail = colGap / 2 - r
+                      const ax2end = x2 - hTrail // where arc 2 ends
+                      const ax = ax2end - 2 * r // where arc 1 starts
+                      const sw1 = dy > 0 ? 1 : 0
+                      const sw2 = dy > 0 ? 0 : 1
+                      pathD = [
+                        `M ${x1} ${y1}`,
+                        `L ${ax} ${y1}`,
+                        `A ${r} ${r} 0 0 ${sw1} ${ax + r} ${y1 + s * r}`,
+                        `L ${ax + r} ${y2 - s * r}`,
+                        `A ${r} ${r} 0 0 ${sw2} ${ax2end} ${y2}`,
+                        `L ${x2} ${y2}`,
+                      ].join(' ')
+                      // Reversed: same points in reverse order, sweep flags flipped
+                      pathDReversed = [
+                        `M ${x2} ${y2}`,
+                        `L ${ax2end} ${y2}`,
+                        `A ${r} ${r} 0 0 ${sw1} ${ax + r} ${y2 - s * r}`,
+                        `L ${ax + r} ${y1 + s * r}`,
+                        `A ${r} ${r} 0 0 ${sw2} ${ax} ${y1}`,
+                        `L ${x1} ${y1}`,
+                      ].join(' ')
+                      const arcLen = (Math.PI * r) / 2
+                      const vSeg = Math.max(0, ady - 2 * r)
+                      pathLen = ax - x1 + arcLen + vSeg + arcLen + (x2 - ax2end)
+                    }
 
-                  return (
-                    <React.Fragment key={dep}>
-                      {/* Dots: background square + inner dot — above nodes */}
-                      <svg
-                        aria-hidden="true"
-                        overflow="visible"
-                        className="absolute pointer-events-none"
-                        style={{
-                          zIndex:
-                            (isHighlighted ||
-                            (activeDists?.has(dep) && activeDists?.has(jobNames[0]!))
-                              ? 30
-                              : 10) + zBase,
-                        }}
-                      >
-                        {/* Background square (panel color) — creates gap between inner dot and node edge */}
-                        <rect
-                          x={x1 - 16}
-                          y={y1 - 16}
-                          width={32}
-                          height={32}
-                          fill="var(--theme-panel-bg)"
-                        />
-                        <rect
-                          x={x2 - 16}
-                          y={y2 - 16}
-                          width={32}
-                          height={32}
-                          fill="var(--theme-panel-bg)"
-                        />
-                        {/* Inner filled dot — start */}
-                        <circle
-                          cx={x1}
-                          cy={y1}
-                          r="8"
-                          fill={isHighlighted ? '#3B82F6' : baseColor}
+                    return (
+                      <React.Fragment key={dep}>
+                        {/* Dots: background square + inner dot — above nodes */}
+                        <svg
+                          aria-hidden="true"
+                          overflow="visible"
+                          className="absolute pointer-events-none"
                           style={{
-                            opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
-                            transition: isHighlighted
-                              ? `fill ${animT}s ${depDist * hopDelay}s, opacity 0s`
-                              : `fill ${animT}s ${(maxHoveredDistRef.current - depDist) * hopDelay}s, opacity 0s`,
+                            zIndex:
+                              (isHighlighted || (activeDists?.has(dep) && activeDists?.has(first))
+                                ? 30
+                                : 10) + zBase,
                           }}
-                        />
-                        {/* Inner filled dot — end */}
-                        <circle
-                          cx={x2}
-                          cy={y2}
-                          r="8"
-                          fill={isHighlighted ? '#3B82F6' : baseColor}
-                          style={{
-                            opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
-                            transition: isHighlighted
-                              ? `fill ${animT}s ${targetDist * hopDelay}s, opacity 0s`
-                              : `fill ${animT}s ${(maxHoveredDistRef.current - targetDist) * hopDelay}s, opacity 0s`,
-                          }}
-                        />
-                      </svg>
-                      <svg
-                        aria-hidden="true"
-                        overflow="visible"
-                        className="absolute pointer-events-none"
-                        style={{ zIndex: (isHighlighted ? 20 : -1) + zBase }}
-                      >
-                        {/* Background mask — always full opacity, clears overlapping lines behind */}
-                        <path
-                          d={pathD}
-                          stroke="var(--theme-panel-bg)"
-                          strokeWidth="6"
-                          fill="transparent"
-                        />
-                        {/* Base colored path */}
-                        <path
-                          d={pathD}
-                          stroke={baseColor}
-                          strokeWidth="6"
-                          fill="transparent"
-                          style={{
-                            opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
-                            transition: `opacity 0s`,
-                          }}
-                        />
-                      </svg>
-                      {/* Blue overlay — draws in via dashoffset, above nodes */}
-                      <svg
-                        aria-hidden="true"
-                        overflow="visible"
-                        className="absolute pointer-events-none"
-                        style={{ zIndex: 20 + zBase }}
-                      >
-                        {/* Draw-in: always mounted so transition can animate from hidden to visible */}
-                        <path
-                          d={drawRightToLeft ? pathDReversed : pathD}
-                          fill="transparent"
-                          style={{
-                            stroke: '#3B82F6',
-                            strokeWidth: 6,
-                            strokeDasharray: `${pathLen} ${pathLen}`,
-                            strokeDashoffset: isHighlighted ? 0 : pathLen,
-                            opacity: isHighlighted ? 1 : 0,
-                            transition: isHighlighted
-                              ? `stroke-dashoffset ${animT}s ease ${connectorDelay}s, opacity 0s ease ${connectorDelay}s`
-                              : 'stroke-dashoffset 0s, opacity 0s',
-                          }}
-                        />
-                        {/* Draw-out: only rendered during highlight or active retract */}
-                        {(() => {
-                          const connKey = `${dep}→${jobNames[0]}`
-                          if (isHighlighted) {
-                            retractPathLensRef.current.set(connKey, pathLen)
-                          }
-                          const isRetracting =
-                            !isHighlighted &&
-                            !!activeDists?.has(dep) &&
-                            !!activeDists?.has(jobNames[0]!)
-                          if (!isHighlighted && !isRetracting) {
-                            return null
-                          }
-                          const frozenLen = retractPathLensRef.current.get(connKey) ?? pathLen
-                          return (
-                            <path
-                              d={drawRightToLeft ? pathDReversed : pathD}
-                              fill="transparent"
-                              style={{
-                                stroke: '#3B82F6',
-                                strokeWidth: 6,
-                                strokeDasharray: `${frozenLen} ${frozenLen}`,
-                                strokeDashoffset: isHighlighted ? 0 : frozenLen,
-                                opacity: isHighlighted ? 0 : 1,
-                                transition: isHighlighted
-                                  ? 'stroke-dashoffset 0s, opacity 0s'
-                                  : `stroke-dashoffset ${animT}s ease ${retractDelay}s, opacity 0s`,
-                              }}
-                            />
-                          )
-                        })()}
-                      </svg>
-                    </React.Fragment>
-                  )
-                })}
-              </React.Fragment>
-            ))}
+                        >
+                          {/* Background square (panel color) — creates gap between inner dot and node edge */}
+                          <rect
+                            x={x1 - 16}
+                            y={y1 - 16}
+                            width={32}
+                            height={32}
+                            fill="var(--theme-panel-bg)"
+                          />
+                          <rect
+                            x={x2 - 16}
+                            y={y2 - 16}
+                            width={32}
+                            height={32}
+                            fill="var(--theme-panel-bg)"
+                          />
+                          {/* Inner filled dot — start */}
+                          <circle
+                            cx={x1}
+                            cy={y1}
+                            r="8"
+                            fill={isHighlighted ? '#3B82F6' : baseColor}
+                            style={{
+                              opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
+                              transition: isHighlighted
+                                ? `fill ${animT}s ${depDist * hopDelay}s, opacity 0s`
+                                : `fill ${animT}s ${(maxHoveredDistRef.current - depDist) * hopDelay}s, opacity 0s`,
+                            }}
+                          />
+                          {/* Inner filled dot — end */}
+                          <circle
+                            cx={x2}
+                            cy={y2}
+                            r="8"
+                            fill={isHighlighted ? '#3B82F6' : baseColor}
+                            style={{
+                              opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
+                              transition: isHighlighted
+                                ? `fill ${animT}s ${targetDist * hopDelay}s, opacity 0s`
+                                : `fill ${animT}s ${(maxHoveredDistRef.current - targetDist) * hopDelay}s, opacity 0s`,
+                            }}
+                          />
+                        </svg>
+                        <svg
+                          aria-hidden="true"
+                          overflow="visible"
+                          className="absolute pointer-events-none"
+                          style={{ zIndex: (isHighlighted ? 20 : -1) + zBase }}
+                        >
+                          {/* Background mask — always full opacity, clears overlapping lines behind */}
+                          <path
+                            d={pathD}
+                            stroke="var(--theme-panel-bg)"
+                            strokeWidth="6"
+                            fill="transparent"
+                          />
+                          {/* Base colored path */}
+                          <path
+                            d={pathD}
+                            stroke={baseColor}
+                            strokeWidth="6"
+                            fill="transparent"
+                            style={{
+                              opacity: hoveredRelated && !isHighlighted ? 0.3 : 1,
+                              transition: `opacity 0s`,
+                            }}
+                          />
+                        </svg>
+                        {/* Blue overlay — draws in via dashoffset, above nodes */}
+                        <svg
+                          aria-hidden="true"
+                          overflow="visible"
+                          className="absolute pointer-events-none"
+                          style={{ zIndex: 20 + zBase }}
+                        >
+                          {/* Draw-in: always mounted so transition can animate from hidden to visible */}
+                          <path
+                            d={drawRightToLeft ? pathDReversed : pathD}
+                            fill="transparent"
+                            style={{
+                              stroke: '#3B82F6',
+                              strokeWidth: 6,
+                              strokeDasharray: `${pathLen} ${pathLen}`,
+                              strokeDashoffset: isHighlighted ? 0 : pathLen,
+                              opacity: isHighlighted ? 1 : 0,
+                              transition: isHighlighted
+                                ? `stroke-dashoffset ${animT}s ease ${connectorDelay}s, opacity 0s ease ${connectorDelay}s`
+                                : 'stroke-dashoffset 0s, opacity 0s',
+                            }}
+                          />
+                          {/* Draw-out: only rendered during highlight or active retract */}
+                          {(() => {
+                            const connKey = `${dep}→${first}`
+                            if (isHighlighted) {
+                              retractPathLensRef.current.set(connKey, pathLen)
+                            }
+                            const isRetracting =
+                              !isHighlighted && !!activeDists?.has(dep) && !!activeDists?.has(first)
+                            if (!isHighlighted && !isRetracting) {
+                              return null
+                            }
+                            const frozenLen = retractPathLensRef.current.get(connKey) ?? pathLen
+                            return (
+                              <path
+                                d={drawRightToLeft ? pathDReversed : pathD}
+                                fill="transparent"
+                                style={{
+                                  stroke: '#3B82F6',
+                                  strokeWidth: 6,
+                                  strokeDasharray: `${frozenLen} ${frozenLen}`,
+                                  strokeDashoffset: isHighlighted ? 0 : frozenLen,
+                                  opacity: isHighlighted ? 0 : 1,
+                                  transition: isHighlighted
+                                    ? 'stroke-dashoffset 0s, opacity 0s'
+                                    : `stroke-dashoffset ${animT}s ease ${retractDelay}s, opacity 0s`,
+                                }}
+                              />
+                            )
+                          })()}
+                        </svg>
+                      </React.Fragment>
+                    )
+                  })}
+                </React.Fragment>
+              ),
+            )}
           </React.Fragment>
         ))
       })()}
@@ -1149,7 +1155,7 @@ function SidebarJobs({
         if (mg) {
           return (
             <MatrixGroupSummaryItem
-              key={'matrix-' + pathPrefix + mg.originaljob}
+              key={`matrix-${pathPrefix}${mg.originaljob}`}
               matrixGroup={mg}
               status={displayJobs[jobName]?.status ?? ''}
               isExpanded={matrixOpen.has(pathPrefix + mg.originaljob)}
@@ -1168,7 +1174,7 @@ function SidebarJobs({
         }
         return (
           <Joblist
-            key={'job-' + pathPrefix + jobName}
+            key={`job-${pathPrefix}${jobName}`}
             jobs={jobs}
             jobNames={[jobName]}
             onJobClick={onJobClick}
@@ -1234,7 +1240,6 @@ function walkJobPath(
 export default function DependencyGraph({
   run,
   preview = false,
-  initialScale = 1,
   removeBorder,
   viewMode = 'dag',
   setViewMode,
@@ -1457,22 +1462,20 @@ export default function DependencyGraph({
     }
   }, [sublogOpen, sublogs, sublogsError, sublogsLoading])
 
-  const jobAndStep = sublogOpen.split('/').slice(-3, -1)
-  if (jobAndStep.length > 1) {
-    jobAndStep[1] = jobAndStep[1]!.split('_')[1] ?? ''
-  }
+  const [sublogJob = '', sublogStepDir] = sublogOpen.split('/').slice(-3, -1)
+  const sublogStep = sublogStepDir === undefined ? undefined : (sublogStepDir.split('_')[1] ?? '')
   // Paging needs a path naming a job and step. A subworkflow's general log is its
   // parent step's log so it qualifies; a run's own logs.out has no step_ to read.
-  const sublogIsStep = jobAndStep.length > 1
+  const sublogIsStep = sublogStep !== undefined
   const logName =
-    jobAndStep.length > 1
+    sublogStep !== undefined
       ? 'Job: ' +
-        (jobAndStep[0]![0]!.toUpperCase() + jobAndStep[0]!.slice(1)).replace(/_/g, ' ') +
+        (sublogJob.charAt(0).toUpperCase() + sublogJob.slice(1)).replace(/_/g, ' ') +
         ' \nStep: ' +
-        (jobs[jobAndStep[0]!]?.steps[Number(jobAndStep[1])]?.name || 'Step ' + jobAndStep[1])
+        (jobs[sublogJob]?.steps[Number(sublogStep)]?.name || `Step ${sublogStep}`)
       : ''
   const sublogIsSubworkflow =
-    jobAndStep.length > 1 && jobs[jobAndStep[0]!]?.steps[Number(jobAndStep[1])]?.subworkflow
+    sublogStep !== undefined && jobs[sublogJob]?.steps[Number(sublogStep)]?.subworkflow
 
   const matrixGroups = useMemo(() => engine.matrixGroups(jobs), [engine, jobs])
   const { dependencyCols } = useMemo(
@@ -1586,7 +1589,7 @@ export default function DependencyGraph({
     sublogOpen === ''
       ? ''
       : preview
-        ? engine.toYaml(jobs[jobAndStep[0]!]?.steps[Number(jobAndStep[1])])
+        ? engine.toYaml(jobs[sublogJob]?.steps[Number(sublogStep)])
         : sublogsError || !sublogs
           ? missingLogText
           : sublogs
@@ -1626,7 +1629,7 @@ export default function DependencyGraph({
     (backward: boolean) => {
       const sublogSplit = sublogOpen.split('/')
       let job = sublogSplit[sublogSplit.length - 3] ?? ''
-      let step = parseInt(sublogSplit[sublogSplit.length - 2]!.slice(5), 10)
+      let step = parseInt((sublogSplit[sublogSplit.length - 2] ?? '').slice(5), 10)
       const jobArr = Object.keys(jobs)
       let idx = jobArr.indexOf(job)
       if (backward) {
@@ -1651,7 +1654,7 @@ export default function DependencyGraph({
         }
       }
       setSublogOpen(
-        sublogSplit.slice(0, -3).join('/') + `/${job}/step_${step}/` + sublogSplit.slice(-1)[0],
+        `${sublogSplit.slice(0, -3).join('/')}/${job}/step_${step}/${sublogSplit.slice(-1)[0]}`,
       )
     },
     [jobs, sublogOpen],
@@ -1745,7 +1748,7 @@ export default function DependencyGraph({
         className="btn btn-neutral"
         onClick={() => {
           if (sublogIsSubworkflow) {
-            openInNewGraph(pathAppend, jobAndStep[0]!, parseInt(jobAndStep[1]!, 10))
+            openInNewGraph(pathAppend, sublogJob, parseInt(sublogStep ?? '', 10))
             setSublogOpen('')
           } else {
             setSublogOpen(
@@ -2000,7 +2003,7 @@ export default function DependencyGraph({
                 value: currentSublog,
                 height: window.innerHeight / 1.4,
                 width: window.innerWidth / 1.4,
-                contentKey: 'editor_' + sublogOpen,
+                contentKey: `editor_${sublogOpen}`,
               }) ?? (
                 <pre
                   className="h-full overflow-auto text-xs p-4"

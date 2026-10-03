@@ -25,8 +25,10 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
     spaceCompact,
     setFormDirty,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<boolean | string>(field.name!)
+  const [fieldState] = useField<boolean | string>(fieldName)
   const { setFieldValue, setFieldTouched } = useFormikContext()
 
   const handleChange = (val: string | boolean) => {
@@ -36,8 +38,8 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
     if (onChange) {
       onChange(val)
     }
-    setFieldTouched(field.name!, true)
-    setFieldValue(field.name!, val)
+    setFieldTouched(fieldName, true)
+    setFieldValue(fieldName, val)
     setFormDirty(true)
   }
 

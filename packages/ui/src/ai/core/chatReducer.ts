@@ -131,8 +131,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         if (isNewConversation) {
           const messages = action.conversation.messages || []
           for (let i = messages.length - 1; i >= 0; i--) {
-            const msg = messages[i]!
-            if (msg.role === 'assistant' && msg.model) {
+            const msg = messages[i]
+            if (msg?.role === 'assistant' && msg.model) {
               const offered = !state.hasLoadedModels || state.models.some((m) => m.id === msg.model)
               if (offered) {
                 restoredProvider = msg.model

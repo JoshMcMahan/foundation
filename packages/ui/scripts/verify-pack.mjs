@@ -176,6 +176,7 @@ try {
       "import * as openai from '@parallelworks/ui/ai/openai'",
       "import * as mock from '@parallelworks/ui/ai/mock'",
       'const need = (mod, name, key) => {',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: this line is source for the generated script, which interpolates
       '  if (!(key in mod)) throw new Error(`${name} is missing export ${key}`)',
       '}',
       "need(root, 'root', 'deriveTheme')",

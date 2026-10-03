@@ -47,7 +47,8 @@ export default memo(function DurationField({
   setFieldTouched,
 }: FieldComponentProps<IDurationField, number | string | undefined>) {
   const { form: t } = useStrings()
-  const name = field.name!
+  // The form names every field before it renders one.
+  const name = field.name ?? ''
   const min = field.min !== undefined ? Number(field.min) : Number.NEGATIVE_INFINITY
   const max = field.max !== undefined ? Number(field.max) : Number.POSITIVE_INFINITY
 
@@ -124,7 +125,10 @@ export default memo(function DurationField({
     setFormDirty(true)
     if (checked) {
       setText('')
-      flushToFormik(disableValue!)
+      // The checkbox that calls this only renders when a disable value is set.
+      if (disableValue !== undefined) {
+        flushToFormik(disableValue)
+      }
     } else {
       flushToFormik(typeof field.default === 'number' ? field.default : '')
     }

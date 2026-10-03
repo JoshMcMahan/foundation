@@ -473,7 +473,7 @@ function getClosestParentIndex(parentPath: string) {
       while (j >= 0 && parentPath[j] !== '[') {
         j--
       }
-      return parseInt(parentPath.slice(j + 1, i))
+      return parseInt(parentPath.slice(j + 1, i), 10)
     }
   }
   return undefined

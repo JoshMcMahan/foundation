@@ -64,7 +64,7 @@ export function FilePreviewViewer({
           return { corsError: true }
         }
         try {
-          // biome-ignore lint/style/noRestrictedGlobals: This probes a signed preview URL outside the product API.
+          // This probes a signed preview URL outside the product API.
           const res = await fetch(url)
           res.body?.cancel().catch(() => {})
           return { corsError: false }

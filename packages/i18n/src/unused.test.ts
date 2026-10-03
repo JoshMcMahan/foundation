@@ -40,7 +40,6 @@ describe('collectUsage', () => {
   })
 
   it('marks the static prefix of a template key as a used subtree', () => {
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: the source under test contains a template key
     expect(usageOf("const t = useTranslations('jobs'); t(`states.${s}`)").usedPrefixes).toEqual([
       'jobs.states',
     ])

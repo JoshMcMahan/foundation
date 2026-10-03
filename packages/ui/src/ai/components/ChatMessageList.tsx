@@ -234,7 +234,6 @@ export default function ChatMessageList({
 
   // Scroll to bottom on initial load / conversation switch — runs before paint
   const hadMessagesRef = useRef(false)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only fire on message count change
   useLayoutEffect(() => {
     if (!containerRef.current || messageCount === 0) {
       return

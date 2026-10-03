@@ -100,12 +100,15 @@ function ChatMessage({
   const isUser = message.role === 'user'
   const isTool = message.role === 'tool'
   // A user message from someone else should be left-aligned
-  const isOtherUser =
+  const otherAuthor =
     isUser &&
     showAuthor &&
-    !!message.author &&
-    !!currentUsername &&
+    message.author &&
+    currentUsername &&
     message.author.username !== currentUsername
+      ? message.author
+      : undefined
+  const isOtherUser = !!otherAuthor
   // Right-align only for the current user's messages
   const isRightAligned = isUser && !isOtherUser
   const hasError = !!message.error
@@ -315,19 +318,19 @@ function ChatMessage({
             )}
 
             {/* Author name above message (other users only) */}
-            {isOtherUser && (
+            {otherAuthor && (
               <span className="text-xs theme-muted-text">
-                {message.author!.name || message.author!.username}
+                {otherAuthor.name || otherAuthor.username}
               </span>
             )}
 
             {/* Message Content */}
             {message.content ? (
-              isUser && isOtherUser ? (
+              otherAuthor ? (
                 <div className="flex items-end gap-2">
                   <Avatar
-                    src={message.author!.avatarUrl ?? undefined}
-                    name={message.author!.name || message.author!.username}
+                    src={otherAuthor.avatarUrl ?? undefined}
+                    name={otherAuthor.name || otherAuthor.username}
                     size="sm"
                     className="flex-shrink-0 mb-0.5"
                   />

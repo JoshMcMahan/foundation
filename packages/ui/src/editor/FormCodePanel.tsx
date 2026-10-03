@@ -67,7 +67,7 @@ const filterFields = (
             engine,
             isObject(nestedSchema) ? nestedSchema : {},
             item,
-            key + `[${i}].`,
+            `${key}[${i}].`,
             rootData || data,
             i,
           )
@@ -86,7 +86,7 @@ const filterFields = (
         engine,
         isObject(fieldSchema) ? fieldSchema : {},
         value,
-        key + '.',
+        `${key}.`,
         rootData || data,
         arrayIndex,
       )

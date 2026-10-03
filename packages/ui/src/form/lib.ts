@@ -60,8 +60,9 @@ export function enforceOneMustBeTrue(
         ? opts.onOption || true
         : true
     const hasTrue = items.some((item) => item[fieldKey] === trueOption)
-    if (!hasTrue) {
-      items[clampedIndex]![fieldKey] = trueOption
+    const promoted = items[clampedIndex]
+    if (!hasTrue && promoted) {
+      promoted[fieldKey] = trueOption
     }
   }
   return items
@@ -90,27 +91,26 @@ export function flattenGroups(schema: unknown): Record<string, unknown> {
 
 /**Not a pure function. Edits 'obj' passed into function */
 export function impureSetValueFromPath(obj: Record<string, unknown>, path: string, value: unknown) {
-  const pathArray = path.split('.')
-  if (pathArray.length === 1) {
-    obj[pathArray[0]!] = value
-    return
-  }
+  const parents = path.split('.')
+  // split always yields at least one segment
+  const leaf = parents.pop() ?? ''
 
   let current = obj
-  for (let i = 0; i < pathArray.length - 1; i++) {
-    const segment = pathArray[i]!
+  for (const segment of parents) {
     const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/)
     if (arrayMatch) {
-      const key = arrayMatch[1]!
-      const index = Number(arrayMatch[2])
+      const [, key = '', indexText] = arrayMatch
+      const index = Number(indexText)
       if (!current[key]) {
         current[key] = []
       }
       const list = current[key] as Record<string, unknown>[]
-      if (!list[index]) {
-        list[index] = {}
+      let item = list[index]
+      if (!item) {
+        item = {}
+        list[index] = item
       }
-      current = list[index]!
+      current = item
     } else {
       if (!current[segment]) {
         current[segment] = {}
@@ -118,7 +118,7 @@ export function impureSetValueFromPath(obj: Record<string, unknown>, path: strin
       current = current[segment] as Record<string, unknown>
     }
   }
-  current[pathArray[pathArray.length - 1]!] = value
+  current[leaf] = value
 }
 
 export function initializeValues(

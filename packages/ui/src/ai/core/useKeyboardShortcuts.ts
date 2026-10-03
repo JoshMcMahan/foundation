@@ -22,23 +22,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   // Get last assistant message for copy functionality
   const getLastAssistantMessage = useCallback(() => {
     const messages = currentConversation?.messages || []
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i]!.role === 'assistant' && messages[i]!.content) {
-        return messages[i]!.content
-      }
-    }
-    return null
+    return messages.findLast((m) => m.role === 'assistant' && m.content)?.content ?? null
   }, [currentConversation?.messages])
 
   // Get last user message for edit functionality
   const getLastUserMessage = useCallback((): ChatMessage | null => {
     const messages = currentConversation?.messages || []
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i]!.role === 'user') {
-        return messages[i]!
-      }
-    }
-    return null
+    return messages.findLast((m) => m.role === 'user') ?? null
   }, [currentConversation?.messages])
 
   const handleNewConversation = useCallback(() => {

@@ -15,7 +15,7 @@ export function getValueUsingPath(obj: unknown, path: string): unknown {
       const [arrayKey = '', indexStr = ''] = key.split('[')
       const index = parseInt(indexStr.slice(0, -1), 10)
       const list = container[arrayKey]
-      if (!Array.isArray(list) || isNaN(index)) {
+      if (!Array.isArray(list) || Number.isNaN(index)) {
         return undefined
       }
       current = list[index]

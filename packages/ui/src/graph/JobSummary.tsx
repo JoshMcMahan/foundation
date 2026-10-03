@@ -66,10 +66,10 @@ export function Joblist(inputs: {
     const jobStatus = inputs.jobs[jobName]?.status
     const matrixMeta = inputs.jobs[jobName]?._matrix
     const jobLabel = matrixMeta?.originaljob
-      ? `${matrixMeta.originaljob[0]!.toUpperCase() + matrixMeta.originaljob.slice(1)} (${(matrixMeta.index ?? 0) + 1}/${matrixMeta.totalingroup ?? '?'})`
-      : (jobName[0]!.toUpperCase() + jobName.slice(1)).replace(/_/g, ' ')
+      ? `${matrixMeta.originaljob.charAt(0).toUpperCase() + matrixMeta.originaljob.slice(1)} (${(matrixMeta.index ?? 0) + 1}/${matrixMeta.totalingroup ?? '?'})`
+      : (jobName.charAt(0).toUpperCase() + jobName.slice(1)).replace(/_/g, ' ')
     return (
-      <div key={'job-' + jobName} className="py-1 select-none">
+      <div key={`job-${jobName}`} className="py-1 select-none">
         <button
           type="button"
           aria-expanded={inputs.isStepsOpen(jobName)}

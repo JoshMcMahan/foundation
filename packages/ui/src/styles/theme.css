@@ -124,6 +124,7 @@
 }
 
 .config-tips .multi-line {
+  /* biome-ignore lint/complexity/noImportantStyles: must win over the tooltip library's own alignment */
   text-align: left !important;
 }
 

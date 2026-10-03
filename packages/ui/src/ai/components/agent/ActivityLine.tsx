@@ -49,7 +49,7 @@ export const activityWords = [
 ] as const
 
 export function randomActivityWord(): string {
-  return activityWords[Math.floor(Math.random() * activityWords.length)]!
+  return activityWords[Math.floor(Math.random() * activityWords.length)] ?? activityWords[0]
 }
 
 /** Elapsed run time the way an agent status line prints it: 45s, 2m13s,

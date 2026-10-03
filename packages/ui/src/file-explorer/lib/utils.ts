@@ -10,7 +10,7 @@ export function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return Number.parseFloat((bytes / k ** i).toFixed(2)) + ' ' + sizes[i]
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 
 export function getFileExtension(filename: string): string | null {
@@ -152,8 +152,8 @@ export function createTreeBuilder(): (storages: TStorage[], options: TTreeOption
       dir = { entries: [], storageName, directories: [], files: [] }
       directories.set(dirPath, dir)
     }
-    for (let i = dir.entries.length; i < entries.length; i++) {
-      const node = toNode(entries[i]!, storage, storagePath, storageName)
+    for (const entry of entries.slice(dir.entries.length)) {
+      const node = toNode(entry, storage, storagePath, storageName)
       // A bucket lists the folder's own marker object along with its children.
       if (node.path === dirPath) {
         continue
@@ -224,12 +224,12 @@ export function createTreeBuilder(): (storages: TStorage[], options: TTreeOption
     }
     const tree: TTree = { treeMap: {}, parentToChildrenMap: {}, rootNodes: [] }
 
-    if (storages.length === 1 && !options.forceUserHierarchy) {
-      const storage = storages[0]!
+    const onlyStorage = storages.length === 1 ? storages[0] : undefined
+    if (onlyStorage && !options.forceUserHierarchy) {
       const storagePath = ensureTrailingSlash(
-        storage.user ? `${storage.user}/${storage.name}` : storage.name,
+        onlyStorage.user ? `${onlyStorage.user}/${onlyStorage.name}` : onlyStorage.name,
       )
-      tree.rootNodes.push(addStorage(storage, storagePath, options, tree))
+      tree.rootNodes.push(addStorage(onlyStorage, storagePath, options, tree))
     } else {
       const userGroups: Record<string, TStorage[]> = {}
       for (const storage of storages) {
@@ -276,7 +276,7 @@ export function getNodeChildren(
   parentToChildrenMap: Record<string, TreeNode[]>,
   parentPath: string,
 ): TreeNode[] {
-  const normalizedParentPath = parentPath.endsWith('/') ? parentPath : parentPath + '/'
+  const normalizedParentPath = parentPath.endsWith('/') ? parentPath : `${parentPath}/`
 
   return parentToChildrenMap[normalizedParentPath] || []
 }
@@ -332,7 +332,7 @@ export async function getUploadNodesFromDataTransferItems(
       } else if (entry.isDirectory) {
         const dirReader = (entry as FileSystemDirectoryEntry).createReader()
         dirReader.readEntries(async (entries: FileSystemEntry[]) => {
-          const newPath = path ? path + entry.name + '/' : entry.name + '/'
+          const newPath = path ? `${path + entry.name}/` : `${entry.name}/`
           if (entries.length === 0) {
             uploadNodes.push({
               name: entry.name,
@@ -460,7 +460,7 @@ function removeLastPathSegment(path: string): string {
 }
 
 export function ensureTrailingSlash(path: string): string {
-  return path.endsWith('/') ? path : path + '/'
+  return path.endsWith('/') ? path : `${path}/`
 }
 
 export function isClientValid(client: IFileExplorerClient): boolean {

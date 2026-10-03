@@ -461,7 +461,7 @@ export function ChatProvider({
               id: pmId,
               role: 'user',
               content: pm.content,
-              timestamp: DateTime.now().toISO()!,
+              timestamp: DateTime.now().toISO(),
               author: currentUser,
               attachments: pm.attachmentIds.length
                 ? pm.attachmentIds.map((id) => ({
@@ -469,7 +469,7 @@ export function ChatProvider({
                     filename: pm.attachmentMeta[id]?.filename ?? '',
                     contentType: pm.attachmentMeta[id]?.contentType ?? '',
                     size: pm.attachmentMeta[id]?.size ?? 0,
-                    uploadedAt: DateTime.now().toISO()!,
+                    uploadedAt: DateTime.now().toISO(),
                   }))
                 : undefined,
             },
@@ -491,14 +491,14 @@ export function ChatProvider({
             id: queuedId,
             role: 'user',
             content,
-            timestamp: DateTime.now().toISO()!,
+            timestamp: DateTime.now().toISO(),
             author: currentUser,
             attachments: attachmentIds?.map((id) => ({
               id,
               filename: attachmentMeta?.[id]?.filename ?? '',
               contentType: attachmentMeta?.[id]?.contentType ?? '',
               size: attachmentMeta?.[id]?.size ?? 0,
-              uploadedAt: DateTime.now().toISO()!,
+              uploadedAt: DateTime.now().toISO(),
             })),
           },
           conversationId: convId,
@@ -506,7 +506,8 @@ export function ChatProvider({
         return true
       }
 
-      if (!isSelectedModelAvailable) {
+      const modelString = state.selectedProvider
+      if (!isSelectedModelAvailable || !modelString) {
         notify.error('Please select a provider first')
         return false
       }
@@ -591,10 +592,10 @@ export function ChatProvider({
                   filename: pm.attachmentMeta[id]?.filename ?? '',
                   contentType: pm.attachmentMeta[id]?.contentType ?? '',
                   size: pm.attachmentMeta[id]?.size ?? 0,
-                  uploadedAt: DateTime.now().toISO()!,
+                  uploadedAt: DateTime.now().toISO(),
                 }))
               : undefined,
-            timestamp: DateTime.now().toISO()!,
+            timestamp: DateTime.now().toISO(),
             author: currentUser,
           }
           dispatch({
@@ -705,8 +706,6 @@ export function ChatProvider({
       let sendSucceeded = false
       let wasAborted = false
       try {
-        const modelString = state.selectedProvider!
-
         // Responses-capable models use the native OpenAI Responses API; the
         // gateway advertises capability per model in the models list.
         const useResponses =
@@ -865,8 +864,8 @@ export function ChatProvider({
           pendingQueueRef.current = []
           dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
 
-          if (queued.length > 0) {
-            const lastQueued = queued[queued.length - 1]!
+          const lastQueued = queued.at(-1)
+          if (lastQueued) {
             const preceding = queued.slice(0, -1)
 
             // Yield to React so the assistant message and activeBranchId are committed before the next send
@@ -1109,12 +1108,12 @@ export function ChatProvider({
       return
     }
     const held = pendingQueueRef.current
-    if (held.length === 0) {
+    const last = held.at(-1)
+    if (!last) {
       return
     }
     pendingQueueRef.current = []
     dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
-    const last = held[held.length - 1]!
     const preceding = held.slice(0, -1).map(({ id: _id, ...rest }) => rest)
     sendMessageRef.current?.(
       last.content,

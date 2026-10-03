@@ -31,6 +31,8 @@ export default memo(function StringField(props: FieldComponentProps<IStringField
     spaceCompact,
     currentValue,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
   // Form-level DynamicDefaultsSync writes resolved defaults into Formik state.
   // For non-prefillDefault strings, fall through to FormikCustomInput's defaultValue/placeholder.
@@ -48,7 +50,7 @@ export default memo(function StringField(props: FieldComponentProps<IStringField
       <FormikCustomInput
         invalid={missing}
         key={field.name}
-        name={field.name!}
+        name={fieldName}
         type={field.type}
         lowercase={field.lowercase}
         placeholder={

@@ -42,6 +42,8 @@ export default function MultiDropdownField({
   setFormDirty,
   onChange,
 }: FieldComponentProps<IMultiDropdownField>) {
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
   // Handle depends_on logic
   let parentValue = field.parentValue
   let options = field.options
@@ -77,7 +79,7 @@ export default function MultiDropdownField({
           <MultiSelectionDropdown
             className="themee-input h-7 w-full rounded border flex items-center px-3 py-2"
             key={field.name}
-            name={field.name!}
+            name={fieldName}
             label={field.label || label}
             options={
               Array.isArray(options)

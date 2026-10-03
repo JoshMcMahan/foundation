@@ -24,6 +24,8 @@ export default function RadioField(props: FieldComponentProps<IRadioField>) {
     spaceCompact,
     setFormDirty,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
   const uid = useId()
   const { setFieldValue, setFieldTouched } = useFormikContext()
@@ -35,8 +37,8 @@ export default function RadioField(props: FieldComponentProps<IRadioField>) {
     if (onChange) {
       onChange(val)
     }
-    setFieldTouched(field.name!, true)
-    setFieldValue(field.name!, val)
+    setFieldTouched(fieldName, true)
+    setFieldValue(fieldName, val)
     setFormDirty(true)
   }
 

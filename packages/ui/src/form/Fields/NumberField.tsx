@@ -28,8 +28,10 @@ export default function NumberField(props: FieldComponentProps<INumberField>) {
     tooltipComponent,
     spaceCompact,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<number | string | undefined>(field.name!)
+  const [fieldState] = useField<number | string | undefined>(fieldName)
   const { setFieldValue } = useFormikContext()
   // With prefillDefault, seed the form value with the default (not just the placeholder) when it's
   // unset — e.g. gpuCount needs to actually hold 1, since the cost estimate prices the attached GPU
@@ -40,9 +42,9 @@ export default function NumberField(props: FieldComponentProps<INumberField>) {
       field.default !== undefined &&
       (fieldState.value === undefined || fieldState.value === null || fieldState.value === '')
     ) {
-      setFieldValue(field.name!, field.default)
+      setFieldValue(fieldName, field.default)
     }
-  }, [field.prefillDefault, field.default, field.name, fieldState.value, setFieldValue])
+  }, [field.prefillDefault, field.default, fieldName, fieldState.value, setFieldValue])
 
   return (
     <FieldWrapper
@@ -56,7 +58,7 @@ export default function NumberField(props: FieldComponentProps<INumberField>) {
         <FormikNumericInput
           invalid={missing}
           key={field.name}
-          name={field.name!}
+          name={fieldName}
           placeholder={getPlaceholder(field.placeholder, field.default)}
           disabled={disabled}
           min={field.min}
@@ -67,7 +69,7 @@ export default function NumberField(props: FieldComponentProps<INumberField>) {
         <FormikCustomInput
           invalid={missing}
           key={field.name}
-          name={field.name!}
+          name={fieldName}
           type="number"
           placeholder={getPlaceholder(field.placeholder, field.default)}
           disabled={disabled}

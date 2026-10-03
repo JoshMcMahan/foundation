@@ -20,8 +20,9 @@ export interface OpenAIStreamConfig {
 // from failures; other errors surface as ChatAdapterError.
 export function createOpenAICompatibleStream(config: OpenAIStreamConfig): StreamCompletion {
   return async (req, handlers, signal) => {
-    const useResponses = req.useResponses === true && !!config.responsesUrl
-    const url = useResponses ? config.responsesUrl! : config.completionsUrl
+    const responsesUrl = req.useResponses === true ? config.responsesUrl : undefined
+    const useResponses = !!responsesUrl
+    const url = responsesUrl || config.completionsUrl
     const body: Record<string, unknown> = useResponses
       ? buildResponsesRequestBody(req.model, req.messages)
       : { model: req.model, messages: req.messages, stream: true }

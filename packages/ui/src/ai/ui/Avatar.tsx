@@ -28,8 +28,10 @@ export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
       return '?'
     }
     const parts = name.split(/[\s.]+/).filter(Boolean)
-    if (parts.length >= 2) {
-      return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase()
+    const first = parts[0]
+    const last = parts.at(-1)
+    if (parts.length >= 2 && first && last) {
+      return (first.charAt(0) + last.charAt(0)).toUpperCase()
     }
     return parts[0]?.[0]?.toUpperCase() || '?'
   }, [name])

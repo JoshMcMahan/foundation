@@ -189,7 +189,7 @@ function getAncestorDirPaths(path: string): string[] {
   const dirSegmentCount = isDir ? segments.length : segments.length - 1
   const ancestors: string[] = []
   for (let i = 1; i <= dirSegmentCount; i++) {
-    ancestors.push(segments.slice(0, i).join('/') + '/')
+    ancestors.push(`${segments.slice(0, i).join('/')}/`)
   }
   return ancestors
 }
@@ -782,12 +782,13 @@ export default function FileExplorer({
       filesToDownload = [selectedNode]
     }
 
-    if (filesToDownload.length === 0) {
+    const firstFile = filesToDownload[0]
+    if (!firstFile) {
       notify.error(t.messages.noFilesForDownload)
       return
     }
 
-    const factory = await getStorageProviderAndClient(filesToDownload[0]!.storageId)
+    const factory = await getStorageProviderAndClient(firstFile.storageId)
     if (!factory) {
       return
     }
@@ -1192,15 +1193,16 @@ export default function FileExplorer({
   }
 
   const handleDelete = async () => {
-    if (!pendingDelete || pendingDelete.length === 0) {
+    const firstPending = pendingDelete?.[0]
+    if (!pendingDelete || !firstPending) {
       notify.error(t.messages.noItemsForDeletion)
       return
     }
 
-    const parentPath = getParentPath(pendingDelete[0]!.path)
+    const parentPath = getParentPath(firstPending.path)
     const parentNode = treeMap[parentPath]
 
-    const factory = await getStorageProviderAndClient(pendingDelete[0]!.storageId)
+    const factory = await getStorageProviderAndClient(firstPending.storageId)
     if (!factory) {
       return
     }
@@ -1304,7 +1306,7 @@ export default function FileExplorer({
     }
 
     const targetNode = treeMap[pendingUpload.targetPath]
-    if (!targetNode || !targetNode.storageId) {
+    if (!targetNode?.storageId) {
       notify.error(t.messages.invalidUploadTarget)
       return
     }

@@ -18,15 +18,14 @@ export default function LabelField(props: FieldComponentProps<ILabelField>) {
         style={
           field.size
             ? {
-                fontSize: field.size.toString() + 'px',
+                fontSize: `${field.size.toString()}px`,
                 whiteSpace: 'pre-wrap',
               }
             : { whiteSpace: 'pre-wrap' }
         }
         className={cx('relative', 'text-md', field.bold !== false ? 'font-bold' : '')}
       >
-        {(field.text && field.text.toString().replace(/(\r)/g, '').replace(/(\\n)/g, '\n')) ||
-          label}
+        {field.text?.toString().replace(/(\r)/g, '').replace(/(\\n)/g, '\n') || label}
       </h3>
     </div>
   )

@@ -36,7 +36,7 @@ export function clip(s: string, max: number): string {
   if (max <= 3) {
     return r.slice(0, max).join('')
   }
-  return r.slice(0, max - 3).join('') + '...'
+  return `${r.slice(0, max - 3).join('')}...`
 }
 
 // Model-controlled text made safe for single-line chrome: newlines and tabs

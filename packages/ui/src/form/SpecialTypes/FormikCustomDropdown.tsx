@@ -140,7 +140,8 @@ export default memo(function FormikCustomDropdown({
       }
       if (autoselect === undefined) {
         // We check there is exactly one option in all categories, if so then we autoselect
-        if (options.length && isCategory(options[0]!)) {
+        const [first] = options
+        if (first && isCategory(first)) {
           let optionCount = 0
           // check if there is exactly one option in all categories
           for (const category of options) {

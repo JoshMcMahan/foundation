@@ -9,8 +9,8 @@ export function durationToAbsHumanDuration(d: Duration): string {
   // Better Duration.toHuman support https://github.com/moment/luxon/issues/1134
   const duration = d.shiftTo('days', 'hours', 'minutes', 'seconds').toObject()
 
-  if ('seconds' in duration) {
-    duration.seconds = Math.round(duration.seconds!)
+  if (duration.seconds !== undefined) {
+    duration.seconds = Math.round(duration.seconds)
   }
 
   const cleanedDuration = Object.fromEntries(

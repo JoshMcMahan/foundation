@@ -32,10 +32,12 @@ const STATUS_CLASSES: Record<AvatarStatus, string> = {
 /** Up to two initials: the first and last word of a name split on spaces and dots. */
 export function avatarInitials(name: string | undefined): string {
   const parts = (name ?? '').split(/[\s.]+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase()
+  const first = parts[0]?.charAt(0)
+  const last = parts.at(-1)?.charAt(0)
+  if (parts.length >= 2 && first && last) {
+    return (first + last).toUpperCase()
   }
-  return parts[0]?.[0]?.toUpperCase() || '?'
+  return first?.toUpperCase() || '?'
 }
 
 export function Avatar({ src, name, size = 'md', status, className }: AvatarProps) {

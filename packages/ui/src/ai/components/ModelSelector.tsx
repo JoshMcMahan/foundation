@@ -55,10 +55,12 @@ function groupModelsByProvider(models: ChatModel[]): Map<string, ChatModel[]> {
     const key = model.id.includes('/')
       ? getProviderKeyFromModelId(model.id)
       : (model.provider ?? model.owned_by)
-    if (!groups.has(key)) {
-      groups.set(key, [])
+    const group = groups.get(key)
+    if (group) {
+      group.push(model)
+    } else {
+      groups.set(key, [model])
     }
-    groups.get(key)!.push(model)
   }
 
   return groups

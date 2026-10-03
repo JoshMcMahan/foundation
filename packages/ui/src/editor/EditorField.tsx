@@ -39,8 +39,10 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
     spaceCompact,
     setFormDirty,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<string>(field.name!)
+  const [fieldState] = useField<string>(fieldName)
   const { setFieldValue, setFieldTouched, values } = useFormikContext()
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
@@ -57,8 +59,8 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
       if (onChange) {
         onChange(val)
       }
-      setFieldTouched(field.name!, true)
-      setFieldValue(field.name!, val)
+      setFieldTouched(fieldName, true)
+      setFieldValue(fieldName, val)
       setFormDirty(true)
     }, 500)
   }
@@ -88,7 +90,7 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
         key={field.name + postfixKey}
         ariaLabel={label}
         height="200px"
-        path={field.name!}
+        path={fieldName}
         {...(touchedRef.current ? {} : { value })}
         className={cx(
           'bg-(--theme-input-bg) w-11 border focus:border rounded text-[10px] leading-4 pl-[6px]',

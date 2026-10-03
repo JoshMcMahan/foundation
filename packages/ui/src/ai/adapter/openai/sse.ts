@@ -45,7 +45,6 @@ export function parseSSELine(line: string): ParsedSSELine {
 }
 
 /** Process an SSE stream from a ReadableStream reader */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: sequential SSE parsing loop, inherently linear
 export async function processSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onContent: (content: string) => void,

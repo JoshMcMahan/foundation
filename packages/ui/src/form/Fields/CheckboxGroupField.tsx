@@ -42,7 +42,9 @@ export default function CheckboxGroupField({
   spaceCompact,
   setFormDirty,
 }: FieldComponentProps<ICheckboxGroupField>) {
-  const [fieldState] = useField<string[]>(field.name!)
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
+  const [fieldState] = useField<string[]>(fieldName)
   const { setFieldValue, setFieldTouched } = useFormikContext()
   const implies = field.implies
 
@@ -66,8 +68,8 @@ export default function CheckboxGroupField({
       : [...manual, value]
     const next = union(nextManual, impliedFrom(nextManual, implies))
     setManual(nextManual)
-    setFieldTouched(field.name!, true)
-    setFieldValue(field.name!, next)
+    setFieldTouched(fieldName, true)
+    setFieldValue(fieldName, next)
     if (onChange) {
       onChange(next)
     }

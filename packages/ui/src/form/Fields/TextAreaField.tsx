@@ -22,6 +22,8 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
     tooltipComponent,
     spaceCompact,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
   return (
     <FieldWrapper
@@ -44,7 +46,7 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
           aria-describedby={describedBy}
           aria-required={field.optional ? undefined : true}
           key={field.name}
-          name={field.name!}
+          name={fieldName}
           type="search"
           placeholder={getPlaceholder(field.placeholder, field.default)}
           disabled={disabled}

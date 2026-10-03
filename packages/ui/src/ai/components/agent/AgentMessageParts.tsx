@@ -827,14 +827,11 @@ export function buildRenderItems(parts: MessagePart[]): RenderItem[] {
     emitThoughts(thoughts)
   }
   const flush = () => {
-    let start = 0
-    while (start < run.length && isReasoning(run[start]!)) {
-      start++
-    }
-    let end = run.length
-    while (end > start && isReasoning(run[end - 1]!)) {
-      end--
-    }
+    // Leading and trailing reasoning sits outside the rollup; a run that is
+    // all reasoning has an empty core.
+    const firstCore = run.findIndex((m) => !isReasoning(m))
+    const start = firstCore === -1 ? run.length : firstCore
+    const end = firstCore === -1 ? run.length : run.findLastIndex((m) => !isReasoning(m)) + 1
     emitThoughts(run.slice(0, start))
     const core = run.slice(start, end)
     if (core.filter((m) => !isReasoning(m)).length >= 2) {

@@ -117,11 +117,9 @@ export default function ChatThread({ conversationId }: { conversationId: string 
   const handleEditLastMessage = useCallback(() => {
     const conversationMessages = currentConversation?.messages || []
     // Find the last user message
-    for (let i = conversationMessages.length - 1; i >= 0; i--) {
-      if (conversationMessages[i]!.role === 'user') {
-        handleEditMessage(conversationMessages[i]!.id)
-        break
-      }
+    const lastUserMessage = conversationMessages.findLast((m) => m.role === 'user')
+    if (lastUserMessage) {
+      handleEditMessage(lastUserMessage.id)
     }
   }, [currentConversation?.messages, handleEditMessage])
 
@@ -137,13 +135,13 @@ export default function ChatThread({ conversationId }: { conversationId: string 
       const conversationMessages = currentConversation?.messages || []
       // Find the assistant message that was clicked
       const assistantMessage = conversationMessages.find((m) => m.id === messageId)
-      if (!assistantMessage || assistantMessage.role !== 'assistant') {
+      if (assistantMessage?.role !== 'assistant') {
         return
       }
 
       // Find its parent (the user message that prompted it)
       const userMessage = conversationMessages.find((m) => m.id === assistantMessage.parentId)
-      if (!userMessage || userMessage.role !== 'user') {
+      if (userMessage?.role !== 'user') {
         return
       }
 
@@ -194,7 +192,7 @@ export default function ChatThread({ conversationId }: { conversationId: string 
 
   // Show author attribution when multiple authors or viewing a shared conversation
   const showAuthor = useMemo(() => {
-    const uniqueAuthors = new Set(messages.filter((m) => m.author).map((m) => m.author!.username))
+    const uniqueAuthors = new Set(messages.flatMap((m) => (m.author ? [m.author.username] : [])))
     return uniqueAuthors.size > 1 || currentConversation?.isOwner === false
   }, [messages, currentConversation?.isOwner])
 

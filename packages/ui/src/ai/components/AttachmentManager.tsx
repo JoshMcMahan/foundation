@@ -48,7 +48,7 @@ export default function AttachmentManager() {
     // serialized key AttachmentUpload revalidates after an upload.
     attachmentsAdapter ? attachmentsPageKey : () => null,
     ([, cursor]: [string, string]) =>
-      attachmentsAdapter!.list({ limit: ATTACHMENTS_PAGE_SIZE, cursor }),
+      attachmentsAdapter?.list({ limit: ATTACHMENTS_PAGE_SIZE, cursor }),
   )
 
   const attachments = useMemo(

@@ -37,7 +37,7 @@ export function MatrixGroupSummaryItem({
   preview: boolean
 }) {
   return (
-    <div key={'matrix-' + matrixGroup.originaljob} className="py-1.5">
+    <div key={`matrix-${matrixGroup.originaljob}`} className="py-1.5">
       <button
         type="button"
         aria-expanded={isExpanded}
@@ -115,6 +115,7 @@ export function MatrixGroupNode({
   preview: boolean
 }) {
   const matrixName = matrixGroup.originaljob
+  const first = jobNames[0] ?? ''
   const matrixMembers = matrixGroup.members
   const { aggStatus, statusLabel } = useWorkflowEngine().matrixStatus(
     matrixMembers.map((m) => jobs[m]?.status),
@@ -122,12 +123,12 @@ export function MatrixGroupNode({
 
   return (
     <div
-      key={'node_' + jobNames[0]}
-      id={'node_' + idPrefix + jobNames[0]}
+      key={`node_${jobNames[0]}`}
+      id={`node_${idPrefix}${jobNames[0]}`}
       role="none"
       className="relative m-24"
       style={{
-        zIndex: (activeDists?.has(jobNames[0]!) ? 25 : 1) + zBase,
+        zIndex: (activeDists?.has(first) ? 25 : 1) + zBase,
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -138,7 +139,7 @@ export function MatrixGroupNode({
       <div
         className="relative border-solid shadow py-4 px-8 rounded-xl border-4 whitespace-nowrap bg-(--theme-panel-bg) text-2xl"
         style={{
-          opacity: hoveredRelated && !hoveredRelated.has(jobNames[0]!) ? 0.5 : 1,
+          opacity: hoveredRelated && !hoveredRelated.has(first) ? 0.5 : 1,
           transition: `opacity ${animT}s`,
         }}
       >
@@ -149,7 +150,7 @@ export function MatrixGroupNode({
           onClick={onToggle}
         >
           <div className="font-semibold text-md p-0.5">
-            Matrix: {matrixName.length > 20 ? matrixName.slice(0, 20) + '...' : matrixName}
+            Matrix: {matrixName.length > 20 ? `${matrixName.slice(0, 20)}...` : matrixName}
           </div>
           {!isExpanded && (
             <div className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1">

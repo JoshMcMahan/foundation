@@ -97,7 +97,7 @@ export default function FormikCustomInput({
 
     if (type === 'number') {
       const parsed = parseFloat(text)
-      val = isNaN(parsed) ? undefined : parsed
+      val = Number.isNaN(parsed) ? undefined : parsed
     }
 
     if (type === 'password' && val === '') {

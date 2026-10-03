@@ -264,6 +264,8 @@ export function UploadSessionToast({
         : progressBarColorScheme.uploading
 
   const allFiles = session.progress?.allFiles ? Array.from(session.progress.allFiles.values()) : []
+  const singleFile = allFiles[0]
+  const singleNode = session.uploadNodes.length === 1 ? session.uploadNodes[0] : undefined
 
   const uploadingFiles = session.progress?.allFiles
     ? Array.from(session.progress.allFiles.values()).filter(
@@ -472,12 +474,12 @@ export function UploadSessionToast({
             )}
 
             {/* Single File Progress */}
-            {session.uploadNodes.length === 1 && allFiles.length > 0 && (
+            {singleNode && singleFile && (
               <FileProgressBar
-                fileProgress={allFiles[0]!}
-                fileName={session.uploadNodes[0]!.name}
+                fileProgress={singleFile}
+                fileName={singleNode.name}
                 progressBarColorScheme={progressBarColorScheme}
-                onCancelFile={() => onCancelFile?.(session.uploadNodes[0]!.relativePath)}
+                onCancelFile={() => onCancelFile?.(singleNode.relativePath)}
               />
             )}
 

@@ -123,7 +123,7 @@ export async function fetchPreviewObject(
 ): Promise<Response> {
   let response: Response
   try {
-    // biome-ignore lint/style/noRestrictedGlobals: This reads a signed preview URL outside the product API.
+    // This reads a signed preview URL outside the product API.
     response = await fetch(url, {
       signal,
       ...(headers ? { headers } : {}),

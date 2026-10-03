@@ -13,7 +13,7 @@ export function parseWizardConfig(options: Record<string, unknown>): ParsedWizar
   const wizardConfig = isWizardMeta(meta) ? meta.wizard : undefined
 
   // Not a wizard form if no wizard config
-  if (!wizardConfig || wizardConfig.mode !== 'wizard') {
+  if (wizardConfig?.mode !== 'wizard') {
     return null
   }
 

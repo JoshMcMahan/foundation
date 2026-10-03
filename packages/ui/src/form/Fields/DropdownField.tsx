@@ -31,6 +31,12 @@ export interface IDropdownField extends BaseField {
   placeholder?: string
 }
 
+// The form always passes both setters; a host that renders the field without
+// them fails when a value is chosen, not on render.
+const missingSetter = () => {
+  throw new Error('DropdownField needs setFieldValue and setFieldTouched')
+}
+
 export default function DropdownField(props: FieldComponentProps<IDropdownField, string>) {
   const {
     field,
@@ -45,6 +51,8 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
     setFieldTouched,
     currentValue,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
   let parentValue = field.parentValue
   let options = (Array.isArray(field.options) && field.options) || []
   if (field.depends_on) {
@@ -73,7 +81,7 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
           invalid={missing}
           className="w-full"
           key={field.name}
-          name={field.name!}
+          name={fieldName}
           ariaLabel={label}
           options={options}
           setFormDirty={props.setFormDirty}
@@ -81,7 +89,7 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
           onChange={onChange}
           secondaryField={secondaryField}
           disabled={disabled}
-          resetOnChange={field.resetOnChange ? field.name! : ''}
+          resetOnChange={field.resetOnChange ? fieldName : ''}
           loading={false}
           autoselect={field.autoselect}
           allowCustomValue={field.allowCustomValue}
@@ -91,8 +99,8 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
             typeof field.default === 'string' ? field.default : undefined,
           )}
           currentValue={currentValue}
-          setFieldValue={setFieldValue!}
-          setFieldTouched={setFieldTouched!}
+          setFieldValue={setFieldValue ?? missingSetter}
+          setFieldTouched={setFieldTouched ?? missingSetter}
         />
       </div>
     </FieldWrapper>

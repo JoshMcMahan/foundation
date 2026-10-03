@@ -308,7 +308,7 @@ describe('DependencyGraph general log', () => {
       <UIProvider
         strings={{
           dag: {
-            statusReason: (reason) => (reason ? 'why: ' + reason : undefined),
+            statusReason: (reason) => (reason ? `why: ${reason}` : undefined),
           },
         }}
       >

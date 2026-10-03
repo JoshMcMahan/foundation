@@ -303,11 +303,14 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
       flushQueuedMessages()
       return
     }
-    const uploaded = attachments.filter((a) => a.uploaded && a.id)
-    const attachmentIds = uploaded.map((a) => a.id!)
+    const attachmentIds: string[] = []
     const meta: Record<string, { filename: string; contentType: string; size: number }> = {}
-    for (const a of uploaded) {
-      meta[a.id!] = {
+    for (const a of attachments) {
+      if (!a.uploaded || !a.id) {
+        continue
+      }
+      attachmentIds.push(a.id)
+      meta[a.id] = {
         filename: a.filename,
         contentType: a.mimeType,
         size: a.size,

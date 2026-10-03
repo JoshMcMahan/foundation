@@ -165,7 +165,7 @@ export default function CustomListbox<T>({
           {optionsElement || null}
         </Transition>
       ) : (
-        <>{controlledOpen && optionsElement}</>
+        controlledOpen && optionsElement
       )}
     </Listbox>
   )

@@ -11,8 +11,10 @@ export interface IColorField extends BaseField {
 
 export default function ColorField(props: FieldComponentProps<IColorField>) {
   const { field, label, labelPosition, onChange, tooltipComponent, spaceCompact } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<string>(field.name!)
+  const [fieldState] = useField<string>(fieldName)
   const { setFieldValue, setFieldTouched } = useFormikContext()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,8 +23,8 @@ export default function ColorField(props: FieldComponentProps<IColorField>) {
     if (onChange) {
       onChange(val)
     }
-    setFieldTouched(field.name!, true)
-    setFieldValue(field.name!, val)
+    setFieldTouched(fieldName, true)
+    setFieldValue(fieldName, val)
   }
 
   return (

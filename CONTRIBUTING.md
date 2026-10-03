@@ -3,7 +3,7 @@
 - Every change goes through a pull request against `canary`. PR titles follow
   [Conventional Commits](https://www.conventionalcommits.org) (`feat(problem): ...`,
   `fix(problem): ...`); PRs are squash-merged, so the title becomes the commit.
-- `make check` must pass: golangci-lint, Biome, TypeScript, and the Go and TypeScript tests.
+- `make check` must pass: golangci-lint, govulncheck, Biome, TypeScript, and the Go and TypeScript tests.
 
 ## Adding a shared rule or code
 

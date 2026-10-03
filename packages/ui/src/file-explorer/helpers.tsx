@@ -250,6 +250,7 @@ function NotFoundPreview({ path, onRetry }: { path: string; onRetry: () => void 
 
 export type CorsAwareRefresh = (opts?: {
   silent?: boolean
+  // biome-ignore lint/suspicious/noConfusingVoidType: a refresh that reports nothing is an async function with no return
 }) => Promise<{ corsError: boolean } | void>
 
 function CorsIssuePreview({
@@ -660,7 +661,7 @@ async function addCorsRules({
   await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
   while (Date.now() < deadline) {
     const result = await onRefresh({ silent: true })
-    if (!result || !result.corsError) {
+    if (!result?.corsError) {
       await onRefresh()
       notify.success(strings.corsAdded)
       return

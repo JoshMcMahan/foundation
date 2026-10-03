@@ -6,7 +6,7 @@
     "node": ">=26"
   },
   "scripts": {
-    "lint": "biome check .",
+    "lint": "biome check --error-on-warnings .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "build": "pnpm -r build"

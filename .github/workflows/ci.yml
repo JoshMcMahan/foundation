@@ -40,6 +40,8 @@ jobs:
         run: go mod tidy -diff && (cd tools && go mod tidy -diff)
       - name: Lint
         run: go tool -modfile=tools/go.mod golangci-lint run ./...
+      - name: Check dependencies for known vulnerabilities
+        run: go tool -modfile=tools/go.mod govulncheck ./...
       - name: Test
         env:
           # go.mod also sets fips140=only; the environment makes the mode explicit

@@ -119,7 +119,6 @@ function replayableOutput(output: unknown[] | undefined): unknown[] {
 // parseResponsesSSELine maps an OpenAI Responses SSE line onto the same parsed
 // shape the chat-completions parser produces, so processSSEStream's
 // accumulation, callbacks, and background-stream plumbing work unchanged.
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: flat event-type dispatch
 export function parseResponsesSSELine(line: string): ParsedSSELine {
   if (!line.startsWith('data: ')) {
     return null

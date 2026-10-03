@@ -20,6 +20,8 @@ export default function ObjectField({
   labelPosition,
   spaceCompact,
 }: FieldComponentProps<IObjectField>) {
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
   const [open, setOpen] = useState(field.collapsed !== undefined ? !field.collapsed : true)
   const { values, setFieldValue, setFieldTouched } = useFormikContext<Record<string, unknown>>()
   const meta = resolveMetaOverrides(field.options, labelPosition, spaceCompact ?? false)
@@ -53,7 +55,7 @@ export default function ObjectField({
             labelPosition={meta.labelPosition}
             spaceCompact={meta.spaceCompact}
             parentInfo={{
-              parentName: field.name!,
+              parentName: fieldName,
               fieldNamePrefix: `${field.name}.`,
             }}
           />

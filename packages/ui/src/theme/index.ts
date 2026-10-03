@@ -79,11 +79,11 @@ export interface SurfaceSeeds {
 type Rgb = [number, number, number]
 
 function parseHex(hex: string): Rgb {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (!m) {
+  const [, r, g, b] = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex) ?? []
+  if (r === undefined || g === undefined || b === undefined) {
     throw new Error(`Invalid hex color: ${hex}`)
   }
-  return [Number.parseInt(m[1]!, 16), Number.parseInt(m[2]!, 16), Number.parseInt(m[3]!, 16)]
+  return [Number.parseInt(r, 16), Number.parseInt(g, 16), Number.parseInt(b, 16)]
 }
 
 function toHex([r, g, b]: Rgb): string {

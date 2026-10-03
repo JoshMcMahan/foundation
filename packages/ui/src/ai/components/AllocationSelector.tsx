@@ -18,13 +18,15 @@ export default function AllocationSelector({
 
   const { data: allocations } = useSWR(
     isOrgProvider && allocationsAdapter ? ['ai-chat-allocations'] : null,
-    () => allocationsAdapter!.list(),
+    // The key is null without an adapter, so the fetcher only runs with one.
+    () => allocationsAdapter?.list(),
   )
 
   // Auto-select first allocation if none selected
   useEffect(() => {
-    if (isOrgProvider && allocations?.length && !selectedAllocation) {
-      setSelectedAllocation(allocations[0]!.name)
+    const first = allocations?.[0]
+    if (isOrgProvider && first && !selectedAllocation) {
+      setSelectedAllocation(first.name)
     }
   }, [isOrgProvider, allocations, selectedAllocation, setSelectedAllocation])
 

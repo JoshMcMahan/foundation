@@ -41,7 +41,9 @@ beforeAll(() => {
     class {
       private targets: Element[] = []
       private entry: { fire: () => void }
-      constructor(private callback: IntersectionObserverCallback) {
+      private callback: IntersectionObserverCallback
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback
         this.entry = { fire: () => this.fire() }
         liveObservers.push(this.entry)
       }

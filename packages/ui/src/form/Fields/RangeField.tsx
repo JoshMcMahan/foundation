@@ -24,19 +24,21 @@ export default function RangeField(props: FieldComponentProps<IRangeField>) {
     spaceCompact,
     setFormDirty,
   } = props
+  // The form names every field before it renders one.
+  const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<string | number>(field.name!)
+  const [fieldState] = useField<string | number>(fieldName)
   const { setFieldValue, setFieldTouched } = useFormikContext()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.valueAsNumber
-    if (!isNaN(val)) {
+    if (!Number.isNaN(val)) {
       val = Math.max(field.min, Math.min(field.max, val))
-      setFieldValue(field.name!, val)
+      setFieldValue(fieldName, val)
       if (onChange) {
         onChange(val)
       }
-      setFieldTouched(field.name!, true)
+      setFieldTouched(fieldName, true)
       setFormDirty(true)
     }
   }
@@ -45,7 +47,7 @@ export default function RangeField(props: FieldComponentProps<IRangeField>) {
   // to 300s, and seeding the 30s min would silently give flex jobs a far-too-short capacity budget.
   const seedValue = field.default ?? field.min
   if ((fieldState.value === undefined || fieldState.value === null) && seedValue !== undefined) {
-    setFieldValue(field.name!, seedValue)
+    setFieldValue(fieldName, seedValue)
   }
 
   const currentValue = fieldState.value !== undefined ? fieldState.value : seedValue

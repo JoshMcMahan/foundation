@@ -208,6 +208,7 @@
 
 /* Light mode: use the primary Shiki theme (--sdm-bg/--sdm-c) */
 .markdown [data-streamdown="code-block-body"] pre {
+  /* biome-ignore lint/complexity/noImportantStyles: the highlighter sets the background as an inline style */
   background-color: var(--sdm-bg, inherit) !important;
   color: var(--sdm-fg, inherit);
 }
@@ -217,6 +218,7 @@
 
 /* Dark mode: switch to --shiki-dark variants */
 .dark .markdown [data-streamdown="code-block-body"] pre {
+  /* biome-ignore lint/complexity/noImportantStyles: the highlighter sets the background as an inline style */
   background-color: var(--shiki-dark-bg, var(--sdm-bg, inherit)) !important;
   color: var(--shiki-dark, var(--sdm-fg, inherit));
 }
@@ -233,6 +235,7 @@
 /* Remove prose backtick pseudo-elements on inline code */
 .markdown code::before,
 .markdown code::after {
+  /* biome-ignore lint/complexity/noImportantStyles: the typography styles add these with a more specific selector */
   content: none !important;
 }
 
@@ -250,7 +253,9 @@
 @media (hover: none) {
   .chat-actions,
   .chat-meta {
+    /* biome-ignore lint/complexity/noImportantStyles: must win over the utility classes that hide these until hover */
     opacity: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must win over the utility classes that hide these until hover */
     pointer-events: auto !important;
   }
 }

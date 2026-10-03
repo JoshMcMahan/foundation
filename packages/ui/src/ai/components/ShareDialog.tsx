@@ -7,6 +7,12 @@ import { useChatConfig } from '../core/config'
 import type { ShareGroup, SharePermission } from '../types'
 import Dropdown from '../ui/Dropdown'
 
+type TeamPermission = SharePermission & { team: string }
+
+function isTeamPermission(p: SharePermission): p is TeamPermission {
+  return !!p.team && !p.entireOrganization
+}
+
 interface ShareDialogProps {
   conversationId: string
   isOpen: boolean
@@ -97,8 +103,8 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
         }
 
         // Handle team permission changes
-        const originalTeamPerms = originalPermissions.filter((p) => p.team && !p.entireOrganization)
-        const currentTeamPerms = permissions.filter((p) => p.team && !p.entireOrganization)
+        const originalTeamPerms = originalPermissions.filter(isTeamPermission)
+        const currentTeamPerms = permissions.filter(isTeamPermission)
 
         // Find groups to add
         for (const perm of currentTeamPerms) {
@@ -106,7 +112,7 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
           if (!original) {
             await sharing.addPermission(conversationId, {
               permission: perm.permission,
-              team: perm.team!,
+              team: perm.team,
               entireOrganization: false,
             })
           } else if (original.permission !== perm.permission && original.id) {
@@ -178,7 +184,7 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
     return null
   }
 
-  const teamPermissions = permissions.filter((p) => p.team && !p.entireOrganization)
+  const teamPermissions = permissions.filter(isTeamPermission)
   const availableTeams = teams.filter((team) => !permissions.some((p) => p.team === team.id))
 
   return (
@@ -254,14 +260,14 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
                           ]}
                           value={perm.permission}
                           onChange={(val) =>
-                            handleTeamPermissionChange(perm.team!, val as 'view' | 'collaborate')
+                            handleTeamPermissionChange(perm.team, val as 'view' | 'collaborate')
                           }
                           wrapperClassName="w-40"
                           textBoxClassName="text-xs border theme-border rounded px-2 py-1"
                         />
                         <button
                           type="button"
-                          onClick={() => handleRemoveTeam(perm.team!)}
+                          onClick={() => handleRemoveTeam(perm.team)}
                           className="p-1 rounded hover:bg-red-500/10"
                           title={t.remove}
                         >

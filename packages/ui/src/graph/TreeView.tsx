@@ -39,10 +39,10 @@ function getJobDuration(job: Job): string {
 function formatJobLabel(jobName: string, job?: Job): string {
   const matrix = job?._matrix
   if (matrix?.originaljob) {
-    const name = matrix.originaljob[0]!.toUpperCase() + matrix.originaljob.slice(1)
+    const name = matrix.originaljob.charAt(0).toUpperCase() + matrix.originaljob.slice(1)
     return `${name} (${(matrix.index ?? 0) + 1}/${matrix.totalingroup ?? '?'})`
   }
-  return (jobName[0]!.toUpperCase() + jobName.slice(1)).replace(/_/g, ' ')
+  return (jobName.charAt(0).toUpperCase() + jobName.slice(1)).replace(/_/g, ' ')
 }
 
 // Inline log viewer component using the shared LogViewer
@@ -231,8 +231,6 @@ function StepRow({
   index,
   isExpanded,
   onToggle,
-  workflowName,
-  runNumber,
   slug,
   jobName,
   expandedJobs,
@@ -882,7 +880,11 @@ export default function TreeView({
           const seenMatrixGroups = new Set<string>()
 
           for (const jobName of visibleJobNames) {
-            const matrixOrigin = jobs[jobName]?._matrix?.originaljob
+            const job = jobs[jobName]
+            if (!job) {
+              continue
+            }
+            const matrixOrigin = job._matrix?.originaljob
             if (matrixOrigin) {
               if (seenMatrixGroups.has(matrixOrigin)) {
                 continue
@@ -931,23 +933,26 @@ export default function TreeView({
                         className="overflow-hidden pl-4"
                         id={`matrix-panel-${matrixOrigin}`}
                       >
-                        {group.members.map((memberName) => (
-                          <JobRow
-                            key={memberName}
-                            jobName={memberName}
-                            job={jobs[memberName]!}
-                            isExpanded={expandedJobs.has(memberName)}
-                            onToggle={() => toggleJob(memberName)}
-                            dependencies={dependenciesMap[memberName]}
-                            workflowName={workflowName}
-                            runNumber={runNumber}
-                            slug={slug}
-                            expandedJobs={expandedSubworkflowJobs}
-                            onJobToggle={toggleSubworkflowJob}
-                            expandedSteps={expandedSteps}
-                            onStepToggle={toggleStep}
-                          />
-                        ))}
+                        {group.members.map((memberName) => {
+                          const member = jobs[memberName]
+                          return member ? (
+                            <JobRow
+                              key={memberName}
+                              jobName={memberName}
+                              job={member}
+                              isExpanded={expandedJobs.has(memberName)}
+                              onToggle={() => toggleJob(memberName)}
+                              dependencies={dependenciesMap[memberName]}
+                              workflowName={workflowName}
+                              runNumber={runNumber}
+                              slug={slug}
+                              expandedJobs={expandedSubworkflowJobs}
+                              onJobToggle={toggleSubworkflowJob}
+                              expandedSteps={expandedSteps}
+                              onStepToggle={toggleStep}
+                            />
+                          ) : null
+                        })}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -958,7 +963,7 @@ export default function TreeView({
                 <JobRow
                   key={jobName}
                   jobName={jobName}
-                  job={jobs[jobName]!}
+                  job={job}
                   isExpanded={expandedJobs.has(jobName)}
                   onToggle={() => toggleJob(jobName)}
                   dependencies={dependenciesMap[jobName]}

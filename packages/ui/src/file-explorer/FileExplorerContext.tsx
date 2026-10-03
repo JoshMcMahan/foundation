@@ -284,7 +284,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
       const results = await Promise.allSettled(
         session.uploadNodes.map(async (node) => {
-          if (node && node.file) {
+          if (node?.file) {
             const fileProgress = session.progress?.allFiles?.get(node.relativePath)
             if (!fileProgress) {
               return
@@ -463,7 +463,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
       const failedFileNames = actualFailedResults
         .map((result) => {
           // Map back to correct file names
-          const originalIndex = results.findIndex((r) => r === result)
+          const originalIndex = results.indexOf(result)
           return session.uploadNodes[originalIndex]?.name || `File #${originalIndex + 1}`
         })
         .filter(Boolean)
@@ -547,11 +547,11 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
   }
 
   const processNextUploadSessionInQueue = async () => {
-    if (isProcessingRef.current || uploadQueueRef.current.length === 0) {
+    const nextSessionId = uploadQueueRef.current[0]
+    if (isProcessingRef.current || nextSessionId === undefined) {
       return
     }
 
-    const nextSessionId = uploadQueueRef.current[0]!
     await startUploadSession(nextSessionId)
   }
 
