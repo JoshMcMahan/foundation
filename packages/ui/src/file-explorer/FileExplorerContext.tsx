@@ -270,8 +270,11 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
           if (!fileProgress) {
             return
           }
+          // Throwing, not returning, is what makes allSettled count the file
+          // as not uploaded; the summary then tells cancelled from failed by
+          // the message.
           if (fileProgress.status === 'cancelled') {
-            return { reason: 'Upload cancelled by user', status: 'rejected' }
+            throw new Error('Upload cancelled by user')
           }
 
           updateFileProgressInUploadSession(session, node.relativePath, {
@@ -287,10 +290,8 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
           const uploadFileInput = session.provider.uploadFileInput
           if (!uploadFileInput) {
-            return {
-              reason: 'Upload is not supported for this storage provider',
-              status: 'rejected',
-            }
+            updateFileProgressInUploadSession(session, node.relativePath, { status: 'failed' })
+            throw new Error('Upload is not supported for this storage provider')
           }
 
           const input = uploadFileInput(session.storageName, objectPath, node.file)
