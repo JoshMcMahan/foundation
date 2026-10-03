@@ -6,7 +6,7 @@ import { sanitizeLabel } from './toolfmt'
 
 export const MAX_EDIT_DIFF_LINES = 100
 export const MAX_WRITE_DIFF_LINES = 50
-export const DIFF_CONTEXT = 3
+const DIFF_CONTEXT = 3
 
 export interface EditToolArgs {
   path?: string

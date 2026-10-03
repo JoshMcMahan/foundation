@@ -12,6 +12,8 @@ import {
 import type { CompletionMessage } from '../adapter/openai/wire'
 import type { ChatAdapter, PartDelta } from '../adapter/types'
 import type {
+  AttachmentMeta,
+  AttachmentRef,
   ChatModel,
   ChatNavigation,
   ChatNotify,
@@ -87,6 +89,56 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+function attachmentRefs(
+  ids: string[] | undefined,
+  meta: AttachmentMeta | undefined,
+): AttachmentRef[] | undefined {
+  if (!ids?.length) {
+    return undefined
+  }
+  const uploadedAt = DateTime.now().toISO()
+  return ids.map((id) => ({
+    id,
+    filename: meta?.[id]?.filename ?? '',
+    contentType: meta?.[id]?.contentType ?? '',
+    size: meta?.[id]?.size ?? 0,
+    uploadedAt,
+  }))
+}
+
+// A message typed while a reply streams, held until that turn ends.
+interface QueuedSend {
+  content: string
+  attachmentIds: string[]
+  attachmentMeta: AttachmentMeta
+}
+
+type SendMessage = (
+  content: string,
+  attachmentIds?: string[],
+  parentId?: string,
+  attachmentMeta?: AttachmentMeta,
+  // Internal: preceding user messages from the queue, each rendered as its own bubble
+  precedingMessages?: QueuedSend[],
+) => Promise<boolean>
+
+// The newest held message becomes the turn's final message; the rest ride
+// ahead of it as separate user messages.
+function heldSendArgs(held: Array<QueuedSend & { id: string }>): Parameters<SendMessage> | null {
+  const last = held.at(-1)
+  if (!last) {
+    return null
+  }
+  const preceding = held.slice(0, -1).map(({ id: _id, ...rest }) => rest)
+  return [
+    last.content,
+    last.attachmentIds.length > 0 ? last.attachmentIds : undefined,
+    undefined,
+    Object.keys(last.attachmentMeta).length > 0 ? last.attachmentMeta : undefined,
+    preceding.length > 0 ? preceding : undefined,
+  ]
+}
+
 interface ChatContextValue {
   adapter: ChatAdapter
   currentUser: ChatUser
@@ -126,7 +178,7 @@ interface ChatContextValue {
     content: string,
     attachmentIds?: string[],
     parentId?: string,
-    attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
+    attachmentMeta?: AttachmentMeta,
   ) => Promise<boolean>
   retryMessage: (messageId: string) => Promise<boolean>
   setSelectedProvider: (providerId: string | null) => void
@@ -202,29 +254,9 @@ export function ChatProvider({
     (!state.hasLoadedModels || state.models.some((m) => m.id === state.selectedProvider))
 
   const isSendingRef = useRef(false)
-  const pendingQueueRef = useRef<
-    Array<{
-      id: string
-      content: string
-      attachmentIds: string[]
-      attachmentMeta: Record<string, { filename: string; contentType: string; size: number }>
-    }>
-  >([])
+  const pendingQueueRef = useRef<Array<QueuedSend & { id: string }>>([])
   // Self-reference for calling sendMessage from the queue processor
-  const sendMessageRef =
-    useRef<
-      (
-        content: string,
-        attachmentIds?: string[],
-        parentId?: string,
-        attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
-        _precedingMessages?: Array<{
-          content: string
-          attachmentIds: string[]
-          attachmentMeta: Record<string, { filename: string; contentType: string; size: number }>
-        }>,
-      ) => Promise<boolean>
-    >(null)
+  const sendMessageRef = useRef<SendMessage>(null)
 
   const loadConversations = useCallback(async () => {
     if (!hasLoadedConversationsRef.current) {
@@ -422,19 +454,8 @@ export function ChatProvider({
     [adapter, notify, state.currentConversation, navigation],
   )
 
-  const sendMessage = useCallback(
-    async (
-      content: string,
-      attachmentIds?: string[],
-      parentId?: string,
-      attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
-      // Internal: preceding user messages from the queue, each rendered as its own bubble
-      _precedingMessages?: Array<{
-        content: string
-        attachmentIds: string[]
-        attachmentMeta: Record<string, { filename: string; contentType: string; size: number }>
-      }>,
-    ): Promise<boolean> => {
+  const sendMessage = useCallback<SendMessage>(
+    async (content, attachmentIds, parentId, attachmentMeta, precedingMessages) => {
       if (isSendingRef.current) {
         const convId = currentConversationIdRef.current
         if (!convId) {
@@ -447,34 +468,6 @@ export function ChatProvider({
             `You can queue up to ${MAX_QUEUED_MESSAGES} messages while waiting for a response`,
           )
           return false
-        }
-
-        // A drain that lost the race to a fresh send arrives here carrying
-        // preceding messages — requeue them ahead of the new content so
-        // nothing is dropped and chronology holds.
-        for (const pm of _precedingMessages ?? []) {
-          const pmId = crypto.randomUUID()
-          pendingQueueRef.current.push({ id: pmId, ...pm })
-          dispatch({
-            type: 'ADD_QUEUED_MESSAGE',
-            message: {
-              id: pmId,
-              role: 'user',
-              content: pm.content,
-              timestamp: DateTime.now().toISO(),
-              author: currentUser,
-              attachments: pm.attachmentIds.length
-                ? pm.attachmentIds.map((id) => ({
-                    id,
-                    filename: pm.attachmentMeta[id]?.filename ?? '',
-                    contentType: pm.attachmentMeta[id]?.contentType ?? '',
-                    size: pm.attachmentMeta[id]?.size ?? 0,
-                    uploadedAt: DateTime.now().toISO(),
-                  }))
-                : undefined,
-            },
-            conversationId: convId,
-          })
         }
 
         const queuedId = crypto.randomUUID()
@@ -493,13 +486,7 @@ export function ChatProvider({
             content,
             timestamp: DateTime.now().toISO(),
             author: currentUser,
-            attachments: attachmentIds?.map((id) => ({
-              id,
-              filename: attachmentMeta?.[id]?.filename ?? '',
-              contentType: attachmentMeta?.[id]?.contentType ?? '',
-              size: attachmentMeta?.[id]?.size ?? 0,
-              uploadedAt: DateTime.now().toISO(),
-            })),
+            attachments: attachmentRefs(attachmentIds, attachmentMeta),
           },
           conversationId: convId,
         })
@@ -520,9 +507,9 @@ export function ChatProvider({
         const held = pendingQueueRef.current
         pendingQueueRef.current = []
         dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
-        _precedingMessages = [
+        precedingMessages = [
           ...held.map(({ id: _id, ...rest }) => rest),
-          ...(_precedingMessages ?? []),
+          ...(precedingMessages ?? []),
         ]
       }
 
@@ -578,23 +565,15 @@ export function ChatProvider({
 
       let lastBranchId = parentId || state.currentConversation?.activeBranchId || null
       const precedingApiMessages: CompletionMessage[] = []
-      if (_precedingMessages?.length) {
-        for (const pm of _precedingMessages) {
+      if (precedingMessages?.length) {
+        for (const pm of precedingMessages) {
           const pmId = crypto.randomUUID()
           const pmMessage: Message = {
             id: pmId,
             parentId: lastBranchId,
             role: 'user',
             content: pm.content,
-            attachments: pm.attachmentIds?.length
-              ? pm.attachmentIds.map((id) => ({
-                  id,
-                  filename: pm.attachmentMeta[id]?.filename ?? '',
-                  contentType: pm.attachmentMeta[id]?.contentType ?? '',
-                  size: pm.attachmentMeta[id]?.size ?? 0,
-                  uploadedAt: DateTime.now().toISO(),
-                }))
-              : undefined,
+            attachments: attachmentRefs(pm.attachmentIds, pm.attachmentMeta),
             timestamp: DateTime.now().toISO(),
             author: currentUser,
           }
@@ -606,7 +585,7 @@ export function ChatProvider({
           precedingApiMessages.push({
             role: 'user' as const,
             content: pm.content,
-            attachment_ids: pm.attachmentIds?.length ? pm.attachmentIds : undefined,
+            attachment_ids: pm.attachmentIds.length ? pm.attachmentIds : undefined,
           })
           lastBranchId = pmId
         }
@@ -618,13 +597,7 @@ export function ChatProvider({
         parentId: lastBranchId,
         role: 'user',
         content,
-        attachments: attachmentIds?.map((id) => ({
-          id,
-          filename: attachmentMeta?.[id]?.filename ?? '',
-          contentType: attachmentMeta?.[id]?.contentType ?? '',
-          size: attachmentMeta?.[id]?.size ?? 0,
-          uploadedAt: new Date().toISOString(),
-        })),
+        attachments: attachmentRefs(attachmentIds, attachmentMeta),
         timestamp: new Date().toISOString(),
         author: currentUser,
       }
@@ -860,26 +833,15 @@ export function ChatProvider({
         if (wasAborted) {
           isSendingRef.current = false
         } else if (sendSucceeded) {
-          const queued = pendingQueueRef.current
+          const next = heldSendArgs(pendingQueueRef.current)
           pendingQueueRef.current = []
           dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
 
-          const lastQueued = queued.at(-1)
-          if (lastQueued) {
-            const preceding = queued.slice(0, -1)
-
+          if (next) {
             // Yield to React so the assistant message and activeBranchId are committed before the next send
             setTimeout(() => {
               isSendingRef.current = false
-              sendMessageRef.current?.(
-                lastQueued.content,
-                lastQueued.attachmentIds.length > 0 ? lastQueued.attachmentIds : undefined,
-                undefined,
-                Object.keys(lastQueued.attachmentMeta).length > 0
-                  ? lastQueued.attachmentMeta
-                  : undefined,
-                preceding.length > 0 ? preceding : undefined,
-              )
+              sendMessageRef.current?.(...next)
             }, 0)
           } else {
             isSendingRef.current = false
@@ -1033,7 +995,7 @@ export function ChatProvider({
     }
 
     const messages = state.currentConversation?.messages || []
-    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
+    const lastUserMessage = messages.findLast((m) => m.role === 'user')
 
     // Use the server-assigned messageId if available; fall back to UUID if stopped before first chunk
     const messageId = stoppedMessageId || crypto.randomUUID()
@@ -1100,28 +1062,19 @@ export function ChatProvider({
     dispatch({ type: 'REMOVE_QUEUED_MESSAGE', id })
   }, [])
 
-  // Sends the held queue on its own (composer empty after a cancel or error):
-  // the newest queued message becomes the turn's final message, the rest ride
-  // ahead of it as separate user messages.
+  // Sends the held queue on its own, when the composer is empty after a
+  // cancel or error.
   const flushQueuedMessages = useCallback(() => {
     if (isSendingRef.current) {
       return
     }
-    const held = pendingQueueRef.current
-    const last = held.at(-1)
-    if (!last) {
+    const next = heldSendArgs(pendingQueueRef.current)
+    if (!next) {
       return
     }
     pendingQueueRef.current = []
     dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
-    const preceding = held.slice(0, -1).map(({ id: _id, ...rest }) => rest)
-    sendMessageRef.current?.(
-      last.content,
-      last.attachmentIds.length > 0 ? last.attachmentIds : undefined,
-      undefined,
-      Object.keys(last.attachmentMeta).length > 0 ? last.attachmentMeta : undefined,
-      preceding.length > 0 ? preceding : undefined,
-    )
+    sendMessageRef.current?.(...next)
   }, [])
 
   const clearCurrentConversation = useCallback(() => {

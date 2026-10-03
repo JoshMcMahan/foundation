@@ -3,7 +3,7 @@ import { keyedByContent } from '../components/keys'
 import { useNotify, useStrings } from '../components/Provider'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
 import type { TreeNode, UploadFileProgress, UploadNode, UploadSession } from './lib/types'
-import { getUploadSessionETA, removeLeadingSlash } from './lib/utils'
+import { calculateUploadNodesTotalSize, getUploadSessionETA, removeLeadingSlash } from './lib/utils'
 import { UploadSessionToast } from './toasts'
 
 interface IFileExplorerContextValue {
@@ -24,13 +24,6 @@ interface IFileExplorerContextValue {
   getUploadSessionById: (sessionId: string) => UploadSession | undefined
   getUploadQueueIndex: (sessionId: string) => number
   startUploadSession: (sessionId: string) => Promise<void>
-
-  // Progress tracking
-  updateFileUploadProgress?: (
-    sessionId: string,
-    fileKey: string,
-    progress: UploadFileProgress,
-  ) => void
 }
 
 const FileExplorerContext = createContext<IFileExplorerContextValue | undefined>(undefined)
@@ -75,10 +68,9 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
   const isProcessingRef = useRef<boolean>(false)
 
   const uploadSessionIdCounter = useRef(0)
-  const uploadSessionIdPrefix = 'upload-session'
 
   const generateUploadSessionId = () => {
-    return `${uploadSessionIdPrefix}-${Date.now()}-${uploadSessionIdCounter.current++}`
+    return `upload-session-${Date.now()}-${uploadSessionIdCounter.current++}`
   }
 
   const calculateWeightedProgress = (session: UploadSession): number => {
@@ -91,32 +83,20 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
     // Calculate weighted progress based on file sizes
     session.progress.allFiles.forEach((fileProgress) => {
-      const fileSize = fileProgress.fileSizeBytes || 0
-      const filePercentage = fileProgress?.percentage || 0
-
-      totalWeightedProgress += (filePercentage / 100) * fileSize
+      const fileSize = fileProgress.fileSizeBytes
+      totalWeightedProgress += ((fileProgress.percentage ?? 0) / 100) * fileSize
       totalWeight += fileSize
     })
 
     return totalWeight > 0 ? (totalWeightedProgress / totalWeight) * 100 : 0
   }
 
-  const calculateOverallLoadedBytes = (
-    session: UploadSession,
-  ): { loaded: number; total: number } => {
-    if (!session.progress?.allFiles) {
-      return { loaded: 0, total: session.progress?.totalSizeBytes || 0 }
-    }
-
+  const sumLoadedBytes = (session: UploadSession): number => {
     let totalLoaded = 0
-    let totalSize = 0
-
-    session.progress.allFiles.forEach((fileProgress) => {
-      totalLoaded += fileProgress.loadedBytes || 0
-      totalSize += fileProgress.fileSizeBytes || 0
+    session.progress?.allFiles?.forEach((fileProgress) => {
+      totalLoaded += fileProgress.loadedBytes ?? 0
     })
-
-    return { loaded: totalLoaded, total: totalSize }
+    return totalLoaded
   }
 
   const updateFileProgressInUploadSession = (
@@ -151,7 +131,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
       id: sessionId,
       storageName,
       targetPath,
-      uploadNodes: uploadNodes,
+      uploadNodes,
       status: 'queued',
       queueIndex: uploadQueueRef.current.length,
       client,
@@ -159,13 +139,13 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
       progress: {
         completedFiles: 0,
         totalFiles: uploadNodes.length,
-        totalSizeBytes: uploadNodes.reduce((sum, node) => sum + (node.file?.size || 0), 0),
+        totalSizeBytes: calculateUploadNodesTotalSize(uploadNodes),
         allFiles: new Map(
           uploadNodes.map((file) => [
             file.relativePath,
             {
               fileKey: file.relativePath,
-              fileSizeBytes: file.file?.size || 0,
+              fileSizeBytes: file.file.size,
               abortController: new AbortController(),
               status: 'pending',
               percentage: 0,
@@ -266,16 +246,18 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
     session.status = 'uploading'
     isProcessingRef.current = true
 
+    const progressToast = (shown: UploadSession = session) => (
+      <UploadSessionToast
+        session={shown}
+        queueLength={uploadQueueRef.current.length}
+        onCancel={() => handleSessionCancel(session)}
+        onCancelFile={(path) => cancelFileInSession(sessionId, path)}
+      />
+    )
+
     try {
       notify.update(sessionId, {
-        render: (
-          <UploadSessionToast
-            session={session}
-            queueLength={uploadQueueRef.current.length}
-            onCancel={() => handleSessionCancel(session)}
-            onCancelFile={(path) => cancelFileInSession(sessionId, path)}
-          />
-        ),
+        render: progressToast(),
         icon: false,
         isLoading: false,
         closeButton: false,
@@ -284,153 +266,124 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
       const results = await Promise.allSettled(
         session.uploadNodes.map(async (node) => {
-          if (node?.file) {
-            const fileProgress = session.progress?.allFiles?.get(node.relativePath)
-            if (!fileProgress) {
+          const fileProgress = session.progress?.allFiles?.get(node.relativePath)
+          if (!fileProgress) {
+            return
+          }
+          if (fileProgress.status === 'cancelled') {
+            return { reason: 'Upload cancelled by user', status: 'rejected' }
+          }
+
+          updateFileProgressInUploadSession(session, node.relativePath, {
+            status: 'uploading',
+            loadedBytes: 0,
+            totalBytes: node.file.size,
+            percentage: 0,
+          })
+
+          const objectPath = session.targetPath
+            ? `${session.targetPath}/${removeLeadingSlash(node.relativePath)}`
+            : removeLeadingSlash(node.relativePath)
+
+          const uploadFileInput = session.provider.uploadFileInput
+          if (!uploadFileInput) {
+            return {
+              reason: 'Upload is not supported for this storage provider',
+              status: 'rejected',
+            }
+          }
+
+          const input = uploadFileInput(session.storageName, objectPath, node.file)
+
+          const onProgress = (progress: {
+            loadedBytes: number
+            totalBytes: number
+            percentage: number
+          }) => {
+            if (session.status === 'cancelled' || !session.progress?.allFiles) {
               return
             }
-            if (fileProgress.status === 'cancelled') {
-              return { reason: 'Upload cancelled by user', status: 'rejected' }
+            const currentFileProgress = session.progress.allFiles.get(node.relativePath)
+            // A completed file is settled too, so a repeated 100% event is not
+            // counted twice.
+            if (
+              !currentFileProgress ||
+              ['failed', 'cancelled', 'completed'].includes(currentFileProgress.status ?? '')
+            ) {
+              return
             }
 
             updateFileProgressInUploadSession(session, node.relativePath, {
-              status: 'uploading',
-              loadedBytes: 0,
-              totalBytes: node.file.size,
-              percentage: 0,
+              loadedBytes: progress.loadedBytes,
+              totalBytes: progress.totalBytes,
+              percentage: progress.percentage,
+              status: progress.percentage === 100 ? 'completed' : 'uploading',
             })
 
-            const objectPath = session.targetPath
-              ? `${session.targetPath}/${removeLeadingSlash(node.relativePath)}`
-              : removeLeadingSlash(node.relativePath)
-
-            const uploadFileInput = session.provider.uploadFileInput
-            if (!uploadFileInput) {
-              return {
-                reason: 'Upload is not supported for this storage provider',
-                status: 'rejected',
-              }
+            if (progress.percentage === 100) {
+              session.progress.completedFiles += 1
             }
 
-            const input = uploadFileInput(session.storageName, objectPath, node.file)
+            const totalLoadedBytes = sumLoadedBytes(session)
+            session.progress.overallProgress = calculateWeightedProgress(session)
+            session.progress.totalLoadedBytes = totalLoadedBytes
 
-            const onProgress = (progress: {
-              loadedBytes: number
-              totalBytes: number
-              percentage: number
-            }) => {
-              if (session.status === 'cancelled') {
-                return
-              }
+            const { estimatedSecondsLeft, lastProgressTime, lastProgressBytes, shouldUpdateETA } =
+              getUploadSessionETA(
+                totalLoadedBytes,
+                session.progress.totalSizeBytes,
+                session.progress.lastProgressTime,
+                session.progress.lastProgressBytes,
+              )
+            session.progress.lastProgressTime = lastProgressTime
+            session.progress.lastProgressBytes = lastProgressBytes
 
-              // Update file progress in session
-              if (session.progress?.allFiles) {
-                const currentFileProgress = session.progress.allFiles.get(node.relativePath)
-                if (!currentFileProgress) {
-                  return
-                }
-                if (
-                  ['failed', 'cancelled', 'complete'].includes(currentFileProgress.status ?? '')
-                ) {
-                  return
-                }
-
-                // Used to avoid duplicate counting of completed files
-                const wasCompleted = currentFileProgress.percentage === 100
-
-                updateFileProgressInUploadSession(session, node.relativePath, {
-                  loadedBytes: progress.loadedBytes,
-                  totalBytes: progress.totalBytes,
-                  percentage: progress.percentage,
-                  status: progress.percentage === 100 ? 'completed' : 'uploading',
-                })
-
-                if (progress.percentage === 100 && !wasCompleted) {
-                  session.progress.completedFiles += 1
-                }
-
-                const overallProgress = calculateWeightedProgress(session)
-                const { loaded: totalLoadedBytes } = calculateOverallLoadedBytes(session)
-
-                session.progress.overallProgress = overallProgress
-                session.progress.totalLoadedBytes = totalLoadedBytes
-
-                const {
-                  estimatedSecondsLeft,
-                  lastProgressTime,
-                  lastProgressBytes,
-                  shouldUpdateETA,
-                } = getUploadSessionETA(
-                  totalLoadedBytes,
-                  session.progress.totalSizeBytes,
-                  session.progress.lastProgressTime,
-                  session.progress.lastProgressBytes,
-                )
-                session.progress.lastProgressTime = lastProgressTime
-                session.progress.lastProgressBytes = lastProgressBytes
-
-                if (shouldUpdateETA) {
-                  session.progress.estimatedSecondsLeft = estimatedSecondsLeft
-                }
-
-                notify.update(sessionId, {
-                  render: (
-                    <UploadSessionToast
-                      session={session}
-                      queueLength={uploadQueueRef.current.length}
-                      onCancel={() => handleSessionCancel(session)}
-                      onCancelFile={(path) => cancelFileInSession(sessionId, path)}
-                    />
-                  ),
-                  icon: false,
-                  isLoading: false,
-                  closeButton: false,
-                  autoClose: false,
-                })
-              }
+            if (shouldUpdateETA) {
+              session.progress.estimatedSecondsLeft = estimatedSecondsLeft
             }
 
-            try {
-              await session.client.uploadFile(input, onProgress, fileProgress.abortController)
-              updateFileProgressInUploadSession(session, node.relativePath, {
-                status: 'completed',
-              })
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error ?? '')
-              const isCancelled =
-                errorMessage.toLowerCase().includes('abort') ||
-                errorMessage.toLowerCase().includes('cancel')
+            notify.update(sessionId, {
+              render: progressToast(),
+              icon: false,
+              isLoading: false,
+              closeButton: false,
+              autoClose: false,
+            })
+          }
 
-              updateFileProgressInUploadSession(session, node.relativePath, {
-                status: isCancelled ? 'cancelled' : 'failed',
-              })
+          try {
+            await session.client.uploadFile(input, onProgress, fileProgress.abortController)
+            updateFileProgressInUploadSession(session, node.relativePath, {
+              status: 'completed',
+            })
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error ?? '')
+            const isCancelled =
+              errorMessage.toLowerCase().includes('abort') ||
+              errorMessage.toLowerCase().includes('cancel')
 
-              notify.update(sessionId, {
-                render: (
-                  <UploadSessionToast
-                    session={{
-                      ...session,
-                      progress: {
-                        completedFiles: 0,
-                        totalFiles: 0,
-                        totalSizeBytes: 0,
-                        ...session.progress,
-                      },
-                    }}
-                    queueLength={uploadQueueRef.current.length}
-                    onCancel={() => handleSessionCancel(session)}
-                    onCancelFile={(path) => cancelFileInSession(sessionId, path)}
-                  />
-                ),
-                icon: false,
-                isLoading: false,
-                closeButton: session.status === 'failed' || session.status === 'cancelled',
-                autoClose: false,
-              })
+            updateFileProgressInUploadSession(session, node.relativePath, {
+              status: isCancelled ? 'cancelled' : 'failed',
+            })
 
-              // Re-throw the error for Promise.allSettled to process the overall toast
-              throw error
-            }
+            notify.update(sessionId, {
+              render: progressToast({
+                ...session,
+                progress: {
+                  completedFiles: 0,
+                  totalFiles: 0,
+                  totalSizeBytes: 0,
+                  ...session.progress,
+                },
+              }),
+              icon: false,
+              isLoading: false,
+              closeButton: session.status === 'failed' || session.status === 'cancelled',
+              autoClose: false,
+            })
+
+            // Re-throw the error for Promise.allSettled to process the overall toast
+            throw error
           }
           return
         }),
@@ -447,29 +400,25 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
         )
       }
 
-      const failedResults = results.filter((r) => r.status === 'rejected')
+      const failedResults = results.filter(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      )
       // Filter out aborted uploads from failed results
       const actualFailedResults = failedResults.filter((result) => {
-        if (result.status === 'rejected') {
-          const reason = result.reason?.message || result.reason?.toString() || ''
-
-          return !reason.toLowerCase().includes('abort') && !reason.toLowerCase().includes('cancel')
-        }
-        return false
+        const reason = result.reason?.message || result.reason?.toString() || ''
+        return !reason.toLowerCase().includes('abort') && !reason.toLowerCase().includes('cancel')
       })
 
-      const abortedCount = failedResults?.length - actualFailedResults?.length
+      const abortedCount = failedResults.length - actualFailedResults.length
 
-      const failedFileNames = actualFailedResults
-        .map((result) => {
-          // Map back to correct file names
-          const originalIndex = results.indexOf(result)
-          return session.uploadNodes[originalIndex]?.name || `File #${originalIndex + 1}`
-        })
-        .filter(Boolean)
+      // Map back to correct file names
+      const failedFileNames = actualFailedResults.map((result) => {
+        const originalIndex = results.indexOf(result)
+        return session.uploadNodes[originalIndex]?.name || `File #${originalIndex + 1}`
+      })
 
-      const successfulCount = results?.length - failedResults?.length
-      if (actualFailedResults?.length > 0) {
+      const successfulCount = results.length - failedResults.length
+      if (actualFailedResults.length > 0) {
         notify.update(sessionId, {
           render: (
             <div className="text-md">

@@ -20,9 +20,7 @@ export default function ColorField(props: FieldComponentProps<IColorField>) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
 
-    if (onChange) {
-      onChange(val)
-    }
+    onChange?.(val)
     setFieldTouched(fieldName, true)
     setFieldValue(fieldName, val)
   }

@@ -16,7 +16,7 @@ interface UseSSEStreamResult {
   /** Start the animation loop for a conversation */
   startStreaming: (conversationId: string) => void
   /** Stop the animation loop, flush remaining content */
-  stopAnimationLoop: () => { unrevealed: string; conversationId: string | null }
+  stopAnimationLoop: () => { unrevealed: string }
   /** Reset all animation refs (used when navigating away) */
   resetAnimationRefs: () => void
   /** Ref to the target content buffer */
@@ -125,21 +125,6 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     streamActiveRef.current = true
   }, [])
 
-  const stopAnimationLoop = useCallback(() => {
-    const conversationId = streamingConversationIdRef.current
-    streamActiveRef.current = false
-    if (streamRafRef.current !== null) {
-      cancelAnimationFrame(streamRafRef.current)
-      streamRafRef.current = null
-    }
-    const unrevealed = targetStreamContentRef.current.slice(revealedLengthRef.current)
-    targetStreamContentRef.current = ''
-    revealedLengthRef.current = 0
-    lastFrameTimeRef.current = 0
-    lastDispatchTimeRef.current = 0
-    return { unrevealed, conversationId }
-  }, [])
-
   const resetAnimationRefs = useCallback(() => {
     streamActiveRef.current = false
     if (streamRafRef.current !== null) {
@@ -151,6 +136,12 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     lastFrameTimeRef.current = 0
     lastDispatchTimeRef.current = 0
   }, [])
+
+  const stopAnimationLoop = useCallback(() => {
+    const unrevealed = targetStreamContentRef.current.slice(revealedLengthRef.current)
+    resetAnimationRefs()
+    return { unrevealed }
+  }, [resetAnimationRefs])
 
   // Clean up pending rAF on unmount
   useEffect(() => {

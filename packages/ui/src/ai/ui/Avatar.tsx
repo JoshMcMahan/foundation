@@ -1,40 +1,21 @@
 import cx from 'classnames'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { avatarInitials } from '../../components/Avatar'
 
 interface AvatarProps {
   src?: string | undefined
   name?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   className?: string
 }
 
-const sizeClasses = {
-  sm: 'w-6 h-6 text-xs',
-  md: 'w-8 h-8 text-sm',
-  lg: 'w-10 h-10 text-base',
-  xl: 'w-12 h-12 text-lg',
-  '2xl': 'w-16 h-16 text-xl',
-}
+const SIZE_CLASSES = 'w-6 h-6 text-xs'
 
-export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
+export function Avatar({ src, name, className }: AvatarProps) {
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
 
   // Track the failed URL rather than a sticky boolean so a changed URL retries
   // instead of pinning to the initials fallback after a prior load error.
   const errored = erroredUrl !== null && erroredUrl === src
-
-  const initials = useMemo(() => {
-    if (!name) {
-      return '?'
-    }
-    const parts = name.split(/[\s.]+/).filter(Boolean)
-    const first = parts[0]
-    const last = parts.at(-1)
-    if (parts.length >= 2 && first && last) {
-      return (first.charAt(0) + last.charAt(0)).toUpperCase()
-    }
-    return parts[0]?.[0]?.toUpperCase() || '?'
-  }, [name])
 
   return (
     <div className={cx('relative inline-flex', className)}>
@@ -43,17 +24,17 @@ export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
           className={cx(
             'rounded-full flex items-center justify-center font-medium',
             'bg-(--theme-element,#3b82f6) text-(--theme-element-text,#ffffff)',
-            sizeClasses[size],
+            SIZE_CLASSES,
           )}
         >
-          {initials}
+          {avatarInitials(name)}
         </div>
       ) : (
         <img
           src={src}
           alt={name || 'User avatar'}
           onError={() => setErroredUrl(src)}
-          className={cx('rounded-full object-cover', sizeClasses[size])}
+          className={cx('rounded-full object-cover', SIZE_CLASSES)}
         />
       )}
     </div>

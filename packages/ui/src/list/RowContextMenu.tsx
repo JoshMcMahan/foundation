@@ -81,7 +81,7 @@ export function toRowMenuItem(action: RowAction): RowMenuItem {
     kind: 'action',
     label: action.label,
     icon: action.icon,
-    onSelect: action.onSelect ?? (() => {}),
+    onSelect: action.onSelect,
     disabled: action.disabled,
     destructive: action.destructive,
     tooltip: action.tooltip,
@@ -502,14 +502,9 @@ export function useCopySubmenu(): CopySubmenu {
           icon: e.icon ?? <CopyIcon />,
         })),
       ]
-      const items: RowMenuItem[] = fields
-        .filter((f) => f.value)
-        .map((f) => ({
-          kind: 'action',
-          label: t.copy(f.label),
-          icon: f.icon,
-          copy: { text: f.value as string, label: f.label },
-        }))
+      const items = fields.flatMap(({ label, value, icon }): RowMenuItem[] =>
+        value ? [{ kind: 'action', label: t.copy(label), icon, copy: { text: value, label } }] : [],
+      )
       return {
         kind: 'submenu',
         label: t.copyMenu,

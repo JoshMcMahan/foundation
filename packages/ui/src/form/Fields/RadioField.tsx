@@ -34,9 +34,7 @@ export default function RadioField(props: FieldComponentProps<IRadioField>) {
     if (disabled) {
       return
     }
-    if (onChange) {
-      onChange(val)
-    }
+    onChange?.(val)
     setFieldTouched(fieldName, true)
     setFieldValue(fieldName, val)
     setFormDirty(true)

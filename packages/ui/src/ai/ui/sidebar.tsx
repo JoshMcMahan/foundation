@@ -11,7 +11,7 @@ import {
   useRowMenuActive,
 } from '../../list/index'
 
-export const SIDEBAR_RAIL_WIDTH_PX = 48
+const SIDEBAR_RAIL_WIDTH_PX = 48
 export const SIDEBAR_DEFAULT_WIDTH_PX = 256
 
 // Tints of the ink rather than the theme's hover, which is a shade off this

@@ -93,7 +93,6 @@ const currentUser = { id: 'user-1', username: 'tester', name: 'Tester' }
 const navigation: ChatNavigation = {
   toConversation: vi.fn(),
   toNewChat: vi.fn(),
-  toAttachments: vi.fn(),
 }
 
 const notify: ChatNotify = {

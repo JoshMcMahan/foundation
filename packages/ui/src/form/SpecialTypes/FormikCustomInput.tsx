@@ -82,9 +82,7 @@ export default function FormikCustomInput({
 
   const flushToFormik = useCallback(
     (val: InputValue) => {
-      if (onChange) {
-        onChange(val)
-      }
+      onChange?.(val)
       setFieldTouched(name, true)
       setFieldValue(name, val)
     },
@@ -92,7 +90,7 @@ export default function FormikCustomInput({
   )
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = sanitize ? sanitizeName(e.target.value) : e.target.value
+    const text = sanitizeName(e.target.value)
     let val: InputValue = text
 
     if (type === 'number') {

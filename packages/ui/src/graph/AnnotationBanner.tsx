@@ -19,7 +19,7 @@ interface CollectedAnnotation {
 }
 
 interface AnnotationBannerProps {
-  executedJobs: Record<string, WorkflowJob> | null | undefined
+  executedJobs: Record<string, WorkflowJob>
 }
 
 const typeOrder: Record<AnnotationType, number> = {
@@ -86,6 +86,7 @@ function collectAnnotations(
               title: annotation.title,
               file: annotation.file,
               line: annotation.line,
+              id: annotation.id,
               jobName: fullJobName,
               stepName: step?.name,
               stepIndex,
@@ -109,10 +110,6 @@ function collectAnnotations(
 
 export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
   const [expanded, setExpanded] = useState(false)
-
-  if (!executedJobs) {
-    return null
-  }
 
   const annotations = collectAnnotations(executedJobs)
   if (annotations.length === 0) {

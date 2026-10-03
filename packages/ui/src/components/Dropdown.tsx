@@ -31,7 +31,6 @@ export interface IProps {
   options: (ICategory | IOptions | string)[]
   onActiveChange?: (option: unknown) => void
   onChange: React.Dispatch<SetStateAction<unknown>>
-  onRangeChange?: (range: { min: number; max: number }) => void
   value: IOptions | string | Record<string, unknown>
   id?: string | undefined
   ariaLabel?: string | undefined
@@ -74,7 +73,7 @@ function getOptionFromValue(value: unknown, options: (ICategory | IOptions | str
   }
 
   // find option from options
-  const found = options?.find((option) => {
+  const found = options.find((option) => {
     if (typeof option === 'string') {
       return checkEquals(value, option)
     } else if (isCategory(option)) {
@@ -103,23 +102,18 @@ function getOptionFromValue(value: unknown, options: (ICategory | IOptions | str
 }
 
 export default function Dropdown(props: IProps) {
-  const { onChange, value, options = [], ...others } = props
+  const { onChange, value, options, ...others } = props
 
   const val = useMemo(() => {
     return getOptionFromValue(value, options)
   }, [value, options])
 
   const wrapperOnchange = (value: FlatDisplayOption | null) => {
-    if (onChange) {
-      onChange(value?.value)
-    }
+    onChange(value?.value)
   }
 
   // Transform options that are strings into IOptions format
   const transformedOptions = useMemo(() => {
-    if (!options || options.length === 0) {
-      return []
-    }
     return options.map((item) => {
       if (isCategory(item)) {
         return {
@@ -435,58 +429,56 @@ function DropdownHelper({
   )
 
   const comboOptions = (
-    <>
-      <ComboboxOptions
-        // Modal mode inerts everything outside, including Save changes.
-        modal={false}
-        ref={setPopperElement}
-        style={styles['popper']}
-        className={cx(
-          'bg-(--theme-input-bg) border-(--theme-border) text-(--theme-app) max-h-60! empty:invisible border overflow-auto rounded-md shadow-lg focus:outline-hidden z-9999 data-[popper-reference-hidden=true]:invisible data-[popper-reference-hidden=true]:pointer-events-none',
-          compact ? 'text-xs' : 'sm:text-sm',
-        )}
-        {...attributes['popper']}
-      >
-        {({ option }) => {
-          const optionLabel = typeof option === 'string' ? option : option.label
-          const optionDescription = typeof option !== 'string' ? option.description : undefined
-          const isCategoryRow = typeof option !== 'string' && Boolean(option.category)
-          const toggleTarget = typeof option !== 'string' ? option.toggle : undefined
-          const isPinned = typeof option !== 'string' && Boolean(option.pinned)
-          if (toggleTarget !== undefined) {
-            return (
-              <ToggleOption
-                option={option}
-                category={toggleTarget}
-                expanded={expandedCategories.has(toggleTarget)}
-                onToggle={toggleCategory}
-              />
-            )
-          }
+    <ComboboxOptions
+      // Modal mode inerts everything outside, including Save changes.
+      modal={false}
+      ref={setPopperElement}
+      style={styles['popper']}
+      className={cx(
+        'bg-(--theme-input-bg) border-(--theme-border) text-(--theme-app) max-h-60! empty:invisible border overflow-auto rounded-md shadow-lg focus:outline-hidden z-9999 data-[popper-reference-hidden=true]:invisible data-[popper-reference-hidden=true]:pointer-events-none',
+        compact ? 'text-xs' : 'sm:text-sm',
+      )}
+      {...attributes['popper']}
+    >
+      {({ option }) => {
+        const optionLabel = typeof option === 'string' ? option : option.label
+        const optionDescription = typeof option !== 'string' ? option.description : undefined
+        const isCategoryRow = typeof option !== 'string' && Boolean(option.category)
+        const toggleTarget = typeof option !== 'string' ? option.toggle : undefined
+        const isPinned = typeof option !== 'string' && Boolean(option.pinned)
+        if (toggleTarget !== undefined) {
           return (
-            <ComboboxOption
-              data-testid="combobox-option"
-              value={option}
-              className={cx(
-                'w-full group relative flex',
-                optionDescription ? 'min-h-10 py-2' : compact ? 'h-8' : 'h-10',
-                isCategoryRow
-                  ? 'text-[14px] font-bold pl-1 items-center'
-                  : 'data-disabled:text-(--theme-muted-text-color) data-disabled:bg-(--theme-muted-panel-bg) data-disabled:cursor-not-allowed cursor-pointer items-center pr-9 pl-3 leading-5 data-focus:bg-(--theme-muted-panel-bg) data-focus:text-(--theme-app) data-focus:outline-hidden',
-                'data-selected:border-l-2 data-selected:border-(--theme-link) data-selected:bg-(--theme-muted-panel-bg) data-selected:text-(--theme-app)',
-                isPinned && 'border-t border-(--theme-border) font-medium',
-              )}
-            >
-              <OptionContent
-                label={optionLabel}
-                description={optionDescription}
-                icon={typeof option !== 'string' && option.icon}
-              />
-            </ComboboxOption>
+            <ToggleOption
+              option={option}
+              category={toggleTarget}
+              expanded={expandedCategories.has(toggleTarget)}
+              onToggle={toggleCategory}
+            />
           )
-        }}
-      </ComboboxOptions>
-    </>
+        }
+        return (
+          <ComboboxOption
+            data-testid="combobox-option"
+            value={option}
+            className={cx(
+              'w-full group relative flex',
+              optionDescription ? 'min-h-10 py-2' : compact ? 'h-8' : 'h-10',
+              isCategoryRow
+                ? 'text-[14px] font-bold pl-1 items-center'
+                : 'data-disabled:text-(--theme-muted-text-color) data-disabled:bg-(--theme-muted-panel-bg) data-disabled:cursor-not-allowed cursor-pointer items-center pr-9 pl-3 leading-5 data-focus:bg-(--theme-muted-panel-bg) data-focus:text-(--theme-app) data-focus:outline-hidden',
+              'data-selected:border-l-2 data-selected:border-(--theme-link) data-selected:bg-(--theme-muted-panel-bg) data-selected:text-(--theme-app)',
+              isPinned && 'border-t border-(--theme-border) font-medium',
+            )}
+          >
+            <OptionContent
+              label={optionLabel}
+              description={optionDescription}
+              icon={typeof option !== 'string' && option.icon}
+            />
+          </ComboboxOption>
+        )
+      }}
+    </ComboboxOptions>
   )
 
   return (

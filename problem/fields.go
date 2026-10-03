@@ -77,6 +77,8 @@ func ValidationFailed(errs ...*FieldError) *Problem {
 	return p
 }
 
+var pointerEscaper = strings.NewReplacer("~", "~0", "/", "~1")
+
 // Pointer returns the JSON Pointer (RFC 6901) to a body field, in the URI
 // fragment form RFC 9457's example uses: Pointer("items", 3, "name") is
 // "#/items/3/name". Pointer() is the whole body, "#".
@@ -90,7 +92,7 @@ func Pointer(path ...any) string {
 		case int:
 			s = strconv.Itoa(v)
 		case string:
-			s = strings.NewReplacer("~", "~0", "/", "~1").Replace(v)
+			s = pointerEscaper.Replace(v)
 		default:
 			panic("problem: Pointer takes string and int segments")
 		}

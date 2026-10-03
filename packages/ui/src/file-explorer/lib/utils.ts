@@ -19,12 +19,7 @@ export function getFileExtension(filename: string): string | null {
 }
 
 export function getNodeName(node: TStorageObject): string {
-  const path = node.path || ''
-
-  const cleanPath = removeTrailingSlash(path)
-
-  const parts = cleanPath.split('/')
-  return parts[parts.length - 1] ?? ''
+  return removeTrailingSlash(node.path).split('/').pop() ?? ''
 }
 
 function toNode(
@@ -233,7 +228,7 @@ export function createTreeBuilder(): (storages: TStorage[], options: TTreeOption
     } else {
       const userGroups: Record<string, TStorage[]> = {}
       for (const storage of storages) {
-        const username = storage.user ?? ''
+        const username = storage.user
         if (!userGroups[username]) {
           userGroups[username] = []
         }
@@ -282,8 +277,7 @@ export function getNodeChildren(
 }
 
 export function getParentPath(currentPath: string): string {
-  const parentPath = ensureTrailingSlash(removeLastPathSegment(currentPath))
-  return parentPath
+  return ensureTrailingSlash(removeLastPathSegment(currentPath))
 }
 
 export type DirectoryNameError = 'reserved' | 'separator' | 'exists'
@@ -324,7 +318,7 @@ export async function getUploadNodesFromDataTransferItems(
           uploadNodes.push({
             name: file.name,
             file,
-            relativePath: path ? path + file.name : file.name,
+            relativePath: path + file.name,
           })
           totalSize += file.size
           resolve()
@@ -332,7 +326,7 @@ export async function getUploadNodesFromDataTransferItems(
       } else if (entry.isDirectory) {
         const dirReader = (entry as FileSystemDirectoryEntry).createReader()
         dirReader.readEntries(async (entries: FileSystemEntry[]) => {
-          const newPath = path ? `${path + entry.name}/` : `${entry.name}/`
+          const newPath = `${path}${entry.name}/`
           if (entries.length === 0) {
             uploadNodes.push({
               name: entry.name,
@@ -369,9 +363,7 @@ export async function getUploadNodesFromDataTransferItems(
 }
 
 export function calculateUploadNodesTotalSize(uploadNodes: UploadNode[]): number {
-  return uploadNodes.reduce((total, node) => {
-    return total + (node.file?.size || 0)
-  }, 0)
+  return uploadNodes.reduce((total, node) => total + node.file.size, 0)
 }
 
 export function getObjectKeyFromNode(node: TreeNode): string {
@@ -464,11 +456,7 @@ export function ensureTrailingSlash(path: string): string {
 }
 
 export function isClientValid(client: IFileExplorerClient): boolean {
-  if (!client?.getExpiresAt) {
-    return false
-  }
-  const expiresAt = client.getExpiresAt()
-  return expiresAt && expiresAt > new Date()
+  return client.getExpiresAt() > new Date()
 }
 
 export function getUploadSessionETA(

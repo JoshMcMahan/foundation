@@ -13,35 +13,29 @@ interface IControlledCollapsiblePanelProps {
   setOpen?: React.Dispatch<React.SetStateAction<boolean>>
   onClick?: (() => void) | undefined
   wrapperElement?: React.ElementType | undefined
-  shown?: boolean
-  setShown?: (shown: boolean) => void
   customizedButton?: React.ReactNode
   /** Rendered right after the title, outside the toggle button. */
   titleAction?: React.ReactNode
   className?: string | undefined
 }
 
-const noop = () => {}
 export function ControlledCollapsiblePanel({
   title = '',
   children,
   open,
   setOpen,
-  onClick = noop,
+  onClick,
   wrapperElement,
-  /* Used on the home page to hide the panel */
   customizedButton = null,
   titleAction,
   className,
 }: IControlledCollapsiblePanelProps) {
   const toggleOpen = useCallback(() => {
-    if (onClick) {
-      onClick()
-    }
+    onClick?.()
     setOpen?.((open) => !open)
   }, [setOpen, onClick])
   const contentId = React.useId()
-  const Wrapper = wrapperElement ? wrapperElement : React.Fragment
+  const Wrapper = wrapperElement ?? React.Fragment
   const titleIsReactNode = React.isValidElement(title)
 
   return titleIsReactNode ? (
@@ -99,6 +93,7 @@ export function UncontrolledCollapsiblePanel({
   initialState = true,
   className,
   customizedButton = null,
+  titleAction,
 }: Omit<IControlledCollapsiblePanelProps, 'setOpen' | 'open'> & {
   initialState?: boolean | undefined
 }) {
@@ -114,6 +109,7 @@ export function UncontrolledCollapsiblePanel({
       wrapperElement={wrapperElement}
       className={className}
       customizedButton={customizedButton}
+      titleAction={titleAction}
     >
       {children}
     </ControlledCollapsiblePanel>

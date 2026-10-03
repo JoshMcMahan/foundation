@@ -287,8 +287,7 @@ function grepMatchPath(line: string, lineNums: boolean): string | null {
     const i = line.indexOf(':')
     return i >= 0 ? line.slice(0, i) : null
   }
-  const m = GREP_CONTENT_PATH.exec(line)
-  return m ? (m[1] ?? null) : null
+  return GREP_CONTENT_PATH.exec(line)?.[1] ?? null
 }
 
 function grepSearchSummary(argsJSON: string, body: string): string {

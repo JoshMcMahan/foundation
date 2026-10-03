@@ -77,26 +77,13 @@ export default function MultiDropdownField({
           />
         ) : (
           <MultiSelectionDropdown
-            className="themee-input h-7 w-full rounded border flex items-center px-3 py-2"
             key={field.name}
             name={fieldName}
             label={field.label || label}
-            options={
-              Array.isArray(options)
-                ? (options as Array<{
-                    label: string
-                    secondaryLabel?: string
-                    value: string
-                    selected: boolean
-                  }>)
-                : []
-            }
+            options={Array.isArray(options) ? options : []}
             setFormDirty={setFormDirty}
             parentValue={parentValue}
             onChange={onChange}
-            secondaryField={
-              typeof field.secondaryField === 'string' ? field.secondaryField : undefined
-            }
             invalid={missing}
           />
         )

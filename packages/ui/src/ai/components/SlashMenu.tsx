@@ -4,7 +4,6 @@ import { type KeyboardEvent, useEffect, useState } from 'react'
 export interface SlashCommandOption {
   name: string
   description?: string | undefined
-  usage?: string | undefined
 }
 
 export interface SlashMenuConfig {

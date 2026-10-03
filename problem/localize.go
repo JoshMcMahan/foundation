@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"maps"
 	"net/http"
-	"path"
 	"slices"
 	"strings"
 
@@ -25,34 +24,45 @@ type Catalog struct {
 // language, such as en.json and ja.json, each an object of messages keyed by
 // code. Every message must be valid; English is required.
 func NewCatalog(fsys fs.FS) (*Catalog, error) {
+	messages, err := readLanguages[map[Code]string](fsys)
+	if err != nil {
+		return nil, err
+	}
+	// Sorted so the same broken catalog always reports the same entry.
+	for _, lang := range slices.Sorted(maps.Keys(messages)) {
+		msgs := messages[lang]
+		for _, code := range slices.Sorted(maps.Keys(msgs)) {
+			if err := checkSyntax(msgs[code]); err != nil {
+				return nil, fmt.Errorf("problem: %s.json %s: %w", lang, code, err)
+			}
+		}
+	}
+	if _, ok := messages["en"]; !ok {
+		return nil, fmt.Errorf("problem: catalog has no en.json")
+	}
+	return &Catalog{messages: messages}, nil
+}
+
+// readLanguages decodes each JSON file at the root of fsys, keyed by the
+// language its name gives, such as ja for ja.json.
+func readLanguages[T any](fsys fs.FS) (map[string]T, error) {
 	files, err := fs.Glob(fsys, "*.json")
 	if err != nil {
 		return nil, err
 	}
-	c := &Catalog{messages: map[string]map[Code]string{}}
+	out := make(map[string]T, len(files))
 	for _, file := range files {
 		data, err := fs.ReadFile(fsys, file)
 		if err != nil {
 			return nil, err
 		}
-		var raw map[string]string
-		if err := json.Unmarshal(data, &raw); err != nil {
+		var v T
+		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, fmt.Errorf("problem: %s: %w", file, err)
 		}
-		lang := strings.TrimSuffix(path.Base(file), ".json")
-		msgs := make(map[Code]string, len(raw))
-		for code, msg := range raw {
-			if _, err := checkSyntax(msg); err != nil {
-				return nil, fmt.Errorf("problem: %s %s: %w", file, code, err)
-			}
-			msgs[Code(code)] = msg
-		}
-		c.messages[lang] = msgs
+		out[strings.TrimSuffix(file, ".json")] = v
 	}
-	if _, ok := c.messages["en"]; !ok {
-		return nil, fmt.Errorf("problem: catalog has no en.json")
-	}
-	return c, nil
+	return out, nil
 }
 
 // MustCatalog is NewCatalog that panics, for catalogs embedded in the binary.
@@ -95,11 +105,10 @@ var Shared = func() *Catalog {
 
 // checkSyntax formats msg with every param standing in as 1, which reports
 // syntax errors without needing real values.
-func checkSyntax(msg string) (string, error) {
+func checkSyntax(msg string) error {
 	f := formatter{tag: language.English, printer: message.NewPrinter(language.English), param: func(string) (any, bool) { return 1, true }}
 	var b strings.Builder
-	err := f.message(&b, msg, 0, false, nil)
-	return b.String(), err
+	return f.message(&b, msg, 0, false, nil)
 }
 
 // Localizer writes problems in the reader's language: each one's detail, and

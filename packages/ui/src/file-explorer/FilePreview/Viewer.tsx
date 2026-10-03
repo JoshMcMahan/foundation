@@ -295,7 +295,6 @@ interface FetchViewProps {
 
 function PdfView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
   const { blobUrl, loading, error, tooLarge, corsError } = useObjectBlobUrl(url, {
-    enabled: true,
     maxBytes: PDF_PREVIEW_MAX_BYTES,
     knownSize: node.size,
     mimeType: 'application/pdf',
@@ -328,7 +327,6 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
   const language = getMonacoLanguage(node)
   const [tail, setTail] = useState(false)
   const { text, loading, error, tooLarge, truncated, corsError } = useObjectText(url, {
-    enabled: true,
     maxBytes: CODE_PREVIEW_MAX_BYTES,
     maxLines: CODE_PREVIEW_MAX_LINES,
     knownSize: node.size,
@@ -414,7 +412,6 @@ function toFencedCode(text: string, language: string): string {
 
 function CsvView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
   const { text, loading, error, tooLarge, corsError } = useObjectText(url, {
-    enabled: true,
     maxBytes: TABULAR_PREVIEW_MAX_BYTES,
     maxLines: CSV_PREVIEW_MAX_ROWS + 2,
     knownSize: node.size,
@@ -487,7 +484,6 @@ function CsvTable({ node, text }: { node: TreeNode; text: string }) {
 
 function NotebookView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
   const { text, loading, error, tooLarge, corsError } = useObjectText(url, {
-    enabled: true,
     maxBytes: TABULAR_PREVIEW_MAX_BYTES,
     knownSize: node.size,
     cacheKey: node.path,

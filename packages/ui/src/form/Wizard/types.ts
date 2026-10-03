@@ -19,8 +19,6 @@ export interface WizardConfig {
   navigation?: WizardNavigation
   /** Label for the final submit button */
   submitLabel?: string
-  /** Use URL-based routing instead of component state */
-  urlBased?: boolean
   /** Flatten step fields into top-level inputs (default: true). Set false to preserve step keys as nested objects. */
   flatten?: boolean
 }
@@ -36,40 +34,10 @@ export interface StepFieldConfig {
   options: DynamicFormSchema
   /** Validate current step before proceeding to next (default: true) */
   validateOnNext?: boolean
-  /** Allow skipping this step without validation */
-  canSkip?: boolean
   /** Custom label for next button on this step */
   nextLabel?: string
   /** Custom label for previous button on this step */
   prevLabel?: string
-  /** Optional tooltip text */
-  tooltip?: string | string[]
-  /** Hidden field support */
-  hidden?: boolean
-  /** Disable this step */
-  disabled?: boolean
-}
-
-/**
- * Internal wizard state managed by useWizardState hook
- */
-export interface WizardState {
-  /** Current step ID/key */
-  currentStep: string
-  /** Set of step IDs that have been visited */
-  visitedSteps: Set<string>
-  /** Set of step IDs that have validation errors */
-  invalidSteps: Set<string>
-  /** List of all step keys in order */
-  stepOrder: string[]
-  /** Total number of steps */
-  totalSteps: number
-  /** Whether the wizard is on the last step */
-  isLastStep: boolean
-  /** Whether the wizard can proceed to next step */
-  canProceedToNext: boolean
-  /** Whether user can go back */
-  canGoBack: boolean
 }
 
 /**
@@ -82,13 +50,8 @@ export interface ParsedWizardConfig {
   steps: Record<string, StepFieldConfig>
   /** Ordered list of step keys */
   stepOrder: string[]
-  /** Schema for non-step fields (should be none in pure wizard) */
-  otherFields: Record<string, unknown>
 }
 
-/**
- * Wizard navigation parameters
- */
 /**
  * Props for WizardContainer component
  */
@@ -127,8 +90,8 @@ export interface WizardStepIndicatorProps {
   visitedSteps: Set<string>
   /** Set of invalid step keys */
   invalidSteps: Set<string>
-  /** Callback when step is clicked */
-  onStepClick?: (stepKey: string) => boolean
+  /** Callback when a step the user may jump to is clicked */
+  onStepClick: (stepKey: string) => boolean
   /** Whether clicking completed steps is allowed */
   allowJump?: boolean | undefined
   /** Hide step numbers */
@@ -139,12 +102,8 @@ export interface WizardStepIndicatorProps {
  * Props for WizardNavigation component
  */
 export interface WizardNavigationProps {
-  /** Current step key */
-  currentStep: string
-  /** List of step keys in order */
-  stepOrder: string[]
-  /** Whether user can go to next step */
-  canGoToNext: boolean
+  /** Whether the wizard is on its last step, which submits instead of going next */
+  isLastStep: boolean
   /** Whether user can go back */
   canGoBack: boolean
   /** Whether current step is valid */
@@ -173,8 +132,6 @@ export interface WizardStepContentProps {
   stepConfig: StepFieldConfig
   /** Form values */
   values: Record<string, unknown>
-  /** Update form values */
-  onValuesChange?: ((values: Record<string, unknown>) => void) | undefined
   /** Label position for fields */
   labelPosition?: LabelPosition | undefined
   /** Missing fields list */

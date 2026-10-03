@@ -119,7 +119,12 @@ func (h *pages) language(r *http.Request) string {
 }
 
 func (h *pages) title(lang string, t *Type) string {
-	if d := doc(h.docs, lang, t.Code); d.Title != "" {
+	return titleOf(doc(h.docs, lang, t.Code), t)
+}
+
+// titleOf is d's title for t, or t's English one.
+func titleOf(d Doc, t *Type) string {
+	if d.Title != "" {
 		return d.Title
 	}
 	return t.Title
@@ -153,9 +158,9 @@ func (h *pages) index(lang string) indexData {
 }
 
 func (h *pages) typeData(lang string, t *Type) typeData {
+	guide := doc(h.docs, lang, t.Code)
 	d := typeData{
-		Lang: lang, T: pageText[lang], Type: t, Title: h.title(lang, t),
-		Doc:    doc(h.docs, lang, t.Code),
+		Lang: lang, T: pageText[lang], Type: t, Title: titleOf(guide, t), Doc: guide,
 		Server: t.Status >= http.StatusInternalServerError,
 	}
 	if d.Doc.Why == "" {

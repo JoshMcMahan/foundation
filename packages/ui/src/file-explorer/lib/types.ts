@@ -8,7 +8,6 @@ export type TStorage = {
   type?: string
   created?: string
   modified?: string
-  region?: string
   csp?: string
   imageUrl?: string
   canWrite?: boolean | undefined

@@ -14,6 +14,7 @@ import { ArrowUpIcon, AttachmentIcon, StopSolidIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import useDragDrop from '../core/useDragDrop'
+import type { AttachmentMeta } from '../types'
 import AttachmentUpload, { type Attachment, type AttachmentUploadHandle } from './AttachmentUpload'
 import { ComposerContext, ComposerSettings } from './ComposerChrome'
 import DragOverlay from './DragOverlay'
@@ -57,11 +58,7 @@ function clearDraft(conversationId?: string) {
 }
 
 interface ChatInputProps {
-  onSend: (
-    content: string,
-    attachmentIds?: string[],
-    attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
-  ) => void
+  onSend: (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => void
   disabled?: boolean
   placeholder?: string | undefined
   conversationId?: string
@@ -304,7 +301,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
       return
     }
     const attachmentIds: string[] = []
-    const meta: Record<string, { filename: string; contentType: string; size: number }> = {}
+    const meta: AttachmentMeta = {}
     for (const a of attachments) {
       if (!a.uploaded || !a.id) {
         continue

@@ -41,14 +41,13 @@ interface WizardConfig {
   /** Navigation UI options */
   navigation?: {
     showSteps?: boolean
-    showProgress?: boolean
     allowJump?: boolean
     hideStepNumbers?: boolean
   }
   /** Label for the final submit button */
   submitLabel?: string
-  /** Use URL-based routing instead of component state */
-  urlBased?: boolean
+  /** Flatten step fields into top-level inputs (default: true). Set false to keep each step's fields under its key. */
+  flatten?: boolean
 }
 
 interface StepField extends BaseField {
@@ -57,7 +56,6 @@ interface StepField extends BaseField {
   description?: string
   options: Record<string, AnyField>
   validateOnNext?: boolean
-  canSkip?: boolean
   nextLabel?: string
   prevLabel?: string
 }

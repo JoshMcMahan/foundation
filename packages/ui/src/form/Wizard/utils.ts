@@ -19,21 +19,13 @@ export function parseWizardConfig(options: Record<string, unknown>): ParsedWizar
 
   const steps: Record<string, StepFieldConfig> = {}
   const stepOrder: string[] = []
-  const otherFields: Record<string, unknown> = {}
 
-  // Extract steps and other fields
-  Object.entries(options).forEach(([key, field]) => {
-    if (key === '$meta') {
-      return
-    }
-
-    if (isStepField(field)) {
+  for (const [key, field] of Object.entries(options)) {
+    if (key !== '$meta' && isStepField(field)) {
       steps[key] = field
       stepOrder.push(key)
-    } else {
-      otherFields[key] = field
     }
-  })
+  }
 
   // Must have at least one step
   if (stepOrder.length === 0) {
@@ -45,6 +37,5 @@ export function parseWizardConfig(options: Record<string, unknown>): ParsedWizar
     config: wizardConfig,
     steps,
     stepOrder,
-    otherFields,
   }
 }

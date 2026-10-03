@@ -112,7 +112,6 @@ export default function MonacoEditor({
               showWords: false,
               showInlineDetails: true,
             },
-            //acceptSuggestionOnEnter: 'off'
           })
 
           model.onDidChangeContent(() => {

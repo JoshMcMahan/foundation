@@ -237,7 +237,7 @@ function ToolStatusDot({ part }: { part: ToolCallPart }) {
   return <span className="text-green-600 leading-none">●</span>
 }
 
-export function ToolCallBlock({ part }: { part: ToolCallPart }) {
+function ToolCallBlock({ part }: { part: ToolCallPart }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   const [expanded, setExpanded] = useState(false)
@@ -300,7 +300,7 @@ export function ToolCallBlock({ part }: { part: ToolCallPart }) {
 /** Drawn the way the TUI draws a delegated Task: a tool-shaped header
  *  `Task(description)`, and under it the latest action while running or
  *  `Done (summary)` once finished. Expanding shows the whole activity feed. */
-export function SubagentCard({ part }: { part: SubagentPart }) {
+function SubagentCard({ part }: { part: SubagentPart }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   const [expanded, setExpanded] = useState(false)
@@ -591,7 +591,7 @@ function PlanApproval({ part }: { part: ApprovalPart }) {
   )
 }
 
-export function TodoSnapshotBlock({ part }: { part: TodoSnapshotPart }) {
+function TodoSnapshotBlock({ part }: { part: TodoSnapshotPart }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   return (
@@ -620,7 +620,7 @@ export function TodoSnapshotBlock({ part }: { part: TodoSnapshotPart }) {
   )
 }
 
-export function NoticeBlock({ part }: { part: NoticePart }) {
+function NoticeBlock({ part }: { part: NoticePart }) {
   const [expanded, setExpanded] = useState(false)
   if (part.kind === 'notice') {
     if (!part.detail) {
@@ -684,13 +684,7 @@ function formatThinkingDuration(ms: number): string {
 /** The TUI's thought: the body shows while it streams, then folds to its
  *  label and opens on request. The composer's activity line carries the
  *  live signal, so nothing here animates. */
-export function ReasoningBlock({
-  part,
-  isStreaming,
-}: {
-  part: ReasoningPart
-  isStreaming?: boolean
-}) {
+function ReasoningBlock({ part, isStreaming }: { part: ReasoningPart; isStreaming?: boolean }) {
   const { strings } = useChatConfig()
   const t = strings.thinking
   const [expanded, setExpanded] = useState(false)
@@ -787,7 +781,7 @@ function isReasoning(m: RunMember): m is { part: ReasoningPart; index: number } 
 
 /** Two thoughts with nothing visible between them read as one, not as a
  *  stack of identical lines. */
-export function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
+function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
   const durationMs = parts.reduce((sum, p) => sum + (p.durationMs ?? 0), 0)
   return {
     kind: 'reasoning',

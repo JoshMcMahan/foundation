@@ -41,10 +41,7 @@ function Pagination({
       <div
         className={cx(
           'hidden',
-          ((startingNumber !== undefined &&
-            startingNumber !== null &&
-            endingNumber !== undefined &&
-            endingNumber !== null) ||
+          ((startingNumber !== undefined && endingNumber !== undefined) ||
             (startingTime && endingTime)) &&
             'sm:block',
         )}

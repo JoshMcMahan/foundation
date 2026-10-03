@@ -6,6 +6,7 @@ import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { getGreeting } from '../core/greeting'
 import useDragDrop from '../core/useDragDrop'
+import type { AttachmentMeta } from '../types'
 import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import { ComposerControls, ConnectToolsLink } from './ComposerChrome'
@@ -84,11 +85,7 @@ export default function ChatEmptyState({
   }, [targetSession, models, hasLoadedModels, isLoadingModels, setSelectedProvider])
 
   const handleSendMessage = useCallback(
-    async (
-      content: string,
-      attachmentIds?: string[],
-      attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
-    ) => {
+    async (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => {
       // sendMessage handles navigation internally when creating a new conversation
       await sendMessage(content, attachmentIds, undefined, attachmentMeta)
     },

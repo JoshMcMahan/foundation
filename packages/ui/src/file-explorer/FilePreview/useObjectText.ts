@@ -74,16 +74,14 @@ async function readObjectText(
  * hasn't. `tail` reads the end of the object instead of the start, and caches
  * separately because the same object yields different text. */
 export function useObjectText(
-  url: string | null,
+  url: string,
   {
-    enabled,
     maxBytes,
     maxLines,
     knownSize,
     cacheKey,
     tail = false,
   }: {
-    enabled: boolean
     maxBytes: number
     maxLines?: number | undefined
     knownSize?: number | undefined
@@ -95,24 +93,18 @@ export function useObjectText(
   // on its own, so a huge object is still previewable a screenful at a time.
   const tooLarge =
     maxLines === undefined && !tail && typeof knownSize === 'number' && knownSize > maxBytes
-  const key = enabled ? (tail ? `${cacheKey}#tail` : cacheKey) : null
+  const key = tail ? `${cacheKey}#tail` : cacheKey
 
-  const [state, setState] = useState<ObjectTextState>({
-    ...IDLE,
-    loading: enabled,
-  })
+  const [state, setState] = useState<ObjectTextState>({ ...IDLE, loading: true })
   // Drop the previous read's state the moment the key changes, so toggling between
   // head and tail can't show one under the other's label.
   const [stateKey, setStateKey] = useState(key)
   if (stateKey !== key) {
     setStateKey(key)
-    setState({ ...IDLE, loading: key !== null })
+    setState({ ...IDLE, loading: true })
   }
 
   useEffect(() => {
-    if (!enabled || !url || !key) {
-      return
-    }
     if (tooLarge) {
       setState({ ...IDLE, tooLarge: true })
       return
@@ -152,11 +144,11 @@ export function useObjectText(
     return () => {
       cancelled = true
     }
-  }, [url, enabled, key, maxBytes, maxLines, tooLarge, tail, cacheKey, knownSize])
+  }, [url, key, maxBytes, maxLines, tooLarge, tail, cacheKey, knownSize])
 
   if (tooLarge) {
     return { ...IDLE, tooLarge: true }
   }
-  const cached = key ? peekPreviewContent<TextResult>(key) : undefined
+  const cached = peekPreviewContent<TextResult>(key)
   return cached ? toState(cached) : state
 }

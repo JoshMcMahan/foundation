@@ -40,11 +40,9 @@ type FormikCustomDropdownProps = {
   options: React.ComponentProps<typeof Dropdown>['options']
   setFormDirty: TSetFormDirty
   onChange?: ((val: string) => void) | undefined
-  parentValue?: unknown
   className?: string
   secondaryField?: string | string[] | undefined
   disabled?: boolean
-  resetOnChange?: string | boolean | undefined
   loading?: boolean
   invalid?: boolean
   autoselect?: boolean | undefined
@@ -76,7 +74,6 @@ export default memo(function FormikCustomDropdown({
   options,
   setFormDirty,
   onChange,
-  parentValue,
   className,
   secondaryField,
   disabled = false,
@@ -93,7 +90,6 @@ export default memo(function FormikCustomDropdown({
 }: FormikCustomDropdownProps) {
   const required = useFieldRequired()
   const controlProps = useFieldControlProps()
-  const prevParentRef = useRef(parentValue)
   const handleChange = (val: unknown) => {
     if (secondaryField && typeof options[0] !== 'string') {
       const option = findSecondaryOption(options, val)
@@ -102,17 +98,11 @@ export default memo(function FormikCustomDropdown({
       }
     }
 
-    if (onChange) {
-      onChange(val as string)
-    }
+    onChange?.(val as string)
     setFieldValue(name, val)
     setFieldTouched(name, true)
     setFormDirty(true)
   }
-
-  useEffect(() => {
-    prevParentRef.current = parentValue
-  })
 
   const prevOptions = useRef<ReturnType<typeof toComparableOptions> | null>(null)
 

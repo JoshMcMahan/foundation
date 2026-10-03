@@ -6,7 +6,7 @@ import { listTableFixedProps, type OpenMenu, type RowMenuItem } from '../list/in
 import { fileRowHeight, ROW_HEIGHT_SHORT } from './FileRow'
 import { FileRowsWindow, spacerHeights } from './FileRowsWindow'
 import { FileTableHeaders } from './FileTableHeaders'
-import { LOAD_MORE_ROW_HEIGHT } from './LoadMoreRow'
+import { LOAD_MORE_ROW_HEIGHT, type LoadMoreState } from './LoadMoreRow'
 import type { TreeNode } from './lib/types'
 
 interface FileTableProps {
@@ -21,14 +21,7 @@ interface FileTableProps {
   onToggleCheck: (node: TreeNode, checked: boolean) => void
   onPreview: (node: TreeNode) => void
   /** Set when the folder has pages left to fetch. */
-  loadMore?:
-    | {
-        loading: boolean
-        error: string | undefined
-        auto: boolean
-        onLoadMore: () => void
-      }
-    | undefined
+  loadMore?: LoadMoreState | undefined
 }
 
 /** The file table. Give it a `key` of the folder path: a folder change must reset

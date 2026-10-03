@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useLayoutEffect } from 'react'
+import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo } from 'react'
 
 export interface IBreadcrumbItem {
   label: string
@@ -45,25 +45,24 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
   const [titleActionSlot, setTitleActionSlot] = React.useState<HTMLElement | null>(null)
   const [rightActionSlot, setRightActionSlot] = React.useState<HTMLElement | null>(null)
   const claimedPath = React.useRef<string | null>(null)
-  return (
-    <BreadcrumbContext.Provider
-      value={{
-        breadcrumbs,
-        setBreadcrumbs,
-        rightsideBreadcrumb,
-        setRightsideBreadcrumb,
-        hidden,
-        setHidden,
-        titleActionSlot,
-        setTitleActionSlot,
-        rightActionSlot,
-        setRightActionSlot,
-        claimedPath,
-      }}
-    >
-      {children}
-    </BreadcrumbContext.Provider>
+  // Memoized so a re-rendering layout doesn't re-render every breadcrumb consumer.
+  const value = useMemo(
+    () => ({
+      breadcrumbs,
+      setBreadcrumbs,
+      rightsideBreadcrumb,
+      setRightsideBreadcrumb,
+      hidden,
+      setHidden,
+      titleActionSlot,
+      setTitleActionSlot,
+      rightActionSlot,
+      setRightActionSlot,
+      claimedPath,
+    }),
+    [breadcrumbs, rightsideBreadcrumb, hidden, titleActionSlot, rightActionSlot],
   )
+  return <BreadcrumbContext.Provider value={value}>{children}</BreadcrumbContext.Provider>
 }
 export function useSetBreadcrumbs(getBreadcrumbs: (() => IBreadcrumbItem[]) | IBreadcrumbItem[]) {
   const { setBreadcrumbs, claimedPath } = useBreadcrumb()

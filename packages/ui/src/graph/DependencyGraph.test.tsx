@@ -61,7 +61,7 @@ vi.mock('../logviewer', () => ({
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
 import { type RunFileResult, UIProvider } from '../components/Provider'
-import DependencyGraph from './DependencyGraph'
+import DependencyGraph, { addCleanupSteps } from './DependencyGraph'
 
 const run = {
   id: 'run-1',
@@ -371,5 +371,39 @@ describe('DependencyGraph general log', () => {
     // And paging still resolves to a real step rather than throwing.
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(footerButtons()).toEqual(['Prev', 'Next', 'Show Script'])
+  })
+})
+
+describe('addCleanupSteps', () => {
+  it('moves cleanup off the step that declared it, not the one mirrored from the end', () => {
+    const { build } = addCleanupSteps({
+      jobs: {
+        build: {
+          status: 'completed',
+          steps: [
+            { name: 'setup', status: 'completed', cleanup: 'teardown' },
+            { name: 'compile', status: 'completed' },
+            { name: 'publish', status: 'completed' },
+          ],
+          cleanup: [
+            { name: 'notify', status: 'completed', cleanup: 'unnotify' },
+            { name: 'archive', status: 'completed' },
+          ],
+        },
+      },
+    })
+
+    const steps = build?.steps ?? []
+    expect(steps.map((s) => s.name)).toEqual([
+      'setup',
+      'compile',
+      'publish',
+      'POST setup',
+      'notify',
+      'archive',
+      'POST notify',
+    ])
+    // Only the POST steps run the cleanup; the steps that declared it no longer carry it.
+    expect(steps.filter((s) => s.cleanup !== undefined)).toEqual([])
   })
 })

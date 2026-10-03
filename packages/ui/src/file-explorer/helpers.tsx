@@ -136,7 +136,7 @@ function getNodeIcon(
   }
 
   // Skip directories as the icon is handled conditionally in the tree
-  if (!isStorageNode && !isUserNode && node.type === 'directory') {
+  if (!isStorageNode && node.type === 'directory') {
     return null
   }
 
@@ -330,7 +330,6 @@ function CorsPropagatingPreview() {
 
   useEffect(() => {
     const start = Date.now()
-    setElapsedMs(0)
     const id = setInterval(() => {
       setElapsedMs(Date.now() - start)
     }, 500)

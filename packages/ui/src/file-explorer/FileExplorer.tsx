@@ -171,6 +171,12 @@ interface IFileExplorerProps {
   downloadCommand?: { label: string; build: (objects: ExplorerObject[]) => string } | undefined
 }
 
+const MAX_UPLOAD_SIZE = 80 * 1024 * 1024 * 1024 // 80 GB
+
+function isUploadSizeExceeded(size: number): boolean {
+  return size > MAX_UPLOAD_SIZE
+}
+
 function isStorageDirectory(
   node: TreeNode | null,
 ): node is TreeNode & { storageId: string; type: 'directory' } {
@@ -345,11 +351,10 @@ export default function FileExplorer({
     () => (selectedNode ? getNodeChildren(parentToChildrenMap, selectedNode.path) : []),
     [parentToChildrenMap, selectedNode],
   )
-  const storageCanWrite = (storageId?: string) =>
-    storages.find((s) => s.id === storageId)?.canWrite === true
-  const storageCanUpload = (storageId?: string) =>
-    storages.find((s) => s.id === storageId)?.canUpload !== false
-  const selectedStorage = storages.find((s) => s.id === selectedNode?.storageId)
+  const findStorage = (storageId: string | undefined) => storages.find((s) => s.id === storageId)
+  const storageCanWrite = (storageId?: string) => findStorage(storageId)?.canWrite === true
+  const storageCanUpload = (storageId?: string) => findStorage(storageId)?.canUpload !== false
+  const selectedStorage = findStorage(selectedNode?.storageId)
   const selectedNodeCanWrite = selectedStorage?.canWrite === true
   const selectedNodeCanUpload = selectedStorage?.canUpload !== false
   const selectedNodeCanShare = selectedStorage?.canShare !== false
@@ -386,11 +391,6 @@ export default function FileExplorer({
     SIDEBAR_WIDTH_DEFAULT,
   )
 
-  const MAX_UPLOAD_SIZE = 80 * 1024 * 1024 * 1024 // 80 GB
-  const isUploadSizeExceeded = (size: number) => {
-    return size > MAX_UPLOAD_SIZE
-  }
-
   const handleToggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev)
@@ -406,10 +406,10 @@ export default function FileExplorer({
   }, [])
 
   const getStorageProviderAndClient = async (storageId: string | undefined) => {
-    const storage = storages.find((s) => s.id === storageId)
+    const storage = findStorage(storageId)
     if (!storage) {
       notify.error(t.messages.storageUnavailable)
-      return
+      return null
     }
     const { provider, client } = await getProviderAndClient(storage).catch(() => ({
       provider: null,
@@ -476,7 +476,7 @@ export default function FileExplorer({
         }
         const { storage, provider, client } = factory
 
-        if (provider?.listDirectoryInput && provider?.convertDataToStorageObjects) {
+        if (provider.listDirectoryInput && provider.convertDataToStorageObjects) {
           const dir_path = node.root ? '' : (node.relativePath ?? '')
           const input = provider.listDirectoryInput(storage, dir_path, cursor ? { cursor } : {})
           const objects = await client.listDirectory(input)
@@ -524,7 +524,7 @@ export default function FileExplorer({
           updateConnectionIssuesMessage((prev) =>
             new Map(prev).set(
               nodeStorageId,
-              `Failed to load contents for ${node?.displayName || node?.name}: ${errorMessage}`,
+              `Failed to load contents for ${node.displayName || node.name}: ${errorMessage}`,
             ),
           )
           if (isCorsError) {
@@ -553,7 +553,7 @@ export default function FileExplorer({
       setDetailTab('details')
     }
     setSelectedPath(path)
-    if (node.type === 'directory' && node?.storageId && !isListed(listings, path)) {
+    if (node.type === 'directory' && node.storageId && !isListed(listings, path)) {
       await fetchNodeChildren(node)
     }
   }
@@ -772,16 +772,18 @@ export default function FileExplorer({
     return false
   }
 
-  const handleDownload = async () => {
-    let filesToDownload: TreeNode[] = []
+  // The checked files, or else the open file.
+  const getFilesToDownload = (): TreeNode[] => {
     if (checkedItems.size > 0) {
-      filesToDownload = Array.from(checkedItems)
+      return Array.from(checkedItems)
         .map((path) => treeMap[path])
-        .filter((node): node is TreeNode => !!node && node.type === 'file')
-    } else if (selectedNode && selectedNode.type === 'file') {
-      filesToDownload = [selectedNode]
+        .filter((node): node is TreeNode => node?.type === 'file')
     }
+    return selectedNode?.type === 'file' ? [selectedNode] : []
+  }
 
+  const handleDownload = async () => {
+    const filesToDownload = getFilesToDownload()
     const firstFile = filesToDownload[0]
     if (!firstFile) {
       notify.error(t.messages.noFilesForDownload)
@@ -794,7 +796,7 @@ export default function FileExplorer({
     }
     const { provider, client } = factory
 
-    if (!provider?.getFileInput) {
+    if (!provider.getFileInput) {
       notify.error(t.messages.downloadUnsupported)
       return
     }
@@ -824,7 +826,7 @@ export default function FileExplorer({
 
     const { provider, client } = factory
 
-    if (!provider?.getFileInput) {
+    if (!provider.getFileInput) {
       notify.error(t.messages.sharingUnsupported)
       return
     }
@@ -865,7 +867,7 @@ export default function FileExplorer({
       return [null, new Error('Failed to connect to storage provider.')]
     }
     const { provider, client } = factory
-    if (!provider?.getFileInput) {
+    if (!provider.getFileInput) {
       return [null, new Error('Preview is not supported for this storage.')]
     }
     const input = provider.getFileInput(
@@ -891,12 +893,7 @@ export default function FileExplorer({
     if (node.type !== 'file') {
       return
     }
-    if (
-      onOpenFile?.(
-        node,
-        storages.find((s) => s.id === node.storageId),
-      )
-    ) {
+    if (onOpenFile?.(node, findStorage(node.storageId))) {
       return
     }
     setPreviewNode(node)
@@ -915,7 +912,7 @@ export default function FileExplorer({
   }
 
   const getNodeUris = (node: TreeNode): string[] => {
-    const storage = storages.find((s) => s.id === node.storageId)
+    const storage = findStorage(node.storageId)
     if (!storage || !objectUris) {
       return []
     }
@@ -946,7 +943,7 @@ export default function FileExplorer({
   }
 
   const deleteNode = (node: TreeNode) => {
-    const storage = storages.find((s) => s.id === node.storageId)
+    const storage = findStorage(node.storageId)
     if (storage?.canWrite !== true) {
       notify.error(t.messages.noWriteAccess)
       return
@@ -981,7 +978,7 @@ export default function FileExplorer({
 
   // Order: lead → actions → Copy → delete last.
   const buildRowMenu = (node: TreeNode): RowMenuItem[] => {
-    const storage = storages.find((s) => s.id === node.storageId)
+    const storage = findStorage(node.storageId)
     const nodeCanWrite = storage?.canWrite === true
     const nodeCanShare = storage?.canShare !== false
     const isFile = node.type === 'file'
@@ -1109,25 +1106,12 @@ export default function FileExplorer({
   }
 
   const generateDownloadCommand = (): string => {
-    let filesToDownload: TreeNode[] = []
-
-    if (checkedItems.size > 0) {
-      filesToDownload = Array.from(checkedItems)
-        .map((path) => treeMap[path])
-        .filter((node): node is TreeNode => !!node && node.type === 'file')
-    } else if (selectedNode && selectedNode.type === 'file') {
-      filesToDownload = [selectedNode]
-    }
-
-    if (filesToDownload.length === 0) {
-      return ''
-    }
-
-    if (!downloadCommand) {
+    const filesToDownload = getFilesToDownload()
+    if (!downloadCommand || filesToDownload.length === 0) {
       return ''
     }
     const objects = filesToDownload.flatMap((node) => {
-      const storage = storages.find((s) => s.id === node.storageId)
+      const storage = findStorage(node.storageId)
       return storage ? [{ storage, key: getObjectKeyFromNode(node), name: node.name }] : []
     })
     return downloadCommand.build(objects)
@@ -1208,7 +1192,7 @@ export default function FileExplorer({
     }
     const { storage, provider, client } = factory
 
-    if (!provider?.deleteFilesInput) {
+    if (!provider.deleteFilesInput) {
       notify.error(t.messages.deleteUnsupported)
       return
     }
@@ -1272,7 +1256,6 @@ export default function FileExplorer({
       return
     }
 
-    setWaitForUpload(true)
     const uploadNodes: UploadNode[] = Array.from(files).map((file) => ({
       name: file.name,
       file,
@@ -1285,7 +1268,6 @@ export default function FileExplorer({
       totalSize,
     })
     setUploadModalOpen(true)
-    setWaitForUpload(false)
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -1323,7 +1305,7 @@ export default function FileExplorer({
       ? ''
       : removeLeadingAndTrailingSlashes(targetNode.relativePath || '')
 
-    if (!provider?.uploadFileInput) {
+    if (!provider.uploadFileInput) {
       notify.error(t.messages.uploadUnsupported)
       return
     }
@@ -1364,7 +1346,6 @@ export default function FileExplorer({
 
     setUploadModalOpen(false)
     setPendingUpload(null)
-    setWaitForUpload(false)
   }
 
   const validateFolderName = (name: string): string | null => {
@@ -1444,6 +1425,8 @@ export default function FileExplorer({
     }
     return { corsError: false }
   }
+
+  const downloadCommandText = generateDownloadCommand()
 
   return (
     <div className="w-full h-full flex relative">
@@ -1698,7 +1681,7 @@ export default function FileExplorer({
                             {t.chrome.downloadFromBrowser}
                           </button>
                         </MenuItem>
-                        {downloadCommand && generateDownloadCommand() && (
+                        {downloadCommand && downloadCommandText && (
                           <>
                             <MenuSeparator className="my-0.5 h-px theme-border" />
                             <MenuItem>
@@ -1706,22 +1689,17 @@ export default function FileExplorer({
                                 <p className="text-sm w-full text-center pointer-events-none px-2 py-1.5">
                                   {downloadCommand.label}
                                 </p>
-                                {(() => {
-                                  const downloadCommand = generateDownloadCommand()
-                                  return (
-                                    <CopyCodeBlock textToCopy={downloadCommand}>
-                                      <div className="overflow-x-auto text-xs">
-                                        {keyedByContent(downloadCommand.split('\n'), (l) => l).map(
-                                          ({ key, item: line }) => (
-                                            <div key={key} className="whitespace-nowrap">
-                                              {line}
-                                            </div>
-                                          ),
-                                        )}
-                                      </div>
-                                    </CopyCodeBlock>
-                                  )
-                                })()}
+                                <CopyCodeBlock textToCopy={downloadCommandText}>
+                                  <div className="overflow-x-auto text-xs">
+                                    {keyedByContent(downloadCommandText.split('\n'), (l) => l).map(
+                                      ({ key, item: line }) => (
+                                        <div key={key} className="whitespace-nowrap">
+                                          {line}
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                </CopyCodeBlock>
                               </div>
                             </MenuItem>
                           </>
@@ -1735,7 +1713,7 @@ export default function FileExplorer({
                       className="btn btn-info cursor-pointer flex items-center justify-center"
                       disabled={!selectedNode.storageId}
                       onClick={() => setAccessDrawerOpen(true)}
-                      hidden={!groups || groups.length === 0 || !selectedNodeCanManageAccess}
+                      hidden={groups.length === 0 || !selectedNodeCanManageAccess}
                     >
                       <AccessIcon className="h-4 w-4 mr-2" />
                       <span className="hidden md:inline">{t.chrome.manageAccess}</span>
@@ -1799,9 +1777,7 @@ export default function FileExplorer({
                             />
                           </Table>
                           <NoDataAvailablePreview
-                            selectedStorage={
-                              storages.find((s) => s.id === selectedNode.storageId) || null
-                            }
+                            selectedStorage={selectedStorage ?? null}
                             canWrite={selectedNodeCanWrite}
                             onRefresh={handleRefresh}
                             error={
@@ -1869,7 +1845,7 @@ export default function FileExplorer({
                         {effectiveTab === 'preview' && previewable ? (
                           <FilePreviewInline
                             node={selectedNode}
-                            storage={storages.find((s) => s.id === selectedNode.storageId) ?? null}
+                            storage={selectedStorage ?? null}
                             getPresignedUrl={getPresignedUrl}
                             onOpenFull={openPreview}
                             onDownload={downloadNode}
@@ -2009,7 +1985,7 @@ export default function FileExplorer({
         open={previewOpen}
         node={previewNode}
         siblings={previewSiblings}
-        storage={storages.find((s) => s.id === previewNode?.storageId) ?? null}
+        storage={findStorage(previewNode?.storageId) ?? null}
         getPresignedUrl={getPresignedUrl}
         onNavigate={setPreviewNode}
         onClose={closePreview}
@@ -2118,7 +2094,7 @@ export default function FileExplorer({
           open: accessDrawerOpen,
           setOpen: setAccessDrawerOpen,
           groups,
-          storage: storages.find((s) => s.id === selectedNode.storageId),
+          storage: selectedStorage,
         })}
     </div>
   )

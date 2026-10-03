@@ -501,7 +501,7 @@ export interface UISlots {
 /** An engine, or a loader so the host can keep the engine out of its first-load bundle. */
 export type WorkflowEngineSource = WorkflowEngine | (() => Promise<WorkflowEngine>)
 
-export interface UIProviderValue {
+interface UIProviderValue {
   notify: UINotify
   strings: UIStrings
   navigation: UINavigation

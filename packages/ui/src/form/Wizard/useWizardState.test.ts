@@ -41,20 +41,6 @@ describe('useWizardState', () => {
       expect(result.current.canGoBack).toBe(false)
       expect(result.current.isLastStep).toBe(false)
     })
-
-    it('should initialize with custom step', () => {
-      const { result } = renderHook(() =>
-        useWizardState({
-          stepOrder,
-          steps: mockSteps,
-          validateStep: mockValidateStep,
-          initialStep: 'step2',
-        }),
-      )
-
-      expect(result.current.currentStep).toBe('step2')
-      expect(result.current.visitedSteps.has('step2')).toBe(true)
-    })
   })
 
   describe('goToNext', () => {
@@ -103,11 +89,16 @@ describe('useWizardState', () => {
           stepOrder,
           steps: mockSteps,
           validateStep: mockValidateStep,
-          initialStep: 'step3',
         }),
       )
 
-      let success = false
+      await act(async () => {
+        await result.current.goToNext()
+      })
+      await act(async () => {
+        await result.current.goToNext()
+      })
+      let success = true
       await act(async () => {
         success = await result.current.goToNext()
       })
@@ -242,54 +233,6 @@ describe('useWizardState', () => {
       const success = result.current.jumpToStep('invalid')
 
       expect(success).toBe(false)
-    })
-  })
-
-  describe('reset', () => {
-    it('should reset to initial state', async () => {
-      const { result } = renderHook(() =>
-        useWizardState({
-          stepOrder,
-          steps: mockSteps,
-          validateStep: mockValidateStep,
-        }),
-      )
-
-      // Navigate and mark invalid
-      await act(async () => {
-        await result.current.goToNext()
-        result.current.markStepInvalid('step1', true)
-      })
-
-      act(() => {
-        result.current.reset()
-      })
-
-      expect(result.current.currentStep).toBe('step1')
-      expect(result.current.visitedSteps.has('step2')).toBe(false)
-      expect(result.current.invalidSteps.has('step1')).toBe(false)
-    })
-  })
-
-  describe('getState', () => {
-    it('should return complete state object', () => {
-      const { result } = renderHook(() =>
-        useWizardState({
-          stepOrder,
-          steps: mockSteps,
-          validateStep: mockValidateStep,
-        }),
-      )
-
-      const state = result.current.getState()
-
-      expect(state).toMatchObject({
-        currentStep: 'step1',
-        totalSteps: 3,
-        isLastStep: false,
-        canProceedToNext: true,
-        canGoBack: false,
-      })
     })
   })
 })

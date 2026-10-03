@@ -35,9 +35,7 @@ export default function RangeField(props: FieldComponentProps<IRangeField>) {
     if (!Number.isNaN(val)) {
       val = Math.max(field.min, Math.min(field.max, val))
       setFieldValue(fieldName, val)
-      if (onChange) {
-        onChange(val)
-      }
+      onChange?.(val)
       setFieldTouched(fieldName, true)
       setFormDirty(true)
     }

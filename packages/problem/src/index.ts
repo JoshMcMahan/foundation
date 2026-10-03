@@ -144,8 +144,9 @@ function fieldErrors(v: unknown): FieldError[] {
   if (!Array.isArray(v)) return []
   const out: FieldError[] = []
   for (const e of v) {
-    const code = isObject(e) ? str(e['code']) : undefined
-    if (!isObject(e) || code === undefined) continue
+    if (!isObject(e)) continue
+    const code = str(e['code'])
+    if (code === undefined) continue
     const pointer = str(e['pointer'])
     const parameter = str(e['parameter'])
     const type = str(e['type'])

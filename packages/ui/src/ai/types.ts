@@ -18,6 +18,13 @@ export interface AttachmentRef {
   messageId?: string
 }
 
+// What the composer knows about the files it just uploaded, by attachment id,
+// so a sent message can show them before the server echoes it back.
+export type AttachmentMeta = Record<
+  string,
+  Pick<AttachmentRef, 'filename' | 'contentType' | 'size'>
+>
+
 export interface FunctionCall {
   name: string
   arguments: string
@@ -272,7 +279,6 @@ export interface Allocation {
 export interface ChatNavigation {
   toConversation(id: string): void
   toNewChat(): void
-  toAttachments(): void
 }
 
 // Host-provided notifications (e.g. a toast system).

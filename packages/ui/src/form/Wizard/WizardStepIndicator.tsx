@@ -1,5 +1,4 @@
 import cx from 'classnames'
-import { useMemo } from 'react'
 import type { WizardStepIndicatorProps } from './types'
 
 export function WizardStepIndicator({
@@ -12,7 +11,7 @@ export function WizardStepIndicator({
   allowJump = false,
   hideStepNumbers = false,
 }: WizardStepIndicatorProps) {
-  const currentIndex = useMemo(() => stepOrder.indexOf(currentStep), [stepOrder, currentStep])
+  const currentIndex = stepOrder.indexOf(currentStep)
 
   const getStepStatus = (stepKey: string, index: number) => {
     if (stepKey === currentStep) {
@@ -24,24 +23,13 @@ export function WizardStepIndicator({
     return 'upcoming'
   }
 
-  const handleStepClick = (stepKey: string) => {
-    if (!allowJump || !visitedSteps.has(stepKey)) {
-      return
-    }
-    onStepClick?.(stepKey)
-  }
-
-  const isClickable = (stepKey: string) => {
-    return allowJump && visitedSteps.has(stepKey) && stepKey !== currentStep
-  }
-
   return (
     <div className="flex items-start justify-between w-full mb-2 gap-4 py-2">
       {stepOrder.map((stepKey, index) => {
         const stepConfig = steps[stepKey]
         const status = getStepStatus(stepKey, index)
         const isInvalid = invalidSteps.has(stepKey)
-        const isClickable_ = isClickable(stepKey)
+        const isClickable = allowJump && visitedSteps.has(stepKey) && stepKey !== currentStep
 
         const isDotActive = status === 'active'
         const isDotCompleted = status === 'completed'
@@ -52,13 +40,13 @@ export function WizardStepIndicator({
             {/* Step dot */}
             <button
               type="button"
-              onClick={() => handleStepClick(stepKey)}
-              disabled={!isClickable_}
+              onClick={() => onStepClick(stepKey)}
+              disabled={!isClickable}
               className={cx(
                 'w-12 h-12 rounded-full border-3 flex items-center justify-center font-bold text-base transition-all duration-300 flex-shrink-0 relative',
                 {
-                  'cursor-pointer': isClickable_,
-                  'cursor-not-allowed': !isClickable_,
+                  'cursor-pointer': isClickable,
+                  'cursor-not-allowed': !isClickable,
                 },
                 {
                   // Active state uses theme colors
@@ -69,9 +57,6 @@ export function WizardStepIndicator({
                   // Upcoming state
                   'bg-(--theme-border) theme-border theme-muted-text shadow-sm':
                     isDotUpcoming && !isInvalid,
-                  // Default state
-                  'bg-(--theme-muted-panel-bg) theme-border theme-muted-text shadow-sm':
-                    !isDotActive && !isDotCompleted && !isDotUpcoming && !isInvalid,
                   // Invalid state
                   'bg-red-50 border-red-500 text-red-600 shadow-sm':
                     isInvalid && status !== 'active',

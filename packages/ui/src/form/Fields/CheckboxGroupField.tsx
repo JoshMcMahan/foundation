@@ -70,9 +70,7 @@ export default function CheckboxGroupField({
     setManual(nextManual)
     setFieldTouched(fieldName, true)
     setFieldValue(fieldName, next)
-    if (onChange) {
-      onChange(next)
-    }
+    onChange?.(next)
     setFormDirty(true)
   }
 

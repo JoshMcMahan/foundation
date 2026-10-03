@@ -1,6 +1,6 @@
 import { Switch } from '@headlessui/react'
 import cx from 'classnames'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { TOOLTIP_ID } from './Tooltip'
 
 interface IToggleProps {
@@ -21,7 +21,7 @@ function SwitchToggle({
   onChange,
   id,
   'aria-describedby': describedBy,
-  value = undefined,
+  value,
   yesLabel = 'Yes',
   noLabel = 'No',
   disabled = false,
@@ -35,12 +35,6 @@ function SwitchToggle({
     setEnabled(e)
     onChange(e)
   }
-
-  useEffect(() => {
-    if (value !== undefined) {
-      setEnabled(value)
-    }
-  }, [value])
 
   const checked = value ?? enabled
 
@@ -59,6 +53,7 @@ function SwitchToggle({
         id={id}
         aria-describedby={describedBy}
         checked={checked}
+        disabled={disabled}
         onChange={setIsEnabled}
         className="text-white text-sm shadow-sm rounded-md cursor-pointer"
         onClick={(e) => e.stopPropagation()}

@@ -72,21 +72,17 @@ export function flattenGroups(schema: unknown): Record<string, unknown> {
   if (!schema || typeof schema !== 'object') {
     return {}
   }
-  const fields = schema as Record<string, SchemaEntry | undefined>
-  let flattenedFields: Record<string, unknown> = {}
-  Object.keys(fields).forEach((key) => {
-    const entry = fields[key]
+  const flattened: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(schema as Record<string, SchemaEntry | undefined>)) {
     if (entry?.type === 'group') {
-      const flattenedGroup = flattenGroups(entry.options)
-      flattenedFields = { ...flattenedFields, ...flattenedGroup }
+      Object.assign(flattened, flattenGroups(entry.options))
     } else if (entry?.type === 'object') {
-      const flattenedGroup = flattenGroups(entry.options)
-      flattenedFields = { ...flattenedFields, [key]: flattenedGroup }
+      flattened[key] = flattenGroups(entry.options)
     } else {
-      flattenedFields[key] = entry
+      flattened[key] = entry
     }
-  })
-  return flattenedFields
+  }
+  return flattened
 }
 
 /**Not a pure function. Edits 'obj' passed into function */
@@ -141,34 +137,17 @@ export function initializeValues(
         return acc
       }
       const fieldSchema = schema[field] ?? EMPTY_ENTRY
-      if (fieldSchema.type === 'group') {
+      // A group's fields, and a wizard step's unless the wizard keeps steps nested,
+      // live at the level that holds the group.
+      const flattenStep = fieldSchema.type === 'step' && schema['$meta']?.wizard?.flatten !== false
+      if (fieldSchema.type === 'group' || flattenStep) {
         const values = initializeValues(fieldSchema.options, data)
-        if (!values) {
-          return acc
-        }
-        Object.keys(values).forEach((key) => {
-          acc[key] = data[key] ?? values[key]
-        })
-        return acc
-      }
-      if (fieldSchema.type === 'step') {
-        const flatten = schema['$meta']?.wizard?.flatten !== false
-        if (flatten) {
-          // Handle wizard step fields - initialize fields within the step
-          const values = initializeValues(fieldSchema.options, data)
-          if (!values) {
-            return acc
-          }
-          Object.keys(values).forEach((key) => {
-            acc[key] = data[key] ?? values[key]
-          })
-        } else {
-          // Preserve step key as nested object
-          acc[field] = initializeValues(fieldSchema.options, asRecord(data[field]))
+        for (const key of Object.keys(values ?? {})) {
+          acc[key] = data[key] ?? values?.[key]
         }
         return acc
       }
-      if (fieldSchema.type === 'object') {
+      if (fieldSchema.type === 'step' || fieldSchema.type === 'object') {
         acc[field] = initializeValues(fieldSchema.options, asRecord(data[field]))
         return acc
       }
@@ -180,13 +159,9 @@ export function initializeValues(
           acc[field] = Array.isArray(listData) ? [...listData] : []
           return acc
         }
-        const arr: (Record<string, unknown> | undefined)[] = []
-        if (Array.isArray(listData)) {
-          for (let i = 0; i < listData.length; i++) {
-            arr.push(initializeValues(fieldSchema.options, asRecord(listData[i])))
-          }
-        }
-        acc[field] = arr
+        acc[field] = Array.isArray(listData)
+          ? listData.map((item) => initializeValues(fieldSchema.options, asRecord(item)))
+          : []
         return acc
       }
       if (data[field] !== undefined) {
@@ -194,7 +169,6 @@ export function initializeValues(
         if (
           (fieldSchema.type === 'dropdown' || fieldSchema.type === 'storage') &&
           fieldSchema.secondaryField &&
-          fieldSchema.options &&
           Array.isArray(fieldSchema.options)
         ) {
           const option = findSecondaryOption(fieldSchema.options, data[field])
@@ -235,20 +209,11 @@ export function initializeValues(
         }
       }
       if (fieldSchema.type === 'dropdown') {
-        if (
-          fieldSchema.options &&
-          Array.isArray(fieldSchema.options) &&
-          fieldSchema.options.length > 0
-        ) {
+        if (Array.isArray(fieldSchema.options) && fieldSchema.options.length > 0) {
           acc[field] = fieldSchema.options[0].value
         }
 
-        if (
-          fieldSchema.type === 'dropdown' &&
-          fieldSchema.secondaryField &&
-          fieldSchema.options &&
-          Array.isArray(fieldSchema.options)
-        ) {
+        if (fieldSchema.secondaryField && Array.isArray(fieldSchema.options)) {
           // Setting value if it's a dropdown with a secondary field
           const option = fieldSchema.options.find(
             (option: { value?: unknown; secondaryValue?: unknown }) => option.value === data[field],

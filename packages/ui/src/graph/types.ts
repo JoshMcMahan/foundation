@@ -14,7 +14,7 @@ export interface RunLink {
   url?: string | undefined
 }
 
-export interface WorkflowAnnotation {
+interface WorkflowAnnotation {
   type?: 'error' | 'warning' | 'notice'
   message?: string
   title?: string
@@ -37,7 +37,7 @@ export interface WorkflowStep {
   subworkflow?: WorkflowSubworkflow | undefined
 }
 
-export interface WorkflowMatrixMeta {
+interface WorkflowMatrixMeta {
   originaljob: string
   index: number
   totalingroup: number

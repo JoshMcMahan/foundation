@@ -6,7 +6,7 @@ import {
   Transition,
 } from '@headlessui/react'
 import cx from 'classnames'
-import { type RefObject, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AngleDownIcon } from '../icons'
 import { focusOnMount } from './focus'
 import { keyedByContent } from './keys'
@@ -53,25 +53,18 @@ export default function CustomListbox<T>({
       !option.selected && option.label && option.label.toLowerCase().includes(filter.toLowerCase()),
   )
 
-  function useOutsideAlerter(ref: RefObject<HTMLElement | null>) {
-    useEffect(() => {
-      // Make Dropdown dissapear when clicked outside of it
-      function handleClickOutside(event: MouseEvent) {
-        if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) {
-          setControlledOpen(false)
-          setFilter('')
-        }
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const wrapper = wrapperRef.current
+      if (wrapper && event.target instanceof Node && !wrapper.contains(event.target)) {
+        setControlledOpen(false)
+        setFilter('')
       }
-
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside)
-      }
-    }, [ref])
-  }
-
-  const wrapperRef = useRef(null)
-  useOutsideAlerter(wrapperRef)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const optionsElement = (
     <ListboxOptions
@@ -162,7 +155,7 @@ export default function CustomListbox<T>({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          {optionsElement || null}
+          {optionsElement}
         </Transition>
       ) : (
         controlledOpen && optionsElement

@@ -38,7 +38,6 @@ interface FilePreviewProps {
   onClose: () => void
   onDownload: (node: TreeNode) => void
   onCopyUri: (node: TreeNode) => void
-  showSecurityIndicator?: boolean
 }
 
 export function FilePreview({
@@ -51,7 +50,6 @@ export function FilePreview({
   onClose,
   onDownload,
   onCopyUri,
-  showSecurityIndicator = true,
 }: FilePreviewProps) {
   const t = useStrings().fileExplorer
   const [style, setStyle] = useLocalStorage<PreviewStyle>('fileExplorer.previewStyle', 'quicklook')
@@ -60,7 +58,7 @@ export function FilePreview({
     url,
     loading: urlLoading,
     error: urlError,
-  } = usePresignedUrl(open ? node : null, getPresignedUrl, {
+  } = usePresignedUrl(node, getPresignedUrl, {
     enabled: open,
     linkErrorMessage: t.preview.linkError,
   })
@@ -125,7 +123,7 @@ export function FilePreview({
       <div className="flex min-w-0 items-center gap-2.5">
         <FileIcon className={cx('h-4 w-4 shrink-0', !floatingChrome && 'theme-muted-text')} />
         <span className="truncate font-semibold">{node.name}</span>
-        {showSecurityIndicator && url && <StreamedBadge />}
+        {url && <StreamedBadge />}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <div

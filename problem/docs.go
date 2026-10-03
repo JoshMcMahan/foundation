@@ -2,10 +2,10 @@ package problem
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
-	"path"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -36,30 +36,22 @@ type Docs struct {
 // NewDocs reads one JSON file per language from fsys, named for the language
 // (en.json, ja.json, ...), each an object of Doc entries keyed by code.
 func NewDocs(fsys fs.FS) (*Docs, error) {
-	files, err := fs.Glob(fsys, "*.json")
+	docs, err := readLanguages[map[Code]Doc](fsys)
 	if err != nil {
 		return nil, err
 	}
-	d := &Docs{docs: map[string]map[Code]Doc{}}
-	for _, file := range files {
-		data, err := fs.ReadFile(fsys, file)
-		if err != nil {
-			return nil, err
-		}
-		var raw map[Code]Doc
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return nil, fmt.Errorf("problem: %s: %w", file, err)
-		}
-		for code, doc := range raw {
-			for _, l := range doc.Links {
+	// Sorted so the same broken file always reports the same entry.
+	for _, lang := range slices.Sorted(maps.Keys(docs)) {
+		entries := docs[lang]
+		for _, code := range slices.Sorted(maps.Keys(entries)) {
+			for _, l := range entries[code].Links {
 				if l.Title == "" || (!strings.HasPrefix(l.Href, "https://") && !strings.HasPrefix(l.Href, "/")) {
-					return nil, fmt.Errorf("problem: %s %s: links need a title and an https:// or / href", file, code)
+					return nil, fmt.Errorf("problem: %s.json %s: links need a title and an https:// or / href", lang, code)
 				}
 			}
 		}
-		d.docs[strings.TrimSuffix(path.Base(file), ".json")] = raw
 	}
-	return d, nil
+	return &Docs{docs: docs}, nil
 }
 
 // MustDocs is NewDocs that panics, for docs embedded in the binary.

@@ -1,10 +1,10 @@
-import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from '@parallelworks/ui/icons'
 import cx from 'classnames'
 import { useId, useRef, useState } from 'react'
 import { useNotify, useStrings, useWorkflowEngine } from '../components/Provider'
 import SwitchToggleSmall from '../components/SwitchToggleSmall'
 import type { WorkflowEngine } from '../engine'
 import { flattenGroups, impureSetValueFromPath } from '../form/lib'
+import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from '../icons'
 import Editor from './Editor'
 import type { ISchemaError } from './Monaco'
 
@@ -17,7 +17,7 @@ const shouldIgnoreField = (
   inputs: Record<string, unknown>,
   arrayIndex?: number,
 ): boolean => {
-  if (!fieldSchema?.['ignore'] || !fieldSchema?.['hidden']) {
+  if (!fieldSchema['ignore'] || !fieldSchema['hidden']) {
     return false
   }
 
@@ -51,34 +51,29 @@ const filterFields = (
   const filtered = Object.keys(data).reduce<Record<string, unknown>>((acc, key) => {
     const value = data[key]
     const fieldSchema = formJSON[key]
-    if (value !== null && Array.isArray(value)) {
+    if (Array.isArray(value)) {
       const items: unknown[] = []
       acc[key] = items
       if (!fieldSchema) {
         return acc
       }
       const nestedSchema = isObject(fieldSchema) ? fieldSchema['options'] : undefined
-      for (let i = 0; i < value.length; i++) {
-        let filteredFieldsNested: FilteredField[] = []
-        let filteredNested: unknown = {}
-        const item: unknown = value[i]
-        if (isObject(item)) {
-          const result = filterFields(
-            engine,
-            isObject(nestedSchema) ? nestedSchema : {},
-            item,
-            `${key}[${i}].`,
-            rootData || data,
-            i,
-          )
-          filteredNested = result.filtered
-          filteredFieldsNested = result.filteredFields
-        } else {
-          filteredNested = item
+      value.forEach((item: unknown, i) => {
+        if (!isObject(item)) {
+          items[i] = item
+          return
         }
-        filteredFields.push(...filteredFieldsNested)
-        items[i] = filteredNested
-      }
+        const result = filterFields(
+          engine,
+          isObject(nestedSchema) ? nestedSchema : {},
+          item,
+          `${key}[${i}].`,
+          rootData || data,
+          i,
+        )
+        filteredFields.push(...result.filteredFields)
+        items[i] = result.filtered
+      })
       return acc
     }
     if (fieldSchema && isObject(value)) {
@@ -95,8 +90,7 @@ const filterFields = (
       return acc
     }
     if (isObject(fieldSchema) && fieldSchema['sensitive']) {
-      const name = prefix ? prefix + key : key
-      filteredFields.push({ key: name, value })
+      filteredFields.push({ key: `${prefix ?? ''}${key}`, value })
       return acc
     }
     // rootData is used here (not data) to support partition-level expression evaluation
@@ -240,7 +234,7 @@ function FormCodePanel({
                   : populateFiltered(filteredFieldsRef.current, parsed)
                 mutate(objToSave)
               } catch {
-                console.log('JSON.parse error in form code editor')
+                // Half-typed JSON; the editor's markers already flag it.
               }
             }}
             language="json"

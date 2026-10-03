@@ -20,7 +20,7 @@ import type {
   ToolCallStatus,
 } from '../types'
 
-export const storyUser: ChatUser = {
+const storyUser: ChatUser = {
   id: 'u-1',
   username: 'alice',
   name: 'Alice Example',
@@ -29,7 +29,7 @@ export const storyUser: ChatUser = {
 const LOREM =
   'The scheduler places the controller on the login node and fans partitions out across compute. Each turn streams through the same pipeline a real backend uses, so polish work here transfers directly.'
 
-export function words(count: number): string {
+function words(count: number): string {
   const pool = LOREM.split(' ')
   const out: string[] = []
   for (let i = 0; i < count; i++) {
@@ -39,7 +39,7 @@ export function words(count: number): string {
 }
 
 let idCounter = 0
-export function nextId(prefix: string): string {
+function nextId(prefix: string): string {
   idCounter += 1
   return `${prefix}-${idCounter}`
 }
@@ -594,7 +594,6 @@ function storyChatLink(onNavigate?: (id: string | null) => void) {
 const noopNavigation = {
   toConversation() {},
   toNewChat() {},
-  toAttachments() {},
 }
 
 const consoleNotify = {
@@ -640,7 +639,6 @@ export function StoryChat({
         ? {
             toConversation: (id: string) => onNavigate(id),
             toNewChat: () => onNavigate(null),
-            toAttachments: () => {},
           }
         : noopNavigation,
     [onNavigate],

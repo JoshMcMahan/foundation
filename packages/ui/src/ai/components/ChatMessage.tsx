@@ -331,7 +331,6 @@ function ChatMessage({
                   <Avatar
                     src={otherAuthor.avatarUrl ?? undefined}
                     name={otherAuthor.name || otherAuthor.username}
-                    size="sm"
                     className="flex-shrink-0 mb-0.5"
                   />
                   <div className="px-4 py-2.5 chat-ink rounded-2xl rounded-bl-md max-w-[70%] inline-block whitespace-pre-wrap text-base leading-6 bg-[color-mix(in_oklab,var(--theme-panel)_6%,transparent)]">

@@ -1,5 +1,5 @@
 import cx from 'classnames'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { type UIStrings, useStrings } from '../components/Provider'
 import {
   AlertIcon,
@@ -56,48 +56,47 @@ function getSessionStatusInfo(session: UploadSession, queueLength: number, strin
   }
 }
 
+function barColor({
+  isCompleted,
+  isCancelled,
+  isFailed,
+}: {
+  isCompleted: boolean
+  isCancelled: boolean
+  isFailed: boolean
+}): string {
+  if (isCompleted) {
+    return 'bg-green-600'
+  }
+  if (isCancelled) {
+    return 'bg-(--theme-muted-text-color)'
+  }
+  return isFailed ? 'bg-red-600' : 'theme-element'
+}
+
 interface FileProgressBarProps {
   fileProgress: UploadFileProgress
   fileName: string
-  progressBarColorScheme: {
-    uploading: string
-    completed: string
-    failed: string
-    cancelled: string
-  }
   onCancelFile?: () => void
 }
 
-function FileProgressBar({
-  fileProgress,
-  fileName,
-  progressBarColorScheme,
-  onCancelFile,
-}: FileProgressBarProps) {
+function FileProgressBar({ fileProgress, fileName, onCancelFile }: FileProgressBarProps) {
   const strings = useStrings().fileExplorer.upload
   const [isHovered, setIsHovered] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  const percentage = fileProgress?.percentage || 0
-  const loadedBytes = fileProgress?.loadedBytes || 0
-  const totalBytes = fileProgress.fileSizeBytes || fileProgress?.totalBytes || 0
+  const percentage = fileProgress.percentage || 0
+  const loadedBytes = fileProgress.loadedBytes || 0
+  const totalBytes = fileProgress.fileSizeBytes || fileProgress.totalBytes || 0
 
   const isCompleted = percentage === 100 || fileProgress.status === 'completed'
   const isCancelled = fileProgress.status === 'cancelled'
   const isFailed = fileProgress.status === 'failed'
-  const isUploading =
-    fileProgress.status === 'uploading' || (!isCompleted && !isCancelled && !isFailed)
-
-  const canCancel =
-    isUploading && fileProgress.abortController && !isCompleted && !isCancelled && !isFailed
-
-  const barColor = isCompleted
-    ? progressBarColorScheme.completed
-    : isCancelled
-      ? progressBarColorScheme.cancelled
-      : isFailed
-        ? progressBarColorScheme.failed
-        : progressBarColorScheme.uploading
+  const isSettled = isCompleted || isCancelled || isFailed
+  // `uploading` still counts once the bar reads 100%, so the percentage stays up
+  // beside the completed label until the status catches up.
+  const isUploading = fileProgress.status === 'uploading' || !isSettled
+  const canCancel = !!fileProgress.abortController && !isSettled
 
   const handleCancelClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -146,7 +145,7 @@ function FileProgressBar({
             <div
               className={cx(
                 'h-full transition-all duration-300 relative flex items-center justify-center',
-                barColor,
+                barColor({ isCompleted, isCancelled, isFailed }),
                 isHovered && 'opacity-80',
               )}
               style={{ width: `${percentage}%` }}
@@ -233,48 +232,33 @@ export function UploadSessionToast({
   const [isFileListExpanded, setIsExpanded] = useState(session.uploadNodes.length <= 3)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  const statusInfo = useMemo(
-    () => getSessionStatusInfo(session, queueLength, strings),
-    [session, queueLength, strings],
-  )
+  // Not memoized: the session is mutated in place, so its identity says nothing
+  // about whether the status changed.
+  const statusInfo = getSessionStatusInfo(session, queueLength, strings)
 
   const targetPath = `${session.targetPath}/`
 
-  const isQueued = session.status === 'queued'
   const isCompleted = session.status === 'completed'
   const isCancelled = session.status === 'cancelled'
   const isFailed = session.status === 'failed'
-  const isUploading = session.status === 'uploading' || (!isCompleted && !isCancelled && !isFailed)
+  // Includes `queued`: a queued session shows the same progress and cancel controls.
+  const isUploading = !isCompleted && !isCancelled && !isFailed
 
   const totalProgress = session.progress?.overallProgress || 0
   const totalSize = session.progress?.totalSizeBytes || 0
 
-  const progressBarColorScheme = {
-    uploading: 'theme-element',
-    completed: 'bg-green-600',
-    failed: 'bg-red-600',
-    cancelled: 'bg-(--theme-muted-text-color)',
-  }
-  const barColor = isCompleted
-    ? progressBarColorScheme.completed
-    : isCancelled
-      ? progressBarColorScheme.cancelled
-      : isFailed
-        ? progressBarColorScheme.failed
-        : progressBarColorScheme.uploading
+  const sessionBarColor = barColor({ isCompleted, isCancelled, isFailed })
 
   const allFiles = session.progress?.allFiles ? Array.from(session.progress.allFiles.values()) : []
   const singleFile = allFiles[0]
   const singleNode = session.uploadNodes.length === 1 ? session.uploadNodes[0] : undefined
 
-  const uploadingFiles = session.progress?.allFiles
-    ? Array.from(session.progress.allFiles.values()).filter(
-        (file) => file.percentage && file.percentage >= 0 && file.percentage < 100,
-      )
-    : []
+  const uploadingFiles = allFiles.filter(
+    (file) => (file.percentage ?? 0) > 0 && (file.percentage ?? 0) < 100,
+  )
 
   const shouldShowSessionCancelButton =
-    !showCancelConfirm && (isUploading || isQueued) && session.uploadNodes.length > 1
+    !showCancelConfirm && isUploading && session.uploadNodes.length > 1
 
   const estimatedSecondsLeft = session.progress?.estimatedSecondsLeft
   const showETA = isUploading && estimatedSecondsLeft && estimatedSecondsLeft > 0
@@ -342,7 +326,7 @@ export function UploadSessionToast({
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-(--theme-border) rounded-full overflow-hidden">
                   <div
-                    className={cx('h-full transition-all duration-300', barColor)}
+                    className={cx('h-full transition-all duration-300', sessionBarColor)}
                     style={{ width: `${totalProgress}%` }}
                   />
                 </div>
@@ -417,7 +401,7 @@ export function UploadSessionToast({
             )}
 
             {/* Overall Progress Bar */}
-            {session.uploadNodes.length > 1 && (isUploading || isQueued) && (
+            {session.uploadNodes.length > 1 && isUploading && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs theme-muted-text">
                   <span>{strings.overallProgress}</span>
@@ -425,7 +409,7 @@ export function UploadSessionToast({
                 </div>
                 <div className="h-2 w-full bg-(--theme-border) rounded-full overflow-hidden">
                   <div
-                    className={cx('h-full transition-all duration-300', barColor)}
+                    className={cx('h-full transition-all duration-300', sessionBarColor)}
                     style={{ width: `${totalProgress}%` }}
                   />
                 </div>
@@ -462,7 +446,6 @@ export function UploadSessionToast({
                           <FileProgressBar
                             fileProgress={fileProgress}
                             fileName={node.name}
-                            progressBarColorScheme={progressBarColorScheme}
                             onCancelFile={() => onCancelFile?.(node.relativePath)}
                           />
                         </div>
@@ -478,7 +461,6 @@ export function UploadSessionToast({
               <FileProgressBar
                 fileProgress={singleFile}
                 fileName={singleNode.name}
-                progressBarColorScheme={progressBarColorScheme}
                 onCancelFile={() => onCancelFile?.(singleNode.relativePath)}
               />
             )}

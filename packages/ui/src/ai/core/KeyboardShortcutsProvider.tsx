@@ -6,7 +6,7 @@ interface KeyboardShortcutsProviderProps {
 
 export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProviderProps) {
   // Initialize keyboard shortcuts
-  useKeyboardShortcuts({ enabled: true })
+  useKeyboardShortcuts()
 
   return <>{children}</>
 }

@@ -7,7 +7,6 @@ export function WizardStepContent({
   stepConfig,
   flatten = true,
   values,
-  onValuesChange,
   setFormDirty,
   setFieldValue,
   setFieldTouched,
@@ -18,7 +17,7 @@ export function WizardStepContent({
   setFieldTouched: (field: string, touched?: boolean, shouldValidate?: boolean) => void
   flatten?: boolean | undefined
 }) {
-  if (!stepConfig?.options) {
+  if (!stepConfig.options) {
     return null
   }
 

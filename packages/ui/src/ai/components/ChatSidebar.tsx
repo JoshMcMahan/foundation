@@ -20,7 +20,7 @@ import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
 import { conversationToMarkdown, downloadText, exportFilename } from '../core/exportConversation'
 import type { ConversationSummary } from '../types'
 import {
-  SIDEBAR_RAIL_WIDTH_PX,
+  SIDEBAR_DEFAULT_WIDTH_PX,
   SidebarGroupHeading,
   SidebarPanel,
   SidebarRow,
@@ -29,7 +29,7 @@ import {
 } from '../ui/sidebar'
 import ShareDialog from './ShareDialog'
 
-export type ConversationGroupKey =
+type ConversationGroupKey =
   | 'groupToday'
   | 'groupYesterday'
   | 'groupThisWeek'
@@ -143,7 +143,6 @@ function ConversationRow({
 const SIDEBAR_WIDTH_STORAGE_KEY = 'aiChatSidebarWidth'
 const SIDEBAR_MIN_WIDTH_PX = 200
 const SIDEBAR_MAX_WIDTH_PX = 480
-const SIDEBAR_DEFAULT_WIDTH_PX = 256
 
 function clampSidebarWidth(width: number): number {
   return Math.min(SIDEBAR_MAX_WIDTH_PX, Math.max(SIDEBAR_MIN_WIDTH_PX, width))
@@ -317,12 +316,7 @@ export default function ChatSidebar({
 
   return (
     <>
-      <SidebarPanel
-        collapsed={sidebarCollapsed}
-        width={sidebarWidth}
-        railWidth={SIDEBAR_RAIL_WIDTH_PX}
-        resizing={resizing}
-      >
+      <SidebarPanel collapsed={sidebarCollapsed} width={sidebarWidth} resizing={resizing}>
         {!sidebarCollapsed && (
           // biome-ignore lint/a11y/useSemanticElements: a window splitter must be focusable and full height; <hr> is reset to height 0 and cannot host the drag surface.
           <div

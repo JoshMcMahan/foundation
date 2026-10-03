@@ -35,9 +35,7 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
     if (disabled) {
       return
     }
-    if (onChange) {
-      onChange(val)
-    }
+    onChange?.(val)
     setFieldTouched(fieldName, true)
     setFieldValue(fieldName, val)
     setFormDirty(true)

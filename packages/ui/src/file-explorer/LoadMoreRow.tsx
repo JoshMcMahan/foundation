@@ -6,6 +6,15 @@ import { useNearEnd } from './useNearEnd'
 /** The virtualizer sizes this row from the constant, never by measuring it. */
 export const LOAD_MORE_ROW_HEIGHT = 45
 
+/** A folder's paging state, as the table's sentinel row needs it. */
+export interface LoadMoreState {
+  loading: boolean
+  error: string | undefined
+  /** False past the auto-load cap, where the user asks for each page. */
+  auto: boolean
+  onLoadMore: () => void
+}
+
 interface LoadMoreRowProps {
   rowId: string
   rowIndex: number

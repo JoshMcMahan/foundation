@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { StepFieldConfig, WizardState } from './types'
+import type { StepFieldConfig } from './types'
 
 interface UseWizardStateProps {
   /** Ordered list of step keys */
@@ -8,17 +8,10 @@ interface UseWizardStateProps {
   steps: Record<string, StepFieldConfig>
   /** Function to validate current step */
   validateStep: (stepKey: string) => Promise<boolean>
-  /** Initial step to start with (default: first step) */
-  initialStep?: string
 }
 
-export function useWizardState({
-  stepOrder,
-  steps,
-  validateStep,
-  initialStep,
-}: UseWizardStateProps) {
-  const firstStep = initialStep || stepOrder[0] || ''
+export function useWizardState({ stepOrder, steps, validateStep }: UseWizardStateProps) {
+  const firstStep = stepOrder[0] ?? ''
   const [currentStep, setCurrentStep] = useState(firstStep)
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set([firstStep]))
   const [invalidSteps, setInvalidSteps] = useState<Set<string>>(new Set())
@@ -27,16 +20,6 @@ export function useWizardState({
   const isLastStep = currentStepIndex === stepOrder.length - 1
   const canGoBack = currentStepIndex > 0
 
-  /**
-   * Mark step as visited
-   */
-  const markStepVisited = useCallback((stepKey: string) => {
-    setVisitedSteps((prev) => new Set([...prev, stepKey]))
-  }, [])
-
-  /**
-   * Mark step as invalid
-   */
   const markStepInvalid = useCallback((stepKey: string, invalid: boolean) => {
     setInvalidSteps((prev) => {
       const next = new Set(prev)
@@ -54,10 +37,7 @@ export function useWizardState({
       return false
     }
 
-    const stepConfig = steps[currentStep]
-
-    // Check if step validation should be performed
-    if (stepConfig?.validateOnNext !== false) {
+    if (steps[currentStep]?.validateOnNext !== false) {
       const isValid = await validateStep(currentStep)
       if (!isValid) {
         markStepInvalid(currentStep, true)
@@ -68,29 +48,18 @@ export function useWizardState({
     // Mark current step as valid if it had errors
     markStepInvalid(currentStep, false)
 
-    // Move to next step
-    const nextStepKey = stepOrder[currentStepIndex + 1]
-    setCurrentStep(nextStepKey ?? '')
-    markStepVisited(nextStepKey ?? '')
+    const nextStepKey = stepOrder[currentStepIndex + 1] ?? ''
+    setCurrentStep(nextStepKey)
+    setVisitedSteps((prev) => new Set([...prev, nextStepKey]))
 
     return true
-  }, [
-    currentStep,
-    currentStepIndex,
-    isLastStep,
-    steps,
-    stepOrder,
-    validateStep,
-    markStepInvalid,
-    markStepVisited,
-  ])
+  }, [currentStep, currentStepIndex, isLastStep, steps, stepOrder, validateStep, markStepInvalid])
 
   const goToPrevious = useCallback(() => {
     if (!canGoBack) {
       return
     }
-    const prevStepKey = stepOrder[currentStepIndex - 1]
-    setCurrentStep(prevStepKey ?? '')
+    setCurrentStep(stepOrder[currentStepIndex - 1] ?? '')
   }, [canGoBack, currentStepIndex, stepOrder])
 
   const jumpToStep = useCallback(
@@ -110,45 +79,14 @@ export function useWizardState({
     [stepOrder, visitedSteps, currentStep],
   )
 
-  /**
-   * Reset wizard to initial state
-   */
-  const reset = useCallback(() => {
-    setCurrentStep(firstStep)
-    setVisitedSteps(new Set([firstStep]))
-    setInvalidSteps(new Set())
-  }, [firstStep])
-
-  /**
-   * Get current wizard state
-   */
-  const getState = useCallback((): WizardState => {
-    return {
-      currentStep,
-      visitedSteps,
-      invalidSteps,
-      stepOrder,
-      totalSteps: stepOrder.length,
-      isLastStep,
-      canProceedToNext: !isLastStep,
-      canGoBack,
-    }
-  }, [currentStep, visitedSteps, invalidSteps, stepOrder, isLastStep, canGoBack])
-
   return {
     currentStep,
     visitedSteps,
     invalidSteps,
     isLastStep,
     canGoBack,
-    currentStepIndex,
-    totalSteps: stepOrder.length,
     goToNext,
     goToPrevious,
     jumpToStep,
-    reset,
-    markStepVisited,
-    markStepInvalid,
-    getState,
   }
 }

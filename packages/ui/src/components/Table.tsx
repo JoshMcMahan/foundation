@@ -95,8 +95,6 @@ interface ITableProps {
   roundedTop?: boolean
   rounded?: boolean
   roundedBottom?: boolean
-  Item?: typeof Item
-  Header?: typeof Header
   isLoading?: boolean
   /** Forwarded to the `<table>`, for attributes that must sit on the element owning
    *  the rows — `role='grid'`, aria-activedescendant, aria-rowcount. `className` is
@@ -188,7 +186,16 @@ export function CompactTable({
   roundedTop = false,
   rounded = false,
   roundedBottom = false,
-}: ITableProps) {
+}: Pick<
+  ITableProps,
+  | 'wrapperClassName'
+  | 'className'
+  | 'tbodyClassName'
+  | 'children'
+  | 'roundedTop'
+  | 'rounded'
+  | 'roundedBottom'
+>) {
   const ChildrenArr = React.Children.toArray(children)
   const Headers = getHeaders(ChildrenArr)
   const hasOverflow = wrapperClassName.split(' ').some((cls) => cls.startsWith('overflow-'))

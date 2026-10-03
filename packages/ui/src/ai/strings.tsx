@@ -77,7 +77,6 @@ export interface ChatStrings {
     share: string
     delete: string
     sharedWithYou: string
-    moreOptions: string
     openSidebar: string
     closeSidebar: string
     newChat: string
@@ -253,7 +252,6 @@ export const defaultChatStrings: ChatStrings = {
     share: 'Share',
     delete: 'Delete',
     sharedWithYou: 'Shared with you',
-    moreOptions: 'More options',
     openSidebar: 'Open sidebar',
     closeSidebar: 'Close sidebar',
     newChat: 'New chat',

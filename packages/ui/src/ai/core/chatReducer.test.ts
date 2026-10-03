@@ -152,31 +152,6 @@ describe('chatReducer', () => {
     })
   })
 
-  describe('UPDATE_CURRENT_CONVERSATION_TITLE', () => {
-    it('should update conversation title', () => {
-      const state = {
-        ...initialState,
-        currentConversation: createMockConversation({ title: 'Old Title' }),
-      }
-
-      const result = chatReducer(state, {
-        type: 'UPDATE_CURRENT_CONVERSATION_TITLE',
-        title: 'New Title',
-      })
-
-      expect(result.currentConversation?.title).toBe('New Title')
-    })
-
-    it('should not update if no current conversation', () => {
-      const result = chatReducer(initialState, {
-        type: 'UPDATE_CURRENT_CONVERSATION_TITLE',
-        title: 'New Title',
-      })
-
-      expect(result).toEqual(initialState)
-    })
-  })
-
   describe('ADD_MESSAGE', () => {
     it('should add message to current conversation', () => {
       const convId = 'test-conv'
@@ -537,35 +512,6 @@ describe('chatReducer', () => {
       })
 
       expect(result.models).toEqual(models)
-    })
-  })
-
-  describe('SET_THINKING', () => {
-    it('should set thinking state and start time', () => {
-      const before = Date.now()
-      const result = chatReducer(initialState, {
-        type: 'SET_THINKING',
-        isThinking: true,
-      })
-
-      expect(result.isThinking).toBe(true)
-      expect(result.thinkingStartTime).toBeGreaterThanOrEqual(before)
-    })
-
-    it('should preserve thinkingStartTime when setting to false', () => {
-      const state: ChatState = {
-        ...initialState,
-        isThinking: true,
-        thinkingStartTime: 12345,
-      }
-
-      const result = chatReducer(state, {
-        type: 'SET_THINKING',
-        isThinking: false,
-      })
-
-      expect(result.isThinking).toBe(false)
-      expect(result.thinkingStartTime).toBe(12345)
     })
   })
 

@@ -171,11 +171,9 @@ func (f *formatter) cases(b *strings.Builder, msg string, i int, name, kind stri
 			if kind == "plural" {
 				pound = &n
 			}
-			var sub strings.Builder
-			if err := f.message(&sub, msg[:o.end+1], o.start, true, pound); err != nil {
+			if err := f.message(b, msg[:o.end+1], o.start, true, pound); err != nil {
 				return 0, err
 			}
-			b.WriteString(sub.String())
 			return i + 1, nil
 		}
 	}

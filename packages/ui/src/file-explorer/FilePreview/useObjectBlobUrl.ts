@@ -8,22 +8,22 @@ interface BlobResult {
   tooLarge: boolean
 }
 
-interface ObjectBlobState {
-  blobUrl: string | null
+interface ObjectBlobState extends BlobResult {
   loading: boolean
   error: string | null
-  tooLarge: boolean
   corsError: boolean
 }
 
+const IDLE: ObjectBlobState = {
+  blobUrl: null,
+  loading: false,
+  error: null,
+  tooLarge: false,
+  corsError: false,
+}
+
 function toState(result: BlobResult): ObjectBlobState {
-  return {
-    blobUrl: result.blobUrl,
-    loading: false,
-    error: null,
-    tooLarge: result.tooLarge,
-    corsError: false,
-  }
+  return { ...IDLE, ...result }
 }
 
 function disposeBlob(result: BlobResult) {
@@ -34,52 +34,34 @@ function disposeBlob(result: BlobResult) {
 
 /** Fetch an object into a blob URL with a forced MIME type so e.g. PDFs render inline even when served as octet-stream; cached per `cacheKey` so repeated mounts share one download and one blob URL, revoked when the cache drops it. */
 export function useObjectBlobUrl(
-  url: string | null,
+  url: string,
   {
-    enabled,
     maxBytes,
     knownSize,
     mimeType,
     cacheKey,
   }: {
-    enabled: boolean
     maxBytes: number
     knownSize?: number | undefined
     mimeType: string
     cacheKey: string
   },
 ): ObjectBlobState {
-  const [state, setState] = useState<ObjectBlobState>({
-    blobUrl: null,
-    loading: enabled,
-    error: null,
-    tooLarge: false,
-    corsError: false,
-  })
+  const [state, setState] = useState<ObjectBlobState>({ ...IDLE, loading: true })
 
   const tooLarge = typeof knownSize === 'number' && knownSize > maxBytes
-  const key = enabled ? cacheKey : null
 
   useEffect(() => {
-    if (!enabled || !url || !key) {
-      return
-    }
     if (tooLarge) {
-      setState({
-        blobUrl: null,
-        loading: false,
-        error: null,
-        tooLarge: true,
-        corsError: false,
-      })
+      setState({ ...IDLE, tooLarge: true })
       return
     }
 
     let cancelled = false
     const record = loadPreviewContent<BlobResult>(
-      key,
+      cacheKey,
       async (signal) => {
-        const response = await fetchPreviewObject(key, url, signal)
+        const response = await fetchPreviewObject(cacheKey, url, signal)
         const { bytes, tooLarge: exceeded } = await readCappedBytes(response, maxBytes)
         if (exceeded) {
           return { blobUrl: null, tooLarge: true }
@@ -91,17 +73,7 @@ export function useObjectBlobUrl(
       },
       disposeBlob,
     )
-    setState(
-      record.value
-        ? toState(record.value)
-        : {
-            blobUrl: null,
-            loading: true,
-            error: null,
-            tooLarge: false,
-            corsError: false,
-          },
-    )
+    setState(record.value ? toState(record.value) : { ...IDLE, loading: true })
     record.promise
       .then((result) => {
         if (!cancelled) {
@@ -114,10 +86,8 @@ export function useObjectBlobUrl(
         }
         if (!cancelled) {
           setState({
-            blobUrl: null,
-            loading: false,
+            ...IDLE,
             error: err instanceof Error ? err.message : 'Failed to load file',
-            tooLarge: false,
             corsError: err instanceof CorsError,
           })
         }
@@ -126,17 +96,11 @@ export function useObjectBlobUrl(
     return () => {
       cancelled = true
     }
-  }, [url, enabled, key, maxBytes, mimeType, tooLarge])
+  }, [url, cacheKey, maxBytes, mimeType, tooLarge])
 
   if (tooLarge) {
-    return {
-      blobUrl: null,
-      loading: false,
-      error: null,
-      tooLarge: true,
-      corsError: false,
-    }
+    return { ...IDLE, tooLarge: true }
   }
-  const cached = key ? peekPreviewContent<BlobResult>(key) : undefined
+  const cached = peekPreviewContent<BlobResult>(cacheKey)
   return cached ? toState(cached) : state
 }

@@ -8,8 +8,8 @@ export default function DropdownWrapper({
   setFormDirty,
   invalid = false,
   loading = false,
-  disabled = undefined,
-  allowCustomValue = undefined,
+  disabled,
+  allowCustomValue,
   currentValue,
   setFieldValue,
   setFieldTouched,
@@ -22,9 +22,7 @@ export default function DropdownWrapper({
     disabled?: boolean | string | undefined
     placeholder?: string | undefined
     default?: unknown
-    parentValue?: unknown
     secondaryField?: string | string[] | undefined
-    resetOnChange?: string | boolean | undefined
     value?: string | undefined
     autoselect?: boolean | string | Record<string, unknown> | undefined
     allowCustomValue?: boolean | undefined
@@ -54,9 +52,7 @@ export default function DropdownWrapper({
       )}
       name={fieldObj.name ?? ''}
       ariaLabel={fieldObj.label}
-      parentValue={fieldObj.parentValue}
       secondaryField={fieldObj.secondaryField}
-      resetOnChange={fieldObj.resetOnChange}
       value={fieldObj.value}
       autoselect={fieldObj.autoselect === undefined ? undefined : Boolean(fieldObj.autoselect)}
       allowCustomValue={allowCustomValue ?? fieldObj.allowCustomValue}

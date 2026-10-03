@@ -15,7 +15,6 @@ interface FilePreviewInlineProps {
   onDownload: (node: TreeNode) => void
   /** When false, skip fetching and release any held preview blob. */
   active?: boolean
-  showSecurityIndicator?: boolean
 }
 
 export function FilePreviewInline({
@@ -25,7 +24,6 @@ export function FilePreviewInline({
   onOpenFull,
   onDownload,
   active = true,
-  showSecurityIndicator = true,
 }: FilePreviewInlineProps) {
   const t = useStrings().fileExplorer
   const { url, loading, error } = usePresignedUrl(node, getPresignedUrl, {
@@ -54,7 +52,7 @@ export function FilePreviewInline({
             {typeof node.size === 'number' && formatFileSize(node.size)}
             {node.contentType && ` · ${node.contentType}`}
           </span>
-          {showSecurityIndicator && url && <StreamedBadge />}
+          {url && <StreamedBadge />}
         </div>
         <button
           type="button"

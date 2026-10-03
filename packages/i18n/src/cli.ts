@@ -22,10 +22,13 @@ const usage = `usage: parallelworks-i18n <command> [--dir <locales>] [--default 
 const args = process.argv.slice(2)
 const flag = (name: string, fallback: string) => {
   const i = args.indexOf(`--${name}`)
-  return i >= 0 && args[i + 1] ? (args[i + 1] ?? fallback) : fallback
+  return (i >= 0 && args[i + 1]) || fallback
 }
 const flags = (name: string) =>
-  args.flatMap((a, i) => (a === `--${name}` && args[i + 1] ? [args[i + 1] ?? ''] : []))
+  args.flatMap((a, i) => {
+    const value = args[i + 1]
+    return a === `--${name}` && value ? [value] : []
+  })
 const dir = path.resolve(flag('dir', 'src/i18n/locales'))
 const defaultLocale = flag('default', 'en')
 const [command, file] = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'))

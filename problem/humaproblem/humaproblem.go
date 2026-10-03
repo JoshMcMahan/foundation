@@ -229,11 +229,12 @@ type matcher struct {
 	build func(args []string) classification
 }
 
+var formatVerb = regexp.MustCompile(`%[vds]`)
+
 // pattern turns one of huma's validation message formats into a regexp that
 // captures its arguments.
 func pattern(format string) *regexp.Regexp {
-	verb := regexp.MustCompile(`%[vds]`)
-	parts := verb.Split(format, -1)
+	parts := formatVerb.Split(format, -1)
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
@@ -268,14 +269,13 @@ var matchers = func() []matcher {
 	m := func(format string, build func([]string) classification) matcher {
 		return matcher{re: pattern(format), build: build}
 	}
+	requiredProperty := func(a []string) classification {
+		return classification{rule: problem.Required, property: a[0]}
+	}
 	var out []matcher
 	out = append(out,
-		m(validation.MsgExpectedRequiredProperty, func(a []string) classification {
-			return classification{rule: problem.Required, property: a[0]}
-		}),
-		m(validation.MsgExpectedDependentRequiredProperty, func(a []string) classification {
-			return classification{rule: problem.Required, property: a[0]}
-		}),
+		m(validation.MsgExpectedRequiredProperty, requiredProperty),
+		m(validation.MsgExpectedDependentRequiredProperty, requiredProperty),
 		m("required %s parameter is missing", is(problem.Required)),
 		m(validation.MsgUnexpectedProperty, is(problem.UnexpectedField)),
 		m("unknown query parameter", is(problem.UnexpectedField)),

@@ -11,7 +11,6 @@ export interface IEditorField extends BaseField {
   default?: string
   options?: {
     language?: string
-    theme?: string
   }
 }
 
@@ -56,9 +55,7 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
       clearTimeout(debounceRef.current)
     }
     debounceRef.current = setTimeout(() => {
-      if (onChange) {
-        onChange(val)
-      }
+      onChange?.(val)
       setFieldTouched(fieldName, true)
       setFieldValue(fieldName, val)
       setFormDirty(true)
@@ -76,8 +73,6 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
     return editorKeyPostfix || randomKey
   }, [editorKeyPostfix])
 
-  const value = fieldState.value
-
   return (
     <FieldWrapper
       optional={field.optional}
@@ -87,11 +82,11 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
       spaceCompact={spaceCompact}
     >
       <Editor
-        key={field.name + postfixKey}
+        key={fieldName + postfixKey}
         ariaLabel={label}
         height="200px"
         path={fieldName}
-        {...(touchedRef.current ? {} : { value })}
+        {...(touchedRef.current ? {} : { value: fieldState.value })}
         className={cx(
           'bg-(--theme-input-bg) w-11 border focus:border rounded text-[10px] leading-4 pl-[6px]',
           disabled && 'opacity-75',

@@ -18,7 +18,6 @@ export interface FileExplorerDeleteFilesResult {
 }
 
 export interface IFileExplorerClient {
-  getStorageName(): string
   getExpiresAt(): Date
   // Method syntax: bivariant params let each provider's client take its own
   // concrete input type while remaining assignable under strictFunctionTypes.
@@ -37,13 +36,6 @@ export interface IFileExplorerClient {
 }
 
 export interface IFileExplorerProvider {
-  createClient:
-    | ((
-        organization: string,
-        username: string,
-        name: string,
-      ) => Promise<IFileExplorerClient | null>)
-    | null
   // Method syntax: bivariant params let each provider's own-output converter assign under strictFunctionTypes.
   convertDataToStorageObjects?(data: unknown): TStorageObject[]
   /** Absent ⇒ the explorer treats one page as the whole directory. Method syntax for

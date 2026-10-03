@@ -20,9 +20,7 @@ export interface ICategory<T = unknown> {
 }
 
 export function isCategory<T>(option: ICategory<T> | IOptions<T> | string): option is ICategory<T> {
-  return (
-    typeof option === 'object' && option !== null && option !== undefined && 'options' in option
-  )
+  return typeof option === 'object' && option !== null && 'options' in option
 }
 
 export function isOption<T>(option: ICategory<T> | IOptions<T> | string): option is IOptions<T> {
@@ -37,12 +35,7 @@ function normalizeOption<T>(
   if (typeof option === 'string') {
     return { label: option, value: option as unknown as T }
   }
-  if (
-    typeof option === 'object' &&
-    option !== null &&
-    option !== undefined &&
-    'options' in option
-  ) {
+  if (typeof option === 'object' && option !== null && 'options' in option) {
     return {
       category: option.category,
       options: Array.isArray(option.options) ? option.options : [],
@@ -68,21 +61,18 @@ export function flattenOptions<T>(
   return result
 }
 
+// Hyphens are ignored so "us-east" and "useast" match each other.
+const normalizeForMatch = (text: unknown) => String(text).toLowerCase().replace(/-/g, '')
+
 export function filterOption<T>(option: IOptions<T>, query: string): boolean {
   if (query === '') {
     return true
   }
-  const q = String(query ?? '')
-    .toLowerCase()
-    .replace(/(-)/gm, '')
-  const label = String(option.label ?? '')
-    .toLowerCase()
-    .replace(/(-)/gm, '')
-  const secondary =
-    option.secondaryValue !== undefined
-      ? String(option.secondaryValue).toLowerCase().replace(/(-)/gm, '')
-      : ''
-  return label.includes(q) || secondary.includes(q)
+  const q = normalizeForMatch(query)
+  return (
+    normalizeForMatch(option.label ?? '').includes(q) ||
+    (option.secondaryValue !== undefined && normalizeForMatch(option.secondaryValue).includes(q))
+  )
 }
 
 export function toggleSetMember<T>(set: ReadonlySet<T>, member: T): Set<T> {

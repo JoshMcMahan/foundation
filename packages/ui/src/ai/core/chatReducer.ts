@@ -36,7 +36,6 @@ export interface ChatState {
 export type ChatAction =
   | { type: 'SET_CONVERSATIONS'; conversations: ConversationSummary[] }
   | { type: 'SET_CURRENT_CONVERSATION'; conversation: Conversation | null }
-  | { type: 'UPDATE_CURRENT_CONVERSATION_TITLE'; title: string }
   | { type: 'SET_PROVIDERS'; providers: ProviderInfo[] }
   | {
       type: 'SET_MODELS'
@@ -49,7 +48,6 @@ export type ChatAction =
   | { type: 'SET_LOADING_MODELS'; isLoadingModels: boolean }
   | { type: 'SET_MODELS_ERROR'; error: string | null }
   | { type: 'SET_STREAMING'; isStreaming: boolean; conversationId?: string }
-  | { type: 'SET_THINKING'; isThinking: boolean }
   | {
       type: 'APPEND_STREAMING_CONTENT'
       content: string
@@ -174,17 +172,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         thinkingStartTime: null,
         queuedMessages: [],
       }
-    case 'UPDATE_CURRENT_CONVERSATION_TITLE':
-      if (!state.currentConversation) {
-        return state
-      }
-      return {
-        ...state,
-        currentConversation: {
-          ...state.currentConversation,
-          title: action.title,
-        },
-      }
     case 'SET_PROVIDERS':
       return { ...state, providers: action.providers }
     case 'SET_MODELS':
@@ -211,12 +198,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         return state
       }
       return { ...state, isStreaming: action.isStreaming }
-    case 'SET_THINKING':
-      return {
-        ...state,
-        isThinking: action.isThinking,
-        thinkingStartTime: action.isThinking ? Date.now() : state.thinkingStartTime,
-      }
     case 'APPEND_STREAMING_CONTENT':
       // Only append streaming content if user is still viewing the same conversation
       if (state.currentConversation?.id !== action.conversationId) {

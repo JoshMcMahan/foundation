@@ -20,7 +20,7 @@ const ROW_PAD_FILE = 28
 /** Row pitch, with `space-y-0.5` folded in: absolutely positioned rows cannot use
  *  sibling margins. useTreePitchAudit warns if this drifts from the DOM. */
 export const TREE_ROW_HEIGHT = 30
-export const TREE_SKELETON_HEIGHT = 64
+const TREE_SKELETON_HEIGHT = 64
 
 function rowHeight(row: TreeRow): number {
   return row.kind === 'skeleton' ? TREE_SKELETON_HEIGHT : TREE_ROW_HEIGHT
@@ -331,9 +331,6 @@ function RowIcons({
   )
 }
 
-/** Sized by the slot, not by its contents: react-loading-skeleton wraps each bar
- *  in an inline span, so a bar occupies a line box taller than its `height` and
- *  the overflow would sit on top of the absolutely positioned row below. */
 /** Click-only, unlike the table's sentinel: the tree is a navigation aid, and
  *  growing it automatically as the user scrolls is what the cap exists to prevent. */
 function TreeMoreRow({
@@ -389,6 +386,9 @@ function TreeMoreRow({
   )
 }
 
+/** Sized by the slot, not by its contents: react-loading-skeleton wraps each bar
+ *  in an inline span, so a bar occupies a line box taller than its `height` and
+ *  the overflow would sit on top of the absolutely positioned row below. */
 function TreeSkeletonRow({ depth }: { depth: number }) {
   return (
     <div className="relative h-full overflow-hidden">
@@ -557,7 +557,6 @@ const TreeRowItem = memo(function TreeRowItem({
 }: TreeRowItemProps) {
   const { node, depth, isExpanded } = row
   const isDirectory = node.type === 'directory'
-  const isStorageNode = !!node.displayName && node.storageId
 
   const { dragActive, dragHandlers } = useSpringLoadedDrop({
     node,
@@ -590,7 +589,8 @@ const TreeRowItem = memo(function TreeRowItem({
     })
 
   const customIcon = getNodeIcon(node)
-  const label = isDirectory && isStorageNode && node.displayName ? node.displayName : node.name
+  // A storage root shows its display name; a user node's display name is its name.
+  const label = isDirectory && node.storageId && node.displayName ? node.displayName : node.name
 
   return (
     <div

@@ -182,7 +182,7 @@ export function FileRow({
             <div className="truncate text-[13px] font-medium leading-tight text-(--theme-app)">
               {node.displayName || node.name}
             </div>
-            {!isDir && node.contentType && (
+            {isTwoLineRow(node) && (
               <div className="truncate text-xs leading-tight text-(--theme-muted-text-color)">
                 {node.contentType}
               </div>

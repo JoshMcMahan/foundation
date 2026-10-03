@@ -72,7 +72,7 @@ export interface NotebookOutput {
   traceback?: string[]
 }
 
-export interface NotebookCell {
+interface NotebookCell {
   cell_type: string
   source: string | string[]
   outputs?: NotebookOutput[]

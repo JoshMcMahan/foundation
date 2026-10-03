@@ -77,14 +77,10 @@ export function BareModal({
         return
       }
       const focusable = panel.querySelectorAll<HTMLElement>(FOCUSABLE)
-      if (focusable.length === 0) {
-        e.preventDefault()
-        onPanelKeyDown?.(e)
-        return
-      }
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
       if (!first || !last) {
+        e.preventDefault()
         onPanelKeyDown?.(e)
         return
       }

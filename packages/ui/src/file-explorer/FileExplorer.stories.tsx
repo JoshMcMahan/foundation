@@ -67,9 +67,8 @@ function listEntries(directoryPath: string): TStorageObject[] {
   return out
 }
 
-function createMockClient(storageName: string): IFileExplorerClient {
+function createMockClient(): IFileExplorerClient {
   return {
-    getStorageName: () => storageName,
     getExpiresAt: () => new Date(Date.now() + 60 * 60 * 1000),
     async listDirectory(input: unknown) {
       await sleep(LATENCY_MS)
@@ -110,7 +109,6 @@ function createMockClient(storageName: string): IFileExplorerClient {
 }
 
 const mockProvider: IFileExplorerProvider = {
-  createClient: async (_org, _user, name) => createMockClient(name),
   convertDataToStorageObjects(data: unknown) {
     return listEntries((data as MockListInput).directoryPath)
   },
@@ -149,9 +147,9 @@ function ExplorerDemo() {
       <FileExplorerProvider>
         <FileExplorer
           storages={STORAGES}
-          getProviderAndClient={async (storage) => ({
+          getProviderAndClient={async () => ({
             provider: mockProvider,
-            client: createMockClient(storage.name),
+            client: createMockClient(),
           })}
           selectedPath={path}
           onPathChange={setPath}

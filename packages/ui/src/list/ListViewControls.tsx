@@ -210,7 +210,7 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
       {hasGrouping && (
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] text-(--theme-app)">{t.grouping}</span>
-          <GroupingDropdown view={view} />
+          <OptionDropdown options={view.groupBys} value={view.groupBy} onSelect={view.setGroupBy} />
         </div>
       )}
       {view.orderBys.length > 0 && (
@@ -230,7 +230,11 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
                 <ChevronDownIcon className="h-3 w-3" />
               )}
             </button>
-            <OrderingDropdown view={view} />
+            <OptionDropdown
+              options={view.orderBys}
+              value={view.orderBy}
+              onSelect={view.setOrderBy}
+            />
           </div>
         </div>
       )}
@@ -332,12 +336,21 @@ function useCloseOnOutsideClick(open: boolean, close: () => void) {
   return ref
 }
 
-function GroupingDropdown<T>({ view }: { view: ListView<T> }) {
+/** Single-choice picker for the Display menu's grouping and ordering rows. */
+function OptionDropdown({
+  options,
+  value,
+  onSelect,
+}: {
+  options: { value: string; label: string }[]
+  value: string
+  onSelect: (value: string) => void
+}) {
   const t = useStrings().list
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const ref = useCloseOnOutsideClick(open, close)
-  const current = view.groupBys.find((g) => g.value === view.groupBy)
+  const current = options.find((o) => o.value === value)
   return (
     <div ref={ref} className="relative">
       <button
@@ -350,62 +363,21 @@ function GroupingDropdown<T>({ view }: { view: ListView<T> }) {
       </button>
       {open && (
         <div className={cx('absolute right-0 top-full z-20 mt-1', FLYOUT)}>
-          {view.groupBys.map((g) => (
-            <button
-              key={g.value}
-              type="button"
-              onClick={() => {
-                view.setGroupBy(g.value)
-                setOpen(false)
-              }}
-              className={cx(
-                'flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[13px] hover:bg-(--theme-muted-panel-bg)',
-                view.groupBy === g.value ? 'text-(--theme-app)' : 'text-(--theme-muted-text-color)',
-              )}
-            >
-              {g.label}
-              {view.groupBy === g.value && <CheckIcon className="h-3 w-3" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function OrderingDropdown<T>({ view }: { view: ListView<T> }) {
-  const t = useStrings().list
-  const [open, setOpen] = useState(false)
-  const close = useCallback(() => setOpen(false), [])
-  const ref = useCloseOnOutsideClick(open, close)
-  const current = view.orderBys.find((o) => o.value === view.orderBy)
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md border border-(--theme-border) px-2 py-1 text-[12px] text-(--theme-app) hover:bg-(--theme-muted-panel-bg)"
-      >
-        {current?.label ?? t.none}
-        <ChevronDownIcon className="h-2.5 w-2.5 opacity-60" />
-      </button>
-      {open && (
-        <div className={cx('absolute right-0 top-full z-20 mt-1', FLYOUT)}>
-          {view.orderBys.map((o) => (
+          {options.map((o) => (
             <button
               key={o.value}
               type="button"
               onClick={() => {
-                view.setOrderBy(o.value)
+                onSelect(o.value)
                 setOpen(false)
               }}
               className={cx(
                 'flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[13px] hover:bg-(--theme-muted-panel-bg)',
-                view.orderBy === o.value ? 'text-(--theme-app)' : 'text-(--theme-muted-text-color)',
+                value === o.value ? 'text-(--theme-app)' : 'text-(--theme-muted-text-color)',
               )}
             >
               {o.label}
-              {view.orderBy === o.value && <CheckIcon className="h-3 w-3" />}
+              {value === o.value && <CheckIcon className="h-3 w-3" />}
             </button>
           ))}
         </div>

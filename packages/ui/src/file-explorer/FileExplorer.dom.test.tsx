@@ -77,7 +77,6 @@ function scriptedStorage(pages: Record<string, TStorageObject[][]> = PAGES) {
   const gateKey = (dir: string, cursor?: string) => `${dir}@${cursor ?? ''}`
 
   const client = {
-    getStorageName: () => 'bucket',
     getExpiresAt: () => new Date(Date.now() + 3_600_000),
     async listDirectory(input: unknown) {
       const { dir, cursor } = input as ListCall
@@ -120,7 +119,6 @@ function scriptedStorage(pages: Record<string, TStorageObject[][]> = PAGES) {
     uploadFile: async () => ({}),
   }
   const provider = {
-    createClient: null,
     listDirectoryInput: (_storage: TStorage, dirPath = '', page: TListPageRequest = {}) => ({
       dir: dirPath,
       cursor: page.cursor,

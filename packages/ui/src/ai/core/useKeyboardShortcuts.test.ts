@@ -1,37 +1,8 @@
-/** @jest-environment node */
-
-// Unit tests for useKeyboardShortcuts utility functions
-// Since hooks require React context, we test the core logic extraction
-
 import type { ChatMessage as Message } from '../types'
-
-// ==========================================
-// Helper Function Implementations (extracted from hook)
-// ==========================================
-
-// Extracts the last assistant message content
-function getLastAssistantMessage(messages: Message[]): string | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]!.role === 'assistant' && messages[i]!.content) {
-      return messages[i]!.content || null
-    }
-  }
-  return null
-}
-
-// Extracts the last user message
-function getLastUserMessage(messages: Message[]): Message | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]!.role === 'user') {
-      return messages[i]!
-    }
-  }
-  return null
-}
-
-// ==========================================
-// Tests
-// ==========================================
+import {
+  lastAssistantContent as getLastAssistantMessage,
+  lastUserMessage as getLastUserMessage,
+} from './useKeyboardShortcuts'
 
 describe('Keyboard Shortcuts Utilities', () => {
   const createMessage = (

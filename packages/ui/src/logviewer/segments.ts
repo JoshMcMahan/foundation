@@ -44,12 +44,12 @@ export function highlightSegments(segments: LogSegment[], searchTerm: string): L
     .join('')
     .toLowerCase()
   const needle = searchTerm.toLowerCase()
-  if (!haystack.includes(needle)) {
+  let found = haystack.indexOf(needle)
+  if (found === -1) {
     return segments
   }
 
   const matchStarts: number[] = []
-  let found = haystack.indexOf(needle)
   while (found !== -1) {
     matchStarts.push(found)
     found = haystack.indexOf(needle, found + needle.length)

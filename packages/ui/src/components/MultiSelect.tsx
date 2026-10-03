@@ -1,6 +1,6 @@
 import { Combobox, ComboboxButton, ComboboxOption, ComboboxOptions } from '@headlessui/react'
 import cx from 'classnames'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { usePopper } from 'react-popper'
 import {
   DropdownCaret,
@@ -34,6 +34,8 @@ type MultiSelectDropdownProps<T = string> = {
   /** Custom comparator for object values. Defaults to strict equality. */
   compareBy?: ((a: T, b: T) => boolean) | undefined
 }
+
+const strictEqual = (a: unknown, b: unknown) => a === b
 
 export default function MultiSelectDropdown<T = string>({
   options,
@@ -70,7 +72,7 @@ export default function MultiSelectDropdown<T = string>({
 
   const allOptions = useMemo(() => flattenOptions(options), [options])
 
-  const compare = compareBy ?? ((a: T, b: T) => a === b)
+  const compare = compareBy ?? strictEqual
 
   const selectedOptions = useMemo(() => {
     const result: IOptions<T>[] = []
@@ -92,8 +94,7 @@ export default function MultiSelectDropdown<T = string>({
     const result: (IOptions<T> | ICategory<T>)[] = []
     for (const opt of allOptions) {
       if (isCategory(opt)) {
-        const children = Array.isArray(opt.options) ? opt.options : []
-        const matchedChildren = children.filter((o) => filterOption(o, query))
+        const matchedChildren = opt.options.filter((o) => filterOption(o, query))
         if (matchedChildren.length > 0) {
           result.push(opt, ...matchedChildren)
         }
@@ -113,16 +114,6 @@ export default function MultiSelectDropdown<T = string>({
     }
   }, [selectedOptions, maxTagCount])
 
-  const handleChange = useCallback(
-    (newValues: T[]) => {
-      if (!Array.isArray(newValues)) {
-        return
-      }
-      onChange(newValues)
-    },
-    [onChange],
-  )
-
   const isDisabled = disabled || loading
 
   const isEmpty = filteredOptions.length === 0
@@ -130,7 +121,7 @@ export default function MultiSelectDropdown<T = string>({
     <Combobox
       multiple
       value={Array.isArray(value) ? value : []}
-      onChange={handleChange}
+      onChange={onChange}
       disabled={isDisabled}
       onClose={() => setQuery('')}
       by={compare}

@@ -5,7 +5,7 @@ import type { OpenMenu, RowMenuItem } from '../list/index'
 import { canPreview } from './FilePreview/previewType'
 import { FileRow, isTwoLineRow, ROW_HEIGHT_SHORT, ROW_HEIGHT_TALL } from './FileRow'
 import { getNodeIcon } from './helpers'
-import { LoadMoreRow } from './LoadMoreRow'
+import { LoadMoreRow, type LoadMoreState } from './LoadMoreRow'
 import type { TreeNode } from './lib/types'
 
 interface Span {
@@ -31,14 +31,8 @@ export function spacerHeights(
   }
 }
 
-interface VirtualRow {
-  index: number
-  start: number
-  size: number
-}
-
 interface FileRowsWindowProps {
-  items: readonly VirtualRow[]
+  items: readonly { index: number }[]
   padTop: number
   padBottom: number
   nodes: TreeNode[]
@@ -47,14 +41,7 @@ interface FileRowsWindowProps {
   activeIndex: number
   rowIdPrefix: string
   scrollEl: HTMLElement | null
-  loadMore?:
-    | {
-        loading: boolean
-        error: string | undefined
-        auto: boolean
-        onLoadMore: () => void
-      }
-    | undefined
+  loadMore?: LoadMoreState | undefined
   getItems: (node: TreeNode) => RowMenuItem[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void

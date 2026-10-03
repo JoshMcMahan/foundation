@@ -48,7 +48,7 @@ export const activityWords = [
   'Cooking',
 ] as const
 
-export function randomActivityWord(): string {
+function randomActivityWord(): string {
   return activityWords[Math.floor(Math.random() * activityWords.length)] ?? activityWords[0]
 }
 

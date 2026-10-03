@@ -4,7 +4,7 @@ import { CloseIcon, ThinkingIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import useDragDrop from '../core/useDragDrop'
-import type { ChatMessage as Message } from '../types'
+import type { AttachmentMeta, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
 import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
@@ -74,11 +74,7 @@ export default function ChatThread({ conversationId }: { conversationId: string 
   }, [conversationId, loadConversation, loadProviders])
 
   const handleSendMessage = useCallback(
-    (
-      content: string,
-      attachmentIds?: string[],
-      attachmentMeta?: Record<string, { filename: string; contentType: string; size: number }>,
-    ) => {
+    (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => {
       sendMessage(content, attachmentIds, undefined, attachmentMeta)
     },
     [sendMessage],

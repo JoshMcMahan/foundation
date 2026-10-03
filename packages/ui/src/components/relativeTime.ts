@@ -4,7 +4,7 @@ import { useStrings } from './Provider'
 
 const TICK_MS = 30000
 
-export function compactRelativeMinutes(
+function compactRelativeMinutes(
   minutes: number,
   t: {
     now: string

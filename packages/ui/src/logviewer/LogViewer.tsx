@@ -628,19 +628,9 @@ export function LogViewer({
     scrollAnimationRef.current = requestAnimationFrame(animate)
   }, [])
 
-  const scrollLogViewer = useCallback(
-    (location: 'top' | 'bottom', ref: React.RefObject<HTMLDivElement | null>) => {
-      if (!ref?.current) {
-        return
-      }
-      if (location === 'top') {
-        ref.current.scroll({ top: 0, left: 0, behavior: 'smooth' })
-      } else {
-        smoothScrollToBottom()
-      }
-    },
-    [smoothScrollToBottom],
-  )
+  const scrollToTop = () => {
+    logContainerRef.current?.scroll({ top: 0, left: 0, behavior: 'smooth' })
+  }
 
   // Detect user-initiated scroll direction and cancel programmatic animation.
   // Registered as native passive listeners so the browser can scroll
@@ -750,8 +740,7 @@ export function LogViewer({
       return
     }
 
-    const convertedLog = typeof log === 'object' ? JSON.stringify(log) : log.toString()
-    const lines = convertedLog.split('\n')
+    const lines = log.split('\n')
     const cleanedLines = lines[lines.length - 1] === '' ? lines.slice(0, -1) : lines
 
     // Check if this is just new lines appended (not a full refresh)
@@ -829,9 +818,8 @@ export function LogViewer({
 
       if (followRef.current) {
         // Only decrease visibleStart (render more lines above), never
-        // increase it — increasing would shift paddingTop and the
-        // synchronous scrollLogViewer call below would read a stale
-        // scrollHeight (before React commits the state update).
+        // increase it — increasing would shift paddingTop under the scroll
+        // to the bottom below.
         const minStart = Math.max(0, parsedLogLengthRef.current - visibleCount)
         setVisibleStart((prev) => Math.min(prev, minStart))
         setVisibleEnd(parsedLogLengthRef.current)
@@ -905,7 +893,7 @@ export function LogViewer({
       const visibleCount = Math.ceil(clientHeight / LINE_HEIGHT) + OVERSCAN * 2
       setVisibleStart(0)
       setVisibleEnd(Math.min(parsedLog.length, visibleCount))
-      scrollLogViewer('top', logContainerRef)
+      scrollToTop()
     } else {
       setVisibleStart(0)
       setVisibleEnd(50)
@@ -960,7 +948,7 @@ export function LogViewer({
                   type="button"
                   className="btn btn-neutral"
                   onClick={() => {
-                    scrollLogViewer('top', logContainerRef)
+                    scrollToTop()
                     updateFollow(false)
                   }}
                 >
@@ -1219,7 +1207,7 @@ export function LogViewer({
       )}
       {/* log viewer bottom bar (only with custom nodes) */}
       {(additionalBottomLeftBarComponents || additionalBottomRightBarComponents) && (
-        <div className={cx('flex theme-panel select-none items-center gap-x-2 p-2')}>
+        <div className="flex theme-panel select-none items-center gap-x-2 p-2">
           <div
             className={cx(
               'w-full flex flex-row gap-x-2 items-center',

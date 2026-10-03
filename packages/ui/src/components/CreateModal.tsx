@@ -625,7 +625,6 @@ function pushToggleRowOnce(
   }
 }
 
-// Extracted from CreateModalSelect to keep its cognitive complexity within lint bounds.
 function buildOptionNodes(
   options: CreateModalSelectOption[],
   query: string,

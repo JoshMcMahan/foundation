@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { Form, Formik } from 'formik'
 import FormikCustomInput from './FormikCustomInput'
 
@@ -125,6 +125,31 @@ describe('FormikCustomInput', () => {
 
       const input = screen.getByRole('spinbutton')
       expect(input).toHaveValue(42)
+    })
+  })
+
+  describe('lowercase', () => {
+    it('lowercases the value without a sanitize pattern', () => {
+      renderWithFormik({ name: 'testInput', type: 'string', lowercase: true })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'MyName' } })
+      expect(screen.getByRole('textbox')).toHaveValue('myname')
+    })
+
+    it('lowercases before applying the sanitize pattern', () => {
+      renderWithFormik({
+        name: 'testInput',
+        type: 'string',
+        lowercase: true,
+        sanitize: '[^a-z]',
+      })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'My-Name' } })
+      expect(screen.getByRole('textbox')).toHaveValue('myname')
+    })
+
+    it('leaves the case alone when lowercase is not set', () => {
+      renderWithFormik({ name: 'testInput', type: 'string' })
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'MyName' } })
+      expect(screen.getByRole('textbox')).toHaveValue('MyName')
     })
   })
 })

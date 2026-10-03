@@ -3,9 +3,7 @@ import Loader from '../../components/Loader'
 import type { WizardNavigationProps } from './types'
 
 export function WizardNavigation({
-  currentStep,
-  stepOrder,
-  canGoToNext,
+  isLastStep,
   canGoBack,
   isCurrentStepValid,
   nextLabel,
@@ -17,9 +15,6 @@ export function WizardNavigation({
 }: WizardNavigationProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const currentIndex = stepOrder.indexOf(currentStep)
-  const isLastStep = currentIndex === stepOrder.length - 1
 
   const handleNext = async () => {
     setIsLoading(true)
@@ -71,7 +66,7 @@ export function WizardNavigation({
             backgroundColor: 'var(--theme-app-bg)',
           }}
           onMouseEnter={(e) => {
-            if (!(!canGoBack || isLoading)) {
+            if (canGoBack && !isLoading) {
               e.currentTarget.style.backgroundColor = 'var(--theme-hover)'
             }
           }}
@@ -94,7 +89,7 @@ export function WizardNavigation({
               backgroundColor: 'var(--theme-element)',
             }}
             onMouseEnter={(e) => {
-              if (!(!isCurrentStepValid || isLoading)) {
+              if (isCurrentStepValid && !isLoading) {
                 e.currentTarget.style.filter = 'brightness(0.9)'
               }
             }}
@@ -110,13 +105,13 @@ export function WizardNavigation({
           <button
             type="button"
             onClick={handleNext}
-            disabled={!canGoToNext || isLoading}
+            disabled={isLoading}
             className="px-8 py-3 rounded-lg font-medium transition-all duration-200 text-white flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             style={{
               backgroundColor: 'var(--theme-element)',
             }}
             onMouseEnter={(e) => {
-              if (!(!canGoToNext || isLoading)) {
+              if (!isLoading) {
                 e.currentTarget.style.filter = 'brightness(0.9)'
               }
             }}

@@ -2,13 +2,7 @@ import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
 import cx from 'classnames'
 import { useEffect, useState } from 'react'
-import {
-  type BundledTheme,
-  type ControlsConfig,
-  defaultRehypePlugins,
-  type PluginConfig,
-  Streamdown,
-} from 'streamdown'
+import { type BundledTheme, defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
 import { useChatConfig } from '../core/config'
 import { rehypeCodeBreaks } from './codeBreaks'
 
@@ -67,10 +61,9 @@ const rehypePlugins = [...Object.values(defaultRehypePlugins), rehypeCodeBreaks]
 interface MarkdownProps {
   children: string
   isStreaming?: boolean
-  controls?: ControlsConfig
 }
 
-export default function Markdown({ children, isStreaming, controls }: MarkdownProps) {
+export default function Markdown({ children, isStreaming }: MarkdownProps) {
   const { markdownComponents } = useChatConfig()
   const needsMermaid = !!children && children.includes('```mermaid')
   const [, setMermaidReady] = useState(() => !!pluginsWithMermaid)
@@ -95,7 +88,6 @@ export default function Markdown({ children, isStreaming, controls }: MarkdownPr
         mode={isStreaming ? 'streaming' : 'static'}
         {...(isStreaming === undefined ? {} : { isAnimating: isStreaming })}
         {...(isStreaming ? ({ caret: 'block' } as const) : {})}
-        {...(controls === undefined ? {} : { controls })}
         plugins={plugins}
         rehypePlugins={rehypePlugins}
         shikiTheme={shikiTheme}

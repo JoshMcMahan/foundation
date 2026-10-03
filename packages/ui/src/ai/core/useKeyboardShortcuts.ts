@@ -4,6 +4,14 @@ import { isMac } from '../utils'
 import { useChat } from './ChatProvider'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from './events'
 
+export function lastAssistantContent(messages: ChatMessage[]): string | null {
+  return messages.findLast((m) => m.role === 'assistant' && m.content)?.content ?? null
+}
+
+export function lastUserMessage(messages: ChatMessage[]): ChatMessage | null {
+  return messages.findLast((m) => m.role === 'user') ?? null
+}
+
 interface UseKeyboardShortcutsOptions {
   enabled?: boolean
 }
@@ -20,16 +28,16 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   } = useChat()
 
   // Get last assistant message for copy functionality
-  const getLastAssistantMessage = useCallback(() => {
-    const messages = currentConversation?.messages || []
-    return messages.findLast((m) => m.role === 'assistant' && m.content)?.content ?? null
-  }, [currentConversation?.messages])
+  const getLastAssistantMessage = useCallback(
+    () => lastAssistantContent(currentConversation?.messages ?? []),
+    [currentConversation?.messages],
+  )
 
   // Get last user message for edit functionality
-  const getLastUserMessage = useCallback((): ChatMessage | null => {
-    const messages = currentConversation?.messages || []
-    return messages.findLast((m) => m.role === 'user') ?? null
-  }, [currentConversation?.messages])
+  const getLastUserMessage = useCallback(
+    () => lastUserMessage(currentConversation?.messages ?? []),
+    [currentConversation?.messages],
+  )
 
   const handleNewConversation = useCallback(() => {
     clearCurrentConversation()

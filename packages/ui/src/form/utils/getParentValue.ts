@@ -1,43 +1,32 @@
 import { checkShowIfObject } from './checkShowIfObject'
 import { getValueUsingPath } from './getValueUsingPath'
 
+/** `index` replaces a path's `[index]` placeholder when the field sits in a list row. */
 export function getParentValue(
   index: number | undefined,
-
   targetField: unknown,
   values: object,
-  dependentPath: string,
-
   field: { depends_on?: string | undefined },
 ) {
-  let parentValue: unknown
+  const atIndex = (path: string) =>
+    index === undefined ? path : path.replace('[index]', `[${index}]`)
+
   if (typeof targetField === 'object' && targetField !== null && !Array.isArray(targetField)) {
-    const valueList = checkShowIfObject(targetField, values, index)
-    //if all values are true, set parentValue to true, else false
-    parentValue = !valueList.includes(false)
-  } else if (field.depends_on) {
-    dependentPath = field.depends_on
-    // if index is present, replace [index] with the actual index
-    if (index !== undefined) {
-      dependentPath = field.depends_on.replace('[index]', `[${index}]`)
-    }
-    const dependsOnValue = getValueUsingPath(values, dependentPath)
+    // Every condition in the object has to hold.
+    return !checkShowIfObject(targetField, values, index).includes(false)
+  }
+  if (field.depends_on) {
+    const dependsOnValue = getValueUsingPath(values, atIndex(field.depends_on))
     const dependsOnText =
       dependsOnValue === null || dependsOnValue === undefined ? undefined : String(dependsOnValue)
     if (Array.isArray(targetField)) {
-      parentValue = targetField.includes(dependsOnValue) || targetField.includes(dependsOnText)
-    } else if (typeof targetField === 'string') {
-      parentValue = dependsOnText !== undefined && targetField.includes(dependsOnText)
-    } else {
-      parentValue = targetField === dependsOnValue
+      return targetField.includes(dependsOnValue) || targetField.includes(dependsOnText)
     }
-  } else {
-    //single show_if without depends_on
-    dependentPath = typeof targetField === 'string' ? targetField : ''
-    if (index !== undefined && typeof targetField === 'string') {
-      dependentPath = targetField.replace('[index]', `[${index}]`)
+    if (typeof targetField === 'string') {
+      return dependsOnText !== undefined && targetField.includes(dependsOnText)
     }
-    parentValue = getValueUsingPath(values, dependentPath)
+    return targetField === dependsOnValue
   }
-  return parentValue
+  // A bare show_if names the field it depends on.
+  return getValueUsingPath(values, typeof targetField === 'string' ? atIndex(targetField) : '')
 }

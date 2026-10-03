@@ -53,13 +53,9 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
   } = props
   // The form names every field before it renders one.
   const fieldName = field.name ?? ''
-  let parentValue = field.parentValue
   let options = (Array.isArray(field.options) && field.options) || []
-  if (field.depends_on) {
-    parentValue = field.depends_on
-    if (!Array.isArray(field.options)) {
-      options = field.options[parentValue] ?? []
-    }
+  if (field.depends_on && !Array.isArray(field.options)) {
+    options = field.options[field.depends_on] ?? []
   }
 
   // Handle secondaryField - if it's an array, join with comma or pass first one
@@ -85,12 +81,9 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
           ariaLabel={label}
           options={options}
           setFormDirty={props.setFormDirty}
-          parentValue={parentValue}
           onChange={onChange}
           secondaryField={secondaryField}
           disabled={disabled}
-          resetOnChange={field.resetOnChange ? fieldName : ''}
-          loading={false}
           autoselect={field.autoselect}
           allowCustomValue={field.allowCustomValue}
           customValueLabel={field.customValueLabel}
