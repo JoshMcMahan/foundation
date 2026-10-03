@@ -1,6 +1,6 @@
 {
   "name": "@parallelworks/ui",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "description": "React UI components: a theme contract, icons, primitives, lists, forms, a job graph, a code editor, a log viewer, a file explorer and an AI chat, each on its own subpath",
   "license": "Apache-2.0",
   "repository": {
