@@ -238,6 +238,12 @@ func TestRequestLog(t *testing.T) {
 	}
 }
 
+// shutdownClient sends each request on its own connection. A keep-alive
+// client can dial a spare connection that never carries a request, and
+// http.Server.Shutdown waits five seconds before it treats one as idle, which
+// outlasts these tests' timeouts.
+var shutdownClient = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+
 func TestServeShutsDownGracefully(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -256,7 +262,7 @@ func TestServeShutsDownGracefully(t *testing.T) {
 	var body string
 	for range 50 {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/", nil)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := shutdownClient.Do(req)
 		if err == nil {
 			b, _ := io.ReadAll(resp.Body)
 			_ = resp.Body.Close()
@@ -304,7 +310,7 @@ func TestServeZeroShutdownTimeoutLetsRequestsFinish(t *testing.T) {
 	}()
 	for i := range 50 {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/", nil)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := shutdownClient.Do(req)
 		if err == nil {
 			_ = resp.Body.Close()
 			break
@@ -318,7 +324,7 @@ func TestServeZeroShutdownTimeoutLetsRequestsFinish(t *testing.T) {
 	body := make(chan string, 1)
 	go func() {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/slow", nil)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := shutdownClient.Do(req)
 		if err != nil {
 			body <- err.Error()
 			return
