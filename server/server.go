@@ -180,14 +180,24 @@ type Listen struct {
 	Addr string
 	// TLSCertFile and TLSKeyFile enable in-process TLS. When unset, TLS is
 	// terminated in front of the service.
-	TLSCertFile     string
-	TLSKeyFile      string
+	TLSCertFile string
+	TLSKeyFile  string
+	// ShutdownTimeout is how long in-flight requests get to finish once ctx
+	// is canceled. Zero means DefaultShutdownTimeout: without a grace period
+	// every deploy would cut off whatever requests were running.
 	ShutdownTimeout time.Duration
 }
+
+// DefaultShutdownTimeout is the grace period Serve gives in-flight requests
+// when Listen.ShutdownTimeout is zero.
+const DefaultShutdownTimeout = 10 * time.Second
 
 // Serve runs an HTTP server until ctx is canceled, then shuts down
 // gracefully, giving in-flight requests up to ShutdownTimeout.
 func Serve(ctx context.Context, l Listen, handler http.Handler, logger *slog.Logger) error {
+	if l.ShutdownTimeout == 0 {
+		l.ShutdownTimeout = DefaultShutdownTimeout
+	}
 	srv := &http.Server{
 		Addr:              l.Addr,
 		Handler:           handler,

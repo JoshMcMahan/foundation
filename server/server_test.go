@@ -278,3 +278,71 @@ func TestServeShutsDownGracefully(t *testing.T) {
 		t.Fatal("Serve did not return after cancel")
 	}
 }
+
+func TestServeZeroShutdownTimeoutLetsRequestsFinish(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+
+	entered := make(chan struct{}, 1)
+	release := make(chan struct{})
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() {
+		done <- server.Serve(ctx, server.Listen{Addr: addr},
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/slow" {
+					entered <- struct{}{}
+					<-release
+				}
+				_, _ = io.WriteString(w, "up")
+			}),
+			slog.New(slog.DiscardHandler))
+	}()
+	for i := range 50 {
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			_ = resp.Body.Close()
+			break
+		}
+		if i == 49 {
+			t.Fatal("server never answered")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	body := make(chan string, 1)
+	go func() {
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/slow", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			body <- err.Error()
+			return
+		}
+		b, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		body <- string(b)
+	}()
+	<-entered
+	cancel()
+	// Shutdown is now waiting on the request; a zero grace period would have
+	// made Serve return before it finished.
+	time.Sleep(100 * time.Millisecond)
+	close(release)
+
+	if got := <-body; got != "up" {
+		t.Errorf("in-flight request got %q, want %q", got, "up")
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Serve = %v, want nil after shutdown", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Serve did not return after cancel")
+	}
+}
