@@ -175,6 +175,17 @@ export type PseudoUserKind = 'command-input' | 'shell-input' | 'compaction'
 
 // Streaming and optimistically-created messages don't have all fields yet, so
 // everything beyond the identity fields is optional.
+/** A saved paste a user message names by its placeholder. The model got an
+ *  inline paste as text; a larger one as its saved file. */
+export interface MessagePaste {
+  placeholder: string
+  id: number
+  lines: number
+  bytes: number
+  inline?: boolean | undefined
+  text?: string | undefined
+}
+
 export interface ChatMessage {
   id: string
   role: string
@@ -200,6 +211,8 @@ export interface ChatMessage {
   // Set by adapters (via classifyPseudoUserMessage) to hide recorded blocks
   // that arrive with role "user"; unset messages render normally.
   pseudo?: PseudoUserKind | null | undefined
+  // Placeholders in content that stand for saved pastes.
+  pastes?: MessagePaste[] | null | undefined
 }
 
 export interface Conversation {

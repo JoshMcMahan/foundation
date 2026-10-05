@@ -57,6 +57,12 @@ export interface ChatStrings {
     sendMessage: string
     filesAttached: (count: number) => string
   }
+  paste: {
+    title: string
+    lines: (count: number) => string
+    saving: string
+    remove: string
+  }
   thinking: {
     label: string
     ellipsis: string
@@ -231,6 +237,12 @@ export const defaultChatStrings: ChatStrings = {
     stopGenerating: 'Stop generating (Escape)',
     sendMessage: 'Send message (Enter)',
     filesAttached: (count) => `${count} file${count > 1 ? 's' : ''} attached`,
+  },
+  paste: {
+    title: 'Pasted text',
+    lines: (count) => `${count.toLocaleString()} line${count === 1 ? '' : 's'}`,
+    saving: 'Saving…',
+    remove: 'Remove paste',
   },
   thinking: {
     label: 'Thinking',

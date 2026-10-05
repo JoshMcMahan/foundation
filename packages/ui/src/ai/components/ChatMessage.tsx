@@ -22,6 +22,7 @@ import { chatProseClasses } from '../ui/prose'
 import { formatFileSize } from '../utils'
 import AgentMessageParts from './agent/AgentMessageParts'
 import BranchNavigator from './BranchNavigator'
+import { UserMessageText } from './PastedText'
 
 interface ChatMessageProps {
   message: Message
@@ -334,12 +335,12 @@ function ChatMessage({
                     className="flex-shrink-0 mb-0.5"
                   />
                   <div className="px-4 py-2.5 chat-ink rounded-2xl rounded-bl-md max-w-[70%] inline-block whitespace-pre-wrap text-base leading-6 bg-[color-mix(in_oklab,var(--theme-panel)_6%,transparent)]">
-                    {message.content}
+                    <UserMessageText content={message.content} pastes={message.pastes} />
                   </div>
                 </div>
               ) : isUser ? (
                 <div className="px-4 py-2.5 chat-ink rounded-2xl rounded-br-md max-w-[70%] inline-block whitespace-pre-wrap text-base leading-6 bg-[color-mix(in_oklab,var(--theme-panel)_6%,transparent)]">
-                  {message.content}
+                  <UserMessageText content={message.content} pastes={message.pastes} />
                 </div>
               ) : (
                 <div

@@ -14,11 +14,13 @@ import { ArrowUpIcon, AttachmentIcon, StopSolidIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import useDragDrop from '../core/useDragDrop'
-import type { AttachmentMeta } from '../types'
+import type { AttachmentMeta, MessagePaste } from '../types'
 import AttachmentUpload, { type Attachment, type AttachmentUploadHandle } from './AttachmentUpload'
 import { ComposerContext, ComposerSettings } from './ComposerChrome'
 import DragOverlay from './DragOverlay'
+import { PasteFileCard } from './PastedText'
 import { SlashMenu, type SlashMenuConfig, useSlashMenu } from './SlashMenu'
+import { type ComposerPastes, usePasteCards } from './usePasteCards'
 
 const DRAFT_STORAGE_PREFIX = 'aiChatDraft:'
 // Beyond this a draft is likely pasted bulk content; persisting it risks
@@ -58,7 +60,12 @@ function clearDraft(conversationId?: string) {
 }
 
 interface ChatInputProps {
-  onSend: (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => void
+  onSend: (
+    content: string,
+    attachmentIds?: string[],
+    attachmentMeta?: AttachmentMeta,
+    pastes?: MessagePaste[],
+  ) => void
   disabled?: boolean
   placeholder?: string | undefined
   conversationId?: string
@@ -85,6 +92,7 @@ interface ChatInputProps {
   /** A turn the chat provider does not run, such as an agent session's: it
    *  drives the Stop button in place of the provider's stream and queue. */
   turn?: { running: boolean; onStop: () => void; stopping?: boolean }
+  pastes?: ComposerPastes | undefined
 }
 
 export interface ChatInputHandle {
@@ -223,10 +231,21 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
     settingsLeft,
     settingsRight,
     turn,
+    pastes,
   },
   ref,
 ) {
   const [input, setInput] = useState(() => readDraft(conversationId))
+  const {
+    cards,
+    handleTextPaste,
+    removeCard,
+    takeCards,
+    blocking: pastesBlocking,
+  } = usePasteCards(pastes, input, (value) => {
+    setInput(value)
+    storeDraft(conversationId, value)
+  })
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showAttachments, setShowAttachments] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -271,8 +290,9 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
     if (previousConversationRef.current !== conversationId) {
       previousConversationRef.current = conversationId
       setInput(readDraft(conversationId))
+      takeCards()
     }
-  }, [conversationId])
+  }, [conversationId, takeCards])
 
   const setInputAndPersist = (value: string) => {
     setInput(value)
@@ -284,19 +304,19 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
   // A queue held across a cancelled or failed turn can be sent on its own.
   const canFlushQueue = !isStreaming && queuedCount > 0 && !disabled
   const { canSend, emphasised } = sendability({
-    hasText: input.trim().length > 0,
+    hasText: input.trim().length > 0 || cards.length > 0,
     canFlushQueue,
     allowEmpty,
     disabled,
     modelReady: isSelectedModelAvailable || !requireModel,
-    pendingCount,
+    pendingCount: pendingCount + (pastesBlocking ? 1 : 0),
   })
 
   const handleSubmit = () => {
     if (!canSend) {
       return
     }
-    if (!input.trim() && canFlushQueue) {
+    if (!input.trim() && cards.length === 0 && canFlushQueue) {
       flushQueuedMessages()
       return
     }
@@ -313,11 +333,17 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
         size: a.size,
       }
     }
-    onSend(
-      input.trim(),
-      attachmentIds.length > 0 ? attachmentIds : undefined,
-      attachmentIds.length > 0 ? meta : undefined,
-    )
+    const sentPastes = takeCards()
+    const content = [input.trim(), ...sentPastes.map((p) => p.placeholder)]
+      .filter(Boolean)
+      .join('\n\n')
+    const ids = attachmentIds.length > 0 ? attachmentIds : undefined
+    const attachmentMeta = attachmentIds.length > 0 ? meta : undefined
+    if (sentPastes.length > 0) {
+      onSend(content, ids, attachmentMeta, sentPastes)
+    } else {
+      onSend(content, ids, attachmentMeta)
+    }
     setInput('')
     clearDraft(conversationId)
     setAttachments([])
@@ -349,16 +375,16 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
   }, [])
 
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    if (!attachmentsAvailable) {
-      return
-    }
     const files = Array.from(e.clipboardData?.files ?? [])
-    if (files.length === 0) {
+    if (attachmentsAvailable && files.length > 0) {
+      e.preventDefault()
+      handleFilesDropped(files)
       return
     }
-    // Only intercept file pastes; text pastes keep default behavior.
-    e.preventDefault()
-    handleFilesDropped(files)
+    // Text too big to send inline becomes a card; the rest pastes as usual.
+    if (pastes && handleTextPaste(e.clipboardData.getData('text/plain'))) {
+      e.preventDefault()
+    }
   }
 
   const { isDragging, dragHandlers } = useDragDrop({
@@ -387,6 +413,22 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
         )}
 
         {context && <ComposerContext>{context}</ComposerContext>}
+
+        {cards.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2" data-testid="composer-pastes">
+            {cards.map((card) => (
+              <PasteFileCard
+                key={card.key}
+                id={card.paste?.id}
+                lines={card.lines}
+                bytes={card.bytes}
+                saving={!card.paste && !card.error}
+                error={card.error}
+                onRemove={() => removeCard(card.key)}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="relative">
           {slash && slashMenu.open && (

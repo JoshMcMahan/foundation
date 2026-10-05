@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { forwardRef, useImperativeHandle } from 'react'
 import ChatInput from './ChatInput'
+import type { PasteUploadResult } from './usePasteCards'
 
 vi.mock('../../icons', () => ({
   ArrowUpIcon: () => <span />,
   AttachmentIcon: () => <span />,
+  FileIcon: () => <span />,
+  RunningIcon: () => <span />,
   StopSolidIcon: () => <span />,
+  XIcon: () => <span />,
 }))
 
 const addFilesMock = vi.fn()
@@ -221,5 +225,144 @@ describe('ChatInput slash commands', () => {
     rerender(<ChatInput onSend={vi.fn()} slash={slash()} />)
     fireEvent.change(textarea(), { target: { value: '/status of the build?' } })
     expect(screen.queryByRole('listbox')).toBeNull()
+  })
+})
+
+describe('ChatInput large pastes', () => {
+  const big = 'pasted line\n'.repeat(200)
+  const saved = {
+    id: 3,
+    placeholder: '[Pasted text #3 +200 lines]',
+    lines: 200,
+    bytes: big.length,
+  }
+  const pasteText = (text: string) =>
+    fireEvent.paste(textarea(), {
+      clipboardData: { files: [], getData: () => text },
+    })
+
+  it('pastes text that fits inline into the box', () => {
+    const upload = vi.fn()
+    render(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 10_000, upload }} />)
+    expect(pasteText(big)).toBe(true)
+    expect(upload).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('paste-file-card')).toBeNull()
+  })
+
+  it('saves a paste too big to send inline and sends it by placeholder', async () => {
+    const upload = vi.fn().mockResolvedValue({ paste: saved })
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    expect(pasteText(big)).toBe(false)
+    expect(upload).toHaveBeenCalledWith(big)
+    expect(screen.getByText('Saving…')).toBeInTheDocument()
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(onSend).not.toHaveBeenCalled()
+
+    await screen.findByText('paste-3.txt')
+    expect(screen.getByText('200 lines · 2.34 KB')).toBeInTheDocument()
+    fireEvent.change(textarea(), { target: { value: 'summarize' } })
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(onSend).toHaveBeenCalledWith(`summarize\n\n${saved.placeholder}`, undefined, undefined, [
+      saved,
+    ])
+    expect(screen.queryByTestId('paste-file-card')).toBeNull()
+  })
+
+  it('puts the text in the box when the target cannot store pastes', async () => {
+    const upload = vi.fn().mockResolvedValue({ unsupported: true })
+    render(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    pasteText(big)
+    await vi.waitFor(() => expect(textarea().value).toBe(big))
+    expect(screen.queryByTestId('paste-file-card')).toBeNull()
+  })
+
+  it('shows an upload that never reached the machine as failed', async () => {
+    const upload = vi.fn().mockRejectedValue(new Error('Failed to fetch'))
+    render(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    pasteText(big)
+    expect(await screen.findByText('Failed to fetch')).toBeInTheDocument()
+  })
+
+  it('keeps a paste removed while saving out of the box', async () => {
+    let answer: (result: PasteUploadResult) => void = () => {}
+    const upload = vi.fn(
+      () =>
+        new Promise<PasteUploadResult>((resolve) => {
+          answer = resolve
+        }),
+    )
+    render(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    pasteText(big)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove paste' }))
+    await act(async () => answer({ unsupported: true }))
+    expect(textarea().value).toBe('')
+  })
+
+  it('leaves pastes as text until the limit is known, then cards the big ones', async () => {
+    const upload = vi.fn().mockResolvedValue({ paste: saved })
+    const { rerender } = render(
+      <ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: undefined, upload }} />,
+    )
+    expect(pasteText(big)).toBe(true)
+    fireEvent.change(textarea(), { target: { value: big } })
+    expect(upload).not.toHaveBeenCalled()
+
+    rerender(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    expect(textarea().value).toBe('')
+    expect(await screen.findByText('paste-3.txt')).toBeInTheDocument()
+  })
+
+  // At most 1MiB of text goes inline per message, however it is split.
+  const first = 'first\n'.repeat(100_000)
+  const second = 'second\n'.repeat(90_000)
+
+  it('cards a paste that would push the message past what goes inline', () => {
+    const upload = vi.fn().mockResolvedValue({ paste: saved })
+    render(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1 << 20, upload }} />)
+    expect(pasteText(first)).toBe(true)
+    fireEvent.change(textarea(), { target: { value: first } })
+    expect(pasteText(second)).toBe(false)
+    expect(upload).toHaveBeenCalledWith(second)
+    expect(textarea().value).toBe(first)
+  })
+
+  it('cards the latest pastes once the limit is known if together they are too much', async () => {
+    const upload = vi.fn().mockResolvedValue({ paste: saved })
+    const { rerender } = render(
+      <ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: undefined, upload }} />,
+    )
+    pasteText(first)
+    pasteText(second)
+    fireEvent.change(textarea(), { target: { value: `${first}${second}` } })
+
+    rerender(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1 << 20, upload }} />)
+    expect(textarea().value).toBe(first)
+    expect(upload).toHaveBeenCalledWith(second)
+    expect(await screen.findByText('paste-3.txt')).toBeInTheDocument()
+  })
+
+  // What the composer shows must match what the new model will be sent.
+  it('moves pastes between the box and cards when the model changes', async () => {
+    const upload = vi.fn().mockResolvedValue({ paste: saved })
+    const { rerender } = render(
+      <ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 10_000, upload }} />,
+    )
+    pasteText(big)
+    fireEvent.change(textarea(), { target: { value: `look: ${big}` } })
+
+    rerender(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    expect(textarea().value).toBe('look: ')
+    expect(upload).toHaveBeenCalledWith(big)
+    await screen.findByText('paste-3.txt')
+
+    rerender(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 10_000, upload }} />)
+    expect(screen.queryByTestId('paste-file-card')).toBeNull()
+    expect(textarea().value).toBe(`look: \n\n${big}`)
+
+    // Back to a card as the limit settles again: the saved paste is reused.
+    rerender(<ChatInput onSend={vi.fn()} pastes={{ inlineMaxBytes: 1000, upload }} />)
+    expect(await screen.findByText('paste-3.txt')).toBeInTheDocument()
+    expect(upload).toHaveBeenCalledTimes(1)
   })
 })
