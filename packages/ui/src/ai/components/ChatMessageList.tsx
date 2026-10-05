@@ -24,6 +24,8 @@ interface ChatMessageListProps {
   streamingMessage?: Message | null
   queuedMessages?: Message[]
   onRemoveQueued?: (id: string) => void
+  /** Which queued messages can still be taken back; all of them when unset. */
+  canRemoveQueued?: (id: string) => boolean
   editingMessageId?: string | null | undefined
   showAuthor?: boolean
   currentUsername?: string
@@ -56,6 +58,7 @@ export default function ChatMessageList({
   streamingMessage,
   queuedMessages,
   onRemoveQueued,
+  canRemoveQueued,
   editingMessageId,
   showAuthor,
   currentUsername,
@@ -440,7 +443,7 @@ export default function ChatMessageList({
               attachmentDownloadUrl={attachmentDownloadUrl}
               onOpenAttachment={onOpenAttachment}
             />
-            {onRemoveQueued && (
+            {onRemoveQueued && (canRemoveQueued?.(msg.id) ?? true) && (
               <button
                 type="button"
                 aria-label={strings.queue.remove}

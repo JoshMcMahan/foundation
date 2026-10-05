@@ -33,6 +33,7 @@ vi.mock('../ui/Markdown', () => ({
 vi.mock('../../icons', () => ({
   ThinkingIcon: () => null,
   ChevronRightIcon: () => null,
+  XIcon: () => null,
 }))
 
 vi.mock('./agent/AgentMessageParts', () => ({
@@ -273,5 +274,24 @@ describe('ChatMessageList working indicator', () => {
     )
 
     expect(queryByText('Thinking...')).not.toBeInTheDocument()
+  })
+})
+
+describe('ChatMessageList queued messages', () => {
+  it('offers removal only for the queued messages the host says can go', () => {
+    const onRemoveQueued = vi.fn()
+    const { getAllByRole } = render(
+      <ChatMessageList
+        messages={[]}
+        allMessages={[]}
+        queuedMessages={[createMockMessage({ id: 'steered' }), createMockMessage({ id: 'queued' })]}
+        onRemoveQueued={onRemoveQueued}
+        canRemoveQueued={(id) => id === 'queued'}
+      />,
+    )
+    const buttons = getAllByRole('button', { name: 'Remove queued message' })
+    expect(buttons).toHaveLength(1)
+    fireEvent.click(buttons[0]!)
+    expect(onRemoveQueued).toHaveBeenCalledWith('queued')
   })
 })
