@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.22.0](https://github.com/parallelworks/foundation/compare/ui-v0.21.2...ui-v0.22.0) (2026-10-06)
+
+
+### Features
+
+* **ui:** per-storage preview limits for the file explorer ([#99](https://github.com/parallelworks/foundation/issues/99)) ([a52f4d2](https://github.com/parallelworks/foundation/commit/a52f4d20c3029a524d6a97f8d1fd1cd379118d33))
+
+## [0.21.2](https://github.com/parallelworks/foundation/compare/ui-v0.21.1...ui-v0.21.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **ui:** the file explorer keeps a removed storage's folders, listings and selection ([#94](https://github.com/parallelworks/foundation/issues/94)) ([77fbf1b](https://github.com/parallelworks/foundation/commit/77fbf1b392c69e8e5957f06f07ba0432d837a70d))
+
 ## [0.21.1](https://github.com/parallelworks/foundation/compare/ui-v0.21.0...ui-v0.21.1) (2026-10-03)
 
 

@@ -11,6 +11,7 @@ import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatMessageList from './ChatMessageList'
 import { ComposerControls, ConnectToolsLink } from './ComposerChrome'
 import DragOverlay from './DragOverlay'
+import ProviderIssueBanner from './ProviderIssueBanner'
 import { ShareButton } from './ShareDialog'
 
 interface EditingState {
@@ -221,6 +222,7 @@ export default function ChatThread({ conversationId }: { conversationId: string 
         {/* Global drag overlay */}
         {isDragging && attachmentsAvailable && <DragOverlay className="rounded-lg" />}
         <BlockedGroupBanner />
+        <ProviderIssueBanner />
         <ChatMessageList
           messages={messages}
           allMessages={messages}

@@ -11,6 +11,7 @@ import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import { ComposerControls, ConnectToolsLink } from './ComposerChrome'
 import DragOverlay from './DragOverlay'
+import ProviderIssueBanner from './ProviderIssueBanner'
 
 function pickRandom<T>(arr: T[], count: number): T[] {
   const shuffled = [...arr].sort(() => Math.random() - 0.5)
@@ -113,6 +114,7 @@ export default function ChatEmptyState({
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         <BlockedGroupBanner />
+        <ProviderIssueBanner />
         {/* Session unreachable banner */}
         {sessionUnreachable && !sessionBannerDismissed && (
           <div className="mx-4 mt-2 flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">

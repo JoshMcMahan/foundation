@@ -1,4 +1,4 @@
-import type { TreeNode } from '../lib/types'
+import type { PreviewLimits, TreeNode, TStorage } from '../lib/types'
 import { getFileExtension } from '../lib/utils'
 
 export { getFileExtension }
@@ -30,6 +30,20 @@ export const CODE_PREVIEW_MAX_LINES = 5000
 
 /** Fetched into a blob URL to render inline regardless of served content type; falls back to download above this. */
 export const PDF_PREVIEW_MAX_BYTES = 50 * 1024 * 1024
+
+export const DEFAULT_PREVIEW_LIMITS: PreviewLimits = {
+  codeBytes: CODE_PREVIEW_MAX_BYTES,
+  codeLines: CODE_PREVIEW_MAX_LINES,
+  tabularBytes: TABULAR_PREVIEW_MAX_BYTES,
+  tabularRows: CSV_PREVIEW_MAX_ROWS,
+  imageBytes: Number.POSITIVE_INFINITY,
+  pdfBytes: PDF_PREVIEW_MAX_BYTES,
+  notebookBytes: TABULAR_PREVIEW_MAX_BYTES,
+}
+
+export function previewLimitsFor(storage: TStorage | null | undefined): PreviewLimits {
+  return { ...DEFAULT_PREVIEW_LIMITS, ...storage?.previewLimits }
+}
 
 const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif', 'svg'])
 const VIDEO_EXT = new Set(['mp4', 'mov', 'webm', 'm4v', 'ogv'])
@@ -86,6 +100,8 @@ const LANGUAGE_BY_EXT: Record<string, string> = {
   tex: 'plaintext',
   txt: 'plaintext',
   log: 'plaintext',
+  out: 'plaintext',
+  err: 'plaintext',
   gitignore: 'plaintext',
 }
 

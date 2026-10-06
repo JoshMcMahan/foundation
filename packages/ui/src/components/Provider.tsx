@@ -141,6 +141,7 @@ export interface UIStrings {
       errorTitle: string
       previewError: string
       tooLarge: string
+      tooLargeSize: (size: string) => string
       downloadInstead: string
       archiveTitle: string
       archiveMessage: string
@@ -641,6 +642,8 @@ const DEFAULTS: UIProviderValue = {
         errorTitle: "Couldn't load preview",
         previewError: "This file couldn't be previewed in your browser.",
         tooLarge: 'This file is too large to preview in the browser.',
+        tooLargeSize: (size: string) =>
+          `This file is ${size}, too large to preview in the browser.`,
         downloadInstead: 'Download instead',
         archiveTitle: "Can't preview archives",
         archiveMessage:

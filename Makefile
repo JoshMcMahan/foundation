@@ -9,6 +9,8 @@ GOTOOL := go tool -modfile=tools/go.mod
 PNPM := cd packages && pnpm
 # Keep local tests in the same mode as CI, even if go.mod's default changes.
 export GODEBUG := fips140=only
+# The dev module runs outside FIPS mode (see dev/go.mod), from its own directory.
+DEV_GO := env -u GODEBUG go -C dev
 
 .PHONY: help
 help: ## Show this help
@@ -18,7 +20,16 @@ help: ## Show this help
 check: check-go check-js test-ci ## Run all linters and tests
 
 .PHONY: check-go
-check-go: tidy-check lint-go vulncheck test-go ## Run all Go checks
+check-go: tidy-check lint-go vulncheck test-go check-dev ## Run all Go checks
+
+.PHONY: check-dev
+check-dev: ## Run the dev module's checks
+	$(DEV_GO) mod tidy -diff
+	$(DEV_GO) tool -modfile=../tools/go.mod golangci-lint run ./...
+	$(DEV_GO) tool -modfile=../tools/go.mod govulncheck ./...
+	$(DEV_GO) test -race -short -shuffle=on -cover ./...
+	@# The stack test runs without -race, which slows unpacking the Postgres binaries tenfold.
+	$(DEV_GO) test -run '^TestStack$$' ./...
 
 # The TypeScript commands each generate catalogs; sequence those writes while
 # allowing the Go checks to run alongside them with make -j.

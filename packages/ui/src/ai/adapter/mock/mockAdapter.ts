@@ -58,6 +58,7 @@ export function createMockChatAdapter(options?: { storageKey?: string }): ChatAd
             },
           ],
           unreachableSessions: [],
+          providerIssues: [],
         }
       },
     },

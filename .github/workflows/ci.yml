@@ -37,11 +37,26 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: setup-go
         with:
           go-version-file: go.mod
-          cache-dependency-path: |
-            go.sum
-            tools/go.sum
+          cache: false
+      - name: Locate Go caches
+        id: go-paths
+        run: |
+          echo "build=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+          echo "modules=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+      # setup-go restores only an exact key, so a dependency bump started lint
+      # and tests from nothing. A prefix match reuses most of the last build;
+      # Go trims stale builds itself, and each Go release starts a fresh cache.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: go-cache
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+          key: go-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum') }}
+          restore-keys: go-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-
       - name: Verify go.mod is tidy
         run: make tidy-check
       - name: Lint
@@ -55,6 +70,59 @@ jobs:
           GODEBUG: fips140=only
           FOUNDATION_TEST_DATABASE_URL: postgres://postgres@localhost:5432/foundation_test?sslmode=disable
         run: make test-go
+      # Only canary saves: PRs can read canary's caches, while caches saved by
+      # PRs are visible to no other branch and crowd canary's out of the quota.
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.event_name == 'push' && steps.go-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
+
+  # The dev module runs outside FIPS mode and starts its own Postgres and S3.
+  dev:
+    needs: actions
+    if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.dev != 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: setup-go
+        with:
+          go-version-file: dev/go.mod
+          cache: false
+      - name: Locate Go caches
+        id: go-paths
+        run: |
+          echo "build=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+          echo "modules=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+      # Same prefix-restore scheme as the go job. The Postgres binaries the
+      # test downloads are cached with it.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: go-cache
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+            ~/.embedded-postgres-go
+          key: go-dev-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('dev/go.sum', 'tools/go.sum') }}
+          restore-keys: go-dev-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-
+      - name: Check
+        run: make check-dev
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.event_name == 'push' && steps.go-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+            ~/.embedded-postgres-go
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
 
   js:
     needs: actions
@@ -70,19 +138,31 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: $/.github/actions/setup-pnpm
         with:
-          package_json_file: packages/package.json
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 26
-          cache: pnpm
-          cache-dependency-path: packages/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+          save-cache: true
       - name: Lint and typecheck
         run: make -C .. lint-js
       - name: Test
         run: make -C .. test-js
+
+  # Separate from js so that installing the packed tarball, which waits on the
+  # registry, runs alongside the tests instead of after them.
+  js-package:
+    needs: actions
+    if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.js != 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # checkout
+    defaults:
+      run:
+        working-directory: packages
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-pnpm
       - name: Build and verify packages
         # Installs the packed tarball into a fresh project, as a consumer would.
         run: make -C .. verify-build
@@ -97,6 +177,7 @@ jobs:
     outputs:
       go: ${{ steps.changes.outputs.go }}
       js: ${{ steps.changes.outputs.js }}
+      dev: ${{ steps.changes.outputs.dev }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

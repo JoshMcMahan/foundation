@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { CorsError } from '../lib/errors'
 import { fetchPreviewObject, loadPreviewContent, peekPreviewContent } from './previewCache'
-import { readCappedText, readTailText, tailRangeFor, tailWindow } from './readCappedBytes'
+import {
+  headRangeFor,
+  readCappedText,
+  readTailText,
+  tailRangeFor,
+  tailWindow,
+} from './readCappedBytes'
 
 interface TextResult {
   text: string | null
@@ -41,7 +47,7 @@ async function readObjectText(
   signal: AbortSignal,
   { url, cacheKey, maxBytes, maxLines, knownSize, tail }: ReadOptions,
 ): Promise<TextResult> {
-  const range = tail ? tailRangeFor(knownSize, maxBytes) : null
+  const range = tail ? tailRangeFor(knownSize, maxBytes) : headRangeFor(knownSize, maxBytes)
   const response = await fetchPreviewObject(
     cacheKey,
     url,
@@ -50,7 +56,7 @@ async function readObjectText(
   )
 
   let startsMidObject = false
-  if (range) {
+  if (tail && range) {
     const window = tailWindow(response, maxBytes)
     // Refuse rather than label the head of the object as its end.
     if (!window) {

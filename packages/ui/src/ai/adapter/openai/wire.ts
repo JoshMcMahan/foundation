@@ -1,5 +1,6 @@
 import type {
   ChatModel,
+  ProviderIssue,
   TokenUsage,
   ToolCall,
   ToolCallDelta,
@@ -53,4 +54,5 @@ export interface ModelsWireResponse {
   object: string
   data: ChatModel[] | null
   unreachable_sessions?: UnreachableSession[] | null
+  provider_issues?: ProviderIssue[] | null
 }

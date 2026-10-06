@@ -635,3 +635,40 @@ describe('FileExplorer selection across navigation', () => {
     expect(deleteButton()).toBeEnabled()
   })
 })
+
+describe('FileExplorer host extensions', () => {
+  it('adds host row actions to a folder menu and shows host content in the folder header', async () => {
+    const script = scriptedStorage()
+    const onSelect = vi.fn()
+    render(
+      <FileExplorerProvider>
+        <FileExplorer
+          getProviderAndClient={script.getProviderAndClient}
+          storages={[storage]}
+          selectedPath={FOLDER_A}
+          onPathChange={() => {}}
+          extraRowActions={(node, owner) =>
+            node.type === 'directory' && owner?.id === storage.id
+              ? [
+                  {
+                    key: 'host',
+                    label: 'Host action',
+                    icon: null,
+                    onSelect: () => onSelect(node.name),
+                  },
+                ]
+              : []
+          }
+          headerAccessory={(node) => <span>{`header for ${node.name}`}</span>}
+        />
+      </FileExplorerProvider>,
+    )
+    await act(async () => {})
+
+    expect(await screen.findByText('header for a')).toBeInTheDocument()
+
+    fireEvent.contextMenu(await findTreeItem('b'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Host action' }))
+    expect(onSelect).toHaveBeenCalledWith('b')
+  })
+})

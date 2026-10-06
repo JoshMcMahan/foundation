@@ -6,6 +6,7 @@ import type {
   Conversation,
   ConversationSummary,
   ProviderInfo,
+  ProviderIssue,
   ShareGroup,
   SharePermission,
   SharePermissionLevel,
@@ -30,6 +31,7 @@ export class ChatAdapterError extends Error {
 export interface ModelsList {
   models: ChatModel[]
   unreachableSessions: UnreachableSession[]
+  providerIssues: ProviderIssue[]
 }
 
 export interface StreamRequest {

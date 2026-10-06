@@ -56,6 +56,7 @@ export function createOpenAIChatAdapter(options: OpenAIChatAdapterOptions): Chat
           return {
             models: options.models.map((id) => staticModel(id, providerLabel)),
             unreachableSessions: [],
+            providerIssues: [],
           }
         }
         const res = await doFetch(`${baseUrl}/models`, { headers })
@@ -71,6 +72,7 @@ export function createOpenAIChatAdapter(options: OpenAIChatAdapterOptions): Chat
             ...m,
           })),
           unreachableSessions: [],
+          providerIssues: body.provider_issues ?? [],
         }
       },
     },

@@ -30,6 +30,14 @@ export interface ChatStrings {
     title: string
     message: string
   }
+  providerIssue: {
+    keyRejected: string
+    unreachable: string
+    keyRejectedHint: string
+    unreachableHint: string
+    bannerKeyRejected: (provider: string) => string
+    bannerUnreachable: (provider: string) => string
+  }
   queue: {
     remove: string
   }
@@ -213,6 +221,16 @@ export const defaultChatStrings: ChatStrings = {
   },
   queue: {
     remove: 'Remove queued message',
+  },
+  providerIssue: {
+    keyRejected: 'API key rejected',
+    unreachable: 'Endpoint unreachable',
+    keyRejectedHint:
+      'The provider rejected this connection\u2019s API key. Update the key in the provider settings to resume.',
+    unreachableHint:
+      'The provider\u2019s endpoint did not respond. Check the endpoint URL and network access.',
+    bannerKeyRejected: (provider) => `API key rejected for \u201c${provider}\u201d`,
+    bannerUnreachable: (provider) => `\u201c${provider}\u201d is unreachable`,
   },
   activity: {
     tokens: (input, output) => `↑${input} ↓${output} tokens`,

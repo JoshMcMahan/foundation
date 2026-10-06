@@ -159,6 +159,13 @@ export function lastLines(text: string, maxLines: number): { text: string; trunc
   return { text, truncated: false }
 }
 
+/** Range header for reading the start of an object that is larger than `maxBytes`,
+ * one byte past the cap so the read still sees the overflow and cuts on a line, as it
+ * does for an unranged body. The bytes past it never leave the server. */
+export function headRangeFor(knownSize: number | undefined, maxBytes: number): string | null {
+  return typeof knownSize === 'number' && knownSize > maxBytes + 1 ? `bytes=0-${maxBytes}` : null
+}
+
 /** Range header for reading the last `maxBytes` of an object. A closed range is a
  * CORS-safelisted header value, so it travels without a preflight that a bucket's
  * CORS rules may not answer; the suffix form is not safelisted, and is only reached

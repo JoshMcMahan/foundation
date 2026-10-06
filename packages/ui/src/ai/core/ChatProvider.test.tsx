@@ -78,6 +78,7 @@ function makeAdapter(overrides?: Partial<ChatAdapter>): ChatAdapter {
       list: vi.fn(async () => ({
         models: testModels,
         unreachableSessions: [],
+        providerIssues: [],
       })),
     },
     providers: {
@@ -126,6 +127,78 @@ async function renderProvider(adapter: ChatAdapter) {
 beforeEach(() => {
   vi.clearAllMocks()
   storage.clear()
+})
+
+describe('model auto-selection', () => {
+  it('skips models from a broken provider and exposes the issue', async () => {
+    const issue = {
+      provider: 'Acme',
+      provider_name: 'acme',
+      status: 'unauthorized' as const,
+      message: 'API key locked',
+    }
+    const adapter = makeAdapter({
+      models: {
+        list: vi.fn(async () => ({
+          models: [
+            {
+              id: 'org:acme/model-a',
+              object: 'model',
+              created: 0,
+              owned_by: 'acme',
+              provider_name: 'acme',
+              tool_calling_mode: 'native' as const,
+            },
+            {
+              id: 'tester:healthy/model-b',
+              object: 'model',
+              created: 0,
+              owned_by: 'healthy',
+              provider_name: 'healthy',
+              provider_owner: 'tester',
+              tool_calling_mode: 'native' as const,
+            },
+          ],
+          unreachableSessions: [],
+          providerIssues: [issue],
+        })),
+      },
+    })
+    await renderProvider(adapter)
+
+    expect(chat.selectedProvider).toBe('tester:healthy/model-b')
+    expect(chat.providerIssues).toEqual([issue])
+  })
+
+  it('falls back to the first model when every provider is broken', async () => {
+    const adapter = makeAdapter({
+      models: {
+        list: vi.fn(async () => ({
+          models: [
+            {
+              id: 'org:acme/model-a',
+              object: 'model',
+              created: 0,
+              owned_by: 'acme',
+              provider_name: 'acme',
+              tool_calling_mode: 'native' as const,
+            },
+          ],
+          unreachableSessions: [],
+          providerIssues: [
+            {
+              provider: 'Acme',
+              provider_name: 'acme',
+              status: 'unreachable' as const,
+            },
+          ],
+        })),
+      },
+    })
+    await renderProvider(adapter)
+
+    expect(chat.selectedProvider).toBe('org:acme/model-a')
+  })
 })
 
 describe('starting a new chat', () => {
@@ -531,6 +604,7 @@ describe('model selection', () => {
     const pendingModels = deferred<{
       models: ChatModel[]
       unreachableSessions: never[]
+      providerIssues: never[]
     }>()
     const adapter = makeAdapter()
     vi.mocked(adapter.models.list).mockImplementation(() => pendingModels.promise)
@@ -543,7 +617,11 @@ describe('model selection', () => {
     expect(chat.selectedProvider).toBe(GONE)
 
     await act(async () => {
-      pendingModels.resolve({ models: testModels, unreachableSessions: [] })
+      pendingModels.resolve({
+        models: testModels,
+        unreachableSessions: [],
+        providerIssues: [],
+      })
       await flush()
     })
 

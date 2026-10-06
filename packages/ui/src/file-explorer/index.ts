@@ -16,6 +16,7 @@ export type { TListPageRequest } from './lib/paging'
 export { LIST_PAGE_SIZE } from './lib/paging'
 export type {
   ExplorerObject,
+  PreviewLimits,
   TreeNode,
   TStorage,
   TStorageObject,

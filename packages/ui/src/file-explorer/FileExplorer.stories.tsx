@@ -26,6 +26,12 @@ const OBJECTS: Record<string, string> = {
   'results/run-001/metrics.json': '{ "loss": 0.021, "epochs": 12 }\n',
   'results/run-001/stdout.log': 'epoch 1/12 ... done\nepoch 12/12 ... done\n',
   'results/run-002/metrics.json': '{ "loss": 0.018, "epochs": 14 }\n',
+  'results/run-002/report.ipynb': JSON.stringify({
+    cells: [{ cell_type: 'markdown', metadata: {}, source: ['# Run 002 report'] }],
+    metadata: {},
+    nbformat: 4,
+    nbformat_minor: 5,
+  }),
 }
 
 const LATENCY_MS = 350
@@ -151,6 +157,7 @@ const COMPUTE_STORAGE: TStorage = {
   canUpload: false,
   canShare: false,
   canManageAccess: false,
+  previewLimits: { codeLines: 1, notebookBytes: 64 },
 }
 
 function ExplorerDemo({ storages = STORAGES }: { storages?: TStorage[] }) {
