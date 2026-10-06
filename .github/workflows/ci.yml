@@ -80,6 +80,50 @@ jobs:
             ${{ steps.go-paths.outputs.modules }}
           key: ${{ steps.go-cache.outputs.cache-primary-key }}
 
+  # The dev module runs outside FIPS mode and starts its own Postgres and S3.
+  dev:
+    needs: actions
+    if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.dev != 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: setup-go
+        with:
+          go-version-file: dev/go.mod
+          cache: false
+      - name: Locate Go caches
+        id: go-paths
+        run: |
+          echo "build=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+          echo "modules=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+      # Same prefix-restore scheme as the go job. The Postgres binaries the
+      # test downloads are cached with it.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: go-cache
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+            ~/.embedded-postgres-go
+          key: go-dev-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('dev/go.sum', 'tools/go.sum') }}
+          restore-keys: go-dev-${{ runner.os }}-${{ steps.setup-go.outputs.go-version }}-
+      - name: Check
+        run: make check-dev
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.event_name == 'push' && steps.go-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ${{ steps.go-paths.outputs.build }}
+            ${{ steps.go-paths.outputs.modules }}
+            ~/.embedded-postgres-go
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
+
   js:
     needs: actions
     if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.js != 'false') }}
@@ -133,6 +177,7 @@ jobs:
     outputs:
       go: ${{ steps.changes.outputs.go }}
       js: ${{ steps.changes.outputs.js }}
+      dev: ${{ steps.changes.outputs.dev }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

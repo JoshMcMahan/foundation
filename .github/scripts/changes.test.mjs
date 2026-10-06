@@ -7,21 +7,27 @@ import { test } from 'node:test'
 import { pathToFileURL } from 'node:url'
 import { affectedChecks, detectChanges } from './changes.mjs'
 
-const both = { go: true, js: true }
-const goOnly = { go: true, js: false }
-const jsOnly = { go: false, js: true }
+const none = { go: false, js: false, dev: false }
+const all = { go: true, js: true, dev: true }
+const both = { go: true, js: true, dev: false }
+const goOnly = { go: true, js: false, dev: false }
+const jsOnly = { go: false, js: true, dev: false }
+const devOnly = { go: false, js: false, dev: true }
+const goAndDev = { go: true, js: false, dev: true }
 
 for (const [path, expected] of [
-  ['README.md', { go: false, js: false }],
-  ['packages/ui/CHANGELOG.md', { go: false, js: false }],
-  ['LICENSE', { go: false, js: false }],
+  ['README.md', none],
+  ['packages/ui/CHANGELOG.md', none],
+  ['LICENSE', none],
   ['server/server.go', goOnly],
   ['spa/locale_test.go', goOnly],
   ['pgdb/testdata/migrations/00001_widgets.sql', goOnly],
   ['go.mod', goOnly],
   ['go.sum', goOnly],
-  ['tools/go.sum', goOnly],
-  ['.golangci.yml', goOnly],
+  ['tools/go.sum', goAndDev],
+  ['.golangci.yml', goAndDev],
+  ['dev/stack.go', devOnly],
+  ['dev/go.sum', devOnly],
   ['packages/ui/src/Table.tsx', jsOnly],
   ['packages/ui/.storybook/main.ts', jsOnly],
   ['packages/ui/src/Guide.mdx', jsOnly],
@@ -35,11 +41,11 @@ for (const [path, expected] of [
   ['problem/messages/en.json', both],
   ['packages/problem/src/index.ts', both],
   ['packages/problem/src/messages/en.json', both],
-  ['Makefile', both],
-  ['.github/workflows/ci.yml', both],
-  ['.github/scripts/changes.mjs', both],
-  ['.gitignore', both],
-  ['new-package/index.go', both],
+  ['Makefile', all],
+  ['.github/workflows/ci.yml', all],
+  ['.github/scripts/changes.mjs', all],
+  ['.gitignore', all],
+  ['new-package/index.go', all],
 ]) {
   test(`checks affected by ${path}`, () => {
     assert.deepEqual(affectedChecks([path]), expected)
@@ -133,15 +139,15 @@ test('documentation-only merges skip both language jobs', (t) => {
   repo.write('README.md', 'updated docs')
   repo.commit()
   repo.merge()
-  assert.deepEqual(detectChanges(repo.cwd), { go: false, js: false })
+  assert.deepEqual(detectChanges(repo.cwd), none)
 })
 
 test('non-merge checkouts and missing history run all checks', (t) => {
   const repo = repository(t)
-  assert.deepEqual(detectChanges(repo.cwd), both)
+  assert.deepEqual(detectChanges(repo.cwd), all)
   repo.write('README.md', 'updated docs')
   repo.commit()
   repo.merge()
-  assert.deepEqual(detectChanges(repo.shallow(1)), both)
-  assert.deepEqual(detectChanges(join(repo.cwd, 'missing')), both)
+  assert.deepEqual(detectChanges(repo.shallow(1)), all)
+  assert.deepEqual(detectChanges(join(repo.cwd, 'missing')), all)
 })
