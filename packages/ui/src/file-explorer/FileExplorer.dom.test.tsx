@@ -536,6 +536,72 @@ describe('FileExplorer storages prop', () => {
   })
 })
 
+describe('FileExplorer storage removal', () => {
+  const other: TStorage = { ...storage, id: 'storage-2', name: 'other', displayName: 'other' }
+  const OTHER_ROOT = `${other.user}/${other.name}/`
+
+  async function renderTwo(selectedPath: string) {
+    const bucket = scriptedStorage()
+    const otherBucket = scriptedStorage()
+    const onPathChange = vi.fn()
+    const view = (path: string, storages: TStorage[]) => (
+      <FileExplorerProvider>
+        <FileExplorer
+          getProviderAndClient={(s) =>
+            (s.id === other.id ? otherBucket : bucket).getProviderAndClient()
+          }
+          storages={storages}
+          selectedPath={path}
+          onPathChange={onPathChange}
+          showUserHierarchy
+          initialExpandedPaths={[`${storage.user}/`, OTHER_ROOT]}
+        />
+      </FileExplorerProvider>
+    )
+    const utils = render(view(selectedPath, [storage, other]))
+    await act(async () => {})
+    return {
+      bucket,
+      otherBucket,
+      onPathChange,
+      async rerender(path: string, storages: TStorage[]) {
+        utils.rerender(view(path, storages))
+        await act(async () => {})
+      },
+    }
+  }
+
+  it('moves a selection inside a removed storage to the user and leaves the other storage alone', async () => {
+    const { otherBucket, onPathChange, rerender } = await renderTwo(FOLDER_A)
+    await screen.findByLabelText('Select one.txt')
+    await waitFor(() => expect(otherBucket.callsFor('')).toHaveLength(1))
+
+    await rerender(FOLDER_A, [other])
+
+    expect(onPathChange).toHaveBeenCalledWith(`${storage.user}/`)
+    expect(treeItem('bucket')).toBeUndefined()
+    expect(await findTreeItem('other')).toBeInTheDocument()
+    expect(treeItem('a')).toBeDefined()
+    expect(otherBucket.callsFor('')).toHaveLength(1)
+  })
+
+  it('lists a storage that comes back afresh instead of showing what it held before', async () => {
+    const { bucket, otherBucket, rerender } = await renderTwo(FOLDER_A)
+    await screen.findByLabelText('Select one.txt')
+    expect(bucket.callsFor('')).toHaveLength(1)
+    expect(bucket.callsFor('a/')).toHaveLength(1)
+
+    await rerender(`${storage.user}/`, [other])
+    bucket.fixture.set('', [[dir('c/')]])
+    await rerender(`${storage.user}/`, [storage, other])
+
+    await waitFor(() => expect(bucket.callsFor('')).toHaveLength(2))
+    expect(await findTreeItem('c')).toBeInTheDocument()
+    expect(bucket.callsFor('a/')).toHaveLength(1)
+    expect(otherBucket.callsFor('')).toHaveLength(1)
+  })
+})
+
 describe('FileExplorer selection across navigation', () => {
   // Back/forward changes the path prop with none of the component's own handlers
   // running, so a checked set held over aimed delete at the folder just left.

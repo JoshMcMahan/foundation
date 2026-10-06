@@ -365,6 +365,54 @@ export default function FileExplorer({
   >(new Map())
   const [hasCorsIssue, setHasCorsIssue] = useState<Map<string, boolean>>(new Map())
 
+  const storageRoots = useMemo(() => {
+    const roots = new Map<string, string>()
+    for (const node of rootNodes) {
+      const candidates = node.root ? [node] : (parentToChildrenMap[node.path] ?? [])
+      for (const root of candidates) {
+        if (root.root && root.storageId) {
+          roots.set(root.storageId, root.path)
+        }
+      }
+    }
+    return roots
+  }, [rootNodes, parentToChildrenMap])
+  const seenStorageRootsRef = useRef(storageRoots)
+  const forgetStorages = useEffectEvent((removed: [string, string][]) => {
+    const isUnder = (path: string) =>
+      removed.some(([, root]) => path !== root && path.startsWith(root))
+    const isWithin = (path: string) => removed.some(([, root]) => path.startsWith(root))
+    for (const path of [...fetchesInFlightRef.current.keys()]) {
+      if (isWithin(path)) {
+        fetchesInFlightRef.current.delete(path)
+      }
+    }
+    setListings((prev) => removed.reduce((next, [, root]) => clearListingsUnder(next, root), prev))
+    setLoadingPaths((prev) => new Set([...prev].filter((path) => !isWithin(path))))
+    setExpandedPaths((prev) => new Set([...prev].filter((path) => !isUnder(path))))
+    const withoutRemoved = <T,>(prev: Map<string, T>) => {
+      const next = new Map(prev)
+      for (const [id] of removed) {
+        next.delete(id)
+      }
+      return next
+    }
+    updateConnectionIssuesMessage(withoutRemoved)
+    setHasCorsIssue(withoutRemoved)
+    const selectedRoot = removed.find(([, root]) => normalizedSelectedPath.startsWith(root))?.[1]
+    if (selectedRoot) {
+      const parent = getParentPath(selectedRoot)
+      setSelectedPath(treeMap[parent] ? parent : '')
+    }
+  })
+  useEffect(() => {
+    const removed = [...seenStorageRootsRef.current].filter(([id]) => !storageRoots.has(id))
+    seenStorageRootsRef.current = storageRoots
+    if (removed.length > 0) {
+      forgetStorages(removed)
+    }
+  }, [storageRoots])
+
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [createFolderTarget, setCreateFolderTarget] = useState<TreeNode | null>(null)
   const [pendingUpload, setPendingUpload] = useState<{

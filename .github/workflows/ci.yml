@@ -13,6 +13,9 @@ concurrency:
 
 jobs:
   go:
+    needs: actions
+    # Missing outputs or a failed audit must never suppress the required checks.
+    if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.go != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -36,21 +39,26 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
       - name: Verify go.mod is tidy
-        run: go mod tidy -diff && (cd tools && go mod tidy -diff)
+        run: make tidy-check
       - name: Lint
-        run: go tool -modfile=tools/go.mod golangci-lint run ./...
+        run: make lint-go
       - name: Check dependencies for known vulnerabilities
-        run: go tool -modfile=tools/go.mod govulncheck ./...
+        run: make vulncheck
       - name: Test
         env:
           # go.mod also sets fips140=only; the environment makes the mode explicit
           # so that a future go.mod edit cannot silently drop it.
           GODEBUG: fips140=only
           FOUNDATION_TEST_DATABASE_URL: postgres://postgres@localhost:5432/foundation_test?sslmode=disable
-        run: go test -race -shuffle=on -cover ./...
+        run: make test-go
 
   js:
+    needs: actions
+    if: ${{ !cancelled() && (needs.actions.result != 'success' || needs.actions.outputs.js != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -71,12 +79,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: packages/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      # Installs the packed tarball into a fresh project, as a consumer would.
-      - run: pnpm -F @parallelworks/ui verify:pack
+      - name: Lint and typecheck
+        run: make -C .. lint-js
+      - name: Test
+        run: make -C .. test-js
+      - name: Build and verify packages
+        # Installs the packed tarball into a fresh project, as a consumer would.
+        run: make -C .. verify-build
 
   # Audits the workflows themselves: unpinned actions, template injection,
   # excessive permissions, cache poisoning in release jobs.
@@ -85,10 +94,21 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read # checkout
+    outputs:
+      go: ${{ steps.changes.outputs.go }}
+      js: ${{ steps.changes.outputs.js }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A PR checkout is a merge commit; its first parent is the tested base.
+          fetch-depth: 2
+      - name: Test change detection
+        run: node --test .github/scripts/changes.test.mjs
+      - name: Detect affected checks
+        id: changes
+        if: github.event_name == 'pull_request'
+        run: node .github/scripts/changes.mjs >> "$GITHUB_OUTPUT"
       - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
           # Fail the job on findings instead of uploading SARIF, which would
