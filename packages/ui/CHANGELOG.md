@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/parallelworks/foundation/compare/ui-v0.21.2...ui-v0.22.0) (2026-10-06)
+
+
+### Features
+
+* **ui:** per-storage preview limits for the file explorer ([#99](https://github.com/parallelworks/foundation/issues/99)) ([a52f4d2](https://github.com/parallelworks/foundation/commit/a52f4d20c3029a524d6a97f8d1fd1cd379118d33))
+
 ## [0.21.2](https://github.com/parallelworks/foundation/compare/ui-v0.21.1...ui-v0.21.2) (2026-10-06)
 
 
