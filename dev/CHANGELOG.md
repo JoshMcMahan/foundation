@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/parallelworks/foundation/compare/dev/v0.2.0...dev/v0.3.0) (2026-10-06)
+
+
+### Features
+
+* **dev:** before commands prepare an app before anything starts ([#114](https://github.com/parallelworks/foundation/issues/114)) ([37ffe7f](https://github.com/parallelworks/foundation/commit/37ffe7f425a71dca486755d23e352386f5ff5c36))
+
 ## [0.2.0](https://github.com/parallelworks/foundation/compare/dev/v0.1.0...dev/v0.2.0) (2026-10-06)
 
 
