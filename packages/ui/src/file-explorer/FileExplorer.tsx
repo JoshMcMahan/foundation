@@ -169,6 +169,10 @@ interface IFileExplorerProps {
   /** A shell command that downloads files, offered beside the browser
    * download. An empty command hides it for that selection. */
   downloadCommand?: { label: string; build: (objects: ExplorerObject[]) => string } | undefined
+  /** Host actions for a row's menu, placed after the built-in ones and before Copy. */
+  extraRowActions?: ((node: TreeNode, storage: TStorage | undefined) => RowAction[]) | undefined
+  /** Host content for the selected folder's header, before its badges. */
+  headerAccessory?: ((node: TreeNode, storage: TStorage | undefined) => ReactNode) | undefined
 }
 
 const MAX_UPLOAD_SIZE = 80 * 1024 * 1024 * 1024 // 80 GB
@@ -257,6 +261,8 @@ export default function FileExplorer({
   onExpandedPathsChange,
   objectUris,
   downloadCommand,
+  extraRowActions,
+  headerAccessory,
 }: IFileExplorerProps) {
   const copySubmenu = useCopySubmenu()
   const t = useStrings().fileExplorer
@@ -1058,6 +1064,7 @@ export default function FileExplorer({
       }
     }
     actions.push(...getCreateFolderActions(node, storage))
+    actions.push(...(extraRowActions?.(node, storage) ?? []))
     // The storage root has no tree parent to refresh after a delete, and
     // deleting the whole storage is not a file-explorer operation — omit it.
     if (nodeCanWrite && !node.root) {
@@ -1602,6 +1609,7 @@ export default function FileExplorer({
                   {renderBreadcrumb()}
                   {/* Action Buttons */}
                   <div className="flex shrink-0 items-center gap-2">
+                    {headerAccessory?.(selectedNode, findStorage(selectedNode.storageId))}
                     {/* Without this the row count reads as the folder's real size. */}
                     {folderHasMore && (
                       <StatusBadge variant="muted" className="whitespace-nowrap tabular-nums">
