@@ -3,5 +3,5 @@
   "packages/problem": "0.3.0",
   "packages/i18n": "0.3.0",
   "packages/lint": "0.4.0",
-  "packages/ui": "0.21.1"
+  "packages/ui": "0.21.2"
 }

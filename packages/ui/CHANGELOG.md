@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/parallelworks/foundation/compare/ui-v0.21.1...ui-v0.21.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **ui:** the file explorer keeps a removed storage's folders, listings and selection ([#94](https://github.com/parallelworks/foundation/issues/94)) ([77fbf1b](https://github.com/parallelworks/foundation/commit/77fbf1b392c69e8e5957f06f07ba0432d837a70d))
+
 ## [0.21.1](https://github.com/parallelworks/foundation/compare/ui-v0.21.0...ui-v0.21.1) (2026-10-03)
 
 
