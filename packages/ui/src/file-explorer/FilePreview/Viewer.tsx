@@ -10,14 +10,10 @@ import type { TreeNode, TStorage } from '../lib/types'
 import { formatFileSize } from '../lib/utils'
 import { joinSource, type NotebookOutput, parseDelimited, parseNotebook, stripAnsi } from './parse'
 import {
-  CODE_PREVIEW_MAX_BYTES,
-  CODE_PREVIEW_MAX_LINES,
-  CSV_PREVIEW_MAX_ROWS,
   getFileExtension,
   getMonacoLanguage,
-  PDF_PREVIEW_MAX_BYTES,
   type PreviewKind,
-  TABULAR_PREVIEW_MAX_BYTES,
+  previewLimitsFor,
 } from './previewType'
 import { countLines } from './readCappedBytes'
 import { useObjectBlobUrl } from './useObjectBlobUrl'
@@ -121,7 +117,9 @@ export function FilePreviewViewer({
 
   switch (kind) {
     case 'image':
-      return <ImageView node={node} url={url} zoom={zoom} onDownload={onDownload} />
+      return (
+        <ImageView node={node} url={url} zoom={zoom} onDownload={onDownload} storage={storage} />
+      )
     case 'video':
       return <VideoView node={node} url={url} onDownload={onDownload} />
     case 'audio':
@@ -180,13 +178,18 @@ function ImageView({
   url,
   zoom,
   onDownload,
+  storage,
 }: {
   node: TreeNode
   url: string
   zoom: number
   onDownload?: (() => void) | undefined
+  storage: TStorage | null
 }) {
   const [hasError, setHasError] = useState(false)
+  if (typeof node.size === 'number' && node.size > previewLimitsFor(storage).imageBytes) {
+    return <TooLargeInline size={node.size} onDownload={onDownload} />
+  }
   if (hasError) {
     return <PreviewError onDownload={onDownload} />
   }
@@ -295,7 +298,7 @@ interface FetchViewProps {
 
 function PdfView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
   const { blobUrl, loading, error, tooLarge, corsError } = useObjectBlobUrl(url, {
-    maxBytes: PDF_PREVIEW_MAX_BYTES,
+    maxBytes: previewLimitsFor(storage).pdfBytes,
     knownSize: node.size,
     mimeType: 'application/pdf',
     cacheKey: node.path,
@@ -305,6 +308,7 @@ function PdfView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps
     <PreviewFetchState
       loading={loading}
       tooLarge={tooLarge}
+      size={node.size}
       error={error}
       corsError={corsError}
       storage={storage}
@@ -326,9 +330,10 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
   const t = useStrings().fileExplorer
   const language = getMonacoLanguage(node)
   const [tail, setTail] = useState(false)
+  const limits = previewLimitsFor(storage)
   const { text, loading, error, tooLarge, truncated, corsError } = useObjectText(url, {
-    maxBytes: CODE_PREVIEW_MAX_BYTES,
-    maxLines: CODE_PREVIEW_MAX_LINES,
+    maxBytes: limits.codeBytes,
+    maxLines: limits.codeLines,
     knownSize: node.size,
     cacheKey: node.path,
     tail,
@@ -381,6 +386,7 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
         <PreviewFetchState
           loading={loading}
           tooLarge={tooLarge}
+          size={node.size}
           error={error}
           corsError={corsError}
           storage={storage}
@@ -411,9 +417,10 @@ function toFencedCode(text: string, language: string): string {
 }
 
 function CsvView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
+  const limits = previewLimitsFor(storage)
   const { text, loading, error, tooLarge, corsError } = useObjectText(url, {
-    maxBytes: TABULAR_PREVIEW_MAX_BYTES,
-    maxLines: CSV_PREVIEW_MAX_ROWS + 2,
+    maxBytes: limits.tabularBytes,
+    maxLines: limits.tabularRows + 2,
     knownSize: node.size,
     cacheKey: node.path,
   })
@@ -422,25 +429,26 @@ function CsvView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps
     <PreviewFetchState
       loading={loading}
       tooLarge={tooLarge}
+      size={node.size}
       error={error}
       corsError={corsError}
       storage={storage}
       onCorsRetry={onCorsRetry}
       onDownload={onDownload}
     >
-      <CsvTable node={node} text={text ?? ''} />
+      <CsvTable node={node} text={text ?? ''} maxRows={limits.tabularRows} />
     </PreviewFetchState>
   )
 }
 
-function CsvTable({ node, text }: { node: TreeNode; text: string }) {
+function CsvTable({ node, text, maxRows }: { node: TreeNode; text: string; maxRows: number }) {
   const t = useStrings().fileExplorer
   const delimiter = getFileExtension(node.name) === 'tsv' ? '\t' : ','
-  const rows = parseDelimited(text, delimiter, CSV_PREVIEW_MAX_ROWS + 2)
+  const rows = parseDelimited(text, delimiter, maxRows + 2)
   const header = rows[0] ?? []
   const body = rows.slice(1)
-  const shown = body.slice(0, CSV_PREVIEW_MAX_ROWS)
-  const truncated = body.length > CSV_PREVIEW_MAX_ROWS
+  const shown = body.slice(0, maxRows)
+  const truncated = body.length > maxRows
   const columnCount = Math.max(header.length, ...shown.map((r) => r.length))
 
   return (
@@ -484,7 +492,7 @@ function CsvTable({ node, text }: { node: TreeNode; text: string }) {
 
 function NotebookView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
   const { text, loading, error, tooLarge, corsError } = useObjectText(url, {
-    maxBytes: TABULAR_PREVIEW_MAX_BYTES,
+    maxBytes: previewLimitsFor(storage).notebookBytes,
     knownSize: node.size,
     cacheKey: node.path,
   })
@@ -493,6 +501,7 @@ function NotebookView({ node, url, onDownload, storage, onCorsRetry }: FetchView
     <PreviewFetchState
       loading={loading}
       tooLarge={tooLarge}
+      size={node.size}
       error={error}
       corsError={corsError}
       storage={storage}
@@ -613,6 +622,7 @@ function PreviewLoading() {
 function PreviewFetchState({
   loading,
   tooLarge,
+  size,
   error,
   corsError,
   storage,
@@ -622,6 +632,7 @@ function PreviewFetchState({
 }: {
   loading: boolean
   tooLarge: boolean
+  size?: number | undefined
   error: string | null
   corsError: boolean
   storage: TStorage | null
@@ -640,7 +651,7 @@ function PreviewFetchState({
     )
   }
   if (tooLarge) {
-    return <TooLargeInline onDownload={onDownload} />
+    return <TooLargeInline size={size} onDownload={onDownload} />
   }
   if (error) {
     return <PreviewError onDownload={onDownload} />
@@ -681,12 +692,22 @@ function NotPreviewable({
   )
 }
 
-function TooLargeInline({ onDownload }: { onDownload?: (() => void) | undefined }) {
+function TooLargeInline({
+  size,
+  onDownload,
+}: {
+  size?: number | undefined
+  onDownload?: (() => void) | undefined
+}) {
   const t = useStrings().fileExplorer
   return (
     <div className="flex h-full items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-3 text-center">
-        <div className="text-sm theme-muted-text">{t.preview.tooLarge}</div>
+        <div className="text-sm theme-muted-text">
+          {typeof size === 'number'
+            ? t.preview.tooLargeSize(formatFileSize(size))
+            : t.preview.tooLarge}
+        </div>
         {onDownload && (
           <button type="button" className="btn btn-info cursor-pointer" onClick={onDownload}>
             <DownloadFileIcon className="mr-2 h-4 w-4" />
