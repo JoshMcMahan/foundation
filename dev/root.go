@@ -1,8 +1,10 @@
 package dev
 
 import (
+	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/lmittmann/tint"
@@ -21,18 +23,34 @@ func NewRootCmd(cfg Config) *cobra.Command {
 		return slog.New(tint.NewTextHandler(os.Stderr, &tint.Options{
 			Level:      level,
 			TimeFormat: time.TimeOnly,
-			NoColor:    os.Getenv("NO_COLOR") != "",
+			NoColor:    !colorEnabled(os.Stderr),
 		}))
 	}
 
 	root := &cobra.Command{
-		Use:           "dev",
-		Short:         "Run local development tasks",
+		Use:   "dev",
+		Short: "Run the stack, the server with hot reload, and the app's processes",
+		Long: "With no command, dev runs everything dev.json describes until interrupted: " +
+			"Postgres and S3, the server (rebuilt when its sources change) and the processes beside it.",
+		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return Up(cmd.Context(), cfg, logger(), os.Stdout)
+		},
 	}
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "log debug output")
-	root.PersistentFlags().StringVar(&cfg.Dir, "dir", cfg.Dir, "directory for Postgres data and S3 objects")
+	var dir string
+	root.PersistentFlags().StringVar(&dir, "dir", "", "directory for Postgres data and S3 objects (default .devstack beside dev.json)")
+	root.PersistentPreRunE = func(*cobra.Command, []string) error {
+		if dir == "" {
+			return nil
+		}
+		// A flag is relative to where it was typed, not to the root.
+		abs, err := filepath.Abs(dir)
+		cfg.Dir = abs
+		return err
+	}
 
 	root.AddCommand(&cobra.Command{
 		Use:   "stack",
@@ -70,4 +88,15 @@ func NewRootCmd(cfg Config) *cobra.Command {
 		},
 	})
 	return root
+}
+
+// colorEnabled follows the NO_COLOR convention, and keeps escape codes out
+// of files and pipes.
+func colorEnabled(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok || os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	info, err := f.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }

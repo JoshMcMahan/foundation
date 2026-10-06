@@ -8,6 +8,7 @@ go 1.27.0
 
 require (
 	github.com/fergusstrange/embedded-postgres v1.34.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/lmittmann/tint v1.2.1
@@ -24,6 +25,7 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 )

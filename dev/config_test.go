@@ -39,14 +39,21 @@ func TestFindConfigMissing(t *testing.T) {
 	}
 }
 
-func TestLoadConfigResolvesDirAgainstFile(t *testing.T) {
+func TestLoadConfigResolvesPathsAgainstFile(t *testing.T) {
 	root := t.TempDir()
-	cfg, err := LoadConfig(writeConfig(t, root, `{"name":"app","postgres":{},"s3":{"addr":"127.0.0.1:9000"}}`))
+	loaded, err := LoadConfig(writeConfig(t, root, `{"name":"app","postgres":{},"s3":{"addr":"127.0.0.1:9000"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loaded.withDefaults()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := filepath.Join(root, ".devstack"); cfg.Dir != want {
 		t.Errorf("Dir = %s, want %s", cfg.Dir, want)
+	}
+	if want := filepath.Join(root, ".env"); cfg.Env != want {
+		t.Errorf("Env = %s, want %s", cfg.Env, want)
 	}
 	if cfg.Postgres == nil || cfg.S3 == nil || cfg.S3.Addr != "127.0.0.1:9000" {
 		t.Errorf("services = %+v, %+v", cfg.Postgres, cfg.S3)
@@ -56,6 +63,17 @@ func TestLoadConfigResolvesDirAgainstFile(t *testing.T) {
 func TestLoadConfigRejectsUnknownKeys(t *testing.T) {
 	if _, err := LoadConfig(writeConfig(t, t.TempDir(), `{"name":"app","postgress":{}}`)); err == nil {
 		t.Error("LoadConfig accepted a misspelled key")
+	}
+}
+
+func TestConfigRequiresCommands(t *testing.T) {
+	for name, cfg := range map[string]Config{
+		"server without run":   {Name: "app", Server: &Server{Build: []string{"go", "build"}}},
+		"process without name": {Name: "app", Processes: []Process{{Run: []string{"vite"}}}},
+	} {
+		if _, err := cfg.withDefaults(); err == nil {
+			t.Errorf("%s accepted", name)
+		}
 	}
 }
 
