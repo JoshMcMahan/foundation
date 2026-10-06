@@ -79,9 +79,12 @@ func TestConfigRequiresCommands(t *testing.T) {
 
 func TestConfigRejectsUnsafeName(t *testing.T) {
 	for _, name := range []string{"", "App", "my-app", "1app", "a b"} {
-		if _, err := (Config{Name: name}).withDefaults(); err == nil {
+		if _, err := (Config{Name: name, Postgres: &Postgres{}}).withDefaults(); err == nil {
 			t.Errorf("name %q accepted", name)
 		}
+	}
+	if _, err := (Config{}).withDefaults(); err != nil {
+		t.Errorf("a config without Postgres needs no name: %v", err)
 	}
 }
 

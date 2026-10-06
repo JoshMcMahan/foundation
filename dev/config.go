@@ -19,7 +19,8 @@ const ConfigFile = "dev.json"
 
 // Config describes an app's local stack.
 type Config struct {
-	// Name is the Postgres user, password and database. Tests get Name_test.
+	// Name is the Postgres user, password and database, and required with
+	// Postgres. Tests get Name_test.
 	Name string `json:"name"`
 	// Root is the directory commands run in and relative paths resolve
 	// against. LoadConfig sets it to the config file's directory; otherwise
@@ -37,6 +38,9 @@ type Config struct {
 	S3 *S3 `json:"s3,omitempty"`
 	// Server is built, run, and rebuilt when its sources change.
 	Server *Server `json:"server,omitempty"`
+	// Before lists commands run once, in order, before anything starts, such
+	// as generating files the server embeds. A failure stops dev.
+	Before [][]string `json:"before,omitempty"`
 	// Processes run alongside the server, such as a Vite dev server.
 	Processes []Process `json:"processes,omitempty"`
 }
@@ -123,7 +127,7 @@ func LoadConfig(path string) (Config, error) {
 }
 
 func (c Config) withDefaults() (Config, error) {
-	if !validName.MatchString(c.Name) {
+	if (c.Postgres != nil || c.Name != "") && !validName.MatchString(c.Name) {
 		return c, fmt.Errorf("name %q must be lowercase letters, digits and underscores, starting with a letter", c.Name)
 	}
 	root, err := filepath.Abs(c.Root)
@@ -151,6 +155,11 @@ func (c Config) withDefaults() (Config, error) {
 			srv.Extensions = []string{".go"}
 		}
 		c.Server = &srv
+	}
+	for i, cmd := range c.Before {
+		if len(cmd) == 0 {
+			return c, fmt.Errorf("before %d is empty", i)
+		}
 	}
 	for i, p := range c.Processes {
 		if p.Name == "" || len(p.Run) == 0 {

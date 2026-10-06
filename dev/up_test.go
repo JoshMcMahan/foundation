@@ -3,6 +3,7 @@ package dev
 import (
 	"bytes"
 	"context"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -228,5 +229,54 @@ func TestUpRebuildsTheServerAndRunsProcesses(t *testing.T) {
 	serverPID, _ = strconv.Atoi(strings.TrimSpace(string(pid)))
 	if alive(serverPID) {
 		t.Error("the server outlived Up")
+	}
+}
+
+func TestUpRunsBeforeCommandsFirst(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{
+		Root: root,
+		Before: [][]string{
+			{"sh", "-c", "echo first > order"},
+			{"sh", "-c", "echo second >> order; echo prepared"},
+		},
+		Processes: []Process{{Name: "web", Run: []string{"sh", "-c", `cat order; exec sleep 300`}}},
+	}
+
+	var out syncBuffer
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() {
+		_ = Up(ctx, cfg, slog.New(slog.DiscardHandler), &out)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	eventually(t, "the process to see both steps", func() bool {
+		return strings.Contains(out.String(), "web    │ first\nweb    │ second")
+	})
+	if !strings.Contains(out.String(), "before │ prepared") {
+		t.Errorf("before's output is missing its prefix:\n%s", out.String())
+	}
+}
+
+func TestUpStopsWhenABeforeCommandFails(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{
+		Root:      root,
+		Before:    [][]string{{"sh", "-c", "exit 3"}, {"touch", "ran"}},
+		Processes: []Process{{Name: "web", Run: []string{"touch", "started"}}},
+	}
+	err := Up(t.Context(), cfg, slog.New(slog.DiscardHandler), io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "exit status 3") {
+		t.Fatalf("Up error = %v, want the failed command's status", err)
+	}
+	for _, f := range []string{"ran", "started"} {
+		if _, err := os.Stat(filepath.Join(root, f)); err == nil {
+			t.Errorf("%s ran after a before command failed", f)
+		}
 	}
 }

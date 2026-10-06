@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,6 +26,10 @@ func Up(ctx context.Context, cfg Config, logger *slog.Logger, out io.Writer) err
 	if err != nil {
 		return err
 	}
+	o := newOutputs(out, cfg)
+	if err := runBefore(ctx, cfg, env, o.writer("before")); err != nil || ctx.Err() != nil {
+		return err
+	}
 
 	if cfg.Postgres != nil || cfg.S3 != nil {
 		stack, err := StartStack(ctx, cfg, logger)
@@ -38,7 +43,6 @@ func Up(ctx context.Context, cfg Config, logger *slog.Logger, out io.Writer) err
 		}()
 	}
 
-	o := newOutputs(out, cfg)
 	var wg sync.WaitGroup
 	for _, p := range cfg.Processes {
 		w := o.writer(p.Name)
@@ -49,6 +53,27 @@ func Up(ctx context.Context, cfg Config, logger *slog.Logger, out io.Writer) err
 		wg.Go(func() { runServer(ctx, cfg, env, w, logger) })
 	}
 	wg.Wait()
+	return nil
+}
+
+func runBefore(ctx context.Context, cfg Config, env []string, out *lineWriter) error {
+	defer out.flush()
+	for _, cmd := range cfg.Before {
+		p, err := startProc(cmd, cfg.Root, env, out)
+		if err != nil {
+			return fmt.Errorf("before: %w", err)
+		}
+		select {
+		case <-ctx.Done():
+			p.stop()
+			return nil
+		case <-p.done:
+			p.drain()
+		}
+		if p.err != nil {
+			return fmt.Errorf("before: %s: %s", strings.Join(cmd, " "), exitStatus(p.err))
+		}
+	}
 	return nil
 }
 
