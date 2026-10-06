@@ -140,13 +140,27 @@ const STORAGE: TStorage = {
 }
 const STORAGES = [STORAGE]
 
-function ExplorerDemo() {
+const COMPUTE_STORAGE: TStorage = {
+  id: 'demo-compute',
+  name: 'cluster~demo-cluster',
+  displayName: 'demo-cluster',
+  user: 'storybook',
+  type: 'cluster',
+  csp: 'compute',
+  canWrite: false,
+  canUpload: false,
+  canShare: false,
+  canManageAccess: false,
+}
+
+function ExplorerDemo({ storages = STORAGES }: { storages?: TStorage[] }) {
   const [path, setPath] = useState('')
   return (
     <div style={{ height: 560 }}>
       <FileExplorerProvider>
         <FileExplorer
-          storages={STORAGES}
+          storages={storages}
+          showUserHierarchy
           getProviderAndClient={async () => ({
             provider: mockProvider,
             client: createMockClient(),
@@ -161,4 +175,20 @@ function ExplorerDemo() {
 
 export const Default: StoryObj = {
   render: () => <ExplorerDemo />,
+}
+
+function ComputeRootDemo() {
+  const [connected, setConnected] = useState(true)
+  return (
+    <div>
+      <button type="button" onClick={() => setConnected((c) => !c)}>
+        {connected ? 'Disconnect demo-cluster' : 'Reconnect demo-cluster'}
+      </button>
+      <ExplorerDemo storages={connected ? [STORAGE, COMPUTE_STORAGE] : STORAGES} />
+    </div>
+  )
+}
+
+export const ComputeRoot: StoryObj = {
+  render: () => <ComputeRootDemo />,
 }
