@@ -3,7 +3,18 @@
 - Every change goes through a pull request against `canary`. PR titles follow
   [Conventional Commits](https://www.conventionalcommits.org) (`feat(problem): ...`,
   `fix(problem): ...`); PRs are squash-merged, so the title becomes the commit.
-- `make check` must pass: golangci-lint, govulncheck, Biome, TypeScript, and the Go and TypeScript tests.
+- `make check` must pass: module tidiness, golangci-lint, govulncheck, Biome,
+  TypeScript, Go and TypeScript tests, CI change detection, and npm build verification.
+
+Use `make -j2 check` to run independent checks concurrently. `make verify-build`
+builds the npm packages, lints their package metadata, and verifies the packed UI
+package in a fresh consumer project. Go tests use FIPS mode and the race detector;
+set `FOUNDATION_TEST_DATABASE_URL` to include the database integration tests.
+
+Pull requests run the Go and JavaScript jobs only when their inputs change.
+Changes to the shared problem contract or repository-wide build configuration run
+both jobs; documentation-only changes still run the workflow audit. Pushes to
+`canary` always run the full suite. `make test-ci` checks the change detection rules.
 
 ## Adding a shared rule or code
 

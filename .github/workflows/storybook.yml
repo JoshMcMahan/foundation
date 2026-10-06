@@ -4,7 +4,13 @@ name: Storybook
 on:
   push:
     branches: [canary]
-    paths: ['packages/ui/**', 'packages/pnpm-lock.yaml', '.github/workflows/storybook.yml']
+    paths:
+      - 'packages/ui/**'
+      - 'packages/package.json'
+      - 'packages/pnpm-lock.yaml'
+      - 'packages/pnpm-workspace.yaml'
+      - 'packages/tsconfig.base.json'
+      - '.github/workflows/storybook.yml'
   workflow_dispatch:
 
 permissions: {}
