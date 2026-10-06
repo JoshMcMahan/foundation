@@ -11,14 +11,7 @@
         "packages",
         "dev",
         "tools",
-        ".github",
-        ".golangci.yml",
-        "Makefile",
-        "README.md",
-        "AGENTS.md",
-        "CLAUDE.md",
-        "CONTRIBUTING.md",
-        "SECURITY.md"
+        ".github"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },

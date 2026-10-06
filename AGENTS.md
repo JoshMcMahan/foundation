@@ -8,6 +8,7 @@ Shared Go and npm packages for building web services. The repository is public.
 - `problem` depends only on the Go standard library and `golang.org/x/text`, whose CLDR plural and number rules keep it in step with `Intl` on the TypeScript side. Integrations (huma, go-ruleguard) go in subpackages.
 - The Go and TypeScript halves of a contract change in the same PR. Codes, rules and params are API contract: never rename one.
 - Every shared message exists in every language in `packages/problem/src/messages/`. `go test ./problem` fails otherwise.
+- Release-please excludes only directories from the root Go module, so a change to a root-level file (`README.md`, `Makefile`, this file) releases it. Document `dev` and the npm packages in their own READMEs.
 - Comments explain why, not what. PR titles follow Conventional Commits; PRs target `canary`.
 
 `make check` runs every linter and test.
