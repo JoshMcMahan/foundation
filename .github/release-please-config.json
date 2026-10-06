@@ -19,7 +19,8 @@
       "release-type": "go",
       "component": "dev",
       "tag-separator": "/",
-      "pull-request-title-pattern": "chore(dev): release ${version}"
+      "pull-request-title-pattern": "chore(dev): release ${version}",
+      "initial-version": "0.1.0"
     },
     "packages/problem": {
       "release-type": "node",
