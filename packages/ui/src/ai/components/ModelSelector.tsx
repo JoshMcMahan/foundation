@@ -1,10 +1,19 @@
 import cx from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CheckIcon, ChevronDownIcon, CloudIcon, CogIcon, RetryIcon, RobotIcon } from '../../icons'
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CloudIcon,
+  CogIcon,
+  RetryIcon,
+  RobotIcon,
+  WarningTriangleIcon,
+} from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
-import type { ChatModel, CspKind } from '../types'
+import { providerIssueFor } from '../core/providerIssues'
+import type { ChatModel, CspKind, ProviderIssue } from '../types'
 
 /** The search field plus the list's max-h-80, so the flip decision matches
  *  what renders. */
@@ -79,6 +88,7 @@ export default function ModelSelector({
     providers,
     models,
     unreachableSessions,
+    providerIssues,
     selectedProvider,
     setSelectedProvider,
     isLoadingModels,
@@ -87,7 +97,7 @@ export default function ModelSelector({
     refreshModels,
     currentUser,
   } = useChat()
-  const { extraLinks, LinkComponent } = useChatConfig()
+  const { extraLinks, LinkComponent, strings } = useChatConfig()
 
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -191,6 +201,21 @@ export default function ModelSelector({
   const selectedModelInfo = models.find((m) => m.id === selectedProvider)
   const selectedModelName = selectedModelInfo ? getModelLabel(selectedModelInfo) : null
   const selectedProviderName = selectedModelInfo?.provider || null
+
+  const issueLabel = (issue: ProviderIssue) =>
+    issue.status === 'unauthorized'
+      ? strings.providerIssue.keyRejected
+      : strings.providerIssue.unreachable
+
+  const issueDetail = (issue: ProviderIssue) =>
+    issue.message ||
+    (issue.status === 'unauthorized'
+      ? strings.providerIssue.keyRejectedHint
+      : strings.providerIssue.unreachableHint)
+
+  const issueSummary = (issue: ProviderIssue) => `${issueLabel(issue)} \u2014 ${issueDetail(issue)}`
+
+  const selectedModelIssue = providerIssueFor(providerIssues, selectedModelInfo)
 
   const handleSelect = (modelId: string) => {
     setSelectedProvider(modelId)
@@ -327,6 +352,12 @@ export default function ModelSelector({
                 >
                   {selectedProviderName}
                 </span>
+              )}
+              {selectedModelIssue && (
+                <WarningTriangleIcon
+                  title={issueSummary(selectedModelIssue)}
+                  className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 self-center"
+                />
               )}
             </div>
           ) : (
@@ -475,6 +506,7 @@ export default function ModelSelector({
                     providerInfo && extraLinks.providerSettings
                       ? extraLinks.providerSettings(providerInfo.user, providerInfo.name)
                       : null
+                  const issue = providerIssueFor(providerIssues, providerModels[0])
 
                   return (
                     <div key={providerKey}>
@@ -491,6 +523,11 @@ export default function ModelSelector({
                           <span className="text-xs theme-muted-text">
                             ({providerModels.length})
                           </span>
+                          {issue && (
+                            <span className="text-[10px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                              {issueLabel(issue)}
+                            </span>
+                          )}
                           {isOwner && settingsHref && (
                             <LinkComponent
                               target={{
@@ -506,6 +543,14 @@ export default function ModelSelector({
                           )}
                         </div>
                       </div>
+                      {issue && (
+                        <div className="flex items-start gap-2 px-4 py-1.5 bg-amber-500/5">
+                          <WarningTriangleIcon className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs text-amber-600 line-clamp-2">
+                            {issueDetail(issue)}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Models */}
                       {providerModels.map((model) => {
@@ -516,10 +561,18 @@ export default function ModelSelector({
                           <button
                             key={model.id}
                             type="button"
-                            onClick={() => handleSelect(model.id)}
+                            aria-disabled={!!issue}
+                            title={issue ? issueSummary(issue) : undefined}
+                            onClick={() => {
+                              if (!issue) {
+                                handleSelect(model.id)
+                              }
+                            }}
                             className={cx(
-                              'w-full flex items-center gap-3 px-4 py-2 text-left cursor-pointer',
-                              'hover:bg-blue-500/5 transition-colors',
+                              'w-full flex items-center gap-3 px-4 py-2 text-left',
+                              issue
+                                ? 'opacity-40 cursor-not-allowed'
+                                : 'cursor-pointer hover:bg-blue-500/5 transition-colors',
                               isSelected && 'bg-blue-500/10',
                             )}
                           >

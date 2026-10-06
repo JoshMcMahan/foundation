@@ -253,6 +253,17 @@ export interface UnreachableSession {
   owner: string
 }
 
+// A connection the gateway reported as unable to serve inference. Field names
+// follow the /v1/models wire extension; models match on provider_name +
+// provider_owner (empty owner = organization connection).
+export interface ProviderIssue {
+  provider: string
+  provider_name: string
+  provider_owner?: string
+  status: 'unauthorized' | 'unreachable'
+  message?: string
+}
+
 export type CspKind = 'openai' | 'anthropic' | 'google' | 'azure' | 'aws' | 'other'
 
 export interface ProviderInfo {

@@ -6,6 +6,7 @@ import type {
   ConversationSummary,
   MessagePart,
   ProviderInfo,
+  ProviderIssue,
   UnreachableSession,
 } from '../types'
 import { applyPartDelta } from './parts'
@@ -16,6 +17,7 @@ export interface ChatState {
   providers: ProviderInfo[]
   models: ChatModel[]
   unreachableSessions: UnreachableSession[]
+  providerIssues: ProviderIssue[]
   selectedProvider: string | null
   selectedAllocation: string | null
   isLoading: boolean
@@ -41,6 +43,7 @@ export type ChatAction =
       type: 'SET_MODELS'
       models: ChatModel[]
       unreachableSessions?: UnreachableSession[]
+      providerIssues?: ProviderIssue[]
     }
   | { type: 'SET_SELECTED_PROVIDER'; providerId: string | null }
   | { type: 'SET_SELECTED_ALLOCATION'; allocation: string | null }
@@ -95,6 +98,7 @@ export const initialState: ChatState = {
   providers: [],
   models: [],
   unreachableSessions: [],
+  providerIssues: [],
   selectedProvider: null,
   selectedAllocation: null,
   isLoading: false,
@@ -179,6 +183,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         models: action.models,
         unreachableSessions: action.unreachableSessions || [],
+        providerIssues: action.providerIssues || [],
         hasLoadedModels: true,
         modelsError: null,
       }

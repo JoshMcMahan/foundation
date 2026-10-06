@@ -14,6 +14,7 @@ import type {
   Conversation,
   ConversationSummary,
   MessagePart,
+  ProviderIssue,
   SubagentPart,
   TodoItem,
   ToolCallPart,
@@ -205,6 +206,7 @@ export function makeStaticAdapter(options?: {
   summaries?: ConversationSummary[]
   streaming?: StreamingKnobs
   sharing?: boolean
+  providerIssues?: ProviderIssue[]
   attachments?: boolean
 }): ChatAdapter {
   const conversations = options?.conversations ?? [makeConversation()]
@@ -259,10 +261,13 @@ export function makeStaticAdapter(options?: {
               created: 0,
               owned_by: 'story',
               provider: 'Story Provider',
+              provider_name: 'story',
+              provider_owner: 'mock',
               tool_calling_mode: 'none' as const,
             },
           ],
           unreachableSessions: [],
+          providerIssues: options?.providerIssues ?? [],
         }
       },
     },

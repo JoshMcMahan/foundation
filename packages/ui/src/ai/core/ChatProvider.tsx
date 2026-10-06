@@ -23,11 +23,13 @@ import type {
   ChatMessage as Message,
   MessagePart,
   ProviderInfo,
+  ProviderIssue,
   UnreachableSession,
 } from '../types'
 import { chatReducer, initialState } from './chatReducer'
 import { ChatConfigProvider, type ChatUIConfig, resolveChatConfig } from './config'
 import { applyPartDelta, finalizeParts } from './parts'
+import { providerIssueFor } from './providerIssues'
 import { useSSEStream } from './useSSEStream'
 
 const SELECTED_MODEL_STORAGE_KEY = 'aiChatSelectedModel'
@@ -150,6 +152,7 @@ interface ChatContextValue {
   providers: ProviderInfo[]
   models: ChatModel[]
   unreachableSessions: UnreachableSession[]
+  providerIssues: ProviderIssue[]
   selectedProvider: string | null
   isSelectedModelAvailable: boolean
   selectedAllocation: string | null
@@ -383,17 +386,26 @@ export function ChatProvider({
     }
     dispatch({ type: 'SET_LOADING_MODELS', isLoadingModels: true })
     try {
-      const { models, unreachableSessions } = await adapter.models.list()
+      const { models, unreachableSessions, providerIssues } = await adapter.models.list()
       dispatch({
         type: 'SET_MODELS',
         models,
         unreachableSessions,
+        providerIssues,
       })
       hasLoadedModelsRef.current = true
       const current = selectedProviderRef.current
       const stored = readStoredModel()
       const offers = (id: string | null) => !!id && models.some((m) => m.id === id)
-      const resolved = offers(current) ? current : offers(stored) ? stored : (models[0]?.id ?? null)
+      // A remembered choice survives even when its provider is broken (the
+      // banner explains); only the fresh default skips broken providers.
+      const firstUsable =
+        models.find((model) => !providerIssueFor(providerIssues, model)) ?? models[0]
+      const resolved = offers(current)
+        ? current
+        : offers(stored)
+          ? stored
+          : (firstUsable?.id ?? null)
       if (resolved !== current) {
         dispatch({
           type: 'SET_SELECTED_PROVIDER',
@@ -1106,6 +1118,7 @@ export function ChatProvider({
       providers: state.providers,
       models: state.models,
       unreachableSessions: state.unreachableSessions,
+      providerIssues: state.providerIssues,
       selectedProvider: state.selectedProvider,
       isSelectedModelAvailable,
       selectedAllocation: state.selectedAllocation,
