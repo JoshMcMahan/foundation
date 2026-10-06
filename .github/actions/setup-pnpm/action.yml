@@ -1,0 +1,51 @@
+name: Set up pnpm
+description: Installs the npm workspace's dependencies, starting from canary's pnpm cache.
+
+inputs:
+  save-cache:
+    description: Save the cache on a push to canary that missed it. Set it in one job only.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      with:
+        package_json_file: packages/package.json
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 26
+        package-manager-cache: false
+    - name: Locate the pnpm store
+      id: pnpm-paths
+      shell: bash
+      working-directory: packages
+      run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+    # Besides the store, the cache carries pnpm's record of the lockfiles that
+    # passed the supply-chain policies, which pnpm trusts only for an identical
+    # lockfile and policy. Any other lockfile is checked against the registry.
+    - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      id: pnpm-cache
+      with:
+        path: |
+          ${{ steps.pnpm-paths.outputs.store }}
+          ${{ runner.temp }}/pnpm-cache/lockfile-verified.jsonl
+        key: pnpm-${{ runner.os }}-${{ hashFiles('packages/pnpm-lock.yaml') }}
+        # A PR starts from canary's store for an older lockfile. Canary itself
+        # installs a new lockfile from scratch, so the store it saves holds
+        # only what that lockfile installs instead of every version since.
+        restore-keys: ${{ github.event_name == 'pull_request' && format('pnpm-{0}-', runner.os) || '' }}
+    - shell: bash
+      working-directory: packages
+      run: pnpm install --frozen-lockfile
+      env:
+        pnpm_config_cache_dir: ${{ runner.temp }}/pnpm-cache
+    # Only canary saves: PRs can read canary's caches, while caches saved by
+    # PRs are visible to no other branch and crowd canary's out of the quota.
+    - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      if: inputs.save-cache == 'true' && github.event_name == 'push' && steps.pnpm-cache.outputs.cache-hit != 'true'
+      with:
+        path: |
+          ${{ steps.pnpm-paths.outputs.store }}
+          ${{ runner.temp }}/pnpm-cache/lockfile-verified.jsonl
+        key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
