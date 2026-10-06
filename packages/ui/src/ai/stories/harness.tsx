@@ -5,8 +5,10 @@
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import type { ChatAdapter, StreamHandlers } from '../adapter/types'
+import type { ComposerPastes, PasteUploadResult } from '../components/usePasteCards'
 import { ChatProvider } from '../core/ChatProvider'
 import type { ChatLinkProps, ChatUIConfig } from '../core/config'
+import { countLines, utf8Bytes } from '../core/pastes'
 import type {
   ApprovalPart,
   ChatMessage,
@@ -14,6 +16,7 @@ import type {
   Conversation,
   ConversationSummary,
   MessagePart,
+  MessagePaste,
   ProviderIssue,
   SubagentPart,
   TodoItem,
@@ -563,6 +566,75 @@ export function makeHybridTurn(): ChatMessage {
       },
     ],
   })
+}
+
+// ---- Paste factories -------------------------------------------------------
+
+export function makePasteText(lines: number): string {
+  return Array.from(
+    { length: lines },
+    (_, i) =>
+      `[${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}] step ${i + 1}/${lines}: compiling internal/server/server.go`,
+  ).join('\n')
+}
+
+export function makePaste(id: number, text: string, options?: { inline?: boolean }): MessagePaste {
+  const lines = countLines(text)
+  return {
+    placeholder: `[Pasted text #${id} +${lines} lines]`,
+    id,
+    lines,
+    bytes: utf8Bytes(text),
+    ...(options?.inline ? { inline: true, text } : {}),
+  }
+}
+
+/** How the stub host answers an upload; `saving` never answers. */
+export type PasteOutcome = 'saved' | 'saving' | 'refused' | 'unsupported'
+
+// A host that stores pastes. Uploads answer with `outcomes` in order, and
+// save once those run out.
+export function makeComposerPastes(options?: {
+  inlineMaxBytes?: number
+  uploadMs?: number
+  outcomes?: PasteOutcome[]
+}): ComposerPastes {
+  const outcomes = [...(options?.outcomes ?? [])]
+  let saved = 0
+  return {
+    inlineMaxBytes: options?.inlineMaxBytes ?? 4_000,
+    async upload(text): Promise<PasteUploadResult> {
+      const outcome = outcomes.shift() ?? 'saved'
+      if (outcome === 'saving') {
+        return new Promise(() => {})
+      }
+      await sleep(options?.uploadMs ?? 600)
+      if (outcome === 'refused') {
+        return {
+          error: 'The session stopped before the paste was saved. Start it and paste again.',
+        }
+      }
+      if (outcome === 'unsupported') {
+        return { unsupported: true }
+      }
+      saved += 1
+      return { paste: makePaste(saved, text) }
+    },
+  }
+}
+
+// Untrusted paste events never insert text, so only pastes the composer turns
+// into cards show up.
+export function pasteIntoComposer(canvasElement: HTMLElement, text: string) {
+  const textarea = canvasElement.querySelector('textarea')
+  if (!textarea) {
+    return
+  }
+  const clipboardData = new DataTransfer()
+  clipboardData.setData('text/plain', text)
+  textarea.dispatchEvent(
+    new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
+  )
 }
 
 // ---- Provider harness ------------------------------------------------------
