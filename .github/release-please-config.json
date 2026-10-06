@@ -10,8 +10,15 @@
       "exclude-paths": [
         "packages",
         "dev",
+        "tools",
         ".github",
-        "README.md"
+        ".golangci.yml",
+        "Makefile",
+        "README.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
