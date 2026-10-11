@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/parallelworks/foundation/compare/ui-v0.35.0...ui-v0.36.0) (2026-10-11)
+
+
+### Features
+
+* **ui:** approval cards word their buttons for what a confirm approves ([#210](https://github.com/parallelworks/foundation/issues/210)) ([bd610ba](https://github.com/parallelworks/foundation/commit/bd610ba74ec02180da6a4c511870469681abaaef))
+
 ## [0.35.0](https://github.com/parallelworks/foundation/compare/ui-v0.34.0...ui-v0.35.0) (2026-10-10)
 
 
