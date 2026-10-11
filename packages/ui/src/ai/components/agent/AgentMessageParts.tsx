@@ -390,6 +390,12 @@ function ConfirmApproval({
   const t = strings.agentTranscript
   const [feedback, setFeedback] = useState<string | null>(null)
   const answer = (a: Parameters<NonNullable<typeof onAnswer>>[1]) => onAnswer?.(part.id, a)
+  const [allowLabel, denyLabel] = {
+    command: [t.allowOnce, t.deny],
+    code: [t.allowCode, t.denyCode],
+    path: [t.allowPath, t.denyPath],
+    call: [t.allowCall, t.denyCall],
+  }[part.subject ?? 'command']
   return (
     <>
       {part.command && (
@@ -407,7 +413,7 @@ function ConfirmApproval({
             onClick={() => answer({ kind: 'confirm', allowed: true })}
             className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-element) text-(--theme-element-text)"
           >
-            {t.allowOnce}
+            {allowLabel}
           </button>
           {part.canAllowDirectory !== false && (
             <button
@@ -423,7 +429,7 @@ function ConfirmApproval({
             onClick={() => answer({ kind: 'confirm', allowed: false })}
             className="px-3 py-1 text-xs font-medium rounded-full border theme-border hover:theme-hover text-red-600"
           >
-            {t.deny}
+            {denyLabel}
           </button>
           <button
             type="button"

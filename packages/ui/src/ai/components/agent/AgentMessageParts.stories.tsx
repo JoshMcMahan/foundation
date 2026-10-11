@@ -121,10 +121,12 @@ export const Approvals: StoryObj<{
   kind: 'confirm' | 'ask'
   resolved: boolean
   multiSelect: boolean
+  subject: 'command' | 'code' | 'path' | 'call'
 }> = {
-  args: { kind: 'confirm', resolved: false, multiSelect: false },
+  args: { kind: 'confirm', resolved: false, multiSelect: false, subject: 'command' },
   argTypes: {
     kind: { control: 'inline-radio', options: ['confirm', 'ask'] },
+    subject: { control: 'inline-radio', options: ['command', 'code', 'path', 'call'] },
   },
   render: (args) => (
     <AgentMessageParts

@@ -11,6 +11,7 @@ import type { ChatLinkProps, ChatUIConfig } from '../core/config'
 import { countLines, utf8Bytes } from '../core/pastes'
 import type {
   ApprovalPart,
+  ApprovalSubject,
   ChatMessage,
   ChatUser,
   Conversation,
@@ -487,10 +488,35 @@ export function makeSubagentParts(options?: { count?: number }): SubagentPart[] 
   })
 }
 
+const confirmSamples: Record<ApprovalSubject, Partial<ApprovalPart>> = {
+  command: {
+    toolName: 'Bash',
+    command: 'kubectl delete pod web-frontend-7d9f --grace-period=0',
+    reason: 'Command deletes a running pod',
+  },
+  code: {
+    toolName: 'NotebookRun',
+    subject: 'code',
+    command: "df = pd.read_parquet('runs.parquet')\ndf.groupby('shard').failures.sum()",
+  },
+  path: {
+    toolName: 'ReadFile',
+    subject: 'path',
+    command: 'ReadFile /etc/slurm/slurm.conf',
+    reason: 'file is outside the workspace',
+  },
+  call: {
+    toolName: 'mcp__tickets__create_issue',
+    subject: 'call',
+    command: 'mcp__tickets__create_issue {"title":"Shard 12 flakes on publish"}',
+  },
+}
+
 export function makeApprovalPart(options?: {
   kind?: 'confirm' | 'ask'
   resolved?: boolean
   multiSelect?: boolean
+  subject?: ApprovalSubject
 }): ApprovalPart {
   const kind = options?.kind ?? 'confirm'
   const base: ApprovalPart =
@@ -499,9 +525,7 @@ export function makeApprovalPart(options?: {
           kind: 'approval',
           id: nextId('appr'),
           approvalKind: 'confirm',
-          toolName: 'Bash',
-          command: 'kubectl delete pod web-frontend-7d9f --grace-period=0',
-          reason: 'Command deletes a running pod',
+          ...confirmSamples[options?.subject ?? 'command'],
           agent: 'main',
           mode: 'accept-edits',
         }

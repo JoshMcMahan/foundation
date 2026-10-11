@@ -114,12 +114,16 @@ export type ApprovalAnswerValue =
     }
   | { kind: 'ask'; text: string; chat?: boolean }
 
+export type ApprovalSubject = 'command' | 'code' | 'path' | 'call'
+
 export interface ApprovalPart {
   kind: 'approval'
   id: string
   approvalKind: 'confirm' | 'ask' | 'plan'
   // confirm fields
   toolName?: string
+  // What a confirm approves; picks the answer wording. Defaults to 'command'.
+  subject?: ApprovalSubject
   command?: string
   reason?: string
   agent?: string

@@ -163,6 +163,22 @@ describe('approval parts', () => {
     })
   })
 
+  it.each([
+    ['code', 'Yes, run this code', "No, don't run this code"],
+    ['path', 'Yes, allow this once', 'No, deny'],
+    ['call', 'Yes, allow this call', 'No, deny this call'],
+  ] as const)('words a %s confirm for what it approves', (subject, allow, deny) => {
+    const onAnswer = vi.fn()
+    renderParts([{ kind: 'approval', id: 's1', approvalKind: 'confirm', subject, command: 'x' }], {
+      onApprovalAnswer: onAnswer,
+    })
+    expect(screen.queryByText('Yes, allow this command')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText(deny))
+    expect(onAnswer).toHaveBeenCalledWith('s1', { kind: 'confirm', allowed: false })
+    fireEvent.click(screen.getByText(allow))
+    expect(onAnswer).toHaveBeenLastCalledWith('s1', { kind: 'confirm', allowed: true })
+  })
+
   it('collects deny feedback before answering', () => {
     const onAnswer = vi.fn()
     renderParts(
