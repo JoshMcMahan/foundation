@@ -1,5 +1,6 @@
 import cx from 'classnames'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { useRelativeTime } from '../../components/relativeTime'
 import { ImageIcon, NewChatIcon, SearchIcon, SharingIcon } from '../../icons'
 import type { OpenMenu, RowMenuItem } from '../../list/index'
 import { useChat } from '../core/ChatProvider'
@@ -7,19 +8,22 @@ import { useChatConfig } from '../core/config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
 import type { ConversationSummary } from '../types'
 import { ConversationSidebar } from '../ui/ConversationSidebar'
-import { SidebarPlaceholder, SidebarRow } from '../ui/sidebar'
+import { SidebarPlaceholder, SidebarRow, SidebarRowTitle } from '../ui/sidebar'
 import { ManageProvidersLink } from './ComposerChrome'
 import { groupConversationsByDate, useConversationActions } from './conversationActions'
 
 function ConversationRow({
   conv,
   isCurrent,
+  updated,
   menuItems,
   openMenu,
   onOpen,
 }: {
   conv: ConversationSummary
   isCurrent: boolean
+  /** When it last changed, already abbreviated. */
+  updated: string
   menuItems: RowMenuItem[]
   openMenu: OpenMenu
   onOpen: () => void
@@ -37,9 +41,7 @@ function ConversationRow({
         {conv.isOwner === false && (
           <SharingIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
         )}
-        <span className="min-w-0 flex-1 truncate text-sm theme-text">
-          {conv.title || t.untitled}
-        </span>
+        <SidebarRowTitle time={updated}>{conv.title || t.untitled}</SidebarRowTitle>
       </LinkComponent>
     </SidebarRow>
   )
@@ -73,6 +75,7 @@ export default function ChatSidebar({
   } = useChat()
   const attachmentsAvailable = !!adapter.attachments
   const { menuItems, openMenu, overlays } = useConversationActions()
+  const { compact } = useRelativeTime()
 
   const drawer = sidebarPresentation === 'drawer'
   // The drawer always opens to the full list; the rail is for a column.
@@ -160,6 +163,7 @@ export default function ChatSidebar({
         <ConversationRow
           conv={conv}
           isCurrent={activeConversationId === conv.id}
+          updated={compact(conv.updatedAt ?? conv.createdAt)}
           menuItems={menuItems(conv)}
           openMenu={openMenu}
           onOpen={closeDrawer}

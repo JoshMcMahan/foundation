@@ -116,6 +116,7 @@ export {
   SidebarPlaceholder,
   SidebarRailItem,
   SidebarRow,
+  SidebarRowTitle,
   SidebarToggle,
   useRowDialogs,
 } from './ui/sidebar'

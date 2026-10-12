@@ -191,6 +191,25 @@ export function SidebarPlaceholder({
   )
 }
 
+/** A row's first line, the same in every list: what it is, and when it last
+ *  moved, abbreviated, on the right. */
+export function SidebarRowTitle({
+  children,
+  time,
+}: {
+  children: ReactNode
+  time?: string | undefined
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 items-baseline gap-2">
+      <span className="min-w-0 flex-1 truncate text-sm theme-text">{children}</span>
+      {time && (
+        <span className="min-w-8 shrink-0 text-[11px] tabular-nums theme-muted-text">{time}</span>
+      )}
+    </span>
+  )
+}
+
 /** One entry in the list: the row highlights while it is the open one or
  *  while its menu is up, and the menu opens from its button or a right-click. */
 export function SidebarRow({

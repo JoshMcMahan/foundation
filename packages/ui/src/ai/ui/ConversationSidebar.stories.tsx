@@ -4,7 +4,14 @@ import { StatusDot } from '../../components/StatusBadge'
 import { useRowMenu } from '../../list/index'
 import { StoryViewport } from '../stories/harness'
 import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
-import { SidebarDrawer, SidebarRailItem, SidebarRow, SidebarToggle } from './sidebar'
+import {
+  SidebarDrawer,
+  SidebarPlaceholder,
+  SidebarRailItem,
+  SidebarRow,
+  SidebarRowTitle,
+  SidebarToggle,
+} from './sidebar'
 
 const meta: Meta = {
   title: 'Chat/Conversation sidebar',
@@ -77,7 +84,7 @@ function TaskSidebar({
         groups={grouped(tasks)}
         getKey={(t) => t.id}
         cycle={{ current: open, onSelect: (t) => setOpenId(t.id) }}
-        placeholder={<p className="px-2 pt-2 text-sm theme-muted-text">No tasks yet</p>}
+        placeholder={<SidebarPlaceholder>No tasks yet</SidebarPlaceholder>}
         renderRow={(t) => (
           <SidebarRow
             selected={t.id === openId}
@@ -90,8 +97,7 @@ function TaskSidebar({
               className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
             >
               {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
-              <span className="min-w-0 flex-1 truncate text-sm theme-text">{t.title}</span>
-              <span className="shrink-0 text-[11px] tabular-nums theme-muted-text">{t.age}</span>
+              <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
             </button>
           </SidebarRow>
         )}

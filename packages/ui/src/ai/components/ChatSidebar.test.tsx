@@ -52,6 +52,7 @@ const chatState = {
     canCollaborate: boolean
     isOwner: boolean
     messageCount: number
+    updatedAt?: string
   }[],
   sidebar: 'expanded' as SidebarState,
   sidebarPresentation: 'inline' as SidebarPresentation,
@@ -368,5 +369,18 @@ describe('ChatSidebar sharing', () => {
     fireEvent.click(theirs as HTMLElement)
     await screen.findAllByText('Download')
     expect(screen.queryByText('Share')).not.toBeInTheDocument()
+  })
+})
+
+describe('ChatSidebar rows', () => {
+  it('say when each conversation last changed', () => {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    chatState.conversations = [
+      { ...conversation('1', 'Fresh'), updatedAt: new Date().toISOString() },
+      { ...conversation('2', 'Older'), createdAt: threeDaysAgo },
+    ]
+    render(<ChatSidebar />)
+    expect(screen.getByText('Fresh').parentElement).toHaveTextContent(/^Freshnow$/)
+    expect(screen.getByText('Older').parentElement).toHaveTextContent(/^Older3d$/)
   })
 })
