@@ -2,6 +2,7 @@ import * as parser from '@parallelworks/workflow-parser'
 import { vi } from 'vitest'
 import type { WorkflowEditing } from '../editing'
 import type { EvaluateOptions, WorkflowEngine } from '../engine'
+import { TEST_ACTIONS } from './actions'
 
 const real = parser.createWorkflowEngine()
 const evaluate = vi.fn(({ obj }: EvaluateOptions<unknown>) => obj)
@@ -25,6 +26,8 @@ export const testEngine = {
   editing: parser satisfies WorkflowEditing,
 } satisfies WorkflowEngine
 
+const loadTestEngine = async () => testEngine
+
 /** For `vi.mock('<path>/components/Provider', mockEngineHooks)`. */
 export async function mockEngineHooks(
   importOriginal: () => Promise<typeof import('../components/Provider')>,
@@ -33,6 +36,9 @@ export async function mockEngineHooks(
     ...(await importOriginal()),
     useWorkflowEngine: () => testEngine,
     useOptionalWorkflowEngine: () => testEngine,
-    useWorkflowEngineLoader: () => async () => testEngine,
+    useWorkflowEngineLoader: () => loadTestEngine,
+    useLoadedWorkflowEngine: () => testEngine,
+    useWorkflowEditing: () => testEngine.editing,
+    useWorkflowActions: () => TEST_ACTIONS,
   }
 }

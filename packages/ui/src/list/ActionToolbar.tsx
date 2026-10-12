@@ -3,7 +3,7 @@ import cx from 'classnames'
 import { createContext, Fragment, useContext, useLayoutEffect, useRef, useState } from 'react'
 import { useLink, useStrings } from '../components/Provider'
 import { TOOLTIP_ID } from '../components/Tooltip'
-import { MenuIcon } from '../icons'
+import { CheckIcon, MenuIcon } from '../icons'
 
 // True inside the `…` menu, so pre-rendered element items whose buttons
 // normally render as chips restyle themselves as menu rows.
@@ -29,6 +29,8 @@ export interface ToolbarAction {
   enabledTooltip?: string
   disabledTooltip?: string | undefined
   hidden?: boolean
+  /** Makes the action a toggle: filled while on, outlined while off. */
+  active?: boolean | undefined
 }
 
 /** A pre-rendered element (e.g. a button component that owns its modal). */
@@ -53,13 +55,19 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
   if (inOverflowMenu) {
     return <OverflowRow item={action} />
   }
+  const off = action.active === false
   const className = cx(
     'inline-flex items-center gap-x-0.5 h-9 px-2 rounded-md text-[13.5px] uppercase font-semibold transition-colors whitespace-nowrap',
-    'bg-(--theme-element) text-(--theme-element-text)',
+    off
+      ? 'border theme-border theme-muted-text'
+      : 'bg-(--theme-element) text-(--theme-element-text)',
     action.disabled
       ? 'opacity-50 cursor-not-allowed'
-      : 'cursor-pointer hover:bg-(--theme-element-hover)',
+      : off
+        ? 'cursor-pointer hover:theme-hover'
+        : 'cursor-pointer hover:bg-(--theme-element-hover)',
   )
+  const pressed = action.active === undefined ? {} : { 'aria-pressed': action.active }
   const tooltipProps = tipProps(
     action.disabled ? action.disabledTooltip : action.enabledTooltip,
     'bottom',
@@ -85,14 +93,20 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
     // the "why is this disabled" copy; anchor it on a wrapping span instead.
     return (
       <span className="inline-flex" {...tooltipProps}>
-        <button type="button" disabled className={className}>
+        <button type="button" disabled className={className} {...pressed}>
           {content}
         </button>
       </span>
     )
   }
   return (
-    <button type="button" onClick={action.onClick} className={className} {...tooltipProps}>
+    <button
+      type="button"
+      onClick={action.onClick}
+      className={className}
+      {...pressed}
+      {...tooltipProps}
+    >
       {content}
     </button>
   )
@@ -101,6 +115,7 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
 /** A single overflowed item rendered as a full-width row inside the `…` menu. */
 function OverflowRow({ item }: { item: ToolbarAction }) {
   const Link = useLink()
+  const { list: t } = useStrings()
   const Icon = item.icon
   const className = cx(
     'flex w-full items-center gap-x-1 px-4 py-2 text-[13px] uppercase font-semibold link hover:theme-hover',
@@ -114,14 +129,18 @@ function OverflowRow({ item }: { item: ToolbarAction }) {
         <Icon className={cx(item.iconClassName)} />
       </div>
       {item.label}
+      {item.active && <CheckIcon className="ml-auto h-4 w-4 opacity-80" />}
     </>
   )
+  // A toggle's state is in its name, as a menu row can't be pressed.
+  const named =
+    item.active === undefined ? {} : { 'aria-label': t.toggleState(item.label, item.active) }
   // MenuItem must render the interactive element itself (not a Fragment
   // around it) so headlessui's injected props — close-on-select, keyboard
   // activation, menuitem role — land on the DOM node.
   if (item.href && !item.disabled) {
     return (
-      <MenuItem as={Link} to={item.href} className={className} {...tooltipProps}>
+      <MenuItem as={Link} to={item.href} className={className} {...named} {...tooltipProps}>
         {content}
       </MenuItem>
     )
@@ -133,6 +152,7 @@ function OverflowRow({ item }: { item: ToolbarAction }) {
       onClick={item.onClick}
       disabled={item.disabled ?? false}
       className={className}
+      {...named}
       {...tooltipProps}
     >
       {content}

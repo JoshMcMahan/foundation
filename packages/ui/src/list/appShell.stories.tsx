@@ -438,6 +438,16 @@ const DETAIL_GROUPS: ToolbarItem[][] = [
       onClick: () => {},
     },
   ],
+  [
+    {
+      key: 'auto-refresh',
+      label: 'Auto refresh',
+      icon: RefreshIcon,
+      onClick: () => {},
+      active: true,
+    },
+    { key: 'follow', label: 'Follow', icon: TerminalIcon, onClick: () => {}, active: false },
+  ],
 ]
 
 const DETAIL_RIGHT: ToolbarItem[] = [

@@ -97,3 +97,54 @@ export const RowsWithContextMenu: StoryObj = {
     await expect(await screen.findByRole('menu')).toBeVisible()
   },
 }
+
+const ADD_ITEMS: RowMenuItem[] = [
+  {
+    kind: 'submenu',
+    label: 'Basic',
+    items: [
+      { kind: 'action', label: 'Text', keywords: 'string', onSelect: () => {} },
+      { kind: 'action', label: 'Number', onSelect: () => {} },
+    ],
+  },
+  {
+    kind: 'submenu',
+    label: 'Choices',
+    items: [
+      { kind: 'action', label: 'Dropdown', keywords: 'select', onSelect: () => {} },
+      { kind: 'action', label: 'Radio buttons', keywords: 'radio', onSelect: () => {} },
+    ],
+  },
+]
+
+function SearchMenuDemo() {
+  const { openMenu, contextMenu } = useRowMenu()
+  return (
+    <div>
+      <button
+        type="button"
+        className="rounded-md border theme-border px-3 py-1.5 text-sm theme-hover"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          openMenu(r.left, r.bottom, ADD_ITEMS, undefined, {
+            placeholder: 'Search types',
+            empty: 'No type matches',
+          })
+        }}
+      >
+        Add input
+      </button>
+      {contextMenu}
+    </div>
+  )
+}
+
+/** A menu with a search field narrows its items, submenus included, as you type. */
+export const MenuWithSearch: StoryObj = {
+  render: () => <SearchMenuDemo />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add input' }))
+    await userEvent.type(await screen.findByRole('searchbox'), 'radio')
+    await expect(screen.getByRole('button', { name: 'Radio buttons' })).toBeVisible()
+  },
+}

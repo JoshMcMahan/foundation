@@ -49,6 +49,22 @@ describe('Input', () => {
     expect(screen.queryByText('*')).not.toBeInTheDocument()
   })
 
+  it('describes the input with its description, and keeps a hint beside the label out of its name', () => {
+    render(<Input label="Email" description="Where receipts go." labelHint={<code>email</code>} />)
+
+    const input = screen.getByRole('textbox', { name: 'Email' })
+    expect(input).toHaveAccessibleDescription('Where receipts go.')
+    expect(screen.getByText('email')).toBeInTheDocument()
+  })
+
+  it('describes a text area with its description', () => {
+    render(<Textarea label="Notes" description="Shown on the run." />)
+
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveAccessibleDescription(
+      'Shown on the run.',
+    )
+  })
+
   it('keeps an existing aria-describedby alongside the error', () => {
     render(
       <>

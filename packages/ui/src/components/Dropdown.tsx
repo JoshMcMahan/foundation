@@ -50,6 +50,8 @@ export interface IProps {
   portalEl?: HTMLElement
   /** Smaller option rows and text, for dense toolbars. */
   compact?: boolean | undefined
+  /** False hides the caret, for a field that has nothing to pick from yet. */
+  showCaret?: boolean | undefined
 }
 
 // A value missing from the options keeps its object and shows its name when it
@@ -256,6 +258,7 @@ function DropdownHelper({
   collapsedLabel = defaultCollapsedLabel,
   portalEl,
   compact = false,
+  showCaret = true,
 }: Omit<IProps, 'options' | 'value' | 'onChange'> & {
   options: (ICategory | IOptions)[]
   value: FlatDisplayOption
@@ -300,6 +303,17 @@ function DropdownHelper({
     }
     setBoundaryEl(dialog as HTMLElement)
   }, [referenceElement])
+  // The combobox's input writes its own, empty aria-describedby over the one passed to it.
+  useEffect(() => {
+    if (!referenceElement) {
+      return
+    }
+    if (describedBy) {
+      referenceElement.setAttribute('aria-describedby', describedBy)
+    } else {
+      referenceElement.removeAttribute('aria-describedby')
+    }
+  }, [referenceElement, describedBy])
   const sameWidthModifier = useMemo(
     () => ({
       name: 'sameWidth',
@@ -555,7 +569,10 @@ function DropdownHelper({
             <ComboboxButton
               ref={buttonRef}
               aria-label={t.showOptions}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed"
+              className={cx(
+                'absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed',
+                !showCaret && 'hidden',
+              )}
               data-testid="combobox-button"
               disabled={disabled}
             >

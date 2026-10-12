@@ -44,9 +44,16 @@ export const Inputs: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-3 max-w-sm">
       <Input label="Cluster name" placeholder="gpu-cluster" />
+      <Input
+        label="Job name"
+        labelHint={<code className="text-xs theme-muted-text">name</code>}
+        description="Letters, numbers, dashes and underscores."
+        defaultValue="build"
+      />
       <Input type="password" placeholder="Password" />
       <Input error="Name is already taken" defaultValue="gpu" />
       <Textarea placeholder="Description" rows={3} />
+      <Textarea label="Notes" description="Shown to everyone who runs the workflow." rows={3} />
     </div>
   ),
 }

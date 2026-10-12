@@ -15,6 +15,7 @@
     "src/**/*.test.tsx",
     "src/**/*.stories.tsx",
     "src/ai/stories",
+    "src/graph/stories",
     "src/test",
     ".storybook"
   ]

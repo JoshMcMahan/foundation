@@ -104,3 +104,35 @@ export const YamlWithSchema: StoryObj<typeof Editor> = {
     width: 640,
   },
 }
+
+/** Problems found elsewhere, such as in the workflow around a job's YAML, marked on their lines. */
+export const YamlWithMarkers: StoryObj<typeof Editor> = {
+  args: {
+    language: 'yaml',
+    value: YAML_VALUE,
+    height: 320,
+    width: 640,
+    markers: [{ line: 6, message: 'This step reads needs.lint, which the job does not list.' }],
+  },
+}
+
+/** A workflow checked for what its schema can't catch, such as an input read but never defined. */
+export const WorkflowWithLint: StoryObj<typeof Editor> = {
+  args: {
+    language: 'yaml',
+    path: 'file:///workflow.yaml',
+    lint: true,
+    height: 320,
+    width: 640,
+    value: `on:
+  execute:
+    inputs:
+      target:
+        type: string
+jobs:
+  build:
+    steps:
+      - run: make TARGET=\${{ inputs.taget }}
+`,
+  },
+}

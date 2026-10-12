@@ -99,6 +99,22 @@ const engine = { ...createWorkflowEngine(), editing: workflowPackage }
 
 Without `editing`, the graph lays its jobs out by their needs alone.
 
+The editor checks YAML against the schemas a host registers with `configureEditorYaml` from
+`@parallelworks/ui/editor`. The job, step, input and settings dialogs edit their YAML at their own
+paths (`JOB_YAML_PATH`, `STEP_YAML_PATH`, `INPUT_YAML_PATH`, `SETTINGS_YAML_PATH`); `settingsSchemas`
+cuts the part of a workflow schema each one edits, for the host to register at that path under a URI
+of its own (the YAML service reads a `#fragment` as an anchor and stops validating):
+
+```ts
+const { job, step, input, settings } = settingsSchemas(workflowSchema)
+configureEditorYaml([
+  { fileMatch: [JOB_YAML_PATH], uri: `${origin}/workflow-job.schema.json`, schema: job },
+  // ...and the same for step, input and settings
+])
+```
+
+Without them, those views still edit, but check nothing against the schema.
+
 ## AI chat
 
 `@parallelworks/ui/ai` is a chat interface (thread, composer, streaming,

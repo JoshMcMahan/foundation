@@ -174,6 +174,7 @@ export const Tables: StoryObj = {
 
 function InputsDemo() {
   const [choice, setChoice] = useState<unknown>('medium')
+  const [branch, setBranch] = useState<unknown>('')
   const [enabled, setEnabled] = useState(false)
   return (
     <div className="flex flex-col gap-6 max-w-sm">
@@ -182,6 +183,15 @@ function InputsDemo() {
         options={['small', 'medium', 'large']}
         value={choice as string}
         onChange={setChoice}
+      />
+      <Dropdown
+        ariaLabel="Branch"
+        options={['main', 'develop']}
+        value={branch as string}
+        onChange={setBranch}
+        allowCustomValue
+        showCaret={false}
+        placeholder="Type or pick a branch"
       />
       <SwitchToggle value={enabled} onChange={setEnabled} />
       <UncontrolledCollapsiblePanel title="Advanced settings">

@@ -101,6 +101,14 @@ describe('Dropdown Component', () => {
     expect(screen.getByRole('combobox')).not.toHaveAttribute('aria-label')
   })
 
+  it('describes the combobox with the description it is given', () => {
+    render(<p id="hint">Where the job runs.</p>)
+    setup({ ariaLabel: 'Cluster', 'aria-describedby': 'hint' })
+    expect(screen.getByRole('combobox', { name: 'Cluster' })).toHaveAccessibleDescription(
+      'Where the job runs.',
+    )
+  })
+
   it('applies the id prop to the combobox', () => {
     setup({ id: 'events-time-range' })
     expect(screen.getByRole('combobox')).toHaveAttribute('id', 'events-time-range')

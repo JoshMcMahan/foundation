@@ -1,7 +1,9 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
-import { createContext, use, useCallback, useContext, useEffect, useMemo } from 'react'
+import { createContext, use, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
+import type { WorkflowAction, WorkflowEditing } from '../editing'
 import type { WorkflowEngine } from '../engine'
+import type { GraphEditorStrings, InputsEditorStrings } from '../graph/editorStrings'
 import type { RunLink } from '../graph/types'
 import { safeUrl } from '../safeUrl'
 
@@ -126,6 +128,9 @@ export interface UIStrings {
     openOriginalWorkflow: string
     openInNewGraph: string
   }
+  /** The visual editor's text a host translates; the editor fills in the rest in English. */
+  graphEditor: Partial<GraphEditorStrings>
+  inputsEditor: Partial<InputsEditorStrings>
   fileExplorer: {
     preview: {
       shareFile: string
@@ -356,6 +361,8 @@ export interface UIStrings {
     copied: (label: string) => string
     couldntCopy: (label: string) => string
     moreActions: string
+    /** A toolbar toggle's name in the overflow menu, where a row can't be pressed. */
+    toggleState: (label: string, on: boolean) => string
     labelName: string
     labelEmail: string
     labelUsername: string
@@ -402,6 +409,10 @@ export interface UINavigation {
   openExternal: (href: string) => void
 }
 
+export type WorkflowJsonRef =
+  | { kind: 'marketplace'; slug: string; version: string }
+  | { kind: 'workflow'; name: string }
+
 export interface RunFileResult {
   data: string | undefined
   isLoading: boolean
@@ -424,6 +435,14 @@ export interface UIData {
     path: string | null,
     options?: { refreshInterval?: number },
   ) => RunFileResult
+  resolveWorkflowJson?: (ref: WorkflowJsonRef) => Promise<unknown>
+  /** The built-in actions a workflow step can use, for the editor's step form. */
+  workflowActions?: Record<string, WorkflowAction>
+  resolveSecretVariables?: () => Promise<string[]>
+  /** Repository files, so the editor can read the workflow a step's repository `uses` names. */
+  repoSuggestions?: {
+    file: (repo: string, ref: string, path: string) => Promise<string>
+  }
   /**
    * Provisions browser-access CORS rules on a storage. Absent, the storage
    * explorer hides its "add CORS rules" affordance.
@@ -642,6 +661,8 @@ const DEFAULTS: UIProviderValue = {
       openOriginalWorkflow: 'Open original workflow',
       openInNewGraph: 'Open in new graph',
     },
+    graphEditor: {},
+    inputsEditor: {},
     fileExplorer: {
       preview: {
         shareFile: 'Share file',
@@ -891,6 +912,7 @@ const DEFAULTS: UIProviderValue = {
       copied: (label) => `Copied ${label}`,
       couldntCopy: (label) => `Couldn't copy ${label}`,
       moreActions: 'More actions',
+      toggleState: (label, on) => `${label}, ${on ? 'on' : 'off'}`,
       labelName: 'name',
       labelEmail: 'email',
       labelUsername: 'username',
@@ -979,6 +1001,24 @@ export function useNavigation(): UINavigation {
   return useContext(UIContext).navigation
 }
 
+export function useWorkflowJsonResolver(): UIData['resolveWorkflowJson'] {
+  return useContext(UIContext).data.resolveWorkflowJson
+}
+
+export function useRepoSuggestions(): UIData['repoSuggestions'] {
+  return useContext(UIContext).data.repoSuggestions
+}
+
+const NO_ACTIONS: Record<string, WorkflowAction> = {}
+
+export function useWorkflowActions(): Record<string, WorkflowAction> {
+  return useContext(UIContext).data.workflowActions ?? NO_ACTIONS
+}
+
+export function useSecretVariablesResolver(): UIData['resolveSecretVariables'] {
+  return useContext(UIContext).data.resolveSecretVariables
+}
+
 export function useSlots(): UISlots {
   return useContext(UIContext).slots
 }
@@ -1026,6 +1066,38 @@ export function useWorkflowEngine(): WorkflowEngine {
     throw new Error('Workflow forms and graphs need a UIProvider with an engine.')
   }
   return resolveEngine(source)
+}
+
+/** The engine once it has loaded, without suspending; renders again when a loader resolves. */
+export function useLoadedWorkflowEngine(): WorkflowEngine | undefined {
+  const source = useContext(UIContext).engine
+  const [, setLoaded] = useState(0)
+  const entry = typeof source === 'function' ? loadEngine(source) : undefined
+  const engine = typeof source === 'function' ? entry?.engine : source
+  useEffect(() => {
+    if (!entry || entry.engine) {
+      return
+    }
+    let live = true
+    entry.promise.then(() => {
+      if (live) {
+        setLoaded((n) => n + 1)
+      }
+    })
+    return () => {
+      live = false
+    }
+  }, [entry])
+  return engine
+}
+
+/** The engine's workflow editing, which the visual editor can't work without. */
+export function useWorkflowEditing(): WorkflowEditing {
+  const { editing } = useWorkflowEngine()
+  if (!editing) {
+    throw new Error('The workflow editor needs a UIProvider engine with editing.')
+  }
+  return editing
 }
 
 /** Resolves the engine without suspending, for async callers such as editor completions. */
@@ -1099,6 +1171,14 @@ export function UIProvider({
         jobActions: {
           ...DEFAULTS.strings.jobActions,
           ...strings?.jobActions,
+        },
+        graphEditor: {
+          ...DEFAULTS.strings.graphEditor,
+          ...strings?.graphEditor,
+        },
+        inputsEditor: {
+          ...DEFAULTS.strings.inputsEditor,
+          ...strings?.inputsEditor,
         },
         fileExplorer: {
           ...DEFAULTS.strings.fileExplorer,

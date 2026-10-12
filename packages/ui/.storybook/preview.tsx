@@ -8,6 +8,7 @@ import '../dist/logviewer/logviewer.css'
 import * as parser from '@parallelworks/workflow-parser'
 import type { Decorator, Preview } from '@storybook/react-vite'
 import { type UILinkComponent, UIProvider } from '../src/components/Provider'
+import { TEST_ACTIONS } from '../src/test/actions'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -18,6 +19,7 @@ import {
 
 // The parser's functions double as the editor's, the way a host passes them.
 const engine = { ...parser.createWorkflowEngine(), editing: parser }
+const storyData = { workflowActions: TEST_ACTIONS }
 
 // Links render as anchors but never navigate away from the story.
 const StoryLink: UILinkComponent = ({ to, onClick, children, ...rest }) => (
@@ -44,7 +46,7 @@ const withTheme: Decorator = (Story, context) => {
   root.style.colorScheme = dark ? 'dark' : 'light'
   root.classList.toggle('dark', dark)
   return (
-    <UIProvider engine={engine} slots={storySlots}>
+    <UIProvider engine={engine} slots={storySlots} data={storyData}>
       <Story />
     </UIProvider>
   )
