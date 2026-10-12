@@ -1,6 +1,15 @@
 import cx from 'classnames'
 import { DateTime } from 'luxon'
-import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { flushSync } from 'react-dom'
 import {
   type ReactZoomPanPinchContentRef,
@@ -29,6 +38,22 @@ import {
 import { LogViewer } from '../logviewer'
 import { AnnotationBanner } from './AnnotationBanner'
 import { Collapse } from './Collapse'
+import type { DependencyGraphEditor } from './editorApi'
+import {
+  BoxGrip,
+  EdgeEnds,
+  EdgeHitPath,
+  EmptyGraphEditor,
+  GraphEditorCanvas,
+  NodePorts,
+} from './editorRows'
+import {
+  EDITOR_HANDLE_CLASS,
+  type GraphEditorApi,
+  GraphEditorProvider,
+  useGraphEditor,
+  useSelectedEdges,
+} from './graphEditorState'
 import { emptyColumnsStyle, emptyRowsStyle } from './gridSpacing'
 import { type JobHandlers, Joblist } from './JobSummary'
 import { MatrixGroupNode, MatrixGroupSummaryItem } from './MatrixGroup'
@@ -577,6 +602,7 @@ function jobHandlers({
   openInNewGraph,
   setSublogOpen,
   renderWell,
+  editStep,
 }: {
   engine: WorkflowEngine
   jobs: Record<string, WorkflowJob>
@@ -593,6 +619,8 @@ function jobHandlers({
     subPrefix: string,
     expanded: boolean,
   ) => ReactNode
+  /** On an editable graph, a step opens for editing instead of its log. */
+  editStep?: ((job: string, step: number) => void) | undefined
 }): JobHandlers {
   const isStepsOpen = (j: string) => stepsOpen.has(pathPrefix + j)
   const subworkflowKey = (j: string, s: number) => `${pathPrefix}${j}:${s}`
@@ -609,6 +637,11 @@ function jobHandlers({
     onStepClick: (j, s) => {
       const step = jobs[j]?.steps?.[s]
       if (step?.status === 'skipped' || step?.status === 'skipped-failed') {
+        return
+      }
+      // Cleanup steps the preview appends as POST steps aren't YAML steps.
+      if (editStep && !step?.linkedStep) {
+        editStep(jobs[j]?._matrix?.originaljob ?? j, s)
         return
       }
       if (step?.subworkflow) {
@@ -664,6 +697,8 @@ function SubworkflowWell({
 // node's background instead of its base lines disappearing behind it. Large
 // enough to clear one level's full z range; accumulates with depth.
 const SUBGRAPH_Z_STEP = 100
+// The editor loads only where a graph is edited, so runs and previews don't carry it.
+const GraphEditorOverlays = lazy(() => import('./GraphEditor'))
 const CONNECTOR_COLOR = 'var(--theme-border)'
 const HIGHLIGHT_COLOR = 'var(--theme-element)'
 const FIT_ANIMATION_MS = 300
@@ -700,6 +735,18 @@ function sizingTransitions(el: HTMLElement) {
     )
 }
 
+// The least shift that brings [start, end] inside [low, high]; none when it can't all fit, so the view stays.
+export function intoView(start: number, end: number, low: number, high: number) {
+  if (end - start > high - low) {
+    return 0
+  }
+  if (start < low) {
+    return low - start
+  }
+  return end > high ? high - end : 0
+}
+// A held job outlives only the edit it was held for; a later fit, such as a resize, refits.
+const HOLD_MS = 2000
 // An exponent of the scale, so presses in and out change it by the same factor.
 const ZOOM_STEP = 0.25
 
@@ -726,6 +773,7 @@ function Subgraph({
   toggleMatrix,
   onReady,
   layout,
+  editable = false,
 }: {
   jobs: Record<string, WorkflowJob>
   pathPrefix: string
@@ -744,9 +792,12 @@ function Subgraph({
   toggleMatrix: (key: string) => void
   onReady?: () => void
   layout?: GraphLayout | undefined
+  editable?: boolean
 }) {
   const engine = useWorkflowEngine()
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const editorApi = useGraphEditor()
+  const selectedEdges = useSelectedEdges(editable ? editorApi : null)
   const zBase = depth * SUBGRAPH_Z_STEP
   const [hoveredJob, setHoveredJob] = useState<string | null>(null)
   const lastHoveredDistancesRef = useRef<Map<string, number> | null>(null)
@@ -772,6 +823,20 @@ function Subgraph({
     () => computeGraphLayout(engine, jobs, matrixGroups, placed),
     [engine, jobs, matrixGroups, placed],
   )
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!editable || !editorApi || !wrapper) {
+      return
+    }
+    editorApi.registerGrid({
+      wrapper,
+      cols: dependencyCols,
+      rows: rowSlots,
+      columns: colSlots,
+    })
+    return () => editorApi.registerGrid(null)
+  }, [editable, editorApi, dependencyCols, rowSlots, colSlots])
 
   // Map of job → hop distance from hovered node (union of ancestors + descendants)
   const hoveredDistances = useMemo(() => {
@@ -897,6 +962,7 @@ function Subgraph({
       },
       openInNewGraph,
       setSublogOpen,
+      editStep: editable && editorApi ? (j, s) => editorApi.editStep(j, s) : undefined,
       renderWell: (subJobs, subPrefix, expanded) => (
         <SubworkflowWell
           expanded={expanded}
@@ -960,6 +1026,7 @@ function Subgraph({
                       zBase={zBase}
                       handlers={handlers}
                       preview={preview}
+                      editable={editable}
                       rowsAbove={rowsAbove}
                     />
                   )
@@ -987,12 +1054,14 @@ function Subgraph({
                         transition: `opacity ${animT}s`,
                       }}
                     >
+                      {editable && jobNames.length > 1 && <BoxGrip jobs={jobNames} />}
                       <Joblist
                         jobs={displayJobs}
                         jobNames={jobNames}
                         {...handlers}
                         growWidth={true}
                         preview={preview}
+                        editable={editable}
                       />
                     </div>
                   </div>
@@ -1027,6 +1096,8 @@ function Subgraph({
     engine,
     invalidateConnectors,
     requestFit,
+    editable,
+    editorApi,
   ])
   const memoizedBoxLayer = useMemo(() => buildBoxLayer(), [buildBoxLayer])
   // A live nested graph exists in this subtree only if an expanded subworkflow
@@ -1099,11 +1170,43 @@ function Subgraph({
           MAX_ARC_R,
         )
 
-        return dependencyCols.map((col) => (
+        // The editor's connector circles on both sides of every node; where a
+        // connector below already draws the dot, the circle leaves it showing.
+        const ports = (jobNames: string[]) => {
+          const [head] = jobNames
+          const el = head === undefined ? null : gid(head)
+          if (head === undefined || !el) {
+            return null
+          }
+          const y = nodeConnectorY(el)
+          const wiredIn = depsOf(head).some((dep) => gid(dep))
+          const wiredOut = dependencyCols.some((c) =>
+            c.some(([other = '']) => depsOf(other).includes(head) && !!gid(other)),
+          )
+          return (
+            <NodePorts
+              jobs={jobNames}
+              left={{ x: ox(el) + 2, y }}
+              right={{ x: ox(el) + el.offsetWidth - 2, y }}
+              drawLeft={!wiredIn}
+              drawRight={!wiredOut}
+              zIndex={40 + zBase}
+            />
+          )
+        }
+
+        // Every connector's pointer target, in one layer the size of the graph.
+        const hits: ReactNode[] = []
+        const connectors = dependencyCols.map((col) => (
           <React.Fragment key={col[0]?.[0]}>
-            {col.map(([first]) =>
-              first === undefined ? null : (
+            {col.map((jobNames) => {
+              const first = jobNames[0]
+              if (first === undefined) {
+                return null
+              }
+              return (
                 <React.Fragment key={first}>
+                  {editable && ports(jobNames)}
                   {depsOf(first).map((dep) => {
                     const isHighlighted = hoveredRelated?.has(first) && hoveredRelated?.has(dep)
                     // Each hop from the hovered node delays the animation by animT
@@ -1122,6 +1225,9 @@ function Subgraph({
                     const y1 = nodeConnectorY(start)
                     const x2 = ox(end) + 2
                     const y2 = nodeConnectorY(end)
+                    const selected = selectedEdges.some(
+                      (edge) => edge.from === dep && edge.to === first,
+                    )
                     const dy = y2 - y1
                     const ady = Math.abs(dy)
 
@@ -1166,6 +1272,21 @@ function Subgraph({
                       pathLen = ax - x1 + arcLen + vSeg + arcLen + (x2 - ax2end)
                     }
 
+                    if (editable) {
+                      hits.push(
+                        <React.Fragment key={`${dep}→${first}`}>
+                          {selected && (
+                            <path
+                              d={pathD}
+                              stroke="var(--theme-element)"
+                              strokeWidth="10"
+                              fill="transparent"
+                            />
+                          )}
+                          <EdgeHitPath d={pathD} edge={{ from: dep, to: first }} />
+                        </React.Fragment>,
+                      )
+                    }
                     return (
                       <React.Fragment key={dep}>
                         {/* Dots: background square + inner dot — above nodes */}
@@ -1299,16 +1420,43 @@ function Subgraph({
                             )
                           })()}
                         </svg>
+                        {editable && selected && (
+                          <EdgeEnds
+                            edge={{ from: dep, to: first }}
+                            start={{ x: x1, y: y1 }}
+                            end={{ x: x2, y: y2 }}
+                            zIndex={45 + zBase}
+                          />
+                        )}
                       </React.Fragment>
                     )
                   })}
                 </React.Fragment>
-              ),
-            )}
+              )
+            })}
           </React.Fragment>
         ))
+        return (
+          <>
+            {connectors}
+            {editable && (
+              // Level with the nodes, which still draw over it, and above the columns laid out around them.
+              <svg
+                role="none"
+                overflow="visible"
+                className="absolute pointer-events-none"
+                width={wrapper?.offsetWidth}
+                height={wrapper?.offsetHeight}
+                style={{ zIndex: 1 + zBase }}
+              >
+                {hits}
+              </svg>
+            )}
+          </>
+        )
       })()}
       {hasLiveNestedGraph ? buildBoxLayer() : memoizedBoxLayer}
+      {editable && <GraphEditorCanvas />}
     </div>
   )
 }
@@ -1485,7 +1633,10 @@ export default function DependencyGraph({
   viewMode = 'dag',
   setViewMode,
   layout,
+  editor,
   yamlJobs,
+  inputs,
+  workflow,
   fixedHeight,
 }: {
   run: GraphRun
@@ -1494,7 +1645,11 @@ export default function DependencyGraph({
   viewMode?: ViewMode
   setViewMode?: (mode: ViewMode) => void
   layout?: GraphLayout | undefined
+  editor?: DependencyGraphEditor | undefined
   yamlJobs?: Record<string, unknown> | undefined
+  inputs?: Record<string, unknown> | undefined
+  /** The workflow as written, for what the editor's expressions can read. */
+  workflow?: Record<string, unknown> | undefined
   fixedHeight?: string | undefined
 }) {
   const engine = useWorkflowEngine()
@@ -1537,9 +1692,11 @@ export default function DependencyGraph({
   // windowSize on every render.
   const [topOffset, setTopOffset] = useState<number | null>(null)
   const topObserverRef = useRef<ResizeObserver | null>(null)
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null)
   const setContainerElement = useCallback(
     (el: HTMLDivElement | null) => {
       containerRef.current = el
+      setContainerEl(el)
       topObserverRef.current?.disconnect()
       topObserverRef.current = null
       if (!el || preview) {
@@ -1638,6 +1795,21 @@ export default function DependencyGraph({
         : positionsOf(root ? (yamlJobs ?? jobs) : jobs),
     [engine, root, layout, yamlJobs, jobs],
   )
+  const [editorApi, setEditorApi] = useState<GraphEditorApi | null>(null)
+  const editorOverlays = editor ? (
+    <Suspense fallback={null}>
+      <GraphEditorOverlays
+        editor={editor}
+        jobs={jobs}
+        yamlJobs={yamlJobs}
+        inputs={inputs}
+        workflow={workflow}
+        layout={placed}
+        container={containerEl}
+        onApi={setEditorApi}
+      />
+    </Suspense>
+  ) : null
 
   const resetGraph = useCallback(() => {
     setSublogOpen('')
@@ -1715,6 +1887,36 @@ export default function DependencyGraph({
     [engine, jobs, matrixGroups],
   )
 
+  // A job held for a connection, where it was on screen, which the next fit keeps it at instead.
+  const held = useRef<{ job: string; x: number; y: number; at: number } | null>(null)
+  // Once the user pans or zooms the editor's view, its edits keep that view until Fit refits it.
+  const viewed = useRef(false)
+  const nodeOf = useCallback((job: string) => {
+    const row = [
+      ...(containerRef.current?.querySelectorAll<HTMLElement>('[data-dag-job]') ?? []),
+    ].find((el) => el.dataset['dagJob'] === job)
+    return row?.closest<HTMLElement>('[id^="node_"]') ?? row ?? null
+  }, [])
+  const hold = useCallback(
+    (job: string) => {
+      const content = graphContentRef.current
+      const transform = transformRef.current
+      const node = nodeOf(job)
+      if (!content || !transform || !node) {
+        return
+      }
+      const { positionX, positionY, scale } = transform.instance.state
+      const pos = offsetWithin(node, content)
+      held.current = {
+        job,
+        x: positionX + pos.x * scale,
+        y: positionY + pos.y * scale,
+        at: performance.now(),
+      }
+    },
+    [nodeOf],
+  )
+
   // Auto-fit: zoom and center graph to fill container
   const fitGraph = useCallback(
     (animationMs = 0) => {
@@ -1745,10 +1947,32 @@ export default function DependencyGraph({
       const graphH = maxY - minY
       const containerW = container.clientWidth
       const containerH = container.clientHeight
+      const margin = Math.min(containerW, containerH) * 0.05
+      const pending = held.current
+      held.current = null
+      const kept = pending && performance.now() - pending.at < HOLD_MS
+      const node = kept ? nodeOf(pending.job) : null
+      const viewing = editor && viewed.current && animationMs === 0
+      if ((pending && node) || viewing) {
+        const { positionX, positionY, scale: current } = transform.instance.state
+        const pos = pending && node ? offsetWithin(node, content) : null
+        const x = pending && pos ? pending.x - pos.x * current : positionX
+        const y = pending && pos ? pending.y - pos.y * current : positionY
+        transform.setTransform(x, y, current, 0)
+        // Kept still unless a graph that fits the panel is partly outside it; then the least pan that shows it.
+        const dx = intoView(x + minX * current, x + maxX * current, margin, containerW - margin)
+        const dy = intoView(y + minY * current, y + maxY * current, margin, containerH - margin)
+        requestAnimationFrame(() => {
+          if (dx !== 0 || dy !== 0) {
+            transform.setTransform(x + dx, y + dy, current, FIT_ANIMATION_MS, 'easeOut')
+          }
+          invalidateConnectors()
+        })
+        return
+      }
       if (graphW === 0 || graphH === 0) {
         return
       }
-      const margin = Math.min(containerW, containerH) * 0.05
       const scaleW = (containerW - margin * 2) / graphW
       const scaleH = (containerH - margin * 2) / graphH
       const scale = Math.min(Math.max(Math.min(scaleW, scaleH), minScale), maxScale)
@@ -1771,7 +1995,7 @@ export default function DependencyGraph({
         invalidateConnectors()
       })
     },
-    [invalidateConnectors],
+    [invalidateConnectors, nodeOf, editor],
   )
 
   // Boxes open and close over CSS transitions, so a fit before they end measures them mid-way:
@@ -1800,6 +2024,59 @@ export default function DependencyGraph({
     fitGraph(FIT_ANIMATION_MS)
   }, [fitGraph, invalidateConnectors, preview, fixedHeight])
 
+  const centerOn = useCallback((el: HTMLElement) => {
+    const container = containerRef.current
+    const content = graphContentRef.current
+    const transform = transformRef.current
+    if (!container || !content || !transform) {
+      return
+    }
+    const { scale } = transform.instance.state
+    const pos = offsetWithin(el, content)
+    transform.setTransform(
+      container.clientWidth / 2 - (pos.x + el.offsetWidth / 2) * scale,
+      container.clientHeight / 2 - (pos.y + el.offsetHeight / 2) * scale,
+      scale,
+      FIT_ANIMATION_MS,
+      'easeOut',
+    )
+  }, [])
+
+  // A problem picked from any pane's list brings its job, or step, into view selected.
+  const registerShow = editor?.registerShow
+  useEffect(() => {
+    if (!editorApi) {
+      return
+    }
+    editorApi.registerView({ hold })
+    return () => editorApi.registerView(null)
+  }, [editorApi, hold])
+  useEffect(() => {
+    if (!registerShow || !editorApi) {
+      return
+    }
+    return registerShow(({ job, step }) => {
+      const row = [
+        ...(containerRef.current?.querySelectorAll<HTMLElement>('[data-dag-job]') ?? []),
+      ].find((el) => el.dataset['dagJob'] === job)
+      if (job === undefined || !row) {
+        return false
+      }
+      if (step !== undefined) {
+        setStepsOpen((prev) => new Set(prev).add(job))
+      }
+      editorApi.focus(step === undefined ? { job } : { job, step })
+      // After the steps it may have just opened are laid out.
+      requestAnimationFrame(() => centerOn(row.closest<HTMLElement>('[id^="node_"]') ?? row))
+      if (step === undefined) {
+        editorApi.editJob(job)
+      } else {
+        editorApi.editStep(job, step)
+      }
+      return true
+    })
+  }, [registerShow, editorApi, centerOn])
+
   // The view opens at its closest zoom, which a fit never passes.
   const [zoomedAll, setZoomedAll] = useState<'in' | 'out' | null>('in')
   const onTransform = useCallback(
@@ -1811,12 +2088,17 @@ export default function DependencyGraph({
   )
 
   // The transform's wrapper grows with the graph, so zoom about the middle of what the panel shows.
+  const moved = useCallback(() => {
+    viewed.current = true
+    invalidateConnectors()
+  }, [invalidateConnectors])
   const zoomBy = useCallback((step: number) => {
     const container = containerRef.current
     const transform = transformRef.current
     if (!container || !transform) {
       return
     }
+    viewed.current = true
     const { positionX, positionY, scale } = transform.instance.state
     const next = Math.min(maxScale, Math.max(minScale, scale * Math.exp(step)))
     const x = container.clientWidth / 2
@@ -1888,6 +2170,7 @@ export default function DependencyGraph({
       setExecutedJobsPath([[], ...executedJobsPath.slice(executedJobsPathIdx, 10)])
       setExecutedJobsPathIdx(0)
     } else {
+      viewed.current = false
       fitGraph(FIT_ANIMATION_MS)
     }
   }
@@ -1997,7 +2280,16 @@ export default function DependencyGraph({
   )
 
   if (!dependencyCols[0]?.length) {
-    return undefined
+    return editor ? (
+      <GraphEditorProvider value={editorApi}>
+        <EmptyGraphEditor
+          containerRef={setContainerElement}
+          overlays={editorOverlays}
+          height={fixedHeight ?? '240px'}
+          removeBorder={removeBorder}
+        />
+      </GraphEditorProvider>
+    ) : undefined
   }
 
   const startDt = run.createdAt ? DateTime.fromISO(run.createdAt) : now
@@ -2041,7 +2333,7 @@ export default function DependencyGraph({
       </button>
     ) : undefined
 
-  return (
+  const graph = (
     <div className="flex flex-col lg:flex-row w-full">
       {!preview && (
         <div className="hidden lg:block lg:w-[280px] flex-shrink-0 lg:mr-1">
@@ -2134,9 +2426,11 @@ export default function DependencyGraph({
         ) : (
           <div
             ref={setContainerElement}
+            tabIndex={editor ? -1 : undefined}
             className={cx(
               'panel w-full overflow-hidden relative',
               removeBorder ? 'border-none' : 'border',
+              editor && 'outline-none',
             )}
             style={{
               height:
@@ -2154,15 +2448,16 @@ export default function DependencyGraph({
               minScale={minScale}
               maxScale={maxScale}
               initialScale={maxScale}
+              {...(editor ? { panning: { excluded: [EDITOR_HANDLE_CLASS] } } : {})}
               doubleClick={{ disabled: true }}
               limitToBounds={false}
               onInit={() => {
                 setTimeout(invalidateConnectors, 0)
               }}
-              onPanning={invalidateConnectors}
-              onPinch={invalidateConnectors}
+              onPanning={moved}
+              onPinch={moved}
               onTransform={onTransform}
-              onWheel={invalidateConnectors}
+              onWheel={moved}
               onZoom={invalidateConnectors}
             >
               {() => (
@@ -2227,12 +2522,14 @@ export default function DependencyGraph({
                         toggleMatrix={toggleMatrix}
                         onReady={fitGraph}
                         layout={placed}
+                        editable={!!editorApi && currentPath.length === 0}
                       />
                     </div>
                   </TransformComponent>
                 </>
               )}
             </TransformWrapper>
+            {editorOverlays}
           </div>
         )}
       </div>
@@ -2285,6 +2582,7 @@ export default function DependencyGraph({
       </BareModal>
     </div>
   )
+  return <GraphEditorProvider value={editorApi}>{graph}</GraphEditorProvider>
 }
 
 const isSlot = (value: unknown): value is number =>
@@ -2377,6 +2675,7 @@ export function DependencyGraphPreview(inputs: {
   yml?: Record<string, unknown>
   removeBorder?: boolean
   layout?: GraphLayout | undefined
+  editor?: DependencyGraphEditor | undefined
   /** A fixed panel height; without one the panel is only as tall as the graph. */
   height?: string | undefined
 }) {
@@ -2413,12 +2712,22 @@ export function DependencyGraphPreview(inputs: {
   const workflowInputs = isJobRecord(executeInputs)
     ? (executeInputs as Record<string, unknown>)
     : undefined
+  const editable = !!inputs.editor
   const executedJobs = useMemo(() => {
-    const withCleanup = addCleanupSteps({ jobs })
+    // A run's graph leaves out a job whose `if` is false; the editor draws every job it edits.
+    const drawn = editable
+      ? Object.fromEntries(
+          Object.entries(jobs).map(([name, job]) => {
+            const { if: condition, ...rest } = job
+            return [name, condition === false ? rest : job]
+          }),
+        )
+      : jobs
+    const withCleanup = addCleanupSteps({ jobs: drawn })
     const evaluated = ready ? withRunExpressions(engine, withCleanup, workflowInputs) : withCleanup
     // A run lists a matrix's runs as jobs of their own; without an engine that edits, it stays one.
     return editing ? editing.expandMatrixJobs(evaluated) : evaluated
-  }, [engine, editing, ready, jobs, workflowInputs])
+  }, [engine, editing, ready, editable, jobs, workflowInputs])
   return (
     <DependencyGraph
       run={{
@@ -2429,7 +2738,10 @@ export function DependencyGraphPreview(inputs: {
       preview={true}
       removeBorder={inputs.removeBorder}
       layout={inputs.layout}
+      editor={inputs.editor}
       yamlJobs={jobs}
+      inputs={workflowInputs}
+      workflow={inputs.yml}
       fixedHeight={inputs.height}
     />
   )

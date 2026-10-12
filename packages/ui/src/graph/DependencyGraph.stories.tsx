@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { GraphLayout } from '../editing'
 import { DependencyGraphPreview } from './DependencyGraph'
+import type { EditorProblem } from './editorApi'
+import type { ListedProblem } from './ProblemsButton'
+import { SAMPLE_WORKFLOW, useStoryWorkflow } from './stories/harness'
 
 const meta: Meta<typeof DependencyGraphPreview> = {
   title: 'UI/Workflow/DependencyGraphPreview',
@@ -14,6 +17,10 @@ const meta: Meta<typeof DependencyGraphPreview> = {
       control: 'object',
       description:
         'Where each job sits on the grid, as a host stores it; rows and columns left out stay empty.',
+    },
+    editor: {
+      control: false,
+      description: 'The callbacks that make the graph an editor; the Editable stories pass them.',
     },
   },
 }
@@ -167,4 +174,70 @@ export const YamlPositions: StoryObj<typeof DependencyGraphPreview> = {
       },
     },
   },
+}
+
+function EditableGraph({
+  source,
+  layout,
+  height = '420px',
+  problems,
+}: {
+  source: string
+  layout?: GraphLayout | undefined
+  height?: string | undefined
+  problems?: EditorProblem[]
+}) {
+  const story = useStoryWorkflow(source, layout)
+  const listed: ListedProblem[] | undefined = problems?.map((problem) => ({
+    ...problem,
+    pick: () => {},
+  }))
+  // In a padded panel without its own border, as an app's editing page shows it.
+  return (
+    <div className="relative p-4 panel">
+      <DependencyGraphPreview
+        yml={story.workflow}
+        layout={story.layout}
+        height={height}
+        removeBorder
+        editor={story.editor({
+          ...(problems ? { problems } : {}),
+          ...(listed ? { listedProblems: listed } : {}),
+          usesSuggestions: ['workflow/deploy', 'marketplace/notify'],
+        })}
+      />
+    </div>
+  )
+}
+
+/**
+ * The graph as an editor: drag a job to move it or onto the trash, drag from a node's circles
+ * to connect jobs, shift-drag to select, and right-click for a job's menu. Edits undo.
+ */
+export const Editable: StoryObj<typeof DependencyGraphPreview> = {
+  render: (args) => <EditableGraph source={SAMPLE_WORKFLOW} height={args.height} />,
+}
+
+/** Problems mark their job or step, and the toolbar counts and lists them. */
+export const EditableWithProblems: StoryObj<typeof DependencyGraphPreview> = {
+  render: (args) => (
+    <EditableGraph
+      source={SAMPLE_WORKFLOW}
+      height={args.height}
+      problems={[
+        {
+          message: 'inputs.taget is read, but the workflow has no input called taget.',
+          line: 31,
+          job: 'build',
+          step: 0,
+        },
+        { message: 'deploy reads needs.build, which it does not list.', line: 51, job: 'deploy' },
+      ]}
+    />
+  ),
+}
+
+/** A workflow without jobs yet: the toolbar adds the first one. */
+export const EditableEmpty: StoryObj<typeof DependencyGraphPreview> = {
+  render: (args) => <EditableGraph source={'jobs: {}\n'} height={args.height ?? '240px'} />,
 }

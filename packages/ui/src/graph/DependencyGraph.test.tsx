@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import type { ReactNode, Ref } from 'react'
@@ -33,6 +34,7 @@ vi.mock('../components/Provider', async (importOriginal) =>
 // The view bar zooms through the library's handle and learns the scale from its onTransform.
 const panZoom = vi.hoisted(() => ({
   onTransform: undefined as ((ref: unknown, state: { scale: number }) => void) | undefined,
+  onWheel: undefined as (() => void) | undefined,
   setTransform: vi.fn(),
   state: { positionX: 0, positionY: 0, scale: 0.6 },
 }))
@@ -43,13 +45,16 @@ vi.mock('react-zoom-pan-pinch', async () => {
       {
         children,
         onTransform,
+        onWheel,
       }: {
         children: ReactNode | (() => ReactNode)
         onTransform?: (ref: unknown, state: { scale: number }) => void
+        onWheel?: () => void
       },
       ref: Ref<unknown>,
     ) {
       panZoom.onTransform = onTransform
+      panZoom.onWheel = onWheel
       useImperativeHandle(ref, () => ({
         instance: { state: panZoom.state },
         setTransform: panZoom.setTransform,
@@ -101,7 +106,9 @@ import DependencyGraph, {
   addCleanupSteps,
   computeGraphLayout,
   DependencyGraphPreview,
+  intoView,
 } from './DependencyGraph'
+import type { DependencyGraphEditor } from './editorApi'
 import { COLUMN_PITCH, SLOT_PITCH } from './gridSpacing'
 import type { WorkflowJob } from './types'
 
@@ -768,6 +775,41 @@ const pipeline = {
 }
 
 const nodeIds = () => [...document.querySelectorAll('[id^="node_"]')].map((el) => el.id)
+
+describe('the editor’s view', () => {
+  it('moves a graph that fits by the least that shows it, and leaves one too big to fit', () => {
+    expect(intoView(100, 500, 20, 980)).toBe(0)
+    expect(intoView(-100, 500, 20, 980)).toBe(120)
+    expect(intoView(600, 1200, 20, 980)).toBe(-220)
+    expect(intoView(-500, 1500, 20, 980)).toBe(0)
+    expect(intoView(-300, 900, 20, 980)).toBe(0)
+  })
+
+  it('keeps a view the user zoomed through the edits after it', async () => {
+    // Fits wait for a frame; this test lets frames run.
+    vi.stubGlobal('requestAnimationFrame', (run: FrameRequestCallback) =>
+      window.setTimeout(() => run(performance.now()), 0),
+    )
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    const editor = {
+      onEdit: vi.fn(),
+      canUndo: false,
+      canRedo: false,
+      onUndo: vi.fn(),
+      onRedo: vi.fn(),
+    } as unknown as DependencyGraphEditor
+    const one = { jobs: { a: { steps: [{ run: 'x' }] } } }
+    const two = { jobs: { ...one.jobs, b: { steps: [{ run: 'y' }] } } }
+    const { rerender } = render(<DependencyGraphPreview yml={one} editor={editor} />)
+    await waitFor(() => expect(document.getElementById('node_a')).not.toBeNull())
+    act(() => panZoom.onWheel?.())
+    panZoom.setTransform.mockClear()
+    rerender(<DependencyGraphPreview yml={two} editor={editor} />)
+    await waitFor(() => expect(panZoom.setTransform).toHaveBeenCalledWith(0, 0, 0.6, 0))
+  })
+})
 
 describe('DependencyGraphPreview', () => {
   it('places each job where its position in the YAML says', () => {

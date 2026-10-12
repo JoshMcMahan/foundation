@@ -1,6 +1,7 @@
 import { Indicator } from '../components/Indicator'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
 import type { MatrixGroup, RunStatus } from '../engine'
+import { EditableJobRow } from './editorRows'
 import { emptyRowsStyle } from './gridSpacing'
 import { type JobHandlers, Joblist } from './JobSummary'
 import { Reveal } from './Reveal'
@@ -66,6 +67,7 @@ export function MatrixGroupNode({
   zBase,
   handlers,
   preview,
+  editable = false,
   rowsAbove = 0,
 }: {
   matrixGroup: MatrixGroup
@@ -82,6 +84,7 @@ export function MatrixGroupNode({
   zBase: number
   handlers: JobHandlers
   preview: boolean
+  editable?: boolean
   /** Empty rows of its column above this node. */
   rowsAbove?: number
 }) {
@@ -133,7 +136,13 @@ export function MatrixGroupNode({
           transition: `opacity ${animT}s`,
         }}
       >
-        {header}
+        {editable ? (
+          <EditableJobRow job={matrixName} label={t.matrixOf(matrixName)} badge={false}>
+            {header}
+          </EditableJobRow>
+        ) : (
+          header
+        )}
         <Reveal open={isExpanded} growWidth={true}>
           <div className="mt-1 border-t border-(--theme-border) pt-1">
             <Joblist
@@ -142,6 +151,7 @@ export function MatrixGroupNode({
               {...handlers}
               growWidth={true}
               preview={preview}
+              editableSteps={editable}
             />
           </div>
         </Reveal>

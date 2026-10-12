@@ -284,6 +284,8 @@ export interface WorkflowEditing {
   inputChildrenKey: (type: unknown) => string | undefined
   isValidInputName: (name: string) => boolean
   newInputName: (existing: Iterable<string>) => string
+  /** The name an `addJob` edit gives the job it adds. */
+  newJobName: (existing: Iterable<string>) => string
   /** `base`, or `base_2`, `base_3`… when it's taken. */
   nextName: (taken: Iterable<string>, base: string) => string
   /** The first of `candidate(1)`, `candidate(2)`… that `taken` doesn't hold. */

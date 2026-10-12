@@ -4,6 +4,7 @@ import { Indicator } from '../components/Indicator'
 import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
 import { TOOLTIP_ID } from '../components/Tooltip'
 import { DocumentIcon, OpenInNewGraphIcon } from '../icons'
+import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
 import type { WorkflowJob, WorkflowSubworkflow } from './types'
 import { jobLabel } from './util'
@@ -60,6 +61,9 @@ export function Joblist(
     // names and icons wrap instead.
     growWidth?: boolean
     preview?: boolean
+    editable?: boolean
+    /** Steps take edits where their jobs don't, as a matrix's runs show its one job's steps. */
+    editableSteps?: boolean
   },
 ) {
   const { jobActions } = useStrings()
@@ -71,22 +75,32 @@ export function Joblist(
     }
     const job = inputs.jobs[jobName]
     const jobStatus = job?.status
+    const label = jobLabel(jobName, job)
+    const toggle = (
+      <button
+        type="button"
+        aria-expanded={inputs.isStepsOpen(jobName)}
+        onClick={() => inputs.onJobClick(jobName)}
+        className={cx(
+          'flex items-center gap-x-1.5 w-full text-left',
+          jobStatus === 'skipped' || jobStatus === 'skipped-failed'
+            ? 'cursor-default'
+            : 'cursor-pointer',
+        )}
+      >
+        {!inputs.preview && <Indicator status={jobStatus} />}
+        <div className="font-medium">{label}</div>
+      </button>
+    )
     return (
       <div key={`job-${jobName}`} className="py-1 select-none">
-        <button
-          type="button"
-          aria-expanded={inputs.isStepsOpen(jobName)}
-          onClick={() => inputs.onJobClick(jobName)}
-          className={cx(
-            'flex items-center gap-x-1.5 w-full text-left',
-            jobStatus === 'skipped' || jobStatus === 'skipped-failed'
-              ? 'cursor-default'
-              : 'cursor-pointer',
-          )}
-        >
-          {!inputs.preview && <Indicator status={jobStatus} />}
-          <div className="font-medium">{jobLabel(jobName, job)}</div>
-        </button>
+        {inputs.editable ? (
+          <EditableJobRow job={jobName} label={label}>
+            {toggle}
+          </EditableJobRow>
+        ) : (
+          toggle
+        )}
         <Reveal open={inputs.isStepsOpen(jobName)} growWidth={inputs.growWidth ?? false}>
           <div className="flex flex-col gap-y-0.5 mt-0.5">
             {(job?.steps || []).map((step, i) => {
@@ -95,6 +109,20 @@ export function Joblist(
               const stepKey = `${jobName}:${i}`
               const subJobs = step.subworkflow?.jobs
               const canExpand = !!subJobs && Object.keys(subJobs).length > 0
+              const stepButton = (
+                <button
+                  type="button"
+                  onClick={() => inputs.onStepClick(jobName, i)}
+                  className={cx(
+                    inputs.preview ? 'ml-1.5' : 'ml-4',
+                    'gap-x-1.5 flex items-center text-left',
+                  )}
+                  data-testid={stepLabel}
+                >
+                  {inputs.preview ? '↳' : <Indicator status={step.status} />}
+                  <div>{stepLabel}</div>
+                </button>
+              )
               return (
                 <div key={stepKey}>
                   <div
@@ -105,18 +133,17 @@ export function Joblist(
                         : 'cursor-pointer',
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => inputs.onStepClick(jobName, i)}
-                      className={cx(
-                        inputs.preview ? 'ml-1.5' : 'ml-4',
-                        'gap-x-1.5 flex items-center text-left',
-                      )}
-                      data-testid={stepLabel}
-                    >
-                      {inputs.preview ? '↳' : <Indicator status={step.status} />}
-                      <div>{stepLabel}</div>
-                    </button>
+                    {(inputs.editable || inputs.editableSteps) && !step.linkedStep ? (
+                      <EditableStepRow
+                        job={job?._matrix?.originaljob ?? jobName}
+                        index={i}
+                        label={stepLabel}
+                      >
+                        {stepButton}
+                      </EditableStepRow>
+                    ) : (
+                      stepButton
+                    )}
                     {step.subworkflow && (
                       <>
                         <button
@@ -153,6 +180,7 @@ export function Joblist(
                 </div>
               )
             })}
+            {inputs.editable && <AddStepButton job={jobName} />}
           </div>
         </Reveal>
       </div>
