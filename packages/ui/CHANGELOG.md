@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.39.0](https://github.com/parallelworks/foundation/compare/ui-v0.38.0...ui-v0.39.0) (2026-10-12)
+
+
+### Features
+
+* **ui:** edit workflow dependency graphs ([#183](https://github.com/parallelworks/foundation/issues/183)) ([99187f5](https://github.com/parallelworks/foundation/commit/99187f56075f4b333f2aef74a9407f01f927457f))
+* **ui:** edit workflow jobs and steps ([#182](https://github.com/parallelworks/foundation/issues/182)) ([f4c6af1](https://github.com/parallelworks/foundation/commit/f4c6af10e6a234cc583dcd63eca362229d18c34c))
+* **ui:** edit workflow settings ([#184](https://github.com/parallelworks/foundation/issues/184)) ([bdac88d](https://github.com/parallelworks/foundation/commit/bdac88d962f44df9f36cd1017b24de91cbf5f472))
+
+
+### Bug Fixes
+
+* **ui:** chat drafts left unsent stay in browser storage forever ([#218](https://github.com/parallelworks/foundation/issues/218)) ([9251a5a](https://github.com/parallelworks/foundation/commit/9251a5aa8ed094fe52760f16ae5de0e8885eda7d))
+
 ## [0.38.0](https://github.com/parallelworks/foundation/compare/ui-v0.37.0...ui-v0.38.0) (2026-10-12)
 
 
