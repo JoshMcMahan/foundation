@@ -10,7 +10,7 @@ so an application ships only what it imports:
 | `./icons` | the icon barrel |
 | `./list` | list pages, tables, row menus and list controls |
 | `./form` | `DynamicForm` and its field registry |
-| `./graph` | job dependency graph and tree view |
+| `./graph` | job dependency graph and tree view, and the visual workflow editor: the graph, the run form as an inputs editor, and their dialogs |
 | `./editor` | Monaco editor (`monaco-editor` is an optional peer); YAML validation, completion and hover run in a bundled worker |
 | `./logviewer` | log viewer with ANSI color and search |
 | `./file-explorer` | object storage explorer over a host-supplied provider |

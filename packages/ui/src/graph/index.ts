@@ -24,3 +24,11 @@ export { type ListedProblem, ProblemsButton } from './ProblemsButton'
 export type { SettingsView } from './settingsViews'
 export { type WorkflowActions, withFields } from './stepWith'
 export type { RunLink } from './types'
+export {
+  INPUT_FORM_FIELDS,
+  LINK_FIELDS,
+  NEEDS_FIELDS,
+  SESSION_FIELDS,
+  WORKFLOW_FIELDS,
+  WorkflowSettingsDialog,
+} from './WorkflowSettingsDialog'
