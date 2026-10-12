@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0](https://github.com/parallelworks/foundation/compare/ui-v0.39.0...ui-v0.40.0) (2026-10-12)
+
+
+### Features
+
+* **ui:** the permission picker offers only the modes a machine accepts ([#219](https://github.com/parallelworks/foundation/issues/219)) ([968953a](https://github.com/parallelworks/foundation/commit/968953a1962407c4db44f6ac47f16e35ec83f981))
+
 ## [0.39.0](https://github.com/parallelworks/foundation/compare/ui-v0.38.0...ui-v0.39.0) (2026-10-12)
 
 
