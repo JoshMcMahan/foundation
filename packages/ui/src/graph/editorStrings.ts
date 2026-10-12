@@ -249,6 +249,7 @@ export const GRAPH_EDITOR_STRINGS = {
   otherInputs: 'Other inputs',
   viewForm: 'Form',
   viewYaml: 'YAML',
+  fixFieldsFirst: 'Fix the fields with errors first, so the YAML shows everything you entered.',
   yamlSyntax: (message: string) => `The YAML doesn’t parse: ${message}`,
   yamlNotMap: 'Write the settings as keys and values, such as run: make.',
   fields: {
