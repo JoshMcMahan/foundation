@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.38.0](https://github.com/parallelworks/foundation/compare/ui-v0.37.0...ui-v0.38.0) (2026-10-12)
+
+
+### Features
+
+* **ui:** edit workflow inputs with declarative layouts ([#181](https://github.com/parallelworks/foundation/issues/181)) ([8736344](https://github.com/parallelworks/foundation/commit/8736344cfc05613a29484dbd75455be0db7914c5))
+* **ui:** every conversation list row says when it last changed ([#215](https://github.com/parallelworks/foundation/issues/215)) ([7baa347](https://github.com/parallelworks/foundation/commit/7baa3474c745e258c95ea2a492d97218b4ea78f1))
+
 ## [0.37.0](https://github.com/parallelworks/foundation/compare/ui-v0.36.0...ui-v0.37.0) (2026-10-12)
 
 
