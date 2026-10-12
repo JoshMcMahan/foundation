@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { forwardRef, useImperativeHandle } from 'react'
 import ChatInput from './ChatInput'
+import { DRAFT_TTL_MS, sweepDrafts } from './chatDraft'
 import type { PasteUploadResult } from './usePasteCards'
 
 vi.mock('../../icons', () => ({
@@ -54,6 +55,10 @@ Object.defineProperty(window, 'localStorage', {
     setItem: (k: string, v: string) => storage.set(k, String(v)),
     removeItem: (k: string) => storage.delete(k),
     clear: () => storage.clear(),
+    key: (i: number) => [...storage.keys()][i] ?? null,
+    get length() {
+      return storage.size
+    },
   },
 })
 
@@ -72,7 +77,7 @@ describe('ChatInput drafts', () => {
   it('persists the draft per conversation and restores it', () => {
     const { unmount } = render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
     fireEvent.change(textarea(), { target: { value: 'half-typed thought' } })
-    expect(storage.get('aiChatDraft:c1')).toBe('half-typed thought')
+    expect(JSON.parse(storage.get('aiChatDraft:c1') ?? '').text).toBe('half-typed thought')
     unmount()
 
     render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
@@ -96,6 +101,38 @@ describe('ChatInput drafts', () => {
     expect(onSend).toHaveBeenCalledWith('ship it', undefined, undefined)
     expect(storage.has('aiChatDraft:c1')).toBe(false)
     expect(textarea().value).toBe('')
+  })
+
+  it('ignores a draft older than its lifetime', () => {
+    storage.set(
+      'aiChatDraft:c1',
+      JSON.stringify({ text: 'stale', savedAt: Date.now() - DRAFT_TTL_MS - 1 }),
+    )
+    render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+    expect(textarea().value).toBe('')
+  })
+
+  it('sweeps expired drafts and dates ones stored without an age', () => {
+    const now = Date.now()
+    storage.set(
+      'aiChatDraft:old',
+      JSON.stringify({ text: 'stale', savedAt: now - DRAFT_TTL_MS - 1 }),
+    )
+    storage.set('aiChatDraft:fresh', JSON.stringify({ text: 'fresh', savedAt: now - 1000 }))
+    storage.set('aiChatDraft:legacy', 'bare text')
+    storage.set('otherKey', 'untouched')
+
+    sweepDrafts(now)
+    expect(storage.has('aiChatDraft:old')).toBe(false)
+    expect(JSON.parse(storage.get('aiChatDraft:fresh') ?? '').text).toBe('fresh')
+    expect(JSON.parse(storage.get('aiChatDraft:legacy') ?? '')).toEqual({
+      text: 'bare text',
+      savedAt: now,
+    })
+    expect(storage.get('otherKey')).toBe('untouched')
+
+    sweepDrafts(now + DRAFT_TTL_MS + 1)
+    expect(storage.has('aiChatDraft:legacy')).toBe(false)
   })
 
   it('does not persist oversized drafts', () => {

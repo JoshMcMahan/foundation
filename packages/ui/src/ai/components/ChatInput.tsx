@@ -17,47 +17,11 @@ import useDragDrop from '../core/useDragDrop'
 import type { AttachmentMeta, MessagePaste } from '../types'
 import AttachmentUpload, { type Attachment, type AttachmentUploadHandle } from './AttachmentUpload'
 import { ComposerContext, ComposerControls, ComposerSettings } from './ComposerChrome'
+import { clearDraft, readDraft, storeDraft, sweepDrafts } from './chatDraft'
 import DragOverlay from './DragOverlay'
 import { PasteFileCard } from './PastedText'
 import { SlashMenu, type SlashMenuConfig, useSlashMenu } from './SlashMenu'
 import { type ComposerPastes, usePasteCards } from './usePasteCards'
-
-const DRAFT_STORAGE_PREFIX = 'aiChatDraft:'
-// Beyond this a draft is likely pasted bulk content; persisting it risks
-// blowing the storage quota shared with the rest of the app.
-const DRAFT_MAX_LENGTH = 10_000
-
-function draftKey(conversationId?: string): string {
-  return `${DRAFT_STORAGE_PREFIX}${conversationId ?? 'new'}`
-}
-
-function readDraft(conversationId?: string): string {
-  try {
-    return window.localStorage.getItem(draftKey(conversationId)) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-function storeDraft(conversationId: string | undefined, text: string) {
-  try {
-    if (!text || text.length > DRAFT_MAX_LENGTH) {
-      window.localStorage.removeItem(draftKey(conversationId))
-    } else {
-      window.localStorage.setItem(draftKey(conversationId), text)
-    }
-  } catch {
-    // Storage unavailable (SSR, disabled storage): drafts simply don't persist.
-  }
-}
-
-function clearDraft(conversationId?: string) {
-  try {
-    window.localStorage.removeItem(draftKey(conversationId))
-  } catch {
-    // Storage unavailable: nothing to clear.
-  }
-}
 
 interface ChatInputProps {
   onSend: (
@@ -224,6 +188,8 @@ function streamControls(chat: ReturnType<typeof useChat>, turn: ChatInputProps['
   }
 }
 
+let draftsSwept = false
+
 const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput(
   {
     onSend,
@@ -251,6 +217,12 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
   ref,
 ) {
   const [input, setInput] = useState(() => readDraft(conversationId))
+  useEffect(() => {
+    if (!draftsSwept) {
+      draftsSwept = true
+      sweepDrafts()
+    }
+  }, [])
   const {
     cards,
     handleTextPaste,
