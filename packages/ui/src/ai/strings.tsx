@@ -170,10 +170,12 @@ export interface ChatStrings {
     choose: string
     readOnly: string
     acceptEdits: string
+    auto: string
     bypassPermissions: string
     plan: string
     readOnlyHint: string
     acceptEditsHint: string
+    autoHint: string
     bypassPermissionsHint: string
     planHint: string
   }
@@ -378,11 +380,14 @@ export const defaultChatStrings: ChatStrings = {
     choose: 'Choose what the agent may do',
     readOnly: 'Read only',
     acceptEdits: 'Accept edits',
+    auto: 'Auto',
     bypassPermissions: 'Bypass permissions',
     plan: 'Plan',
     readOnlyHint: 'The workspace can be read but not changed.',
     acceptEditsHint:
       'File edits are applied without asking. The workspace can be changed without your review.',
+    autoHint:
+      'File edits are applied without asking. An automatic reviewer approves or denies most actions that would ask you.',
     bypassPermissionsHint:
       'Every action is taken without asking, including commands that change the system.',
     planHint: 'The workspace is left unchanged while a plan is drafted.',

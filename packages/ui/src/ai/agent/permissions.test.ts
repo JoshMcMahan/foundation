@@ -6,8 +6,10 @@ describe('permissionModesUpTo', () => {
     expect(permissionModesUpTo('bypass-permissions')).toEqual([
       'read-only',
       'accept-edits',
+      'auto',
       'bypass-permissions',
     ])
+    expect(permissionModesUpTo('auto')).toEqual(['read-only', 'accept-edits', 'auto'])
     expect(permissionModesUpTo('read-only')).toEqual(['read-only'])
   })
 
@@ -29,6 +31,8 @@ describe('clampPermissionMode', () => {
 
   it('lowers a mode above the ceiling to the highest offered', () => {
     expect(clampPermissionMode('bypass-permissions', 'accept-edits')).toBe('accept-edits')
+    expect(clampPermissionMode('bypass-permissions', 'auto')).toBe('auto')
+    expect(clampPermissionMode('auto', 'accept-edits')).toBe('accept-edits')
     expect(clampPermissionMode('accept-edits', 'read-only')).toBe('read-only')
   })
 })

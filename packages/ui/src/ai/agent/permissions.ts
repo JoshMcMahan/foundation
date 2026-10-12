@@ -1,5 +1,10 @@
 // Plan is entered from the session itself, never asked for from outside it.
-const REQUESTABLE_PERMISSION_MODES = ['read-only', 'accept-edits', 'bypass-permissions'] as const
+const REQUESTABLE_PERMISSION_MODES = [
+  'read-only',
+  'accept-edits',
+  'auto',
+  'bypass-permissions',
+] as const
 
 // A session started from the terminal can be in a mode a menu does not offer;
 // showing the default in its place would understate what the session may do.
@@ -15,7 +20,8 @@ const PERMISSION_RANK: Record<NamedPermissionMode, number> = {
   'read-only': 0,
   plan: 1,
   'accept-edits': 2,
-  'bypass-permissions': 3,
+  auto: 3,
+  'bypass-permissions': 4,
 }
 
 export function isNamedPermissionMode(mode: string | undefined): mode is NamedPermissionMode {

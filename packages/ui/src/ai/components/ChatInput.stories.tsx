@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo } from 'react'
 import { StatusBadge } from '../../components/StatusBadge'
-import { DEFAULT_PERMISSION_MODE } from '../agent/permissions'
+import {
+  DEFAULT_PERMISSION_MODE,
+  NAMED_PERMISSION_MODES,
+  type NamedPermissionMode,
+} from '../agent/permissions'
 import {
   makeComposerPastes,
   makePasteText,
@@ -92,8 +96,26 @@ export const Toolbar: StoryObj<{ attachOpen: boolean }> = {
 // An agent's composer: a notice above, where the turn runs as chips, what the
 // agent is doing just above the box, the agent's own setting under it, and a
 // hint. The model stays in the box as it does in a chat.
-export const AgentComposer: StoryObj<{ notice: boolean; hint: string }> = {
-  args: { notice: true, hint: 'Enter sends, Shift+Enter adds a line' },
+export const AgentComposer: StoryObj<{
+  notice: boolean
+  hint: string
+  mode: NamedPermissionMode
+  ceiling: NamedPermissionMode
+}> = {
+  args: {
+    notice: true,
+    hint: 'Enter sends, Shift+Enter adds a line',
+    mode: DEFAULT_PERMISSION_MODE,
+    ceiling: 'auto',
+  },
+  argTypes: {
+    mode: { control: 'select', options: NAMED_PERMISSION_MODES },
+    ceiling: {
+      control: 'select',
+      options: NAMED_PERMISSION_MODES,
+      description: "The machine's remoteMaxPermissionMode; the menu stops at it",
+    },
+  },
   render: (args) => (
     <StoryChat>
       <div>
@@ -117,11 +139,7 @@ export const AgentComposer: StoryObj<{ notice: boolean; hint: string }> = {
             </>
           }
           settingsLeft={
-            <PermissionPicker
-              mode={DEFAULT_PERMISSION_MODE}
-              ceiling={undefined}
-              onPick={() => {}}
-            />
+            <PermissionPicker mode={args.mode} ceiling={args.ceiling} onPick={() => {}} />
           }
           hint={args.hint || undefined}
         />

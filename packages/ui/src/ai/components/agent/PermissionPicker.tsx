@@ -6,17 +6,16 @@ import {
   permissionModesUpTo,
 } from '../../agent/permissions'
 import { useChatConfig } from '../../core/config'
+import type { ChatStrings } from '../../strings'
 import Dropdown from '../../ui/Dropdown'
 
-const LABEL_KEY: Record<
-  NamedPermissionMode,
-  'readOnly' | 'acceptEdits' | 'bypassPermissions' | 'plan'
-> = {
+const LABEL_KEY = {
   'read-only': 'readOnly',
   'accept-edits': 'acceptEdits',
+  auto: 'auto',
   'bypass-permissions': 'bypassPermissions',
   plan: 'plan',
-}
+} as const satisfies Record<NamedPermissionMode, keyof ChatStrings['permissions']>
 
 /** What the agent may do, as a toolbar chip: the choices stop at the machine's
  *  ceiling, and a mode set elsewhere (plan, or one past the ceiling) still
