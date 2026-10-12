@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/parallelworks/foundation/compare/dev/v0.14.0...dev/v0.15.0) (2026-10-12)
+
+
+### Features
+
+* **dev:** add dev clean for finished worktrees and Go's build cache ([#214](https://github.com/parallelworks/foundation/issues/214)) ([bef4881](https://github.com/parallelworks/foundation/commit/bef4881c69dfd27508b27de754df9aa42103e677))
+
+
+### Bug Fixes
+
+* **deps:** build with Go 1.27.2 for the standard library security fixes ([#205](https://github.com/parallelworks/foundation/issues/205)) ([577ef73](https://github.com/parallelworks/foundation/commit/577ef7309a0b3d9ccde21b4289b0fa32520c40cb))
+
 ## [0.14.0](https://github.com/parallelworks/foundation/compare/dev/v0.13.0...dev/v0.14.0) (2026-10-08)
 
 
