@@ -10,11 +10,26 @@ describe('PermissionPicker', () => {
   })
 
   it('offers auto up to an auto ceiling', () => {
-    render(<PermissionPicker mode="auto" ceiling="auto" onPick={vi.fn()} />)
+    render(
+      <PermissionPicker
+        mode="auto"
+        ceiling="auto"
+        accepted={['read-only', 'accept-edits', 'auto', 'bypass-permissions', 'plan']}
+        onPick={vi.fn()}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Choose what the agent may do' }))
     const offered = within(screen.getByRole('list'))
     expect(offered.getByText('Auto')).toBeInTheDocument()
     expect(offered.queryByText('Bypass permissions')).not.toBeInTheDocument()
+  })
+
+  it('leaves auto out for a machine that does not list it', () => {
+    render(<PermissionPicker mode="accept-edits" ceiling="bypass-permissions" onPick={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Choose what the agent may do' }))
+    const offered = within(screen.getByRole('list'))
+    expect(offered.getByText('Bypass permissions')).toBeInTheDocument()
+    expect(offered.queryByText('Auto')).not.toBeInTheDocument()
   })
 
   it('shows an unrecognised mode verbatim', () => {

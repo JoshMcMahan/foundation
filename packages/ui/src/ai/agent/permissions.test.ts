@@ -1,16 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import { clampPermissionMode, isNamedPermissionMode, permissionModesUpTo } from './permissions'
 
+const ALL = ['read-only', 'accept-edits', 'auto', 'bypass-permissions', 'plan']
+
 describe('permissionModesUpTo', () => {
   it('offers every requestable mode up to the ceiling', () => {
-    expect(permissionModesUpTo('bypass-permissions')).toEqual([
+    expect(permissionModesUpTo('bypass-permissions', ALL)).toEqual([
       'read-only',
       'accept-edits',
       'auto',
       'bypass-permissions',
     ])
-    expect(permissionModesUpTo('auto')).toEqual(['read-only', 'accept-edits', 'auto'])
-    expect(permissionModesUpTo('read-only')).toEqual(['read-only'])
+    expect(permissionModesUpTo('auto', ALL)).toEqual(['read-only', 'accept-edits', 'auto'])
+    expect(permissionModesUpTo('read-only', ALL)).toEqual(['read-only'])
+  })
+
+  // A machine that predates auto refuses it, so the menu leaves it out.
+  it('offers only the modes the machine accepts', () => {
+    expect(permissionModesUpTo('bypass-permissions')).toEqual([
+      'read-only',
+      'accept-edits',
+      'bypass-permissions',
+    ])
+    expect(permissionModesUpTo('bypass-permissions', ['read-only', 'accept-edits'])).toEqual([
+      'read-only',
+      'accept-edits',
+    ])
   })
 
   // Plan sits between read-only and accept-edits but is never requested.
@@ -31,8 +46,9 @@ describe('clampPermissionMode', () => {
 
   it('lowers a mode above the ceiling to the highest offered', () => {
     expect(clampPermissionMode('bypass-permissions', 'accept-edits')).toBe('accept-edits')
-    expect(clampPermissionMode('bypass-permissions', 'auto')).toBe('auto')
-    expect(clampPermissionMode('auto', 'accept-edits')).toBe('accept-edits')
+    expect(clampPermissionMode('bypass-permissions', 'auto', ALL)).toBe('auto')
+    expect(clampPermissionMode('auto', 'accept-edits', ALL)).toBe('accept-edits')
+    expect(clampPermissionMode('auto', 'bypass-permissions')).toBe('bypass-permissions')
     expect(clampPermissionMode('accept-edits', 'read-only')).toBe('read-only')
   })
 })

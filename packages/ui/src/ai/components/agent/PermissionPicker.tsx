@@ -24,18 +24,21 @@ export default function PermissionPicker({
   mode,
   onPick,
   ceiling,
+  accepted,
   disabled = false,
 }: {
   mode: string | undefined
   onPick: (mode: PermissionMode) => void
   /** The machine's remoteMaxPermissionMode; unknown offers the daemon default. */
   ceiling: string | undefined
+  /** The machine's permissionModes; unknown offers what a machine that predates the list accepts. */
+  accepted?: readonly string[] | undefined
   disabled?: boolean
 }) {
   const t = useChatConfig().strings.permissions
   const current = mode ?? DEFAULT_PERMISSION_MODE
   const named = isNamedPermissionMode(current) ? current : undefined
-  const options = permissionModesUpTo(ceiling).map((m) => ({
+  const options = permissionModesUpTo(ceiling, accepted).map((m) => ({
     value: m,
     label: t[LABEL_KEY[m]],
     description: t[`${LABEL_KEY[m]}Hint`],

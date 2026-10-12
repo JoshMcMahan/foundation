@@ -101,12 +101,14 @@ export const AgentComposer: StoryObj<{
   hint: string
   mode: NamedPermissionMode
   ceiling: NamedPermissionMode
+  listsModes: boolean
 }> = {
   args: {
     notice: true,
     hint: 'Enter sends, Shift+Enter adds a line',
     mode: DEFAULT_PERMISSION_MODE,
     ceiling: 'auto',
+    listsModes: true,
   },
   argTypes: {
     mode: { control: 'select', options: NAMED_PERMISSION_MODES },
@@ -114,6 +116,10 @@ export const AgentComposer: StoryObj<{
       control: 'select',
       options: NAMED_PERMISSION_MODES,
       description: "The machine's remoteMaxPermissionMode; the menu stops at it",
+    },
+    listsModes: {
+      control: 'boolean',
+      description: 'The machine lists the modes it accepts; off is one that predates auto',
     },
   },
   render: (args) => (
@@ -139,7 +145,12 @@ export const AgentComposer: StoryObj<{
             </>
           }
           settingsLeft={
-            <PermissionPicker mode={args.mode} ceiling={args.ceiling} onPick={() => {}} />
+            <PermissionPicker
+              mode={args.mode}
+              ceiling={args.ceiling}
+              accepted={args.listsModes ? NAMED_PERMISSION_MODES : undefined}
+              onPick={() => {}}
+            />
           }
           hint={args.hint || undefined}
         />
