@@ -400,6 +400,7 @@ func NewRootCmd(cfg Config, opts ...Option) *cobra.Command {
 			return ResetStack(cmd.Context(), cfg, logger())
 		},
 	})
+	root.AddCommand(newCleanCmd(&verbose))
 	return root
 }
 
