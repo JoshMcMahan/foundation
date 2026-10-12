@@ -9,6 +9,7 @@ import { useWorkflowEditing, useWorkflowEngine } from '../components/Provider'
 import type { FieldPatch, GraphEdit, InputPath, WorkflowEditing } from '../editing'
 import { INPUT_YAML_PATH } from '../editor/settingsYaml'
 import { DynamicForm } from '../form/Form'
+import { FormEditingContext } from '../form/formEditing'
 import { formatDuration, parseDuration } from '../form/utils/duration'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon, EditIcon, TrashIcon } from '../icons'
 import {
@@ -1418,22 +1419,25 @@ function RowsField({
       onInputCapture={touch}
       onKeyDownCapture={touch}
     >
-      <DynamicForm
-        key={JSON.stringify(template)}
-        formJSONs={formJSONs}
-        initialValues={{ rows: draft.rows }}
-        labelPosition="top"
-        workflowForm
-        setValues={(values) => {
-          if (touched.current) {
-            const rows = values['rows']
-            onChange({
-              expression: undefined,
-              rows: Array.isArray(rows) ? rows.map(asRecord) : [],
-            })
-          }
-        }}
-      />
+      {/* This form previews the run form's list, so the editing rows around the dialog stay out of it. */}
+      <FormEditingContext.Provider value={null}>
+        <DynamicForm
+          key={JSON.stringify(template)}
+          formJSONs={formJSONs}
+          initialValues={{ rows: draft.rows }}
+          labelPosition="top"
+          workflowForm
+          setValues={(values) => {
+            if (touched.current) {
+              const rows = values['rows']
+              onChange({
+                expression: undefined,
+                rows: Array.isArray(rows) ? rows.map(asRecord) : [],
+              })
+            }
+          }}
+        />
+      </FormEditingContext.Provider>
       <FieldError message={error} />
     </div>
   )

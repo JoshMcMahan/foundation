@@ -50,6 +50,7 @@ export function FieldWrapper({
       <label
         htmlFor={id}
         id={labelId}
+        data-field-label
         className={cx(
           'relative',
           labelPosition === 'left' ? 'form-label' : 'form-label-top',

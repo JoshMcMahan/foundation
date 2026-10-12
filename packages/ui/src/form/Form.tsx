@@ -31,6 +31,7 @@ import { AngleRightIcon, TrashIcon } from '../icons'
 import { FormLayout, LayoutCSSContext } from './FormLayout'
 import { useFieldControlProps, useFieldRequired } from './fieldContext'
 import { type FieldComponent, FieldRegistryContext, Registry } from './fieldRegistry'
+import { EditingScope, useFormEditing } from './formEditing'
 import { resolveFormLayout } from './layout'
 import { inputWidth, resolvedFlag } from './lib'
 import { useParsedOpts } from './useParsedOpts'
@@ -436,6 +437,7 @@ export function GroupHeader({
       <button
         type="button"
         aria-expanded={open}
+        data-field-label
         className="w-full flex items-center text-left transform ease-in transition cursor-pointer"
         onClick={() => setOpen((open) => !open)}
       >
@@ -834,6 +836,8 @@ const FormField = React.memo(
     workflowForm?: boolean
   }) {
     const parsedField = useFieldParse(optionsField, values, parentInfo?.arrayIndex)
+    const editing = useFormEditing()
+    const path = editing ? [...editing.parent, fieldName] : null
     const field = asSchemaField(parentInfo ? parsedField : optionsField)
     if (field === null) {
       return null
@@ -858,7 +862,9 @@ const FormField = React.memo(
         deleteFieldByPath(values, fieldObj.name)
       }
       // If it is not set, default to no show only without deleting field from values
-      return null
+      return editing && path && fieldName !== '$meta' ? (
+        <editing.Row path={path} instance={fieldObj.name} hidden />
+      ) : null
     }
     let onChange: ((val: unknown) => void) | undefined
     if (field.one_must_be_true && parentInfo?.onChange) {
@@ -895,7 +901,7 @@ const FormField = React.memo(
         if (!workflowForm) {
           deleteFieldByPath(values, fieldObj.name)
         }
-        return null
+        return editing && path ? <editing.Row path={path} instance={fieldObj.name} hidden /> : null
       }
     }
     if (field.depends_on && parentInfo?.arrayIndex !== undefined) {
@@ -922,7 +928,7 @@ const FormField = React.memo(
       const HeaderElement = hideHeader ? React.Fragment : UncontrolledCollapsiblePanel
       const meta = resolveMetaOverrides(field.options, labelPosition, spaceCompact)
 
-      return (
+      const group = (
         <div className="flex flex-col w-full">
           <HeaderElement
             {...(!hideHeader && {
@@ -933,21 +939,30 @@ const FormField = React.memo(
             })}
           >
             <div className="w-full">
-              <FieldsFromOptions
-                options={field.options ?? {}}
-                setFormDirty={setFormDirty}
-                setFieldValue={setFieldValue}
-                setFieldTouched={setFieldTouched}
-                values={values}
-                parentInfo={parentInfo}
-                workflowForm={workflowForm}
-                labelPosition={meta.labelPosition}
-                spaceCompact={meta.spaceCompact}
-                missingFields={missingFields}
-              />
+              <EditingScope editing={editing} path={path}>
+                <FieldsFromOptions
+                  options={field.options ?? {}}
+                  setFormDirty={setFormDirty}
+                  setFieldValue={setFieldValue}
+                  setFieldTouched={setFieldTouched}
+                  values={values}
+                  parentInfo={parentInfo}
+                  workflowForm={workflowForm}
+                  labelPosition={meta.labelPosition}
+                  spaceCompact={meta.spaceCompact}
+                  missingFields={missingFields}
+                />
+              </EditingScope>
             </div>
           </HeaderElement>
         </div>
+      )
+      return editing && path ? (
+        <editing.Row path={path} instance={fieldObj.name}>
+          {group}
+        </editing.Row>
+      ) : (
+        group
       )
     }
     if (typeof field.type === 'object' && field.depends_on) {
@@ -984,7 +999,7 @@ const FormField = React.memo(
       }
     }
 
-    return (
+    const input = (
       <div className={cx('flex w-full', labelPosition === 'left' ? 'mb-[15px]' : 'mb-[5px]')}>
         <InputField
           field={fieldObj}
@@ -1003,6 +1018,18 @@ const FormField = React.memo(
           workflowForm={workflowForm}
         />
       </div>
+    )
+    if (!editing || !path) {
+      return input
+    }
+    // An object's fields are editable in place, and a list's template through any of its rows.
+    const holds = fieldObj.type === 'object' || fieldObj.type === 'list'
+    return (
+      <editing.Row path={path} instance={fieldObj.name}>
+        <EditingScope editing={editing} path={holds ? path : null}>
+          {input}
+        </EditingScope>
+      </editing.Row>
     )
   },
   (prev, next) => {
@@ -1070,6 +1097,7 @@ export function FieldsFromOptions({
   /** Prevents deletion of hidden+ignored field values (workflow forms filter at submit time) */
   workflowForm?: boolean | undefined
 }) {
+  const editing = useFormEditing()
   const chosen = useChosenLabelPosition(options)
   // A group's fields can be a wizard of their own, paged inside the form around it.
   const wizard = parseWizardConfig(options)
@@ -1116,6 +1144,7 @@ export function FieldsFromOptions({
       workflowForm={workflowForm}
     />
   )
+  const add = editing ? <editing.Add parent={editing.parent} /> : null
   const layout = resolveFormLayout(
     asRecord(options['$meta'])['layout'],
     names.filter((name) => !name.startsWith('$') && asSchemaField(options[name])),
@@ -1126,10 +1155,12 @@ export function FieldsFromOptions({
         <div className="flex min-w-0 flex-col gap-4">
           <FormLayout layout={layout.layout} renderField={(name) => fieldOf(name, true)} />
           {layout.remaining.map((name) => fieldOf(name, true))}
+          {add}
         </div>
       </ChosenLabelPosition.Provider>
     )
   }
+
   return (
     <ChosenLabelPosition.Provider value={chosen}>
       {flows ? (
@@ -1168,9 +1199,13 @@ export function FieldsFromOptions({
               </div>
             )
           })}
+          {add && <div className="order-2 w-full px-2">{add}</div>}
         </div>
       ) : (
-        names.map((name) => fieldOf(name))
+        <>
+          {names.map((name) => fieldOf(name, undefined))}
+          {add}
+        </>
       )}
     </ChosenLabelPosition.Provider>
   )

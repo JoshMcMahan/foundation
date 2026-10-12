@@ -1,6 +1,7 @@
 import { type FormikValues, useFormikContext } from 'formik'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useStrings, useWorkflowEngine } from '../../components/Provider'
+import { useFormEditing } from '../formEditing'
 import { initializeValues } from '../lib'
 import { getValueUsingPath } from '../utils/getValueUsingPath'
 import type { StepFieldConfig, WizardContainerProps } from './types'
@@ -9,6 +10,7 @@ import { copyBounds, stepText } from './utils'
 import { WizardNavigation } from './WizardNavigation'
 import { WizardStepContent } from './WizardStepContent'
 import { WizardStepIndicator } from './WizardStepIndicator'
+import { WizardPagesContext } from './wizardPages'
 
 /** One page the wizard shows: a step, or one copy of a step the person repeats. */
 interface Page {
@@ -41,6 +43,9 @@ export function WizardContainer({
   setFieldTouched: (field: string, touched?: boolean, shouldValidate?: boolean) => void
 }) {
   const { validateForm, setTouched, touched, initialValues } = useFormikContext<FormikValues>()
+  const editing = useFormEditing()
+  const pages = useContext(WizardPagesContext)
+  const [ownPage, setOwnPage] = useState(0)
   const { form: strings } = useStrings()
   const engine = useWorkflowEngine()
 
@@ -266,20 +271,42 @@ export function WizardContainer({
     await onSubmit?.(values)
   }, [isLastStep, validateForm, values, setTouched, touched, onSubmit])
 
+  // A form being built pages as it will when run, moving freely: no step blocks the next, every
+  // step can be jumped to, and the editor can turn the pages too.
+  const last = Math.max(shown.order.length - 1, 0)
+  const wizardKey = editing ? JSON.stringify(editing.parent) : ''
+  const editIndex = Math.min(Math.max(pages ? pages.page(wizardKey) : ownPage, 0), last)
+  const turn = (to: number) => {
+    const next = Math.max(to, 0)
+    if (pages) {
+      pages.setPage(wizardKey, next)
+    } else {
+      setOwnPage(next)
+    }
+  }
+  const drawn = shown.order.length
+  // Every row of a list holding a wizard shares its key, so only a change of count reports again.
+  const setCount = pages?.setCount
+  useEffect(() => {
+    setCount?.(wizardKey, drawn)
+  }, [setCount, wizardKey, drawn])
   // The page shown can go, as when saved inputs change a repeated page's copies: show the nearest one left.
   const shownBefore = useRef(shown.order)
   useEffect(() => {
     shownBefore.current = shown.order
   })
-  const pageKey = shown.byKey[currentStep]
+  const runKey = shown.byKey[currentStep]
     ? currentStep
     : nearestPage(currentStep, shown.order, shownBefore.current)
   useEffect(() => {
-    if (pageKey && pageKey !== currentStep) {
-      showStep(pageKey)
+    if (!editing && runKey && runKey !== currentStep) {
+      showStep(runKey)
     }
-  }, [pageKey, currentStep, showStep])
+  }, [editing, runKey, currentStep, showStep])
+  const pageKey = editing ? (shown.order[editIndex] ?? '') : runKey
   const page = shown.byKey[pageKey]
+  // A new copy goes after the step's last and is the page shown.
+  const show = (key: string, index: number) => (editing ? turn(index) : showStep(key))
   const copiesOf = (step: string): unknown[] => {
     const rows = getValueUsingPath(values, `${fieldNamePrefix}${step}`)
     return Array.isArray(rows) ? rows : []
@@ -297,14 +324,16 @@ export function WizardContainer({
       ...kept,
       takeAside(aside, kept.length) ?? initializeValues(options, {}) ?? {},
     ])
-    // A new copy goes after the step's last and is the page shown.
-    showStep(`${shownPage.step}[${kept.length}]`)
+    // The first copy takes the empty page's place.
+    const at = shown.order.indexOf(pageKey) + (shownPage.copy === undefined ? 0 : 1)
+    show(`${shownPage.step}[${kept.length}]`, at)
   }
   const removeCopy = (shownPage: Page) => {
     const copy = shownPage.copy ?? 0
     const rows = copiesOf(shownPage.step).filter((_, i) => i !== copy)
     setFieldValue(`${fieldNamePrefix}${shownPage.step}`, rows)
-    showStep(rows.length > 0 ? `${shownPage.step}[${Math.max(copy - 1, 0)}]` : shownPage.step)
+    const at = shown.order.indexOf(pageKey) - (copy > 0 ? 1 : 0)
+    show(rows.length > 0 ? `${shownPage.step}[${Math.max(copy - 1, 0)}]` : shownPage.step, at)
   }
 
   const rawTitle = page ? steps[page.step]?.title : undefined
@@ -362,6 +391,43 @@ export function WizardContainer({
       {copies}
     </div>
   ) : null
+
+  if (editing) {
+    return (
+      <div className={className}>
+        {navigation.showSteps !== false && (
+          <WizardStepIndicator
+            stepOrder={shown.order}
+            currentStep={pageKey}
+            steps={configs}
+            visitedSteps={new Set(shown.order)}
+            invalidSteps={new Set()}
+            onStepClick={(key) => {
+              turn(shown.order.indexOf(key))
+              return true
+            }}
+            allowJump
+            hideStepNumbers={navigation.hideStepNumbers}
+          />
+        )}
+        {content}
+        <WizardNavigation
+          isLastStep={editIndex === last}
+          canGoBack={editIndex > 0}
+          isCurrentStepValid
+          nextLabel={page?.config.nextLabel}
+          prevLabel={page?.config.prevLabel}
+          submitLabel={config.submitLabel || 'Execute'}
+          onNext={async () => {
+            turn(editIndex + 1)
+            return true
+          }}
+          onPrevious={() => turn(editIndex - 1)}
+          onSubmit={nested ? undefined : async () => {}}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className={className}>
