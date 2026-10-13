@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/parallelworks/foundation/compare/dev/v0.15.0...dev/v0.16.0) (2026-10-13)
+
+
+### Features
+
+* **dev:** a service that runs once holds back its dependents until it finishes ([#223](https://github.com/parallelworks/foundation/issues/223)) ([6c21a8d](https://github.com/parallelworks/foundation/commit/6c21a8dd213760b9ecf38cec7a1af0e739116a46))
+
 ## [0.15.0](https://github.com/parallelworks/foundation/compare/dev/v0.14.0...dev/v0.15.0) (2026-10-12)
 
 
