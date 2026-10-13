@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.43.0](https://github.com/parallelworks/foundation/compare/ui-v0.42.0...ui-v0.43.0) (2026-10-13)
+
+
+### Features
+
+* **ui:** a row's more button shows on touch screens and can name its row ([#232](https://github.com/parallelworks/foundation/issues/232)) ([8831ea1](https://github.com/parallelworks/foundation/commit/8831ea185a86fb81b89f8384805be36597ebe33e))
+
+
+### Bug Fixes
+
+* **ui:** grouped dropdown options keep their groups, and a create dialog's fields are named by their labels ([#229](https://github.com/parallelworks/foundation/issues/229)) ([1d166c1](https://github.com/parallelworks/foundation/commit/1d166c1de67a7e8ee446b2601f1b10693971d26f))
+
 ## [0.42.0](https://github.com/parallelworks/foundation/compare/ui-v0.41.0...ui-v0.42.0) (2026-10-13)
 
 
