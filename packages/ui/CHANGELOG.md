@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/parallelworks/foundation/compare/ui-v0.40.1...ui-v0.41.0) (2026-10-13)
+
+
+### Features
+
+* **ui:** chat shows the tool calls a gateway runs while it answers ([#226](https://github.com/parallelworks/foundation/issues/226)) ([42fed74](https://github.com/parallelworks/foundation/commit/42fed746123ceb338e70946bd36ec403bad95d8b))
+
 ## [0.40.1](https://github.com/parallelworks/foundation/compare/ui-v0.40.0...ui-v0.40.1) (2026-10-13)
 
 
