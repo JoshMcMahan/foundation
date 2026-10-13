@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.0](https://github.com/parallelworks/foundation/compare/ui-v0.43.0...ui-v0.44.0) (2026-10-13)
+
+
+### Features
+
+* **ui:** Select reports the highlighted item, for previewing a choice ([#234](https://github.com/parallelworks/foundation/issues/234)) ([610ea90](https://github.com/parallelworks/foundation/commit/610ea900a1f44bdd94d8317c9831835f6a80d22e))
+
 ## [0.43.0](https://github.com/parallelworks/foundation/compare/ui-v0.42.0...ui-v0.43.0) (2026-10-13)
 
 
