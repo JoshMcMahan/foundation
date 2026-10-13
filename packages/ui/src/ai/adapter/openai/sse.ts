@@ -1,5 +1,6 @@
 import type { ToolCall, ToolCallDelta } from '../../types'
-import type { CompletionChunk } from './wire'
+import type { PartDelta } from '../types'
+import type { CompletionChunk, ToolResultChunk } from './wire'
 
 export type ParsedSSELine = {
   id?: string | undefined
@@ -7,6 +8,7 @@ export type ParsedSSELine = {
   content?: string | undefined
   reasoningContent?: string | undefined
   toolCalls?: ToolCallDelta[] | undefined
+  toolResult?: ToolResultChunk | undefined
   finishReason?: string | null | undefined
   model?: string | undefined
   error?: string | undefined
@@ -36,6 +38,7 @@ export function parseSSELine(line: string): ParsedSSELine {
       content: choice?.delta?.content as string | undefined,
       reasoningContent: choice?.delta?.reasoning_content,
       toolCalls: choice?.delta?.tool_calls ?? undefined,
+      toolResult: chunk.toolResult,
       finishReason: choice?.finish_reason,
       model: chunk.model,
     }
@@ -44,7 +47,10 @@ export function parseSSELine(line: string): ParsedSSELine {
   }
 }
 
-/** Process an SSE stream from a ReadableStream reader */
+/** Process an SSE stream from a ReadableStream reader. With `onPart`, tool
+ *  calls stream as parts; a call the gateway answered with a result is left
+ *  off the returned `toolCalls`, which then hold only calls the caller must
+ *  run. */
 export async function processSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onContent: (content: string) => void,
@@ -53,6 +59,7 @@ export async function processSSEStream(
   onReasoning?: (reasoning: string) => void,
   onMessageId?: (messageId: string) => void,
   parseLine: SSELineParser = parseSSELine,
+  onPart?: (delta: PartDelta) => void,
 ): Promise<{
   content: string
   messageId: string
@@ -72,6 +79,16 @@ export async function processSSEStream(
   // Tool call deltas arrive by index across multiple chunks and must be reassembled
   const toolCallsMap: Map<number, { id: string; type: string; name: string; arguments: string }> =
     new Map()
+  const startedToolCalls = new Set<number>()
+  const answeredToolCalls = new Set<string>()
+  const startToolCall = (index: number) => {
+    const tc = toolCallsMap.get(index)
+    if (!onPart || !tc?.id || !tc.name || startedToolCalls.has(index)) {
+      return
+    }
+    startedToolCalls.add(index)
+    onPart({ type: 'tool_start', id: tc.id, name: tc.name, args: tc.arguments })
+  }
 
   let lineBuffer = ''
   while (true) {
@@ -123,8 +140,13 @@ export async function processSSEStream(
             }
             const existing = toolCallsMap.get(tc.index)
             if (existing) {
+              existing.id ||= tc.id || ''
+              existing.name ||= tc.function?.name || ''
               if (tc.function?.arguments) {
                 existing.arguments += tc.function.arguments
+                if (startedToolCalls.has(tc.index)) {
+                  onPart?.({ type: 'tool_update', id: existing.id, args: tc.function.arguments })
+                }
               }
             } else {
               toolCallsMap.set(tc.index, {
@@ -134,7 +156,17 @@ export async function processSSEStream(
                 arguments: tc.function?.arguments || '',
               })
             }
+            startToolCall(tc.index)
           }
+        }
+        if (parsed.toolResult) {
+          answeredToolCalls.add(parsed.toolResult.toolCallId)
+          onPart?.({
+            type: 'tool_end',
+            id: parsed.toolResult.toolCallId,
+            result: parsed.toolResult.content,
+            ...(parsed.toolResult.isError ? { isError: true } : {}),
+          })
         }
       }
     }
@@ -157,14 +189,16 @@ export async function processSSEStream(
     }
   }
 
-  const toolCalls: ToolCall[] = Array.from(toolCallsMap.values()).map((tc) => ({
-    id: tc.id,
-    type: tc.type,
-    function: {
-      name: tc.name,
-      arguments: tc.arguments,
-    },
-  }))
+  const toolCalls: ToolCall[] = Array.from(toolCallsMap.values())
+    .filter((tc) => !answeredToolCalls.has(tc.id))
+    .map((tc) => ({
+      id: tc.id,
+      type: tc.type,
+      function: {
+        name: tc.name,
+        arguments: tc.arguments,
+      },
+    }))
 
   if (toolCalls.length > 0 && onToolCall) {
     onToolCall(toolCalls)

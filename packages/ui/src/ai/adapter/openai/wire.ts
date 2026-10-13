@@ -45,8 +45,16 @@ export interface CompletionChunk {
   created?: number
   // Gateway extension: backend-generated message ID for persistence.
   messageId?: string
+  // Gateway extension: the result of a tool call the gateway ran itself.
+  toolResult?: ToolResultChunk
   choices?: CompletionChunkChoice[] | null
   usage?: TokenUsage
+}
+
+export interface ToolResultChunk {
+  toolCallId: string
+  content: string
+  isError?: boolean
 }
 
 // OpenAI-compatible /v1/models response with gateway extensions.

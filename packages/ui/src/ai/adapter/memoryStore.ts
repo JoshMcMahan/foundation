@@ -1,7 +1,9 @@
-import type { ChatMessage, Conversation, ConversationSummary } from '../types'
+import { applyPartDelta, finalizeParts } from '../core/parts'
+import type { ChatMessage, Conversation, ConversationSummary, MessagePart } from '../types'
 import {
   ChatAdapterError,
   type ConversationsAdapter,
+  type PartDelta,
   type StreamCompletion,
   type StreamRequest,
 } from './types'
@@ -158,6 +160,7 @@ export function createMemoryConversationStore(options?: {
       return async (req, handlers, signal) => {
         let partialContent = ''
         let partialReasoning = ''
+        let parts: MessagePart[] = []
         const wrappedHandlers = {
           ...handlers,
           onContent: (chunk: string) => {
@@ -167,6 +170,10 @@ export function createMemoryConversationStore(options?: {
           onReasoning: (chunk: string) => {
             partialReasoning += chunk
             handlers.onReasoning?.(chunk)
+          },
+          onPart: (delta: PartDelta) => {
+            parts = applyPartDelta(parts, delta)
+            handlers.onPart?.(delta)
           },
         }
         recordUser(req)
@@ -181,6 +188,7 @@ export function createMemoryConversationStore(options?: {
             ...(result.reasoning ? { reasoning: result.reasoning } : {}),
             ...(result.responsesOutput.length ? { responsesOutput: result.responsesOutput } : {}),
             ...(result.toolCalls.length ? { toolCalls: result.toolCalls } : {}),
+            ...(parts.length ? { parts: finalizeParts(parts) } : {}),
             timestamp: new Date().toISOString(),
           })
           return { ...result, messageId: assistantId }

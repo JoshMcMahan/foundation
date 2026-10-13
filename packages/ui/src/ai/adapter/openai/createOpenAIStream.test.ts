@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ChatAdapterError, type StreamRequest } from '../types'
+import { ChatAdapterError, type PartDelta, type StreamRequest } from '../types'
 import { createOpenAICompatibleStream } from './createOpenAIStream'
 
 function sseResponse(lines: string[]): Response {
@@ -57,6 +57,56 @@ describe('createOpenAICompatibleStream', () => {
     expect(body.model).toBe('org:acme/model-a')
     expect(body.stream).toBe(true)
     expect(body.messages).toEqual([{ role: 'user', content: 'hi' }])
+  })
+
+  it('streams tool calls the gateway runs as parts and keeps them off the result', async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
+      sseResponse([
+        'data: {"id":"c","model":"m","messageId":"srv-1","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"list_clusters","arguments":"{\\"st"}}]}}]}',
+        'data: {"id":"c","model":"m","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"ate\\":\\"on\\"}"}}]}}]}',
+        'data: {"id":"c","model":"m","toolResult":{"toolCallId":"call-1","content":"[\\"gpu-a\\"]"}}',
+        'data: {"id":"c","model":"m","choices":[{"delta":{"content":"You have gpu-a."},"finish_reason":"stop"}]}',
+        'data: [DONE]',
+      ]),
+    )
+    const stream = createOpenAICompatibleStream({
+      completionsUrl: '/v1/chat/completions',
+      fetch: fetchMock,
+    })
+
+    const parts: PartDelta[] = []
+    const result = await stream(baseRequest(), {
+      onContent: () => {},
+      onPart: (delta) => parts.push(delta),
+    })
+
+    expect(parts).toEqual([
+      { type: 'tool_start', id: 'call-1', name: 'list_clusters', args: '{"st' },
+      { type: 'tool_update', id: 'call-1', args: 'ate":"on"}' },
+      { type: 'tool_end', id: 'call-1', result: '["gpu-a"]' },
+    ])
+    expect(result.toolCalls).toEqual([])
+    expect(result.content).toBe('You have gpu-a.')
+  })
+
+  it('returns tool calls the gateway left for the caller to run', async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
+      sseResponse([
+        'data: {"id":"c","model":"m","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"lookup","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}',
+        'data: [DONE]',
+      ]),
+    )
+    const stream = createOpenAICompatibleStream({
+      completionsUrl: '/v1/chat/completions',
+      fetch: fetchMock,
+    })
+
+    const result = await stream(baseRequest(), { onContent: () => {} })
+
+    expect(result.finishReason).toBe('tool_calls')
+    expect(result.toolCalls).toEqual([
+      { id: 'call-1', type: 'function', function: { name: 'lookup', arguments: '{}' } },
+    ])
   })
 
   it('uses the Responses transport when requested and available', async () => {

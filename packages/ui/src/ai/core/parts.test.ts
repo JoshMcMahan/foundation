@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MessagePart, ToolCallPart } from '../types'
-import { applyPartDelta, finalizeParts } from './parts'
+import { applyPartDelta, finalizeParts, toolTurnMessages } from './parts'
 
 const runningTool = (id = 't1'): ToolCallPart => ({
   kind: 'tool_call',
@@ -205,5 +205,47 @@ describe('finalizeParts', () => {
     const done: ToolCallPart = { ...runningTool(), status: 'ok', result: 'x' }
     const notice: MessagePart = { kind: 'notice', text: 'n' }
     expect(finalizeParts([done, notice])).toEqual([done, notice])
+  })
+})
+
+describe('toolTurnMessages', () => {
+  const answer = { role: 'assistant', content: 'You have gpu-a.' }
+
+  it('replays finished tool calls and their results before the answer', () => {
+    const parts: MessagePart[] = [
+      { ...runningTool('t1'), status: 'ok', result: '["gpu-a"]' },
+      { ...runningTool('t2'), status: 'error', result: 'not found' },
+    ]
+    expect(toolTurnMessages(parts, answer)).toEqual([
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          {
+            id: 't1',
+            type: 'function',
+            function: { name: 'get_workflow', arguments: '{"name":"helloworld"}' },
+          },
+          {
+            id: 't2',
+            type: 'function',
+            function: { name: 'get_workflow', arguments: '{"name":"helloworld"}' },
+          },
+        ],
+      },
+      { role: 'tool', tool_call_id: 't1', content: '["gpu-a"]' },
+      { role: 'tool', tool_call_id: 't2', content: 'not found' },
+      answer,
+    ])
+  })
+
+  it('returns the answer alone when no tool call finished', () => {
+    expect(toolTurnMessages([runningTool()], answer)).toEqual([answer])
+    expect(toolTurnMessages(undefined, answer)).toEqual([answer])
+  })
+
+  it('leaves out an empty answer after the tool results', () => {
+    const parts: MessagePart[] = [{ ...runningTool(), status: 'ok', result: 'done' }]
+    expect(toolTurnMessages(parts, { role: 'assistant', content: null })).toHaveLength(2)
   })
 })

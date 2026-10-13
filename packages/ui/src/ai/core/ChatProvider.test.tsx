@@ -538,6 +538,38 @@ describe('streamed parts', () => {
     expect(assistant?.reasoningDuration).toBe(3_000)
   })
 
+  it('replays the tool calls of a turn and results to the model on the next send', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (req.messages.length > 1) {
+        return emptyStreamResult()
+      }
+      handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'list_clusters', args: '{}' })
+      handlers.onPart?.({ type: 'tool_end', id: 't1', result: '["gpu-a"]' })
+      return { ...emptyStreamResult(), content: 'You have gpu-a.' }
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('what is running')
+    })
+    await act(async () => {
+      await chat.sendMessage('thanks')
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].messages).toEqual([
+      { role: 'user', content: 'what is running' },
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          { id: 't1', type: 'function', function: { name: 'list_clusters', arguments: '{}' } },
+        ],
+      },
+      { role: 'tool', tool_call_id: 't1', content: '["gpu-a"]' },
+      { role: 'assistant', content: 'You have gpu-a.' },
+      { role: 'user', content: 'thanks' },
+    ])
+  })
+
   it('closes out a tool call the stream never resolved', async () => {
     const adapter = makeAdapter({
       streamCompletion: vi.fn(async (_req, handlers) => {

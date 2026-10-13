@@ -27,4 +27,5 @@ export type {
   CompletionMessage,
   CompletionRequest,
   ModelsWireResponse,
+  ToolResultChunk,
 } from './wire'

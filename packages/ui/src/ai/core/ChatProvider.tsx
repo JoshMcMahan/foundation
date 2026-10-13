@@ -29,7 +29,7 @@ import type {
 } from '../types'
 import { chatReducer, initialState } from './chatReducer'
 import { ChatConfigProvider, type ChatUIConfig, resolveChatConfig } from './config'
-import { applyPartDelta, finalizeParts } from './parts'
+import { applyPartDelta, finalizeParts, toolTurnMessages } from './parts'
 import { providerIssueFor } from './providerIssues'
 import {
   ReportSidebarPresentationContext,
@@ -648,8 +648,8 @@ export function ChatProvider({
       const existingMessages = isNewConversation ? [] : state.currentConversation?.messages || []
       const apiMessages: CompletionMessage[] = [
         ...existingMessages
-          .filter((m) => m.content || m.toolCalls?.length)
-          .map((m) => {
+          .filter((m) => m.content || m.toolCalls?.length || m.parts?.length)
+          .flatMap((m) => {
             const msg: CompletionMessage = {
               role: m.role,
               content: m.content || null,
@@ -674,7 +674,7 @@ export function ChatProvider({
             // The AI already processed those attachments when they were first sent.
             // Re-sending them would cause duplicate content and potential API errors
             // for non-vision models.
-            return msg
+            return m.role === 'assistant' ? toolTurnMessages(m.parts, msg) : [msg]
           }),
         ...precedingApiMessages,
         {
