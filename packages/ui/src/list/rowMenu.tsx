@@ -155,24 +155,30 @@ export function useCopySubmenu(): CopySubmenu {
 }
 
 /** Opens a row's menu under itself. Shows on the row's hover or focus, and
- *  stays while its menu is `open`, though the pointer has left the row. */
+ *  stays while its menu is `open`, though the pointer has left the row. A touch
+ *  screen has no hover, so there it always shows: the row's menu is otherwise
+ *  out of reach. */
 export function MoreButton({
   onOpen,
   open = false,
   visible = open,
+  label,
   className,
 }: {
   onOpen: (button: HTMLElement) => void
   open?: boolean
   /** Shows at rest too. */
   visible?: boolean
+  /** Names the row the menu acts on, as "More actions for Core", for a list
+   *  of rows that would otherwise each read "More actions". */
+  label?: string | undefined
   className?: string | undefined
 }) {
   const { list: t } = useStrings()
   return (
     <button
       type="button"
-      aria-label={t.moreActions}
+      aria-label={label ?? t.moreActions}
       aria-haspopup="menu"
       aria-expanded={open}
       onClick={(e) => {
@@ -181,7 +187,7 @@ export function MoreButton({
       }}
       className={cx(
         'rounded p-1 cursor-pointer text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) focus-visible:opacity-100',
-        visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100',
         className,
       )}
     >

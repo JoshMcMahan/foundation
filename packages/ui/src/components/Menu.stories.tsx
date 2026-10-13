@@ -2,8 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
 import { AddIcon, ClipboardIcon, EditIcon, TrashIcon } from '../icons'
+import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../list/rowMenu'
 import { ActionMenu } from './ActionMenu'
-import { useContextMenu } from './ContextMenu'
+import { type OpenMenu, useContextMenu } from './ContextMenu'
 import { type MenuEntry, type MenuSearch, menuDivider } from './MenuEntries'
 
 const meta: Meta = {
@@ -142,5 +143,70 @@ export const AtThePointer: StoryObj = {
     const { left, top } = area.getBoundingClientRect()
     fireEvent.contextMenu(area, { clientX: left + 8, clientY: top + 8 })
     await expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeVisible()
+  },
+}
+
+function MoreButtonRow({
+  name,
+  openMenu,
+  visible,
+  named,
+}: {
+  name: string
+  openMenu: OpenMenu
+  visible: boolean
+  named: boolean
+}) {
+  const { active, openMenu: openRowMenu } = useRowMenuActive(openMenu)
+  const items = useItems()
+  return (
+    <li
+      className={`group flex h-8 items-center gap-2 rounded-md pr-1 pl-2 text-sm ${active ? 'theme-hover' : 'hover:theme-hover'}`}
+      {...rowContextMenuProps(openRowMenu, items)}
+    >
+      <span className="flex-1 truncate">{name}</span>
+      <MoreButton
+        open={active}
+        visible={visible}
+        label={named ? `More actions for ${name}` : undefined}
+        onOpen={(button) => openRowMenu(button, items)}
+      />
+    </li>
+  )
+}
+
+/** A row's more button opens the same menu as its right-click. With a mouse it
+ *  shows on the row's hover; on a touch screen it always shows. `label` names
+ *  the row for a screen reader. */
+export const MoreButtonOnARow: StoryObj<{ visible: boolean; named: boolean }> = {
+  args: { visible: false, named: true },
+  argTypes: {
+    visible: { control: 'boolean', description: 'Shows at rest too' },
+    named: { control: 'boolean', description: 'Passes a label naming the row' },
+  },
+  render: function Render({ visible, named }) {
+    const { openMenu, contextMenu } = useContextMenu()
+    return (
+      <>
+        <ul className="w-64 space-y-0.5">
+          {['Core', 'Platform', 'Research'].map((name) => (
+            <MoreButtonRow
+              key={name}
+              name={name}
+              openMenu={openMenu}
+              visible={visible}
+              named={named}
+            />
+          ))}
+        </ul>
+        {contextMenu}
+      </>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole('button', { name: 'More actions for Core' })
+    await userEvent.click(button)
+    await expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeVisible()
+    await waitFor(() => expect(button).toHaveAttribute('aria-expanded', 'true'))
   },
 }
