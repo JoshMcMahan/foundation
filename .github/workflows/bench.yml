@@ -1,0 +1,104 @@
+name: Benchmark
+
+# Measures the dependency graph on large workflows in headless Chrome and
+# reports it on the PR against its base. It never fails a PR: shared runners
+# are too noisy to gate on, so what must not regress is held by tests instead.
+on:
+  pull_request:
+    paths:
+      - 'packages/ui/**'
+      - 'packages/package.json'
+      - 'packages/pnpm-lock.yaml'
+      - '.github/workflows/bench.yml'
+
+permissions: {}
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read # checkout
+    outputs:
+      report: ${{ steps.report.outputs.report }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: $/.github/actions/setup-pnpm
+      - name: Build the head
+        working-directory: packages/ui
+        run: pnpm bench:build
+      # The base is built with the head's benchmark page, so both draw the same
+      # graphs; a base without what that page needs is left out of the report.
+      - name: Build the base
+        id: base
+        continue-on-error: true
+        working-directory: base/packages
+        env:
+          pnpm_config_cache_dir: ${{ runner.temp }}/pnpm-cache
+        run: |
+          rm -rf ui/bench
+          cp -r ../../packages/ui/bench ui/bench
+          rm -rf ui/bench/dist
+          pnpm install --frozen-lockfile
+          cd ui
+          pnpm build:css
+          pnpm exec vite build --config bench/vite.config.ts --logLevel warn
+      - name: Measure
+        working-directory: packages/ui
+        env:
+          BASE_BUILT: ${{ steps.base.outcome }}
+        run: |
+          builds=(head=bench/dist)
+          if [ "$BASE_BUILT" = success ]; then
+            builds+=(base=../../base/packages/ui/bench/dist)
+          fi
+          node bench/run.ts --out "$RUNNER_TEMP/bench.md" "${builds[@]}"
+      - name: Report
+        id: report
+        run: |
+          cat "$RUNNER_TEMP/bench.md" >> "$GITHUB_STEP_SUMMARY"
+          delimiter="EOF_$(openssl rand -hex 16)"
+          {
+            echo "report<<$delimiter"
+            cat "$RUNNER_TEMP/bench.md"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+  # Kept apart from the job that runs the PR's code, which never holds a token
+  # that can write. A fork's PR gets no token that can comment, so its report
+  # is only in the run's summary.
+  comment:
+    needs: measure
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write # the report's comment
+    steps:
+      - name: Post or update the report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          REPORT: ${{ needs.measure.outputs.report }}
+        run: |
+          marker='<!-- dependency-graph-benchmark -->'
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" \
+            | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$REPORT" > /dev/null
+          else
+            gh api "repos/$REPO/issues/$PR/comments" -f body="$REPORT" > /dev/null
+          fi

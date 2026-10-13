@@ -1,8 +1,9 @@
+import { memo } from 'react'
 import { Indicator } from '../components/Indicator'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
 import type { MatrixGroup, RunStatus } from '../engine'
 import { EditableJobRow } from './editorRows'
-import { emptyRowsStyle } from './gridSpacing'
+import { GraphNode } from './GraphNode'
 import { type JobHandlers, Joblist } from './JobSummary'
 import { Reveal } from './Reveal'
 import type { WorkflowJob } from './types'
@@ -52,18 +53,13 @@ export function MatrixGroupSummaryItem({
 }
 
 /** Matrix group node in the DAG visualization. */
-export function MatrixGroupNode({
+export const MatrixGroupNode = memo(function MatrixGroupNode({
   matrixGroup,
   jobNames,
   idPrefix,
   isExpanded,
-  onToggle,
+  toggleMatrix,
   jobs,
-  activeDists,
-  onMouseEnter,
-  onMouseLeave,
-  hoveredRelated,
-  animT,
   zBase,
   handlers,
   preview,
@@ -74,13 +70,9 @@ export function MatrixGroupNode({
   jobNames: string[]
   idPrefix: string
   isExpanded: boolean
-  onToggle: () => void
+  /** Opens or closes the matrix by its key, its path prefix and job. */
+  toggleMatrix: (key: string) => void
   jobs: Record<string, WorkflowJob>
-  activeDists: Map<string, number> | null
-  onMouseEnter: () => void
-  onMouseLeave: () => void
-  hoveredRelated: Set<string> | null
-  animT: number
   zBase: number
   handlers: JobHandlers
   preview: boolean
@@ -100,7 +92,7 @@ export function MatrixGroupNode({
       type="button"
       aria-expanded={isExpanded}
       className="cursor-pointer w-full text-left"
-      onClick={onToggle}
+      onClick={() => toggleMatrix(idPrefix + matrixName)}
     >
       <div className="font-semibold text-md p-0.5">
         {t.matrixOf(matrixName.length > 20 ? `${matrixName.slice(0, 20)}...` : matrixName)}
@@ -113,49 +105,27 @@ export function MatrixGroupNode({
       )}
     </button>
   )
-
   return (
-    <div
-      id={`node_${idPrefix}${first}`}
-      role="none"
-      className="relative m-24"
-      style={{
-        zIndex: (activeDists?.has(first) ? 25 : 1) + zBase,
-        ...emptyRowsStyle(rowsAbove),
-      }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onFocus={onMouseEnter}
-      onBlur={onMouseLeave}
-    >
-      <div className="absolute inset-0 rounded-2xl bg-(--theme-panel-bg)" />
-      <div
-        className="relative border-solid shadow py-4 px-8 rounded-xl border-4 whitespace-nowrap bg-(--theme-panel-bg) text-2xl"
-        style={{
-          opacity: hoveredRelated && !hoveredRelated.has(first) ? 0.5 : 1,
-          transition: `opacity ${animT}s`,
-        }}
-      >
-        {editable ? (
-          <EditableJobRow job={matrixName} label={t.matrixOf(matrixName)} badge={false}>
-            {header}
-          </EditableJobRow>
-        ) : (
-          header
-        )}
-        <Reveal open={isExpanded} growWidth={true}>
-          <div className="mt-1 border-t border-(--theme-border) pt-1">
-            <Joblist
-              jobs={jobs}
-              jobNames={matrixMembers}
-              {...handlers}
-              growWidth={true}
-              preview={preview}
-              editableSteps={editable}
-            />
-          </div>
-        </Reveal>
-      </div>
-    </div>
+    <GraphNode id={`node_${idPrefix}${first}`} job={first} rowsAbove={rowsAbove} zBase={zBase}>
+      {editable ? (
+        <EditableJobRow job={matrixName} label={t.matrixOf(matrixName)} badge={false}>
+          {header}
+        </EditableJobRow>
+      ) : (
+        header
+      )}
+      <Reveal open={isExpanded} growWidth={true}>
+        <div className="mt-1 border-t border-(--theme-border) pt-1">
+          <Joblist
+            jobs={jobs}
+            jobNames={matrixMembers}
+            {...handlers}
+            growWidth={true}
+            preview={preview}
+            editableSteps={editable}
+          />
+        </div>
+      </Reveal>
+    </GraphNode>
   )
-}
+})

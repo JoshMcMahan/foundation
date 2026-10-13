@@ -77,9 +77,10 @@ vi.mock('../components/Dropdown', () => import('../test/DropdownStandIn'))
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
 import { suggestionsOf } from '../test/DropdownStandIn'
-import { computeGraphLayout, DependencyGraphPreview } from './DependencyGraph'
+import { DependencyGraphPreview } from './DependencyGraph'
 import type { DependencyGraphEditor, EditorProblem } from './editorApi'
 import { GRAPH_EDITOR_STRINGS } from './editorStrings'
+import { computeGraphLayout } from './graphLayout'
 import { COLUMN_PITCH } from './gridSpacing'
 import type { WorkflowJob } from './types'
 

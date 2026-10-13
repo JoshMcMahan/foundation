@@ -87,7 +87,7 @@ export default function Markdown({ children, isStreaming }: MarkdownProps) {
       <Streamdown
         mode={isStreaming ? 'streaming' : 'static'}
         {...(isStreaming === undefined ? {} : { isAnimating: isStreaming })}
-        {...(isStreaming ? ({ caret: 'block' } as const) : {})}
+        {...(isStreaming ? ({ caret: 'block', className: 'markdown-streaming' } as const) : {})}
         plugins={plugins}
         rehypePlugins={rehypePlugins}
         shikiTheme={shikiTheme}

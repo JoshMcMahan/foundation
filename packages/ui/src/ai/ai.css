@@ -471,8 +471,10 @@
   color: color-mix(in oklab, var(--theme-accent, #06354f) 70%, var(--theme-panel-bg, #fff));
 }
 
-/* The reply being written ends in the accent's caret. */
-.chat-thread [style*="--streamdown-caret"] > :last-child::after {
+/* The reply being written ends in the accent's caret. Matched by a class, not by the inline style
+   that sets the caret: a rule reaching past an element its style attribute selects makes every
+   inline style change anywhere on the page restyle that element's whole subtree. */
+.chat-thread .markdown-streaming > :last-child::after {
   color: var(--chat-accent);
 }
 

@@ -12,6 +12,15 @@ describe('Markdown host component overrides', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  // The chat's caret rule matches this class rather than the inline style that sets the caret, which
+  // would make every inline style change on the page restyle the subtree it changed in.
+  it('marks a reply being written by a class, for its caret', () => {
+    const { container, rerender } = render(<Markdown isStreaming>writing</Markdown>)
+    expect(container.querySelector('.markdown-streaming')).not.toBeNull()
+    rerender(<Markdown isStreaming={false}>written</Markdown>)
+    expect(container.querySelector('.markdown-streaming')).toBeNull()
+  })
+
   it('lets the host override a tag via config.markdownComponents', () => {
     render(
       <ChatConfigProvider

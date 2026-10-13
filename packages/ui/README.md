@@ -99,6 +99,12 @@ const engine = { ...createWorkflowEngine(), editing: workflowPackage }
 
 Without `editing`, the graph lays its jobs out by their needs alone.
 
+The graph draws thousands of jobs, and subworkflows opened inline several levels deep. Layout is
+near linear in jobs and needs; hovering a job re-renders only the nodes and connectors whose
+highlight changes, and panning, zooming and a running run's clock re-render none. The view fits
+the whole graph, zooms out to 1% to show the shape of the largest, and in to 200% to read a node;
+the wheel zooms by the same factor at every scale, about the pointer.
+
 The editor checks YAML against the schemas a host registers with `configureEditorYaml` from
 `@parallelworks/ui/editor`. The job, step, input and settings dialogs edit their YAML at their own
 paths (`JOB_YAML_PATH`, `STEP_YAML_PATH`, `INPUT_YAML_PATH`, `SETTINGS_YAML_PATH`); `settingsSchemas`

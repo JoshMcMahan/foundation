@@ -105,7 +105,9 @@
     "lint:package": "publint --strict",
     "verify:pack": "node scripts/verify-pack.mjs",
     "prepublishOnly": "pnpm clean && pnpm build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p bench",
+    "bench:build": "pnpm build:css && vite build --config bench/vite.config.ts --logLevel warn",
+    "bench": "pnpm bench:build && node bench/run.ts head=bench/dist",
     "storybook": "pnpm build:css && storybook dev -p 6006",
     "build-storybook": "pnpm build:css && storybook build"
   },
@@ -159,6 +161,7 @@
     "jsdom": "^30.1.1",
     "monaco-editor": "^0.57.0",
     "path-browserify": "^1.0.1",
+    "playwright-core": "1.56.1",
     "publint": "^0.3.25",
     "react": "19.3.0",
     "react-dom": "19.3.0",

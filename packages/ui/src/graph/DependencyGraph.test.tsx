@@ -34,32 +34,38 @@ vi.mock('../components/Provider', async (importOriginal) =>
 // The view bar zooms through the library's handle and learns the scale from its onTransform.
 const panZoom = vi.hoisted(() => ({
   onTransform: undefined as ((ref: unknown, state: { scale: number }) => void) | undefined,
-  onWheel: undefined as (() => void) | undefined,
   setTransform: vi.fn(),
   state: { positionX: 0, positionY: 0, scale: 0.6 },
 }))
 vi.mock('react-zoom-pan-pinch', async () => {
-  const { forwardRef, useImperativeHandle } = await import('react')
+  const { forwardRef, useImperativeHandle, useRef } = await import('react')
   return {
     TransformWrapper: forwardRef(function TransformWrapper(
       {
         children,
         onTransform,
-        onWheel,
       }: {
         children: ReactNode | (() => ReactNode)
         onTransform?: (ref: unknown, state: { scale: number }) => void
-        onWheel?: () => void
       },
       ref: Ref<unknown>,
     ) {
       panZoom.onTransform = onTransform
-      panZoom.onWheel = onWheel
+      const wrapper = useRef<HTMLDivElement>(null)
       useImperativeHandle(ref, () => ({
-        instance: { state: panZoom.state },
+        instance: {
+          state: panZoom.state,
+          get wrapperComponent() {
+            return wrapper.current
+          },
+        },
         setTransform: panZoom.setTransform,
       }))
-      return typeof children === 'function' ? children() : children
+      return (
+        <div ref={wrapper} data-testid="pan-zoom">
+          {typeof children === 'function' ? children() : children}
+        </div>
+      )
     }),
     TransformComponent: ({ children }: { children: unknown }) => children,
   }
@@ -102,15 +108,12 @@ vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
 import { detectMatrixGroups, emptyLayout, layoutFromCols } from '@parallelworks/workflow-parser'
 import { type RunFileResult, UIProvider } from '../components/Provider'
-import DependencyGraph, {
-  addCleanupSteps,
-  computeGraphLayout,
-  DependencyGraphPreview,
-  intoView,
-} from './DependencyGraph'
+import DependencyGraph, { addCleanupSteps, DependencyGraphPreview } from './DependencyGraph'
 import type { DependencyGraphEditor } from './editorApi'
+import { computeGraphLayout } from './graphLayout'
 import { COLUMN_PITCH, SLOT_PITCH } from './gridSpacing'
 import type { WorkflowJob } from './types'
+import { intoView, MAX_SCALE, MIN_SCALE, wheelFactor } from './viewport'
 
 const run = {
   id: 'run-1',
@@ -300,8 +303,8 @@ describe('DependencyGraph view bar', () => {
     render(<DependencyGraph run={run} preview />)
     const zoomIn = screen.getByRole('button', { name: 'Zoom in' })
     const zoomOut = screen.getByRole('button', { name: 'Zoom out' })
-    // A graph opens at its closest zoom.
-    expect(zoomIn).toBeDisabled()
+    // A graph opens where a fit comes closest, which zooms in further still.
+    expect(zoomIn).toBeEnabled()
     fireEvent.click(zoomOut)
     expect(panZoom.setTransform).toHaveBeenLastCalledWith(
       expect.any(Number),
@@ -310,11 +313,30 @@ describe('DependencyGraph view bar', () => {
       expect.any(Number),
       'easeOut',
     )
+    act(() => panZoom.onTransform?.(null, { scale: MAX_SCALE }))
+    expect(zoomIn).toBeDisabled()
+    expect(zoomOut).toBeEnabled()
     act(() => panZoom.onTransform?.(null, { scale: 0.4 }))
     expect(zoomIn).toBeEnabled()
-    expect(zoomOut).toBeEnabled()
-    act(() => panZoom.onTransform?.(null, { scale: 0.2 }))
+    act(() => panZoom.onTransform?.(null, { scale: MIN_SCALE }))
     expect(zoomOut).toBeDisabled()
+  })
+
+  it('zooms the wheel by a factor about the pointer, the same at every scale', () => {
+    render(<DependencyGraph run={run} preview />)
+    const wrapper = screen.getByTestId('pan-zoom')
+    for (const scale of [0.02, 0.6]) {
+      panZoom.state.scale = scale
+      fireEvent.wheel(wrapper, { deltaY: -100, clientX: 0, clientY: 0 })
+      expect(panZoom.setTransform).toHaveBeenLastCalledWith(
+        0,
+        0,
+        scale * wheelFactor({ deltaY: -100, deltaMode: 0, ctrlKey: false }),
+        0,
+        'easeOut',
+      )
+    }
+    panZoom.state.scale = 0.6
   })
 
   it('goes back to the run from a subworkflow opened in its own graph on Reset View', () => {
@@ -804,7 +826,7 @@ describe('the editor’s view', () => {
     const two = { jobs: { ...one.jobs, b: { steps: [{ run: 'y' }] } } }
     const { rerender } = render(<DependencyGraphPreview yml={one} editor={editor} />)
     await waitFor(() => expect(document.getElementById('node_a')).not.toBeNull())
-    act(() => panZoom.onWheel?.())
+    fireEvent.wheel(screen.getByTestId('pan-zoom'), { deltaY: 100 })
     panZoom.setTransform.mockClear()
     rerender(<DependencyGraphPreview yml={two} editor={editor} />)
     await waitFor(() => expect(panZoom.setTransform).toHaveBeenCalledWith(0, 0, 0.6, 0))

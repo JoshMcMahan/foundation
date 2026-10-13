@@ -3,6 +3,7 @@ import type { GraphLayout } from '../editing'
 import { DependencyGraphPreview } from './DependencyGraph'
 import type { EditorProblem } from './editorApi'
 import type { ListedProblem } from './ProblemsButton'
+import { chainJobs, layeredJobs, nestedJobs } from './stories/generate'
 import { SAMPLE_WORKFLOW, useStoryWorkflow } from './stories/harness'
 
 const meta: Meta<typeof DependencyGraphPreview> = {
@@ -80,6 +81,21 @@ export const WithMatrixGroup: StoryObj<typeof DependencyGraphPreview> = {
 }
 
 /** A matrix as written: the preview lists each combination, as a run would. */
+// A graph of a thousand jobs, laid out in thirty columns: zoom out to its whole shape, in to a job.
+export const ThousandJobs: StoryObj<typeof DependencyGraphPreview> = {
+  args: { yml: { jobs: layeredJobs(1000) }, height: '720px' },
+}
+
+// Five hundred jobs one after another, the widest a graph gets.
+export const LongChain: StoryObj<typeof DependencyGraphPreview> = {
+  args: { yml: { jobs: chainJobs(500) }, height: '480px' },
+}
+
+// Subworkflows three levels deep; Expand All opens every level inline.
+export const NestedSubworkflows: StoryObj<typeof DependencyGraphPreview> = {
+  args: { yml: { jobs: nestedJobs(3, 12) }, height: '720px' },
+}
+
 export const MatrixFromYaml: StoryObj<typeof DependencyGraphPreview> = {
   args: {
     yml: {

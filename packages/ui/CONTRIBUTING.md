@@ -36,6 +36,16 @@ compiled `dist/` output through `publishConfig`.
 - **Every story renders in a test**: `src/stories.test.tsx` and
   `src/ai/stories.test.tsx` compose and render each one.
 
+## Benchmark
+
+`pnpm bench` builds `bench/` as a host would and measures the dependency graph
+in headless Chrome: mounting 1,000 and 3,000 jobs, expanding nested
+subworkflows, and the frames of hovering and wheel zoom. A PR that changes
+`packages/ui` gets the same report as a comment, against its base. It never
+fails the PR, since shared runners are too noisy to gate on. What must not
+regress is held by tests that count work instead, such as layout time growing
+in step with the jobs.
+
 ## Workflow engine
 
 Tests and stories that exercise the form and graph use
