@@ -1,8 +1,9 @@
 import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
 import { useEffect, useState } from 'react'
-import { type BundledTheme, defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
+import { defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
 import { cx } from '../cx'
+import { CODE_THEMES } from './codeTheme'
 import { ExternalLink } from './ExternalLink'
 import type { MarkdownProps } from './Markdown'
 import { rehypeCodeBreaks } from './markdownCodeBreaks'
@@ -35,8 +36,6 @@ function loadMermaid(): Promise<void> {
   })
   return mermaidLoad
 }
-
-const shikiTheme: [BundledTheme, BundledTheme] = ['github-light', 'github-dark']
 
 // Passing rehypePlugins replaces Streamdown's list rather than extending it,
 // so its own plugins go first.
@@ -74,7 +73,7 @@ export default function MarkdownImpl({
         {...(controls ? { controls } : {})}
         plugins={plugins}
         rehypePlugins={rehypePlugins}
-        shikiTheme={shikiTheme}
+        shikiTheme={CODE_THEMES}
         components={{
           a: ({ node, ...props }) => (
             <ExternalLink {...props} className={cx('link wrap-break-word', props.className)} />

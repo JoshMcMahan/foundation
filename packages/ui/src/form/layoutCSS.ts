@@ -1,6 +1,6 @@
 import { type CssNode, generate, lexer, parse, walk } from 'css-tree'
 import type { CSSProperties } from 'react'
-import { deriveTheme, isDarkColor } from '../theme'
+import { deriveTheme, isDarkColor } from '../theme/index'
 
 const properties = new Set([
   'gap',
@@ -201,7 +201,7 @@ export function resolveLayoutCSS(css: unknown): { style: CSSProperties; issues: 
     delete style['--form-accent']
     return {
       style: {
-        ...deriveTheme({ background, accent: expandHex(accent) }),
+        ...deriveTheme({ interface: { base: background, accent: expandHex(accent) } }),
         backgroundColor: background,
         color: 'var(--theme-app)',
         colorScheme: isDarkColor(background) ? 'dark' : 'light',

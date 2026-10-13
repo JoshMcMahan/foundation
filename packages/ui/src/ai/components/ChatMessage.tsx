@@ -254,7 +254,7 @@ function ChatMessage({
             <button
               type="button"
               onClick={onCancelEdit}
-              className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors chat-tint hover:chat-tint-strong text-(--theme-panel)"
+              className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors chat-tint hover:chat-tint-strong text-(--theme-app)"
             >
               {common.cancel}
             </button>
@@ -262,7 +262,7 @@ function ChatMessage({
               type="button"
               onClick={handleSave}
               disabled={!editContent.trim()}
-              className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed bg-(--theme-panel) text-(--theme-panel-bg)"
+              className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed bg-(--theme-app) text-(--theme-panel-bg)"
             >
               {common.send}
             </button>

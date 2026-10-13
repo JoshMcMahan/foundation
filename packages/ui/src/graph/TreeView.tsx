@@ -27,7 +27,7 @@ function Chevron({ open, hidden = false }: { open: boolean; hidden?: boolean }) 
         hidden ? 'invisible' : 'text-[var(--theme-muted-text-color)]',
       )}
     >
-      <ChevronRightIcon className={cx('w-4 h-4', open && 'text-[var(--theme-element)]')} />
+      <ChevronRightIcon className={cx('w-4 h-4', open && 'text-[var(--theme-accent)]')} />
     </div>
   )
 }

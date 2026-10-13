@@ -433,7 +433,7 @@ function InputRow({
         found.length > 0 && 'rounded-md ring-2 ring-(--theme-error)',
         // Drawn behind the row and past its edges, so the label and field keep clear of it.
         selected &&
-          "isolate before:pointer-events-none before:absolute before:-inset-x-2 before:-inset-y-1 before:-z-10 before:rounded-lg before:bg-(--theme-element)/15 before:ring-2 before:ring-(--theme-element) before:content-['']",
+          "isolate before:pointer-events-none before:absolute before:-inset-x-2 before:-inset-y-1 before:-z-10 before:rounded-lg before:bg-(--theme-accent)/15 before:ring-2 before:ring-(--theme-accent) before:content-['']",
       )}
       onPointerOver={(e) => {
         e.stopPropagation()
@@ -1852,7 +1852,7 @@ export function InputsFormEditor({
         row.animate?.(
           [
             {
-              boxShadow: '0 0 0 4px color-mix(in srgb, var(--theme-element) 45%, transparent)',
+              boxShadow: '0 0 0 4px color-mix(in srgb, var(--theme-accent) 45%, transparent)',
             },
             { boxShadow: '0 0 0 0 transparent' },
           ],
@@ -1956,7 +1956,7 @@ function DropIndicator({
     <>
       {drag.gap?.beside ? (
         <div
-          className="pointer-events-none absolute z-20 w-1 rounded-full bg-(--theme-element)"
+          className="pointer-events-none absolute z-20 w-1 rounded-full bg-(--theme-accent)"
           style={{
             left: drag.gap.beside.x - rect.left - 2,
             top: drag.gap.beside.top - rect.top,
@@ -1966,7 +1966,7 @@ function DropIndicator({
       ) : (
         drag.gap && (
           <div
-            className="pointer-events-none absolute z-20 h-1 rounded-full bg-(--theme-element)"
+            className="pointer-events-none absolute z-20 h-1 rounded-full bg-(--theme-accent)"
             style={{
               left: drag.gap.left - rect.left,
               top: drag.gap.y - rect.top - 2,
@@ -2036,7 +2036,7 @@ function RowResizer({
         }
       }}
     >
-      <div className="h-full w-0.5 rounded-full bg-(--theme-element) opacity-50 group-hover/edge:opacity-100 group-focus-visible/edge:opacity-100" />
+      <div className="h-full w-0.5 rounded-full bg-(--theme-accent) opacity-50 group-hover/edge:opacity-100 group-focus-visible/edge:opacity-100" />
     </div>
   )
 }

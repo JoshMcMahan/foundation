@@ -1,58 +1,77 @@
-/* The unified theme contract: `theme-*` utilities backed by a closed set of
- * `--theme-*` CSS variables (see src/theme/index.ts for the full token list —
- * every token is derivable from an {accent, background, contrast} seed per
- * surface via deriveTheme()). Hosts override the variables at runtime (e.g.
- * an org theme); the :root block only supplies defaults for standalone use.
+/* The theme contract: `theme-*` utilities over the `--theme-*` tokens, which
+ * src/theme generates from a scheme of three choices (base, accent, contrast).
+ * Hosts set the tokens at runtime with applyTheme; the defaults below are the
+ * default theme's light scheme, for standalone use, with display-p3 values for
+ * wide-gamut screens.
  *
- * Sidebar tokens (--theme-bg, --theme-sidebar-*) are part of the contract but
- * intentionally have no :root defaults: hosts supply per-site fallbacks at the
- * use sites, and a global default here would override them. */
+ * Sidebar tokens (--theme-sidebar-*) are part of the contract but have no
+ * defaults here: hosts supply per-site fallbacks at the use sites, and a global
+ * default would override them. */
 
+/* generated:start (src/theme/derive.test.ts checks this; UPDATE_THEME_CSS=1 rewrites it) */
 :root {
-  --theme-app-bg: #ffffff;
-  --theme-app: #000000;
-  --theme-panel-bg: #ffffff;
-  --theme-panel: #000000;
-  --theme-muted-panel-bg: #f8f9fa;
-  --theme-muted-panel-color: #5f6b76;
-  --theme-muted-text-color: #5f6b76;
-  --theme-border: #d1d5db;
-  --theme-element: #06354f;
-  --theme-element-text: #ffffff;
-  --theme-element-hover: #053047;
-  --theme-hover: #f3f4f6;
-  --theme-hover-text: #000000;
-  --theme-link: #2f6fa8;
-  --theme-input-bg: #f9fafb;
-  --theme-input: #3b82f6;
-  --theme-input-disabled-bg: #f3f4f6;
-  --theme-input-disabled-text: #9ca3af;
-  --theme-card-bg: #ffffff;
-  --theme-card-border: rgba(0, 0, 0, 0.04);
-  --theme-card-hover: #fafafa;
+  --theme-app-bg: #f3f4f6;
+  --theme-panel-bg: #fcfeff;
+  --theme-panel-hover: #f2f5f9;
+  --theme-muted-panel-bg: #e7eaee;
+  --theme-hover: #e3e5e9;
+  --theme-input-bg: #fafcfe;
+  --theme-input-disabled-bg: #ebeef1;
+  --theme-app: #0a101b;
+  --theme-muted-text-color: #4e5664;
+  --theme-placeholder: #808999;
+  --theme-link: #06354f;
+  --theme-border: #cacdd0;
+  --theme-border-strong: #a3a6a9;
   --theme-accent: #06354f;
   --theme-accent-text: #ffffff;
-  --theme-focus-ring: rgba(37, 99, 235, 0.2);
-  --theme-hover-overlay: rgba(0, 0, 0, 0.02);
-  --theme-success: #16a34a;
-  --theme-success-muted: rgba(22, 163, 74, 0.1);
-  --theme-error: #dc2626;
-  --theme-error-muted: rgba(220, 38, 38, 0.1);
-  --theme-warning: #d97706;
-  --theme-warning-muted: rgba(217, 119, 6, 0.1);
-  --theme-info: #2563eb;
-  --theme-info-muted: rgba(37, 99, 235, 0.1);
-  --theme-favorite: #e11d48;
-  --theme-favorite-muted: rgba(225, 29, 72, 0.1);
-  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --theme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --theme-auth-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.2), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+  --theme-accent-hover: #002841;
+  --theme-accent-subtle: #d3ebfc;
+  --theme-focus: #06354f;
+  --theme-focus-ring: rgba(6, 53, 79, 0.25);
+  --theme-success: #005f23;
+  --theme-success-muted: rgba(0, 95, 35, 0.1);
+  --theme-error: #95050f;
+  --theme-error-muted: rgba(149, 5, 15, 0.1);
+  --theme-warning: #794800;
+  --theme-warning-muted: rgba(121, 72, 0, 0.1);
+  --theme-info: #004caa;
+  --theme-info-muted: rgba(0, 76, 170, 0.1);
+  --theme-favorite: #920242;
+  --theme-favorite-muted: rgba(146, 2, 66, 0.1);
+  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.07);
+  --theme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+  --theme-shadow-xl: 0 25px 80px -20px rgba(0, 0, 0, 0.2), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+  --theme-code-bg: #e7eaee;
+  --theme-code-text: #1c2330;
+  --theme-code-comment: #555d6c;
+  --theme-code-keyword: #36617d;
+  --theme-code-string: #196a24;
+  --theme-code-number: #944500;
+  --theme-code-function: #6c4b9e;
+  --theme-code-type: #006565;
+  --theme-code-property: #5a51a5;
+  --theme-ansi-black: #1c2330;
+  --theme-ansi-red: #a3322d;
+  --theme-ansi-green: #006a12;
+  --theme-ansi-yellow: #755800;
+  --theme-ansi-blue: #0b5aae;
+  --theme-ansi-magenta: #8d3a88;
+  --theme-ansi-cyan: #00666c;
+  --theme-ansi-white: #555d6c;
 }
 
-@utility theme-element {
-  background-color: var(--theme-element, #06354f);
-  color: var(--theme-element-text, #ffffff);
+@media (color-gamut: p3) {
+  :root {
+    --theme-ansi-cyan: color(display-p3 0 0.4024 0.4329);
+  }
+}
+/* generated:end */
+
+@utility theme-accent {
+  background-color: var(--theme-accent, #06354f);
+  color: var(--theme-accent-text, #ffffff);
 }
 
 @utility theme-app {
@@ -62,7 +81,7 @@
 
 @utility theme-panel {
   background-color: var(--theme-panel-bg, #fff);
-  color: var(--theme-panel, #000);
+  color: var(--theme-app, #000);
 }
 
 /* The bordered panel graphs and settings cards sit in; graph circles hide connectors with its color. */
@@ -72,7 +91,7 @@
 
 @utility theme-muted-panel {
   background-color: var(--theme-muted-panel-bg, #f8f9fa);
-  color: var(--theme-muted-panel-color, #5f6b76);
+  color: var(--theme-muted-text-color, #5f6b76);
 }
 
 @utility theme-muted-text {
@@ -89,7 +108,7 @@
     background-color 0.15s ease-in-out,
     color 0.15s ease-in-out;
   background-color: var(--theme-hover, #f3f4f6);
-  color: var(--theme-hover-text, #000000);
+  color: var(--theme-app, #000000);
 }
 
 /* Utility for theme-aware borders */
@@ -98,7 +117,7 @@
 }
 
 .theme-hover-text {
-  color: var(--theme-hover-text);
+  color: var(--theme-app);
 }
 
 .tooltip {
@@ -136,7 +155,7 @@
 }
 
 .theme-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-element, #3b82f6);
+  background: var(--theme-accent, #3b82f6);
 }
 
 .theme-scrollbar::-webkit-scrollbar-corner {
@@ -165,7 +184,7 @@
 }
 
 .theme-scrollbar-small::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-element, #3b82f6);
+  background: var(--theme-accent, #3b82f6);
 }
 
 .theme-scrollbar-small::-webkit-scrollbar-corner {

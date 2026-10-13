@@ -14,7 +14,7 @@ import {
 } from './lintContext'
 import { type NestedWorkflowText, publishNestedText } from './nestedText'
 import { registerRevealer } from './reveal'
-import { defineEditorThemes, getThemeName } from './themes'
+import { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 import { setupMonacoWorkers } from './workers'
 import { ensureYamlLanguage } from './yamlLanguage'
 
@@ -160,6 +160,8 @@ export default function MonacoEditor({
   }, [path, isNested])
 
   // Update theme when the scheme or disabled state changes
+  const themeName = useRef(getThemeName(isDark, disabled))
+  themeName.current = getThemeName(isDark, disabled)
   useEffect(() => {
     if (!monacoRef.current) {
       return
@@ -168,6 +170,8 @@ export default function MonacoEditor({
     monaco.editor.setTheme(getThemeName(isDark, disabled))
     monacoRef.current.updateOptions({ readOnly })
   }, [disabled, isDark, readOnly])
+  // And when the host applies other tokens in the same mode, as a theme editor does.
+  useEffect(() => followThemeTokens(monaco.editor, () => themeName.current), [])
 
   // Reconcile before paint so an older passive effect cannot overwrite a new edit.
   useLayoutEffect(() => {
@@ -317,7 +321,7 @@ export default function MonacoEditor({
             const flash = editor.createDecorationsCollection([
               {
                 range: new monaco.Range(start, 1, last, 1),
-                options: { isWholeLine: true, className: 'bg-(--theme-element)/20' },
+                options: { isWholeLine: true, className: 'bg-(--theme-accent)/20' },
               },
             ])
             window.setTimeout(() => flash.clear(), 1500)

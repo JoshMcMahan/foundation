@@ -102,10 +102,10 @@ export default function ActivityLine({
   }
   return (
     <div data-testid={testId} className="flex min-h-8 items-center gap-2 px-1 text-sm">
-      <Loader inline decorative size={14} color="var(--theme-element)" />
+      <Loader inline decorative size={14} color="var(--theme-accent)" />
       <span
         data-testid={testId ? `${testId}-word` : undefined}
-        className="min-w-0 truncate text-(--theme-element)"
+        className="min-w-0 truncate text-(--theme-accent)"
       >
         {word ?? turnWord}…
       </span>

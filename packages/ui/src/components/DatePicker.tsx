@@ -87,7 +87,7 @@ const calendarClassNames: Partial<ClassNames> = {
   day_button:
     'size-9 rounded-md cursor-pointer outline-none hover:bg-(--theme-hover) focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) disabled:cursor-not-allowed disabled:hover:bg-transparent',
   selected:
-    '[&>button]:bg-(--theme-element) [&>button]:text-(--theme-element-text) [&>button]:hover:bg-(--theme-element)',
+    '[&>button]:bg-(--theme-accent) [&>button]:text-(--theme-accent-text) [&>button]:hover:bg-(--theme-accent)',
   today: 'font-semibold [&>button]:underline [&>button]:underline-offset-4',
   outside: 'text-(--theme-muted-text-color) opacity-60',
   disabled: 'text-(--theme-muted-text-color) opacity-40',

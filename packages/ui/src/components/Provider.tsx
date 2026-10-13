@@ -116,6 +116,51 @@ export interface UIStrings {
     previousMonth: string
     nextMonth: string
   }
+  theme: {
+    /** Names the light, dark or system choice. */
+    appearance: string
+    light: string
+    dark: string
+    system: string
+    /** Names the choice of which mode's colors the controls edit. */
+    editing: string
+    presets: string
+    /** The background a theme is generated from. */
+    base: string
+    accent: string
+    contrast: string
+    /** Under the contrast slider. */
+    contrastHelp: string
+    /** The switch that gives the sidebar its own colors. */
+    customSidebar: string
+    sidebarBase: string
+    sidebarAccent: string
+    code: string
+    codeStyle: (style: 'balanced' | 'vivid' | 'muted' | 'mono') => string
+    /** Names a color input's picker, beside its hex field. */
+    pick: (name: string) => string
+    invalidColor: string
+    copy: string
+    /** The thing a copy toast names. */
+    copied: string
+    import: string
+    importLabel: string
+    importPlaceholder: string
+    apply: string
+    reset: string
+    /** Why a pasted theme was refused. */
+    importError: (code: 'json' | 'version' | 'shape' | 'color' | 'range', path: string) => string
+    preview: string
+    previewNav: readonly string[]
+    previewHeading: string
+    previewBody: string
+    previewMuted: string
+    previewLink: string
+    previewButton: string
+    previewSearch: string
+    previewPassed: string
+    previewFailed: string
+  }
   logviewer: {
     error: string
     warning: string
@@ -704,6 +749,51 @@ const DEFAULTS: UIProviderValue = {
       previousMonth: 'Previous month',
       nextMonth: 'Next month',
     },
+    theme: {
+      appearance: 'Appearance',
+      light: 'Light',
+      dark: 'Dark',
+      system: 'System',
+      editing: 'Colors for',
+      presets: 'Presets',
+      base: 'Background',
+      accent: 'Accent',
+      contrast: 'Contrast',
+      contrastHelp: 'Separates surfaces and strengthens text. Text always meets WCAG AA.',
+      customSidebar: 'Custom sidebar',
+      sidebarBase: 'Sidebar background',
+      sidebarAccent: 'Sidebar accent',
+      code: 'Code',
+      codeStyle: (style) =>
+        ({ balanced: 'Balanced', vivid: 'Vivid', muted: 'Muted', mono: 'Monochrome' })[style],
+      pick: (name) => `Pick ${name.toLowerCase()}`,
+      invalidColor: 'Enter a hex color, such as #1f6feb.',
+      copy: 'Copy theme',
+      copied: 'theme',
+      import: 'Import theme',
+      importLabel: 'Theme to import',
+      importPlaceholder: 'Paste a copied theme',
+      apply: 'Apply',
+      reset: 'Reset',
+      importError: (code, path) =>
+        ({
+          json: 'This isn’t a copied theme: it isn’t valid JSON.',
+          version: 'This theme is from a version this app can’t read.',
+          shape: `This theme is incomplete${path ? ` at ${path}` : ''}.`,
+          color: `${path} isn’t a color.`,
+          range: `${path} is out of range.`,
+        })[code],
+      preview: 'Preview',
+      previewNav: ['Home', 'Runs', 'Settings'],
+      previewHeading: 'Weekly report',
+      previewBody: 'Twelve runs finished and two need attention.',
+      previewMuted: 'Updated a minute ago',
+      previewLink: 'View runs',
+      previewButton: 'Run again',
+      previewSearch: 'Search runs',
+      previewPassed: 'Passed',
+      previewFailed: 'Failed',
+    },
     logviewer: {
       error: 'Error:',
       warning: 'Warning:',
@@ -1260,6 +1350,7 @@ export function UIProvider({
         common: { ...DEFAULTS.strings.common, ...strings?.common },
         dropdown: { ...DEFAULTS.strings.dropdown, ...strings?.dropdown },
         datePicker: { ...DEFAULTS.strings.datePicker, ...strings?.datePicker },
+        theme: { ...DEFAULTS.strings.theme, ...strings?.theme },
         logviewer: { ...DEFAULTS.strings.logviewer, ...strings?.logviewer },
         dag: { ...DEFAULTS.strings.dag, ...strings?.dag },
         jobActions: {

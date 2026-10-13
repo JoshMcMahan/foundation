@@ -12,8 +12,10 @@ import { TEST_ACTIONS } from '../src/test/actions'
 import {
   applyTheme,
   DEFAULT_PRESET,
-  deriveTheme,
-  isDarkColor,
+  generateTheme,
+  type Mode,
+  modeOf,
+  schemeFor,
   THEME_PRESETS,
 } from '../src/theme/index'
 
@@ -38,11 +40,17 @@ const storySlots = { link: StoryLink }
 
 const withTheme: Decorator = (Story, context) => {
   const preset = THEME_PRESETS.find((p) => p.name === context.globals.theme) ?? DEFAULT_PRESET
+  // Without a mode picked, a preset shows the mode it was made for.
+  const picked = context.globals.mode as Mode | 'preset'
+  const scheme = schemeFor(
+    preset.theme,
+    picked === 'preset' ? (preset.theme.light ? 'light' : 'dark') : picked,
+  )
   const root = document.documentElement
-  applyTheme(root, deriveTheme(preset.seed))
+  applyTheme(root, generateTheme(scheme, preset.theme.code ? { code: preset.theme.code } : {}))
   // Drives light-dark() CSS, useCssIsDark and the dark: variant, the way a
   // host sets them.
-  const dark = isDarkColor(preset.seed.interface.background)
+  const dark = modeOf(scheme) === 'dark'
   root.style.colorScheme = dark ? 'dark' : 'light'
   root.classList.toggle('dark', dark)
   return (
@@ -64,9 +72,23 @@ const preview: Preview = {
         dynamicTitle: true,
       },
     },
+    mode: {
+      description: 'Light or dark scheme of the theme',
+      toolbar: {
+        title: 'Mode',
+        icon: 'mirror',
+        items: [
+          { value: 'preset', title: "Preset's own" },
+          { value: 'light', title: 'Light' },
+          { value: 'dark', title: 'Dark' },
+        ],
+        dynamicTitle: true,
+      },
+    },
   },
   initialGlobals: {
     theme: DEFAULT_PRESET.name,
+    mode: 'preset',
   },
   parameters: {
     controls: { expanded: true },

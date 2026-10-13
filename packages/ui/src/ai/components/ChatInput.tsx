@@ -159,7 +159,7 @@ function SendButton({
       data-testid={testId}
       className={cx(
         'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 active:scale-95',
-        emphasised ? 'theme-element hover:opacity-90' : 'chat-send-idle',
+        emphasised ? 'theme-accent hover:opacity-90' : 'chat-send-idle',
         !enabled && 'cursor-not-allowed active:scale-100',
       )}
       aria-label={label}
@@ -383,7 +383,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
         type="button"
         onClick={stopStreaming}
         disabled={turn?.stopping}
-        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-(--theme-panel) text-(--theme-panel-bg) transition-opacity hover:opacity-85 disabled:opacity-50"
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-(--theme-app) text-(--theme-panel-bg) transition-opacity hover:opacity-85 disabled:opacity-50"
         aria-label={t.stopGenerating}
         title={t.stopGenerating}
       >

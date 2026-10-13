@@ -19,7 +19,7 @@ export default function ChatStage({
       <div className="w-full pt-[max(2rem,24cqh)] pb-[12vh]">
         {heading && (
           <div className="mx-auto mb-6 max-w-[var(--chat-column,50rem)] px-8 text-center">
-            <h1 className="text-[1.75rem] leading-tight font-medium tracking-[-0.02em] text-balance text-(--theme-panel)">
+            <h1 className="text-[1.75rem] leading-tight font-medium tracking-[-0.02em] text-balance text-(--theme-app)">
               {heading}
             </h1>
             {subheading && <p className="mt-2 text-sm theme-muted-text">{subheading}</p>}

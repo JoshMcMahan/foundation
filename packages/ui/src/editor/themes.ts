@@ -1,4 +1,13 @@
 import type * as monaco from 'monaco-editor'
+import {
+  DEFAULT_THEME,
+  deriveTheme,
+  type Mode,
+  parseColor,
+  schemeFor,
+  type ThemeToken,
+  toHex,
+} from '../theme/index'
 
 type ThemeData = monaco.editor.IStandaloneThemeData
 
@@ -13,105 +22,98 @@ export function expandShorthandHex(color: string): string {
     : color
 }
 
-function normalizeThemeColors(colors: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(colors).map(([key, value]) => [key, expandShorthandHex(value)]),
-  )
+const fallbacks: Partial<Record<Mode, Record<ThemeToken, string>>> = {}
+
+/** A token as Monaco takes it: a 6-digit hex. Monaco can't read display-p3, so
+ *  a wide-gamut value is mapped back into sRGB; the default theme fills in for
+ *  a host that sets no tokens. */
+function token(name: ThemeToken, mode: Mode): string {
+  const set =
+    typeof window === 'undefined'
+      ? ''
+      : getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  const color = parseColor(expandShorthandHex(set))
+  if (color) {
+    return toHex(color)
+  }
+  fallbacks[mode] ??= deriveTheme(schemeFor(DEFAULT_THEME, mode))
+  return fallbacks[mode][name]
 }
 
-// Editor themes read the unified --theme-* contract off the document at
-// definition time; the fallbacks only matter for hosts that set no tokens.
-function themeVar(name: string, fallback: string): string {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  return value || fallback
-}
+// Monaco's token names, across its languages, mapped to the theme's code tokens.
+const RULES: [string, ThemeToken, string?][] = [
+  ['', '--theme-code-text'],
+  ['comment', '--theme-code-comment', 'italic'],
+  ['keyword', '--theme-code-keyword'],
+  ['string', '--theme-code-string'],
+  ['attribute.value', '--theme-code-string'],
+  ['regexp', '--theme-code-string'],
+  ['number', '--theme-code-number'],
+  ['constant', '--theme-code-number'],
+  ['predefined', '--theme-code-function'],
+  ['type', '--theme-code-type'],
+  // YAML marks its keys as types.
+  ['type.yaml', '--theme-code-property'],
+  ['tag', '--theme-code-property'],
+  ['attribute.name', '--theme-code-property'],
+  ['delimiter', '--theme-code-text'],
+  ['operators', '--theme-code-text'],
+]
 
-// The light enabled case uses monaco's stock 'vs' theme, matching the
-// pre-token behavior where org colors only shaped the dark variants.
-function createEditorThemes(): Record<string, ThemeData> {
-  const dark = {
-    foreground: themeVar('--theme-app', '#e6edf3'),
-    background: themeVar('--theme-panel-bg', '#161b22'),
-    border: themeVar('--theme-border', '#30363d'),
-    lineHighlight: themeVar('--theme-muted-panel-bg', '#21262d'),
-    lineNumber: themeVar('--theme-muted-text-color', '#8b949e'),
-    selection: themeVar('--theme-element', '#2f81f7'),
-    selectionFg: themeVar('--theme-element-text', '#ffffff'),
-    disabledBg: themeVar('--theme-input-disabled-bg', '#1c2128'),
-    disabledFg: themeVar('--theme-muted-text-color', '#8b949e'),
-  }
-  const light = {
-    disabledBg: themeVar('--theme-input-disabled-bg', '#f3f4f6'),
-    disabledFg: themeVar('--theme-muted-text-color', '#5f6b76'),
-    border: themeVar('--theme-border', '#d1d5db'),
-    selection: themeVar('--theme-element', '#2f81f7'),
-    selectionFg: themeVar('--theme-element-text', '#ffffff'),
-  }
+function editorTheme(mode: Mode, disabled: boolean): ThemeData {
+  const c = (name: ThemeToken) => token(name, mode)
+  const foreground = disabled ? c('--theme-muted-text-color') : c('--theme-code-text')
+  const background = disabled ? c('--theme-input-disabled-bg') : c('--theme-panel-bg')
   return {
-    'app-dark': {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.foreground': dark.foreground,
-        'editor.background': dark.background,
-        'editor.border': dark.border,
-        'editorCursor.foreground': dark.foreground,
-        'editor.lineHighlightBackground': dark.lineHighlight,
-        'editorLineNumber.foreground': dark.lineNumber,
-        'editor.selectionBackground': dark.selection,
-        'editor.selectionForeground': dark.selectionFg,
-      },
-    },
-    'app-dark-disabled': {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.foreground': dark.disabledFg,
-        'editor.background': dark.disabledBg,
-        'editor.border': dark.border,
-        'editorCursor.foreground': 'transparent',
-        'editor.lineHighlightBackground': dark.disabledBg,
-        'editorLineNumber.foreground': dark.disabledFg,
-        'editor.selectionBackground': dark.selection,
-        'editor.selectionForeground': dark.selectionFg,
-      },
-    },
-    'app-light-disabled': {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.foreground': light.disabledFg,
-        'editor.background': light.disabledBg,
-        'editor.border': light.border,
-        'editorCursor.foreground': 'transparent',
-        'editor.lineHighlightBackground': light.disabledBg,
-        'editorLineNumber.foreground': light.disabledFg,
-        'editor.selectionBackground': light.selection,
-        'editor.selectionForeground': light.selectionFg,
-      },
+    base: mode === 'dark' ? 'vs-dark' : 'vs',
+    inherit: true,
+    rules: disabled
+      ? [{ token: '', foreground: foreground.slice(1) }]
+      : RULES.map(([name, t, fontStyle]) => ({
+          token: name,
+          foreground: c(t).slice(1),
+          ...(fontStyle ? { fontStyle } : {}),
+        })),
+    colors: {
+      'editor.foreground': foreground,
+      'editor.background': background,
+      'editor.border': c('--theme-border'),
+      'editorCursor.foreground': disabled ? background : c('--theme-app'),
+      'editor.lineHighlightBackground': disabled ? background : c('--theme-hover'),
+      'editorLineNumber.foreground': c('--theme-placeholder'),
+      'editorLineNumber.activeForeground': c('--theme-muted-text-color'),
+      'editor.selectionBackground': c('--theme-accent-subtle'),
+      'editor.inactiveSelectionBackground': c('--theme-hover'),
     },
   }
 }
 
+/** Monaco themes read from the document's tokens: call again after the host applies another theme. */
 export function defineEditorThemes(monacoEditor: typeof monaco.editor): void {
-  const themes = createEditorThemes()
-  for (const [name, themeData] of Object.entries(themes)) {
-    monacoEditor.defineTheme(name, {
-      ...themeData,
-      colors: normalizeThemeColors(themeData.colors),
-    })
+  for (const mode of ['light', 'dark'] as const) {
+    for (const disabled of [false, true]) {
+      monacoEditor.defineTheme(getThemeName(mode === 'dark', disabled), editorTheme(mode, disabled))
+    }
   }
+}
+
+/** Redefines the editor themes when the host applies other tokens to the document,
+ *  and sets `current()` again, so an open editor follows a theme being edited. */
+export function followThemeTokens(
+  monacoEditor: typeof monaco.editor,
+  current: () => string,
+): () => void {
+  if (typeof MutationObserver === 'undefined') {
+    return () => {}
+  }
+  const observer = new MutationObserver(() => {
+    defineEditorThemes(monacoEditor)
+    monacoEditor.setTheme(current())
+  })
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+  return () => observer.disconnect()
 }
 
 export function getThemeName(isDark: boolean, disabled?: boolean): string {
-  if (isDark) {
-    return disabled ? 'app-dark-disabled' : 'app-dark'
-  }
-  return disabled ? 'app-light-disabled' : 'vs'
+  return `app-${isDark ? 'dark' : 'light'}${disabled ? '-disabled' : ''}`
 }

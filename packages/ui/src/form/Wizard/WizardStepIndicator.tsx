@@ -84,8 +84,8 @@ export function WizardStepIndicator({
 }
 
 const segmentClasses: Record<Status, string> = {
-  done: 'bg-(--theme-element)',
-  current: 'bg-(--theme-element)',
+  done: 'bg-(--theme-accent)',
+  current: 'bg-(--theme-accent)',
   upcoming: 'bg-(--theme-border)',
   invalid: 'bg-(--theme-error)',
 }
@@ -110,8 +110,8 @@ function StepItem({
       aria-hidden="true"
       className={cx(
         'flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold tabular-nums',
-        status === 'current' && 'bg-(--theme-element) text-(--theme-element-text)',
-        status === 'done' && 'bg-(--theme-muted-panel-bg) text-(--theme-element)',
+        status === 'current' && 'bg-(--theme-accent) text-(--theme-accent-text)',
+        status === 'done' && 'bg-(--theme-muted-panel-bg) text-(--theme-accent)',
         status === 'upcoming' && 'border border-(--theme-border) text-(--theme-muted-text-color)',
         status === 'invalid' && 'bg-(--theme-muted-panel-bg) text-(--theme-error)',
       )}

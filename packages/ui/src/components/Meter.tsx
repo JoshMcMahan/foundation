@@ -10,7 +10,7 @@ export type BarTone = 'accent' | 'success' | 'warning' | 'error' | 'muted'
 // Status hues are fixed, as StatusBadge's are: a host theme may set the accent
 // to a color that would read as a warning, or not contrast with the track.
 const fillClassName: Record<BarTone, string> = {
-  accent: 'bg-(--theme-element)',
+  accent: 'bg-(--theme-accent)',
   success: 'bg-green-600',
   warning: 'bg-amber-500',
   error: 'bg-red-600',

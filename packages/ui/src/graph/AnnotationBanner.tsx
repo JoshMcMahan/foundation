@@ -140,7 +140,7 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
       >
         <ChevronIcon className="w-3.5 h-3.5 text-[var(--theme-muted-text-color)] shrink-0" />
 
-        <span className="text-sm font-medium text-[var(--theme-panel-color)]">{t.annotations}</span>
+        <span className="text-sm font-medium text-[var(--theme-app)]">{t.annotations}</span>
 
         {/* Count badges */}
         <div className="flex items-center gap-1.5">
@@ -187,7 +187,7 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
                         t.annotationType.notice}
                       :
                     </span>{' '}
-                    <span className="text-[var(--theme-panel-color)]">{annotation.message}</span>
+                    <span className="text-[var(--theme-app)]">{annotation.message}</span>
                     <span className="text-[var(--theme-muted-text-color)] ml-2 text-xs">
                       {t.annotationSource(
                         annotation.jobName,

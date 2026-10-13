@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { defineEditorThemes, expandShorthandHex } from './themes'
 
 const validColor = /^#?([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/
@@ -20,6 +21,30 @@ describe('expandShorthandHex', () => {
 
   it('leaves non-hex values unchanged', () => {
     expect(expandShorthandHex('transparent')).toBe('transparent')
+  })
+})
+
+describe('defineEditorThemes syntax', () => {
+  it('colors syntax from the code tokens, mapping a display-p3 value back into hex', () => {
+    document.documentElement.style.setProperty('--theme-code-keyword', 'color(display-p3 1 0 0)')
+    document.documentElement.style.setProperty('--theme-code-string', '#00aa00')
+    const themes = new Map<string, { rules: { token: string; foreground?: string }[] }>()
+    defineEditorThemes({
+      defineTheme: (name: string, data: { rules: { token: string; foreground?: string }[] }) =>
+        themes.set(name, data),
+    } as unknown as Parameters<typeof defineEditorThemes>[0])
+    expect([...themes.keys()].sort()).toEqual([
+      'app-dark',
+      'app-dark-disabled',
+      'app-light',
+      'app-light-disabled',
+    ])
+    const rule = (token: string) => themes.get('app-light')?.rules.find((r) => r.token === token)
+    expect(rule('string')?.foreground).toBe('00aa00')
+    // Display-p3 red is outside sRGB; Monaco gets its sRGB mapping.
+    expect(rule('keyword')?.foreground).toMatch(/^[\da-f]{6}$/)
+    document.documentElement.style.removeProperty('--theme-code-keyword')
+    document.documentElement.style.removeProperty('--theme-code-string')
   })
 })
 

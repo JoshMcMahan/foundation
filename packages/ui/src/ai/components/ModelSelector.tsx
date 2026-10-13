@@ -185,7 +185,7 @@ export default function ModelSelector({
         <button
           type="button"
           onClick={() => refreshModels()}
-          className="flex items-center gap-1 text-xs text-(--theme-element) hover:underline"
+          className="flex items-center gap-1 text-xs text-(--theme-accent) hover:underline"
         >
           <RetryIcon className="h-2.5 w-2.5" />
           {common.retry}

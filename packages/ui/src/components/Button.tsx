@@ -70,7 +70,7 @@ export function MethodButton({
   const content = (
     <>
       {icon && (
-        <span className="size-10 rounded-lg bg-gradient-to-br from-[var(--gradient-start,var(--theme-element))] to-[var(--gradient-mid,var(--theme-link))] flex items-center justify-center shrink-0 mr-4 [&_svg]:size-5 [&_svg]:text-white">
+        <span className="size-10 rounded-lg bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] flex items-center justify-center shrink-0 mr-4 [&_svg]:size-5 [&_svg]:text-white">
           {icon}
         </span>
       )}

@@ -23,17 +23,17 @@ const base =
 
 // One look for every state, on the control itself, or on the box around it with `within`.
 const own = cx(
-  'focus-visible:border-(--theme-element) focus-visible:ring-1 focus-visible:ring-(--theme-element)',
+  'focus-visible:border-(--theme-accent) focus-visible:ring-1 focus-visible:ring-(--theme-accent)',
   'aria-invalid:border-(--theme-error) aria-invalid:focus-visible:ring-(--theme-error)',
-  'disabled:cursor-not-allowed disabled:bg-(--theme-input-disabled-bg) disabled:text-(--theme-input-disabled-text)',
-  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-input-disabled-text)',
+  'disabled:cursor-not-allowed disabled:bg-(--theme-input-disabled-bg) disabled:text-(--theme-placeholder)',
+  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
 )
 const inside = cx(
-  'has-[:focus-visible]:border-(--theme-element) has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-(--theme-element)',
+  'has-[:focus-visible]:border-(--theme-accent) has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-(--theme-accent)',
   'has-[[aria-invalid=true]]:border-(--theme-error) has-[[aria-invalid=true]:focus-visible]:ring-(--theme-error)',
   // The input, not a stepper or clear button that disables itself at a limit.
-  'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-input-disabled-text)',
-  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-input-disabled-text)',
+  'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-placeholder)',
+  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
 )
 
 /** The box every input-like control draws: text inputs, textareas, and the triggers of

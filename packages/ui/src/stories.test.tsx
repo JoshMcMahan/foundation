@@ -18,6 +18,7 @@ import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as primitives from './components/primitives.stories'
 import * as sections from './components/sections.stories'
+import * as themeEditor from './components/ThemeEditor.stories'
 import * as toasts from './components/Toast.stories'
 import * as fileExplorer from './file-explorer/FileExplorer.stories'
 import * as form from './form/DynamicForm.stories'
@@ -34,6 +35,7 @@ import * as list from './list/ListTable.stories'
 import * as listControls from './list/listControls.stories'
 import * as userHoverCard from './list/UserHoverCard.stories'
 import * as logviewer from './logviewer/LogViewer.stories'
+import * as themeGenerator from './theme/theme.stories'
 
 // jsdom lacks these; the DAG and explorer rely on them for layout plumbing.
 global.requestAnimationFrame = (() => 0) as typeof requestAnimationFrame
@@ -77,6 +79,8 @@ const SUITES = {
   problemsButton,
   settingsDialog,
   fileExplorer,
+  themeEditor,
+  themeGenerator,
 } as const
 
 afterEach(cleanup)

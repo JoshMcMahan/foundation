@@ -8,7 +8,7 @@ import { UIProvider } from '../src/components/Provider'
 import { DependencyGraphPreview } from '../src/graph/DependencyGraph'
 import { layeredJobs, nestedJobs } from '../src/graph/stories/generate'
 import { TEST_ACTIONS } from '../src/test/actions'
-import { applyTheme, DEFAULT_PRESET, deriveTheme } from '../src/theme/index'
+import { applyTheme, DEFAULT_THEME, deriveTheme, schemeFor } from '../src/theme/index'
 
 const engine = { ...parser.createWorkflowEngine(), editing: parser }
 const shapes: Record<string, () => Record<string, unknown>> = {
@@ -17,7 +17,7 @@ const shapes: Record<string, () => Record<string, unknown>> = {
   nested: () => nestedJobs(3, 12),
 }
 const shape = new URLSearchParams(location.search).get('shape') ?? 'thousand'
-applyTheme(document.documentElement, deriveTheme(DEFAULT_PRESET.seed))
+applyTheme(document.documentElement, deriveTheme(schemeFor(DEFAULT_THEME, 'light')))
 const root = createRoot(document.getElementById('root') as HTMLElement)
 let mounts = 0
 const mount = () => {

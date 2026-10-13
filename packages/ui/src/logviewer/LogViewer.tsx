@@ -797,7 +797,7 @@ export function LogViewer({
                     {(timeRangeFrom !== '' || timeRangeTo !== '') && (
                       <span
                         title={t.timeRangeActive}
-                        className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--theme-element)]/15 text-[var(--theme-element)]"
+                        className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--theme-accent)]/15 text-[var(--theme-accent)]"
                       >
                         {t.timeRangeOn}
                       </span>

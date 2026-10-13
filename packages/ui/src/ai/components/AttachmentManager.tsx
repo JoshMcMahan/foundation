@@ -91,7 +91,7 @@ export default function AttachmentManager() {
         {/* Main content area */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl font-semibold mb-6 text-(--theme-panel)">{t.title}</h1>
+            <h1 className="text-2xl font-semibold mb-6 text-(--theme-app)">{t.title}</h1>
 
             {isLoading && attachments.length === 0 ? (
               <div className="py-12">
@@ -147,7 +147,7 @@ export default function AttachmentManager() {
                         </div>
                         <div className="p-3 text-xs bg-(--theme-panel-bg) flex items-center justify-between gap-1">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-(--theme-panel)">
+                            <p className="truncate font-medium text-(--theme-app)">
                               {att.filename || 'File'}
                             </p>
                             <p className="truncate theme-muted-text">

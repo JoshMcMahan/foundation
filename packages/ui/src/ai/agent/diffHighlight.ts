@@ -1,7 +1,9 @@
-// Syntax tokens for diff rows via shiki — the same engine, themes, and
+// Syntax tokens for diff rows via shiki — the same engine, theme, and
 // per-language lazy-highlighter pattern @streamdown/code uses for markdown
 // code blocks, so the two stay visually consistent and the consumer bundle
 // dedupes to one shiki. Everything loads lazily on the first diff render.
+// Colors are the theme's code tokens, so diffs follow the host's theme.
+import { CODE_THEME } from '../../components/codeTheme'
 
 export interface DiffToken {
   content: string
@@ -103,7 +105,7 @@ function getHighlighter(lang: string): Promise<Highlighter | null> {
       ])
       return (await createHighlighter({
         langs: [lang],
-        themes: ['github-light', 'github-dark'],
+        themes: [CODE_THEME],
         engine: createJavaScriptRegexEngine({ forgiving: true }),
       })) as unknown as Highlighter
     })().catch(() => null)
@@ -118,7 +120,6 @@ function getHighlighter(lang: string): Promise<Highlighter | null> {
 export async function tokenizeDiffLines(
   lines: string[],
   lang: string,
-  isDark: boolean,
 ): Promise<DiffToken[][] | null> {
   const highlighter = await getHighlighter(lang)
   if (!highlighter) {
@@ -127,7 +128,7 @@ export async function tokenizeDiffLines(
   try {
     const tokens = highlighter.codeToTokensBase(lines.join('\n'), {
       lang,
-      theme: isDark ? 'github-dark' : 'github-light',
+      theme: CODE_THEME.name as string,
     })
     if (tokens.length !== lines.length) {
       return null

@@ -192,7 +192,7 @@ export function MarqueeBox({ box, className }: { box: Box; className?: string })
   return (
     <div
       className={cx(
-        'absolute rounded-md border-2 border-dashed border-(--theme-element) bg-(--theme-element)/10',
+        'absolute rounded-md border-2 border-dashed border-(--theme-accent) bg-(--theme-accent)/10',
         className,
       )}
       style={place(box)}

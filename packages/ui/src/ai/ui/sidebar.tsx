@@ -18,7 +18,7 @@ export const SIDEBAR_DEFAULT_WIDTH_PX = 256
 // conversation on screen is marked in the chat's own colour, and the ink for
 // a passing pointer.
 const HIGHLIGHT_SELECTED = 'bg-[color-mix(in_oklab,var(--theme-accent)_12%,transparent)]'
-const HIGHLIGHT_HOVER = 'hover:bg-[color-mix(in_oklab,var(--theme-panel)_5%,transparent)]'
+const HIGHLIGHT_HOVER = 'hover:bg-[color-mix(in_oklab,var(--theme-app)_5%,transparent)]'
 
 /** The column a conversation list lives in: it animates between its width
  *  and a rail, unless a drag is setting the width right now. */

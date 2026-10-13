@@ -6,8 +6,8 @@
  * on a dark one, from whatever ink the theme (or an org palette) supplies. */
 .chat-ink {
   --chat-ink: light-dark(
-    color-mix(in oklab, var(--theme-panel, #000) 60%, black),
-    color-mix(in oklab, var(--theme-panel, #fff) 75%, white)
+    color-mix(in oklab, var(--theme-app, #000) 60%, black),
+    color-mix(in oklab, var(--theme-app, #fff) 75%, white)
   );
   color: var(--chat-ink);
   --tw-prose-body: var(--chat-ink);
@@ -53,7 +53,7 @@
   font-size: 0.875rem;
   font-family: var(--font-mono, ui-monospace, monospace);
   padding: 0.125em 0.375em;
-  background-color: color-mix(in oklab, var(--theme-panel, #000) 8%, transparent);
+  background-color: color-mix(in oklab, var(--theme-app, #000) 8%, transparent);
   border-radius: 0.25rem;
   /* Identifiers carry a colour of their own so they read as code at a glance
    * without the weight the plugin gives them: the theme's link blue, which
@@ -110,7 +110,7 @@
  * table reads as part of the answer rather than a widget dropped into it),
  * and the copy/download controls only while the pointer is over the table. */
 .markdown [data-streamdown="table-wrapper"] {
-  --table-line: color-mix(in oklab, var(--theme-panel, #000) 10%, transparent);
+  --table-line: color-mix(in oklab, var(--theme-app, #000) 10%, transparent);
   position: relative;
   display: block;
   background: transparent;
@@ -152,7 +152,7 @@
   font-weight: 600;
   color: inherit;
   background: transparent;
-  border-bottom: 1px solid color-mix(in oklab, var(--theme-panel, #000) 28%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--theme-app, #000) 28%, transparent);
 }
 .markdown [data-streamdown="table"] td {
   padding: 0.4375rem 0.75rem;
@@ -187,7 +187,8 @@
 }
 
 /* Streamdown code blocks: one surface, not a frame around an inset panel.
- * A wash of the ink with a hairline edge holds the language on its top edge,
+ * The theme's code surface, which the syntax colors are solved against, with a
+ * hairline edge holds the language on its top edge,
  * the copy and download controls quiet beside it, and the code on the same
  * ground, so the block reads as part of the answer. */
 .markdown [data-streamdown="code-block"] {
@@ -197,8 +198,8 @@
   border: 0;
   border-radius: 0.75rem;
   overflow: hidden;
-  background: color-mix(in oklab, var(--theme-panel, #000) 4%, var(--theme-panel-bg, #fff));
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--theme-panel, #000) 8%, transparent);
+  background: var(--theme-code-bg, #f3f4f6);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--theme-app, #000) 8%, transparent);
 }
 .markdown [data-streamdown="code-block-header"] {
   height: 2.25rem;
@@ -222,8 +223,8 @@
     color 150ms ease-out;
 }
 .markdown [data-streamdown="code-block-actions"] button:hover {
-  color: var(--theme-panel, #000);
-  background: color-mix(in oklab, var(--theme-panel, #000) 7%, transparent);
+  color: var(--theme-app, #000);
+  background: color-mix(in oklab, var(--theme-app, #000) 7%, transparent);
 }
 .markdown [data-streamdown="code-block-body"] {
   border: 0;
@@ -360,10 +361,10 @@
 /* Tints of the ink for controls that sit on the panel: the theme's hover is a
  * shade off another surface and would not read as a highlight here. */
 @utility chat-tint {
-  background-color: color-mix(in oklab, var(--theme-panel, #000) 6%, transparent);
+  background-color: color-mix(in oklab, var(--theme-app, #000) 6%, transparent);
 }
 @utility chat-tint-strong {
-  background-color: color-mix(in oklab, var(--theme-panel, #000) 10%, transparent);
+  background-color: color-mix(in oklab, var(--theme-app, #000) 10%, transparent);
 }
 
 /* The composer is one surface lifted off the page: a hairline of the ink for
@@ -371,14 +372,14 @@
  * shadow is black on every scheme; an ink-coloured one would glow on dark. */
 .chat-composer {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--theme-panel, #000) 12%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--theme-app, #000) 12%, transparent),
     0 1px 2px rgb(0 0 0 / 0.04),
     0 6px 16px -8px rgb(0 0 0 / 0.12);
   transition: box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .chat-composer:focus-within {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--theme-panel, #000) 22%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--theme-app, #000) 22%, transparent),
     0 1px 2px rgb(0 0 0 / 0.05),
     0 10px 24px -10px rgb(0 0 0 / 0.18);
 }
@@ -411,7 +412,7 @@
 /* An edge drawn from the ink rather than the theme's border, so a card reads
  * the same on the panel and on a tinted bubble. */
 .chat-hairline {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--theme-panel, #000) 10%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--theme-app, #000) 10%, transparent);
 }
 
 /* A bubble carrying pastes would shrink to its shortest line and squeeze
@@ -428,7 +429,7 @@
 .chat-composer,
 .chat-empty,
 .chat-reasoning-body {
-  --chat-accent: var(--theme-accent, var(--theme-element, #06354f));
+  --chat-accent: var(--theme-accent, var(--theme-accent, #06354f));
 }
 
 /* What the reader wrote carries a wash of the accent: theirs, not the
@@ -489,6 +490,6 @@
  * losing contrast. */
 .chat-queued .chat-bubble-user {
   background: transparent;
-  outline: 1px dashed color-mix(in oklab, var(--theme-panel, #000) 30%, transparent);
+  outline: 1px dashed color-mix(in oklab, var(--theme-app, #000) 30%, transparent);
   outline-offset: -1px;
 }

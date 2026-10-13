@@ -106,7 +106,7 @@ function ViewToggle({
         className={cx(
           'px-3 py-1.5 text-xs font-mono transition-colors',
           viewMode === 'dag'
-            ? 'bg-[var(--theme-element)] text-[var(--theme-element-text)]'
+            ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-text)]'
             : 'text-[var(--theme-muted-text-color)] hover:text-[var(--theme-app)] hover:bg-[var(--theme-hover)]',
         )}
       >
@@ -118,7 +118,7 @@ function ViewToggle({
         className={cx(
           'px-3 py-1.5 text-xs font-mono transition-colors',
           viewMode === 'tree'
-            ? 'bg-[var(--theme-element)] text-[var(--theme-element-text)]'
+            ? 'bg-[var(--theme-accent)] text-[var(--theme-accent-text)]'
             : 'text-[var(--theme-muted-text-color)] hover:text-[var(--theme-app)] hover:bg-[var(--theme-hover)]',
         )}
       >
@@ -930,7 +930,7 @@ function EditorEdges({
         {edges.map(({ from, to, path }) => (
           <Fragment key={`${from}→${to}`}>
             {chosen.has(`${from}→${to}`) && (
-              <path d={path.d} stroke="var(--theme-element)" strokeWidth="10" fill="transparent" />
+              <path d={path.d} stroke="var(--theme-accent)" strokeWidth="10" fill="transparent" />
             )}
             <EdgeHitPath d={path.d} edge={{ from, to }} />
           </Fragment>

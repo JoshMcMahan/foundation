@@ -162,7 +162,7 @@ export default function ChatEmptyState({
                       kind: 'external',
                       href: extraLinks.addProvider,
                     }}
-                    className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-full transition-opacity text-sm font-medium theme-element hover:opacity-90"
+                    className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-full transition-opacity text-sm font-medium theme-accent hover:opacity-90"
                   >
                     <AddIcon className="h-3 w-3" />
                     {t.addProvider}

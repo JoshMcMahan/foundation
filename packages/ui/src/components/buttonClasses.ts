@@ -21,7 +21,7 @@ const base =
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-(--theme-element) text-(--theme-element-text) hover:not-disabled:not-aria-disabled:bg-(--theme-element-hover)',
+    'bg-(--theme-accent) text-(--theme-accent-text) hover:not-disabled:not-aria-disabled:bg-(--theme-accent-hover)',
   secondary:
     'border border-(--theme-border) bg-(--theme-panel-bg) text-(--theme-app) hover:not-disabled:not-aria-disabled:bg-(--theme-hover)',
   outline:

@@ -161,7 +161,7 @@ function FormCodePanel({
           jsonHasErrors ? 'border-red-500' : 'border-(--theme-border)',
         )}
       >
-        <div className="bg-(--theme-muted-panel-bg) text-(--theme-muted-panel-color) flex shrink-0 items-center gap-3 border-b border-(--theme-border) px-3 py-2">
+        <div className="bg-(--theme-muted-panel-bg) text-(--theme-muted-text-color) flex shrink-0 items-center gap-3 border-b border-(--theme-border) px-3 py-2">
           {hasHiddenFields && (
             <Tooltip content={t.showHiddenFieldsHint}>
               <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-(--theme-app)">

@@ -6,7 +6,7 @@ so an application ships only what it imports:
 | Subpath | Contents |
 | --- | --- |
 | `.` | theme contract, primitives (buttons, inputs, tables, tooltips, modals, dropdowns, settings layouts, page header), `UIProvider` |
-| `./theme` | `deriveTheme`, presets, `applyTheme` |
+| `./theme` | theme seeds and presets, `generateTheme`, `applyTheme`, `fitSeed` |
 | `./icons` | the icon barrel |
 | `./list` | list pages, tables, row menus and list controls |
 | `./form` | `DynamicForm` and its field registry |
@@ -59,6 +59,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A live relative time or duration | `RelativeTime`, `Elapsed` |
 | Rendered Markdown | `Markdown` |
 | A value that survives a reload | `usePersistedState` |
+| Choosing the app's colors | `ThemeEditor`, applied with `useApplyTheme` |
 
 Some pairs look alike and are split on purpose:
 
@@ -89,22 +90,91 @@ Some pairs look alike and are split on purpose:
   A `Combobox` filters as you type, for a list long enough to search, and is the
   one that takes several values, new ones, or free text (`Autocomplete`).
 
-## Theme contract
+## Themes
 
 Every color a component may use is one of the closed set of `--theme-*` CSS
-variables, and every token is computable from a tiny seed — accent +
-background + contrast — per surface (interface, and optionally sidebar).
-Presets are named seeds; a custom theme is the same seed exposed directly.
-Components consume only tokens and never branch on a light/dark flag.
+variables. Components read only those tokens and never branch on a light or dark
+flag. A theme is not the tokens but a few picked values, a seed, from which every
+token is generated:
 
 ```ts
-import { deriveTheme, applyTheme, THEME_PRESETS } from '@parallelworks/ui/theme'
+import type { Theme } from '@parallelworks/ui/theme'
 
-const vars = deriveTheme({ accent: '#06354f', background: '#f3f4f6' })
-applyTheme(document.documentElement, vars)
+const theme: Theme = {
+  version: 1,
+  light: { interface: { base: '#f3f4f6', accent: '#06354f', contrast: 30 }, sidebar: { base: '#06354f' } },
+  dark: { interface: { base: '#111418', accent: '#5b9ccf' } },
+  code: 'balanced',
+}
 ```
 
-Import the stylesheet contract once in your app:
+- **`base`** is the page background. Its lightness decides the mode, so a seed
+  is light or dark by what it looks like. A near-white base keeps panels pure
+  white.
+- **`accent`** is used exactly for the primary button and the selection; text on
+  it, links, focus rings and tints are solved from it.
+- **`contrast`** runs 0 to 100, 30 by default. It spreads the surfaces apart and
+  raises text toward the WCAG and APCA targets below. Even 0 meets WCAG AA.
+- **`sidebar`** takes its own `base` and `accent`; leave it out and the sidebar
+  follows the page.
+- **`light` and `dark`** are both optional: a missing mode is derived from the
+  other, so a theme with one scheme still follows the device.
+- **`code`** picks the syntax and terminal palette: `balanced`, `vivid`, `muted`
+  or `mono`.
+
+A theme is plain JSON. Store it as it is; `parseTheme` reads one back (a string
+or a parsed value) and returns `{ ok: false, error: { code, path } }` instead of
+throwing, so an import can say which field is wrong. `serializeTheme` writes one.
+
+### How tokens are generated
+
+Generation works in OKLCH. Neutrals take the base's hue with a faint tint toward
+the accent; surfaces step away from the base by an amount the contrast scales,
+with a knee at 30 so the upper half of the slider changes more gently. Dark text
+on a tinted light base carries several times the base's chroma, as hand-made
+slate and gray scales do, while light text on a dark base carries less. Each text
+color is then solved: a binary search on lightness, at its own hue and chroma,
+until it reaches its target against every surface it sits on.
+
+| Pair | WCAG at 0 / 30 / 100 | APCA Lc |
+| --- | --- | --- |
+| Body text | 4.5 / 7 / 12 | 75 / 90 / 105 |
+| Secondary text, links, status, syntax and terminal colors | 4.5 / 4.5 / 7 | 60 / 70 / 85 |
+| Placeholders | 3 / 3 / 4.5 | 45 / 50 / 65 |
+| Focus ring | 3 / 3 / 4.5 | |
+| Control borders | 1.6 / 2.2 / 3 | |
+| Text on the accent | 4.5 | |
+
+Status colors (success, error, warning, info, favorite) and terminal colors keep
+fixed hues, so red means the same thing in every theme. Syntax colors turn away
+from the accent's hue when they come within 30° of it, so a keyword never looks
+like a link.
+
+Every color is mapped into sRGB with the CSS Color 4 method, which lowers
+chroma at fixed lightness and hue. It is mapped into display-p3 too: where the
+wider color differs from sRGB by more than one just-noticeable difference
+(ΔEOK 0.02), it is emitted under `@media (color-gamut: p3)`. The contrast
+targets are checked in both gamuts.
+
+### Applying a theme
+
+```ts
+import { applyTheme, generateTheme, schemeFor, resolveMode } from '@parallelworks/ui/theme'
+
+const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches
+const mode = resolveMode('system', prefersDark) // 'light' or 'dark'
+applyTheme(document.documentElement, generateTheme(schemeFor(theme, mode), { code: theme.code }))
+```
+
+In React, `useColorMode(preference)` follows the device while the preference is
+`system`, and `useApplyTheme(theme, mode)` applies the theme to the document
+root (or to an element you pass) and sets `color-scheme`. `applyTheme` sets the
+display-p3 values on a wide-gamut screen. To render a theme on the server,
+`themeStylesheet(selector, scheme)` returns a stylesheet with both blocks.
+`deriveTheme(scheme)` returns the sRGB tokens alone.
+
+`theme.css` defines the default theme's tokens, so a page renders before any
+script runs:
 
 ```css
 /* In a Tailwind v4 build: */
@@ -123,6 +193,60 @@ The prebuilt stylesheet nests all of its rules in the `pw-ui` cascade layer,
 so its precedence does not depend on where it loads. It includes Tailwind's
 preflight reset; a host with its own Tailwind build should use the `@source`
 route instead to avoid a double preflight.
+
+### Editing a theme
+
+`ThemeEditor` is controlled: it takes `value` and `onChange`, with presets, a
+color picker and hex field for each seed, the contrast slider, a custom sidebar,
+the code palette, copy, import and reset. Pass `preference` and
+`onPreferenceChange` to show the light, dark and system choice. It shows a
+scoped preview of the theme beside the controls; with `preview={false}` and
+`useApplyTheme`, the whole app is the preview. Its strings are in
+`UIStrings.theme`.
+
+### Code
+
+Code blocks in `Markdown`, highlighted diffs, the Monaco editor and the log
+viewer's ANSI colors all read the `--theme-code-*` and `--theme-ansi-*` tokens,
+so they follow the theme without a light or dark switch. Monaco takes only
+hex, so it gets the sRGB colors and redefines its theme when the tokens change.
+
+### Moving a stored palette to a seed
+
+`fitSeed(colors)` takes the colors a theme stored as tokens (any of them) and
+returns the seed that comes closest, with a report:
+
+```ts
+const { scheme, report } = fitSeed({ '--theme-app-bg': '#f4f6f8', '--theme-accent': '#0b7a75' })
+report.verdict // 'faithful', 'close' or 'changed'
+report.worst   // the tokens furthest from what was stored
+```
+
+Each token's distance is ΔEOK × 100, so 2 is about one just-noticeable
+difference. A fit is `faithful` when the main tokens are within 2 and none is
+over 5, and `close` within 5 and 10. A stored color that failed WCAG AA is
+marked `correctedForContrast` and left out of the verdict, since the generated
+one is meant to differ.
+
+### Renamed tokens
+
+| Before | Now |
+| --- | --- |
+| `--theme-element` | `--theme-accent` |
+| `--theme-element-text` | `--theme-accent-text` |
+| `--theme-element-hover` | `--theme-accent-hover` |
+| `--theme-panel`, `--theme-hover-text` | `--theme-app` |
+| `--theme-muted-panel-color` | `--theme-muted-text-color` |
+| `--theme-card-bg` | `--theme-panel-bg` |
+| `--theme-card-hover` | `--theme-panel-hover` |
+| `--theme-card-border` | `--theme-border` |
+| `--theme-hover-overlay` | `--theme-hover` |
+| `--theme-input-disabled-text` | `--theme-placeholder` |
+| `--theme-input` | `--theme-focus` |
+| `--theme-auth-shadow` | `--theme-shadow-xl` |
+| `--theme-sidebar-hover-text` | `--theme-sidebar-text` |
+| `--theme-bg` | `--theme-sidebar-bg` |
+| `theme-element` (utility) | `theme-accent` |
 
 ## Buttons and spinners
 

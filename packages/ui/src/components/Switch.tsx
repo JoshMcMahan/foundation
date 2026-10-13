@@ -26,7 +26,7 @@ export function Switch({ size = 'md', className, onLabel, offLabel, ...props }: 
       {...props}
       className={cx(
         'peer inline-flex shrink-0 items-center rounded-full p-0.5 bg-(--theme-border) transition-colors duration-200 cursor-pointer outline-none',
-        'data-checked:bg-(--theme-element)',
+        'data-checked:bg-(--theme-accent)',
         'focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) aria-invalid:ring-2 aria-invalid:ring-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         sizes[size].root,

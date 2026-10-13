@@ -126,7 +126,7 @@ function UriCard({ value }: { value: string }) {
           {scheme}
         </span>
       )}
-      <span className="flex-1 min-w-0 inline-flex items-center px-3 py-2 font-mono text-[12.5px] leading-snug break-all text-(--theme-input)">
+      <span className="flex-1 min-w-0 inline-flex items-center px-3 py-2 font-mono text-[12.5px] leading-snug break-all text-(--theme-focus)">
         {value}
       </span>
       <span
@@ -1847,7 +1847,7 @@ export default function FileExplorer({
                       cx(
                         'mx-2.5 border-b-2 px-1 py-2.5 text-[13px] font-medium cursor-pointer transition-colors',
                         active
-                          ? 'theme-text border-(--theme-element)'
+                          ? 'theme-text border-(--theme-accent)'
                           : 'theme-muted-text border-transparent hover:theme-text',
                       )
                     return (

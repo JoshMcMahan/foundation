@@ -13,6 +13,6 @@ export {
   STEP_YAML_PATH,
   settingsSchemas,
 } from './settingsYaml'
-export { defineEditorThemes, getThemeName } from './themes'
+export { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 export { setupMonacoWorkers } from './workers'
 export { configureEditorYaml } from './yaml'

@@ -41,10 +41,10 @@ export function Slider({
     >
       <BaseSlider.Control className="flex w-full touch-none select-none items-center py-2 data-disabled:cursor-not-allowed data-disabled:opacity-50">
         <BaseSlider.Track className="h-1 w-full rounded-full bg-(--theme-border)">
-          <BaseSlider.Indicator className="rounded-full bg-(--theme-element)" />
+          <BaseSlider.Indicator className="rounded-full bg-(--theme-accent)" />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
-            className="size-4 rounded-full border-2 border-(--theme-element) bg-(--theme-panel-bg) shadow-sm outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-(--theme-focus-ring)"
+            className="size-4 rounded-full border-2 border-(--theme-accent) bg-(--theme-panel-bg) shadow-sm outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-(--theme-focus-ring)"
           />
         </BaseSlider.Track>
       </BaseSlider.Control>

@@ -26,7 +26,7 @@ describe('Meter', () => {
   })
 
   it.each([
-    [50, 'bg-(--theme-element)'],
+    [50, 'bg-(--theme-accent)'],
     [85, 'bg-amber-500'],
     [95, 'bg-red-600'],
   ])('colors %s by its levels', (value, color) => {

@@ -23,7 +23,7 @@ describe('languageForPath', () => {
 describe('tokenizeDiffLines', () => {
   it('tokenizes lines with colors and stays line-aligned', async () => {
     const lines = ['const a = 1', 'let b = "two"']
-    const tokens = await tokenizeDiffLines(lines, 'typescript', false)
+    const tokens = await tokenizeDiffLines(lines, 'typescript')
     expect(tokens).not.toBeNull()
     expect(tokens).toHaveLength(2)
     expect(tokens?.[0]?.map((t) => t.content).join('')).toBe(lines[0])
@@ -32,6 +32,6 @@ describe('tokenizeDiffLines', () => {
   })
 
   it('returns null for an unknown language instead of guessing', async () => {
-    expect(await tokenizeDiffLines(['x'], 'not-a-language', false)).toBeNull()
+    expect(await tokenizeDiffLines(['x'], 'not-a-language')).toBeNull()
   })
 })

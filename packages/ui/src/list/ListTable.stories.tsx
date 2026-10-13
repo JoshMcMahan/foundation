@@ -62,7 +62,7 @@ function DemoRow({ row, openMenu }: { row: (typeof ROWS)[number]; openMenu: Open
         </div>
       </Table.Item>
       <NameCell
-        icon={<span className="h-4 w-4 rounded-sm bg-(--theme-element)" />}
+        icon={<span className="h-4 w-4 rounded-sm bg-(--theme-accent)" />}
         name={row.name}
         subtitle={row.subtitle}
         href={null}

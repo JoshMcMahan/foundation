@@ -16,9 +16,9 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
     <BaseCheckbox.Root
       {...props}
       className={cx(
-        'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-element-text) cursor-pointer outline-none transition-colors',
-        'data-checked:border-(--theme-element) data-checked:bg-(--theme-element)',
-        'data-indeterminate:border-(--theme-element) data-indeterminate:bg-(--theme-element)',
+        'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-accent-text) cursor-pointer outline-none transition-colors',
+        'data-checked:border-(--theme-accent) data-checked:bg-(--theme-accent)',
+        'data-indeterminate:border-(--theme-accent) data-indeterminate:bg-(--theme-accent)',
         'focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) aria-invalid:border-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         className,

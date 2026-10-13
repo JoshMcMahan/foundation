@@ -47,7 +47,7 @@ export function GraphEditorCanvas() {
         <div
           className={cx(
             'absolute rounded-full',
-            refused ? 'bg-(--theme-error)' : 'bg-(--theme-element)',
+            refused ? 'bg-(--theme-error)' : 'bg-(--theme-accent)',
           )}
           style={place(indicator)}
         />
@@ -56,7 +56,7 @@ export function GraphEditorCanvas() {
         <div
           className={cx(
             'absolute rounded-md border-4',
-            refused ? 'border-(--theme-error)' : 'border-(--theme-element)',
+            refused ? 'border-(--theme-error)' : 'border-(--theme-accent)',
           )}
           style={{
             left: outline.left - 8,
@@ -71,7 +71,7 @@ export function GraphEditorCanvas() {
           className={cx(
             'absolute rounded-md border-4',
             (target.kind === 'connect' ? target.edits : target.valid)
-              ? 'border-(--theme-element)'
+              ? 'border-(--theme-accent)'
               : 'border-(--theme-error)',
           )}
           style={{
@@ -92,7 +92,7 @@ export function GraphEditorCanvas() {
             stroke={
               target?.kind === 'connect' && !target.edits
                 ? 'var(--theme-error)'
-                : 'var(--theme-element)'
+                : 'var(--theme-accent)'
             }
             strokeWidth={6}
             strokeDasharray="16 10"
@@ -118,7 +118,7 @@ function SelectionBox({ api }: { api: GraphEditorApi }) {
   return (
     <>
       <div
-        className="absolute rounded-xl border-2 border-dashed border-(--theme-element)"
+        className="absolute rounded-xl border-2 border-dashed border-(--theme-accent)"
         style={place(bounds)}
       />
       <PortCircle
@@ -144,7 +144,7 @@ function SelectionBox({ api }: { api: GraphEditorApi }) {
           aria-label={t.moveSelectionHint}
           className={cx(
             EDITOR_HANDLE_CLASS,
-            'pointer-events-auto absolute flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)',
+            'pointer-events-auto absolute flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 border-(--theme-accent) bg-(--theme-panel-bg)',
           )}
           style={{ left: bounds.left - 16, top: bounds.top - 16 }}
           onPointerDown={(e) =>
@@ -273,8 +273,8 @@ function EditableRow({
         // Room between the label and its ring, without moving the label or widening the node.
         '-mx-0.5 px-0.5',
         className,
-        selected && 'bg-(--theme-element)/15',
-        flagged ? 'ring-2 ring-(--theme-error)' : selected && 'ring-2 ring-(--theme-element)',
+        selected && 'bg-(--theme-accent)/15',
+        flagged ? 'ring-2 ring-(--theme-error)' : selected && 'ring-2 ring-(--theme-accent)',
       )}
       onPointerDown={(e) => {
         if (e.shiftKey) {
@@ -440,8 +440,8 @@ function PortCircle({
         {draw && <span className="absolute inset-0 bg-(--theme-panel-bg)" />}
         <span
           className={cx(
-            'relative h-4 w-4 rounded-full group-hover/port:bg-(--theme-element)',
-            dragging ? 'bg-(--theme-element)' : draw && 'bg-(--theme-border)',
+            'relative h-4 w-4 rounded-full group-hover/port:bg-(--theme-accent)',
+            dragging ? 'bg-(--theme-accent)' : draw && 'bg-(--theme-border)',
           )}
         />
       </span>
@@ -595,7 +595,7 @@ export function EdgeHitPath({ d, edge }: { d: string; edge: EdgeSelection }) {
       fill="none"
       className={cx(
         EDITOR_HANDLE_CLASS,
-        'outline-none focus-visible:[stroke:color-mix(in_srgb,var(--theme-element)_35%,transparent)]',
+        'outline-none focus-visible:[stroke:color-mix(in_srgb,var(--theme-accent)_35%,transparent)]',
       )}
       style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
       onClick={(e) => api.selectEdge(edge, e.shiftKey)}
@@ -653,7 +653,7 @@ export function EdgeEnds({
           }
         }}
       >
-        <span className="h-5 w-5 rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)" />
+        <span className="h-5 w-5 rounded-full border-4 border-(--theme-accent) bg-(--theme-panel-bg)" />
       </span>
     </Tooltip>
   )

@@ -1,7 +1,12 @@
 import * as monaco from 'monaco-editor'
 import { useEffect, useRef } from 'react'
 import { useCssIsDark } from '../../components/useCssIsDark'
-import { defineEditorThemes, getThemeName, setupMonacoWorkers } from '../../editor'
+import {
+  defineEditorThemes,
+  followThemeTokens,
+  getThemeName,
+  setupMonacoWorkers,
+} from '../../editor'
 
 interface CodePreviewEditorProps {
   value: string
@@ -56,6 +61,7 @@ export default function CodePreviewEditor({ value, language }: CodePreviewEditor
       defineEditorThemes(monaco.editor)
       monaco.editor.setTheme(getThemeName(isDark))
     }
+    return followThemeTokens(monaco.editor, () => getThemeName(isDark))
   }, [isDark])
 
   return (

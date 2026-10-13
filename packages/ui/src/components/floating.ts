@@ -11,7 +11,7 @@ export const panelClassName = `rounded-lg border border-(--theme-border) bg-(--t
 
 /** A row in a panel. */
 export const panelItemClassName =
-  'flex w-full cursor-pointer select-none items-center gap-2 px-3 py-1.5 text-left outline-none data-highlighted:bg-(--theme-hover) data-highlighted:text-(--theme-hover-text) data-disabled:cursor-not-allowed data-disabled:opacity-50'
+  'flex w-full cursor-pointer select-none items-center gap-2 px-3 py-1.5 text-left outline-none data-highlighted:bg-(--theme-hover) data-highlighted:text-(--theme-app) data-disabled:cursor-not-allowed data-disabled:opacity-50'
 
 /** A tooltip's or infotip's small inverted surface. */
 export const tipClassName = `rounded-md bg-(--theme-app) px-2 py-1 text-xs text-(--theme-app-bg) shadow-(--theme-shadow) whitespace-pre-line break-words data-instant:transition-none ${enterExit}`

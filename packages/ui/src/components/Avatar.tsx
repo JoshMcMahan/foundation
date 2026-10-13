@@ -70,7 +70,7 @@ export function Avatar({ src, name, size = 'md', status, className }: AvatarProp
         )}
         <BaseAvatar.Fallback
           aria-hidden="true"
-          className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--gradient-start,var(--theme-element))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-element-text)"
+          className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-accent-text)"
         >
           {/* Two letters crowd a 16px circle and sit under the status dot. */}
           {size === 'xs' ? avatarInitials(name).charAt(0) : avatarInitials(name)}

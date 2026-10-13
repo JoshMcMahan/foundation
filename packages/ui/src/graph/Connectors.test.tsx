@@ -95,7 +95,7 @@ describe('ConnectorLayers', () => {
     expect(lines()).toBe(0)
     act(() => lineage.hover('b'))
     expect(lines()).toBe(2)
-    expect(container.querySelectorAll('circle[fill="var(--theme-element)"]')).toHaveLength(4)
+    expect(container.querySelectorAll('circle[fill="var(--theme-accent)"]')).toHaveLength(4)
   })
 
   it('renders only the connectors and dots of the lineage shown', () => {

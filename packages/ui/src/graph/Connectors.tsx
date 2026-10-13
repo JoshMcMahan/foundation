@@ -4,7 +4,7 @@ import { dimClasses } from './GraphNode'
 import { highlightOf, useLineage, useLineageStore } from './lineage'
 
 const CONNECTOR_COLOR = 'var(--theme-border)'
-const HIGHLIGHT_COLOR = 'var(--theme-element)'
+const HIGHLIGHT_COLOR = 'var(--theme-accent)'
 const PANEL_COLOR = 'var(--theme-panel-bg)'
 const STROKE = 6
 

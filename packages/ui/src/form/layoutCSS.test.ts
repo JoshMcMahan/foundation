@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contrastRatio } from '../theme'
+import { contrastRatio } from '../theme/index'
 import { resolveLayoutCSS } from './layoutCSS'
 
 describe('authored layout CSS', () => {
@@ -26,7 +26,7 @@ describe('authored layout CSS', () => {
     expect(result.issues).toEqual([])
     expect(result.style).toMatchObject({
       '--theme-app-bg': '#112233',
-      '--theme-element': '#d4ed7a',
+      '--theme-accent': '#d4ed7a',
       backgroundColor: '#112233',
       colorScheme: 'dark',
       border: '2px solid #abcdef',
@@ -36,9 +36,9 @@ describe('authored layout CSS', () => {
     expect(result.style).not.toHaveProperty('--form-surface')
     const theme = result.style as Record<string, string>
     expect(contrastRatio(theme['--theme-app']!, theme['--theme-app-bg']!)).toBeGreaterThan(4.5)
-    expect(
-      contrastRatio(theme['--theme-element-text']!, theme['--theme-element']!),
-    ).toBeGreaterThan(4.5)
+    expect(contrastRatio(theme['--theme-accent-text']!, theme['--theme-accent']!)).toBeGreaterThan(
+      4.5,
+    )
     expect(resolveLayoutCSS('color: #abc; background-color: #fff;').issues).toEqual([])
   })
 

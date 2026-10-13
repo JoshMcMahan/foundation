@@ -3,7 +3,6 @@ import { Disclosure } from '../../../components/Disclosure'
 import { fieldBox } from '../../../components/fieldBox'
 import { Loader } from '../../../components/Loader'
 import { useStrings } from '../../../components/Provider'
-import { useCssIsDark } from '../../../components/useCssIsDark'
 import { cx } from '../../../cx'
 import { formatDuration } from '../../../format'
 import { CheckIcon } from '../../../icons'
@@ -99,7 +98,6 @@ function LineSpans({
 }
 
 function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
-  const isDark = useCssIsDark()
   const [tokens, setTokens] = useState<DiffToken[][] | null>(null)
   const lineKey = useMemo(
     () => rows.map((r) => (r.kind === 'gap' ? '' : r.text)).join('\n'),
@@ -111,7 +109,7 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
       return
     }
     let live = true
-    tokenizeDiffLines(lineKey.split('\n'), lang, isDark).then((t) => {
+    tokenizeDiffLines(lineKey.split('\n'), lang).then((t) => {
       if (live) {
         setTokens(t)
       }
@@ -119,7 +117,7 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
     return () => {
       live = false
     }
-  }, [lang, lineKey, isDark])
+  }, [lang, lineKey])
   const numbered = rows.some((r) => r.oldNo !== undefined || r.newNo !== undefined)
   return (
     <div className="overflow-x-auto rounded-md border theme-border font-mono text-xs leading-5">
@@ -418,7 +416,7 @@ function ConfirmApproval({
           <button
             type="button"
             onClick={() => answer({ kind: 'confirm', allowed: true })}
-            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-element) text-(--theme-element-text)"
+            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text)"
           >
             {allowLabel}
           </button>
@@ -464,7 +462,7 @@ function ConfirmApproval({
                 denyMessage: feedback.trim(),
               })
             }
-            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-element) text-(--theme-element-text) disabled:opacity-50"
+            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text) disabled:opacity-50"
           >
             {common.send}
           </button>
@@ -535,7 +533,7 @@ function AskApproval({
             type="button"
             disabled={!own.trim()}
             onClick={() => answer(own.trim())}
-            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-element) text-(--theme-element-text) disabled:opacity-50"
+            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text) disabled:opacity-50"
           >
             {common.send}
           </button>
@@ -573,7 +571,7 @@ export function ApprovalBlock({
   }
   return (
     <div
-      className="my-1.5 rounded-lg border border-(--theme-element) p-3 space-y-2"
+      className="my-1.5 rounded-lg border border-(--theme-accent) p-3 space-y-2"
       data-testid="approval-part"
     >
       {(part.header || part.toolName) && (
@@ -598,7 +596,7 @@ function PlanApproval({ part }: { part: ApprovalPart }) {
     <>
       <div className="text-xs theme-muted-text">{t.planPending}</div>
       {part.plan && (
-        <div className="prose prose-sm max-w-none rounded-md bg-(--theme-muted-panel-bg) p-2 text-(--theme-panel)">
+        <div className="prose prose-sm max-w-none rounded-md bg-(--theme-muted-panel-bg) p-2 text-(--theme-app)">
           <Markdown isStreaming={false}>{part.plan}</Markdown>
         </div>
       )}

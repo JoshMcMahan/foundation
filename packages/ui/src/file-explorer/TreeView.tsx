@@ -605,7 +605,7 @@ const TreeRowItem = memo(function TreeRowItem({
           'transition-colors duration-150',
           'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-(--theme-link)',
           isSelected
-            ? 'bg-(--theme-element)/15 font-medium'
+            ? 'bg-(--theme-accent)/15 font-medium'
             : dragActive
               ? 'theme-hover'
               : 'hover:theme-hover',

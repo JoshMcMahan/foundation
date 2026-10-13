@@ -253,7 +253,7 @@ function AudioView({
   return (
     <div className="flex h-full w-full items-center justify-center p-6">
       <div className="flex w-full max-w-xl flex-col items-center gap-6">
-        <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-linear-to-br from-(--theme-element) to-(--theme-link) shadow-lg">
+        <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-linear-to-br from-(--theme-accent) to-(--theme-link) shadow-lg">
           <MusicIcon className="h-12 w-12 text-white" />
         </div>
         <div className="text-center">
@@ -360,7 +360,7 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
               type="button"
               className={cx(
                 'cursor-pointer px-2 py-0.5',
-                tail ? 'theme-muted-text theme-hover' : 'theme-element',
+                tail ? 'theme-muted-text theme-hover' : 'theme-accent',
               )}
               onClick={() => setTail(false)}
             >
@@ -370,7 +370,7 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
               type="button"
               className={cx(
                 'cursor-pointer px-2 py-0.5',
-                tail ? 'theme-element' : 'theme-muted-text theme-hover',
+                tail ? 'theme-accent' : 'theme-muted-text theme-hover',
               )}
               onClick={() => setTail(true)}
             >

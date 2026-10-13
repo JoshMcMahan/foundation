@@ -27,11 +27,11 @@ export function Card({ children, size = 'md', elevated = false, render, classNam
     render: render ?? <div />,
     props: {
       className: cx(
-        'block w-full rounded-2xl border border-(--theme-border) bg-(--theme-card-bg) backdrop-blur-xl',
-        elevated ? 'shadow-(--theme-auth-shadow)' : 'shadow-(--theme-shadow)',
+        'block w-full rounded-2xl border border-(--theme-border) bg-(--theme-panel-bg) backdrop-blur-xl',
+        elevated ? 'shadow-(--theme-shadow-xl)' : 'shadow-(--theme-shadow)',
         sizeClasses[size],
         render &&
-          'cursor-pointer text-left transition-[background-color,box-shadow] duration-150 hover:bg-(--theme-card-hover) hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
+          'cursor-pointer text-left transition-[background-color,box-shadow] duration-150 hover:bg-(--theme-panel-hover) hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
         className,
       ),
       children,

@@ -189,6 +189,7 @@ export { Switch, type SwitchProps } from './components/Switch'
 export { isTextEntryContext, useShortcutKey } from './components/shortcutKey'
 export { CompactTable, Table } from './components/Table'
 export { type TabItem, TabPanel, Tabs, type TabsProps } from './components/Tabs'
+export { ThemeEditor, type ThemeEditorProps, ThemePreview } from './components/ThemeEditor'
 export {
   type ToastAction,
   type Toaster,
@@ -205,6 +206,7 @@ export {
 } from './components/Tooltip'
 export { type CopyOptions, useCopy } from './components/useCopy'
 export { useCssIsDark } from './components/useCssIsDark'
+export { useApplyTheme, useColorMode } from './components/useTheme'
 export type {
   EditRefusalReason,
   FieldPatch,
