@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.1](https://github.com/parallelworks/foundation/compare/ui-v0.40.0...ui-v0.40.1) (2026-10-13)
+
+
+### Performance Improvements
+
+* **ui:** draw workflow graphs of thousands of jobs, and zoom further ([#221](https://github.com/parallelworks/foundation/issues/221)) ([5d751d7](https://github.com/parallelworks/foundation/commit/5d751d7e0a36063eacfde41df4f9a430fa77cb8d))
+
 ## [0.40.0](https://github.com/parallelworks/foundation/compare/ui-v0.39.0...ui-v0.40.0) (2026-10-12)
 
 
