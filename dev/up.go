@@ -117,6 +117,11 @@ func runProcess(ctx context.Context, svc Service, env []string, out *lineWriter,
 			proc.drain()
 		}
 		status := exitStatus(proc.err)
+		if proc.err == nil && svc.Once {
+			logger.InfoContext(ctx, "finished")
+			set(stateFinished, "")
+			return
+		}
 		if proc.err == nil || svc.Restart != "on-failure" {
 			logger.WarnContext(ctx, "exited", "status", status)
 			set(stateExited, status)

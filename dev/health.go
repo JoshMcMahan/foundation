@@ -95,9 +95,10 @@ func (s *supervisor) transition(r *runner, from, to state, detail string) {
 	s.notify()
 }
 
-// up reports whether a service is doing its job: ready, or running when it
-// has no health URL. done reports whether it has stopped trying.
-func (st state) up() bool { return st == stateReady || st == stateRunning }
+// up reports whether a service is doing its job: ready, running when it has
+// no health URL, or finished when it runs once. done reports whether it has
+// stopped trying.
+func (st state) up() bool { return st == stateReady || st == stateRunning || st == stateFinished }
 
 func (st state) done() bool {
 	return slices.Contains([]state{stateFailed, stateExited, stateUnhealthy, stateStopped}, st)

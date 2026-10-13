@@ -140,9 +140,43 @@ func TestPlaceholdersAndDependencyChecks(t *testing.T) {
 		"unknown dependency": {{Name: "web", Run: []string{"a"}, DependsOn: []string{"db"}}},
 		"cycle":              {{Name: "a", Run: []string{"a"}, DependsOn: []string{"b"}}, {Name: "b", Run: []string{"b"}, DependsOn: []string{"a"}}},
 		"bad restart":        {{Name: "a", Run: []string{"a"}, Restart: "always"}},
+		"server run once":    {{Name: "a", Run: []string{"a"}, Build: []string{"b"}, Once: true}},
+		"once with health":   {{Name: "a", Run: []string{"a"}, Health: "http://localhost:1/", Once: true}},
 	} {
 		if _, err := (Config{Services: svcs}).withDefaults(); err == nil {
 			t.Errorf("%s accepted", name)
 		}
 	}
+}
+
+func TestServicesWaitForOneThatRunsOnceToFinish(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{Root: root, Services: []Service{
+		{Name: "db", Run: []string{"sleep", "300"}, Manual: true},
+		// Fails until the file it waits for appears, as a seed waits for its database.
+		{Name: "seed", Run: []string{"sh", "-c", "test -f ready && sleep 0.3"}, DependsOn: []string{"db"}, Once: true, Restart: "on-failure", Manual: true},
+		{Name: "web", Run: []string{"sh", "-c", "touch started; exec sleep 300"}, DependsOn: []string{"seed"}, Manual: true},
+	}}
+	s, err := newSupervisor(t.Context(), cfg, slog.New(slog.DiscardHandler), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- s.run(ctx, "web") }()
+	t.Cleanup(func() { cancel(); <-done })
+
+	eventually(t, "seed to fail and retry", func() bool { return stateOf(s.statuses(), "seed") == stateExited })
+	if stateOf(s.statuses(), "web") != stateWaiting {
+		t.Fatalf("web = %s while seed fails, want waiting", stateOf(s.statuses(), "web"))
+	}
+	if err := os.WriteFile(filepath.Join(root, "ready"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "seed to run", func() bool { return stateOf(s.statuses(), "seed") == stateStarting })
+	if _, err := os.Stat(filepath.Join(root, "started")); err == nil {
+		t.Fatal("web started while seed was still running")
+	}
+	eventually(t, "seed to finish", func() bool { return stateOf(s.statuses(), "seed") == stateFinished })
+	eventually(t, "web to run once seed finished", func() bool { return stateOf(s.statuses(), "web") == stateRunning })
 }

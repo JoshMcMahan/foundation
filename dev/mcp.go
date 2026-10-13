@@ -65,7 +65,7 @@ func newMCPServer(cfg Config, ext extension) *mcp.Server {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "status",
 		Description: "Show the checkout's running dev: each service's state (building, starting, ready, running, " +
-			"unhealthy, failed, exited, stopped), its URL, and the ports dev allocated. Fails if dev is not running; start it with up.",
+			"finished, unhealthy, failed, exited, stopped), its URL, and the ports dev allocated. Fails if dev is not running; start it with up.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, _ mcpNone) (*mcp.CallToolResult, mcpStatus, error) {
 		resp, err := controlFull(ctx, cfg, controlRequest{Command: "info"})
 		if err != nil {

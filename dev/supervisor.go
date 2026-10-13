@@ -26,7 +26,8 @@ const (
 	stateRunning  state = "running"
 	stateFailed   state = "failed" // the build failed; waiting for a change
 	stateExited   state = "exited"
-	stateWaiting  state = "waiting" // for the services it depends on
+	stateWaiting  state = "waiting"  // for the services it depends on
+	stateFinished state = "finished" // a service run once exited cleanly
 )
 
 // status is a service's state, as the TUI and `dev status` show it.
@@ -318,7 +319,7 @@ func (s *supervisor) setState(r *runner, st state, detail string) {
 		s.mu.Unlock()
 		return
 	}
-	if st == stateRunning && r.svc.Health != "" {
+	if st == stateRunning && (r.svc.Health != "" || r.svc.Once) {
 		st = stateStarting
 	}
 	wasUp := r.status.State.up()

@@ -378,12 +378,13 @@ var (
 		stateStopped:   lipgloss.NewStyle().Faint(true),
 		stateStarting:  lipgloss.NewStyle().Foreground(lipgloss.Color("3")),
 		stateReady:     lipgloss.NewStyle().Foreground(lipgloss.Color("2")),
+		stateFinished:  lipgloss.NewStyle().Foreground(lipgloss.Color("2")),
 		stateUnhealthy: lipgloss.NewStyle().Foreground(lipgloss.Color("1")),
 		stateWaiting:   lipgloss.NewStyle().Faint(true),
 	}
 	stateMark = map[state]string{
 		stateRunning: "●", stateBuilding: "◐", stateFailed: "✗", stateExited: "✗", stateStopped: "○",
-		stateStarting: "◐", stateReady: "●", stateUnhealthy: "✗", stateWaiting: "◌",
+		stateStarting: "◐", stateReady: "●", stateUnhealthy: "✗", stateWaiting: "◌", stateFinished: "✓",
 	}
 )
 

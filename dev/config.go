@@ -133,9 +133,9 @@ type Service struct {
 	Health string `json:"health,omitempty"`
 	// Manual services start only when named: `dev web worker`.
 	Manual bool `json:"manual,omitempty"`
-	// DependsOn names services that must be up (ready, or running without a
-	// health URL) before this one starts, such as a database. Starting this
-	// one starts them too.
+	// DependsOn names services that must be up (ready, running without a
+	// health URL, or finished when they run once) before this one starts, such
+	// as a database. Starting this one starts them too.
 	DependsOn []string `json:"dependsOn,omitempty"`
 	// Restart is "on-failure" to start the service again, with backoff, when
 	// it exits with an error; by default it is left stopped.
@@ -146,6 +146,10 @@ type Service struct {
 	// Profiles limits the service to checkouts that choose one of them, such
 	// as a local database that the remote setup does without.
 	Profiles []string `json:"profiles,omitempty"`
+	// Once is for a command that readies something and exits, such as one
+	// that loads a database: it reads starting while it runs and finished once
+	// it exits cleanly, and services that depend on it wait for it to finish.
+	Once bool `json:"once,omitempty"`
 }
 
 // S3 configures the local S3-compatible server.
@@ -326,7 +330,8 @@ func (c Config) databaseURL(db string) string {
 }
 
 // checkDependencies rejects unknown services in dependsOn, a dependency
-// cycle, and restart values other than "on-failure".
+// cycle, restart values other than "on-failure", and a service run once that
+// is a server or has a health URL.
 func (c Config) checkDependencies() error {
 	byName := map[string]Service{}
 	for _, svc := range c.Services {
@@ -335,6 +340,9 @@ func (c Config) checkDependencies() error {
 	for _, svc := range c.Services {
 		if svc.Restart != "" && svc.Restart != "on-failure" {
 			return fmt.Errorf("service %q: restart must be on-failure or unset, got %q", svc.Name, svc.Restart)
+		}
+		if svc.Once && (len(svc.Build) > 0 || svc.Health != "") {
+			return fmt.Errorf("service %q: once is for a command that exits, not one with build or health", svc.Name)
 		}
 		for _, dep := range svc.DependsOn {
 			if _, ok := byName[dep]; !ok {
