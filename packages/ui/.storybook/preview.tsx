@@ -22,13 +22,13 @@ const engine = { ...parser.createWorkflowEngine(), editing: parser }
 const storyData = { workflowActions: TEST_ACTIONS }
 
 // Links render as anchors but never navigate away from the story.
-const StoryLink: UILinkComponent = ({ to, onClick, children, ...rest }) => (
+const StoryLink: UILinkComponent = ({ href, onClick, children, ...rest }) => (
   <a
-    href={to}
+    href={href}
     {...rest}
     onClick={(e) => {
       e.preventDefault()
-      onClick?.()
+      onClick?.(e)
     }}
   >
     {children}

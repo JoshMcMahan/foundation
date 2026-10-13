@@ -27,7 +27,6 @@ describe('EditorField', () => {
     field: { type: 'editor', name: 'testEditorField' },
     label: 'Test Editor Label',
     labelPosition: 'top',
-    missing: false,
     disabled: false,
   }
 

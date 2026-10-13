@@ -101,26 +101,6 @@
   color: var(--theme-hover-text);
 }
 
-/* Utility for theme-aware input styling */
-.theme-input {
-  background-color: var(--theme-input-bg, #f9fafb);
-  border-color: var(--theme-border, #d1d5db);
-  color: var(--theme-app, #374151);
-}
-
-.theme-input:focus {
-  border-color: var(--theme-element, #3b82f6);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--theme-element, #3b82f6);
-}
-
-.theme-input:disabled,
-.theme-input.disabled {
-  cursor: not-allowed;
-  background-color: var(--theme-input-disabled-bg, #f3f4f6);
-  color: var(--theme-input-disabled-text, #9ca3af);
-}
-
 .tooltip {
   color: var(--theme-muted-text-color, #5f6b76);
 }
@@ -190,36 +170,6 @@
 
 .theme-scrollbar-small::-webkit-scrollbar-corner {
   background: var(--theme-panel-bg, #ffffff);
-}
-
-/* Button utilities matching the host app's .btn family, so packaged surfaces
- * (workflow views, storage explorer) style identically for standalone
- * consumers. A host that defines its own .btn family keeps its definitions. */
-@utility btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  vertical-align: middle;
-  transition: all 0.15s ease-in-out;
-}
-@utility btn-info {
-  background-color: var(--theme-element, #06354f);
-  color: var(--theme-element-text, #ffffff);
-}
-@utility btn-neutral {
-  background-color: var(--theme-input-bg, #ffffff);
-  border: 1px solid var(--theme-border, #d1d5db);
-}
-@utility btn-destructive {
-  background-color: #ef4444;
-  color: #ffffff;
 }
 
 @keyframes logo-loader-ripple {

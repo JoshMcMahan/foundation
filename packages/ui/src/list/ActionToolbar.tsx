@@ -1,12 +1,13 @@
-import { Button } from '@base-ui/react/button'
 import { Menu } from '@base-ui/react/menu'
 import { Toggle } from '@base-ui/react/toggle'
-import { clsx as cx } from 'clsx'
 import { createContext, Fragment, useContext, useLayoutEffect, useRef, useState } from 'react'
+import { Button } from '../components/Button'
+import { buttonClasses } from '../components/buttonClasses'
 import { MenuPopup } from '../components/Menu'
 import { MenuEntries } from '../components/MenuEntries'
 import { useLink, useStrings } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
 import { MenuIcon } from '../icons'
 import type { RowAction } from './rowMenu'
 
@@ -44,21 +45,14 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
   if (inOverflowMenu) {
     return <MenuEntries entries={[action]} />
   }
-  const off = action.checked === false
-  const className = cx(
-    'inline-flex items-center gap-x-0.5 h-9 px-2 rounded-md text-[13.5px] uppercase font-semibold transition-colors whitespace-nowrap',
-    off
-      ? 'border theme-border theme-muted-text'
-      : 'bg-(--theme-element) text-(--theme-element-text)',
-    'data-disabled:opacity-50 data-disabled:cursor-not-allowed',
-    !action.disabled &&
-      (off
-        ? 'cursor-pointer hover:theme-hover'
-        : 'cursor-pointer hover:bg-(--theme-element-hover)'),
-  )
+  // A toggle that's off reads outlined; every other action is filled.
+  const className = buttonClasses({
+    variant: action.checked === false ? 'outline' : 'primary',
+    size: 'md',
+  })
   const content = (
     <>
-      <div className="h-6 flex items-center [&>svg]:w-auto">{action.icon}</div>
+      {action.icon}
       {action.label}
     </>
   )
@@ -84,10 +78,11 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
     // Focusable while disabled, so keyboard users can reach the reason.
     control = (
       <Button
+        variant="primary"
+        size="md"
         onClick={action.onClick}
         disabled={action.disabled}
         focusableWhenDisabled
-        className={className}
       >
         {content}
       </Button>
@@ -107,7 +102,7 @@ function OverflowMenu({ items }: { items: ToolbarItem[] }) {
       <Tooltip content={t.moreActions}>
         <Menu.Trigger
           aria-label={t.moreActions}
-          className="inline-flex items-center justify-center h-9 w-9 rounded-md border theme-border link hover:theme-hover transition-colors"
+          className={buttonClasses({ variant: 'outline', size: 'md', iconOnly: true })}
           data-testid="action-toolbar-menu-button"
         >
           <MenuIcon />
@@ -130,8 +125,8 @@ function OverflowMenu({ items }: { items: ToolbarItem[] }) {
   )
 }
 
-// Width reserved for the `…` overflow button (h-9 w-9 chip) plus its leading gap.
-const MENU_BUTTON_WIDTH = 44
+// Width reserved for the `…` overflow button (a 32px square) plus its leading gap.
+const MENU_BUTTON_WIDTH = 40
 // gap-1 between toolbar chips.
 const ITEM_GAP = 4
 
@@ -214,13 +209,7 @@ function CollapsibleRight({ items }: { items: ToolbarItem[] }) {
 }
 
 /** Pins a detail-page toolbar just below the sticky breadcrumb strip (top-10 matches the strip's 40px height). */
-export const stickyToolbarClasses = 'sticky top-10 z-10 bg-(--theme-app-bg)'
-
-/** Pins a detail-page tabs row under the pinned toolbar (top-22 = 40px strip + 48px toolbar block). */
-export const stickyTabsClasses = 'sticky top-22 z-10 bg-(--theme-app-bg)'
-
-/** Pins a detail-page tabs row directly under the breadcrumb strip when the page has no pinned toolbar (top-10 = the strip's height). */
-export const stickyTabsUnderHeaderClasses = 'sticky top-10 z-10 bg-(--theme-app-bg)'
+export const stickyToolbarClasses = 'sticky top-10 z-(--layer-sticky) bg-(--theme-app-bg)'
 
 /** Action groups left, secondary actions right (collapsing into a `…` menu). */
 export function ActionToolbar({

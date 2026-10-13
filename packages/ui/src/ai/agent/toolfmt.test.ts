@@ -89,7 +89,7 @@ describe('toolSummary', () => {
       old_string: 'a\nb\n',
       new_string: 'a\nc\nd\n',
     })
-    expect(toolSummary('EditFile', args, 'ok', false, editSummary)).toBe(
+    expect(toolSummary('EditFile', args, 'ok', false, { editSummary })).toBe(
       'Added 2 lines, removed 1 line',
     )
   })

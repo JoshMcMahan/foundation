@@ -1,30 +1,29 @@
-import { clsx as cx } from 'clsx'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { OpenMenu } from '../../components/ContextMenu'
+import { EmptyState } from '../../components/EmptyState'
 import type { MenuEntry } from '../../components/MenuEntries'
-import { useRelativeTime } from '../../components/relativeTime'
-import { ImageIcon, NewChatIcon, SearchIcon, SharingIcon } from '../../icons'
+import { RelativeTime } from '../../components/relativeTime'
+import { SearchInput } from '../../components/SearchInput'
+import { cx } from '../../cx'
+import { ImageIcon, NewChatIcon, SharingIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
 import type { ConversationSummary } from '../types'
 import { ConversationSidebar } from '../ui/ConversationSidebar'
-import { SidebarPlaceholder, SidebarRow, SidebarRowTitle } from '../ui/sidebar'
+import { SidebarRow, SidebarRowTitle } from '../ui/sidebar'
 import { ManageProvidersLink } from './ComposerChrome'
 import { groupConversationsByDate, useConversationActions } from './conversationActions'
 
 function ConversationRow({
   conv,
   isCurrent,
-  updated,
   menuItems,
   openMenu,
   onOpen,
 }: {
   conv: ConversationSummary
   isCurrent: boolean
-  /** When it last changed, already abbreviated. */
-  updated: string
   menuItems: MenuEntry[]
   openMenu: OpenMenu
   onOpen: () => void
@@ -42,7 +41,11 @@ function ConversationRow({
         {conv.isOwner === false && (
           <SharingIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
         )}
-        <SidebarRowTitle time={updated}>{conv.title || t.untitled}</SidebarRowTitle>
+        <SidebarRowTitle
+          time={<RelativeTime value={conv.updatedAt ?? conv.createdAt} format="compact" />}
+        >
+          {conv.title || t.untitled}
+        </SidebarRowTitle>
       </LinkComponent>
     </SidebarRow>
   )
@@ -76,7 +79,6 @@ export default function ChatSidebar({
   } = useChat()
   const attachmentsAvailable = !!adapter.attachments
   const { menuItems, openMenu, overlays } = useConversationActions()
-  const { compact } = useRelativeTime()
 
   const drawer = sidebarPresentation === 'drawer'
   // The drawer always opens to the full list; the rail is for a column.
@@ -163,7 +165,6 @@ export default function ChatSidebar({
         <ConversationRow
           conv={conv}
           isCurrent={activeConversationId === conv.id}
-          updated={compact(conv.updatedAt ?? conv.createdAt)}
           menuItems={menuItems(conv)}
           openMenu={openMenu}
           onOpen={closeDrawer}
@@ -171,9 +172,10 @@ export default function ChatSidebar({
       )}
       loading={isLoading}
       placeholder={
-        <SidebarPlaceholder>
-          {conversations.length === 0 ? tSidebar.noConversations : strings.chrome.noMatches}
-        </SidebarPlaceholder>
+        <EmptyState
+          variant="bare"
+          title={conversations.length === 0 ? tSidebar.noConversations : strings.chrome.noMatches}
+        />
       }
       cycle={{
         current: filteredConversations.find((conv) => conv.id === activeConversationId),
@@ -225,24 +227,13 @@ export default function ChatSidebar({
 
                 {!sidebarCollapsed && conversations.length > 0 && (
                   <div className="px-2 pb-2">
-                    <div className="relative">
-                      <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 theme-muted-text pointer-events-none" />
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape' && search) {
-                            e.stopPropagation()
-                            setSearch('')
-                          }
-                        }}
-                        placeholder={strings.chrome.searchPlaceholder}
-                        aria-label={strings.chrome.searchLabel}
-                        className="w-full h-9 pl-8 pr-2 text-sm rounded-lg border border-transparent chat-tint theme-text placeholder:theme-muted-text transition-colors focus:outline-none focus:border-(--theme-border) focus:bg-(--theme-panel-bg)"
-                      />
-                    </div>
+                    <SearchInput
+                      ref={searchInputRef}
+                      value={search}
+                      onValueChange={setSearch}
+                      label={strings.chrome.searchLabel}
+                      placeholder={strings.chrome.searchPlaceholder}
+                    />
                   </div>
                 )}
               </>

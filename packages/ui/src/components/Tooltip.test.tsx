@@ -127,7 +127,7 @@ describe('InfoTip', () => {
   it('reveals its text, links included, when pressed', async () => {
     withProvider(<InfoTip text="See [the docs](https://example.com/docs)" />)
     fireEvent.click(screen.getByRole('button', { name: 'More information' }))
-    expect(await screen.findByRole('link', { name: 'the docs' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /^the docs/ })).toHaveAttribute(
       'href',
       'https://example.com/docs',
     )

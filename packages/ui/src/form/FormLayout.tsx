@@ -1,6 +1,7 @@
-import { clsx as cx } from 'clsx'
 import type { CSSProperties, ReactNode } from 'react'
 import { createContext, useContext, useId, useMemo } from 'react'
+import { FieldRowContext } from '../components/Field'
+import { cx } from '../cx'
 import {
   type FormLayoutNode,
   type LayoutGap,
@@ -47,10 +48,13 @@ function LayoutNode({
   node,
   renderField,
   sharedRows,
+  inRow = false,
 }: {
   node: FormLayoutNode
   renderField: (name: string) => ReactNode
   sharedRows?: SharedRows | undefined
+  /** Whether the field takes a row's label and control tracks, as its grid lines fields up. */
+  inRow?: boolean
 }) {
   const labelId = useId()
   const descriptionId = useId()
@@ -63,15 +67,21 @@ function LayoutNode({
     return (
       <div
         data-layout-field={node.field}
-        className="min-w-0 max-w-full empty:hidden [&>div]:mb-0"
+        className={cx(
+          'min-w-0 max-w-full empty:hidden [&>div]:mb-0',
+          inRow && 'contents [&>*]:row-span-2',
+        )}
         style={customStyle}
       >
-        {renderField(node.field)}
+        <FieldRowContext value={inRow}>{renderField(node.field)}</FieldRowContext>
       </div>
     )
   }
   const columns = responsiveLayoutValues<LayoutTracks>(node.type === 'grid' ? node.columns : 1, 1)
   const alignRows = node.type === 'grid' && node.align === 'rows'
+  // Fields side by side line up their controls: each takes a label track and a control track of
+  // the grid, and everything else in the grid spans both, so it doesn't stretch a label track.
+  const alignFields = node.type === 'grid' && !alignRows
   const childSharedRows = alignRows
     ? (Object.fromEntries(
         layoutBreakpoints.map((key) => [key, trackCount(columns[key]) > 1]),
@@ -100,12 +110,21 @@ function LayoutNode({
           visible,
           sharedRows && slotClass,
           alignRows && sharedRowsClass,
+          alignFields &&
+            (child.type === 'field'
+              ? 'row-span-2 grid grid-rows-subgrid gap-y-1.5'
+              : 'row-span-2 self-start'),
           node.type === 'grid' &&
             'col-span-(--layout-span-base) @min-[24rem]/layout:col-span-(--layout-span-sm) @min-[40rem]/layout:col-span-(--layout-span-md) @min-[64rem]/layout:col-span-(--layout-span-lg)',
         )}
         style={style}
       >
-        <LayoutNode node={child} renderField={renderField} sharedRows={childSharedRows} />
+        <LayoutNode
+          node={child}
+          renderField={renderField}
+          sharedRows={childSharedRows}
+          inRow={alignFields}
+        />
       </div>
     )
   })
@@ -133,7 +152,6 @@ function LayoutNode({
         <div
           className={cx(
             'grid gap-(--layout-gap) grid-cols-(--layout-columns-base) @min-[24rem]/layout:grid-cols-(--layout-columns-sm) @min-[40rem]/layout:grid-cols-(--layout-columns-md) @min-[64rem]/layout:grid-cols-(--layout-columns-lg)',
-            !alignRows && 'items-start',
           )}
           style={style}
         >

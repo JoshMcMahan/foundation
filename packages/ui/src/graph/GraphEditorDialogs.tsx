@@ -1,9 +1,11 @@
-import { clsx as cx } from 'clsx'
 import { type ReactNode, useId, useMemo, useRef, useState } from 'react'
+import { Checkbox } from '../components/Checkbox'
+import { ErrorText, FieldOption } from '../components/Field'
 import { IconButton } from '../components/IconButton'
-import { fieldBoxClasses, Input } from '../components/Input'
+import { Input } from '../components/Input'
 import { withPositionKeys } from '../components/keys'
 import { useWorkflowActions, useWorkflowEditing } from '../components/Provider'
+import { Select } from '../components/Select'
 import type { GraphEdit, WorkflowEditing } from '../editing'
 import { useLintContext, useLintEditing } from '../editor/lintContext'
 import type { NestedWorkflowText } from '../editor/nestedText'
@@ -15,6 +17,7 @@ import {
   ChoiceButtons,
   conditionText,
   countError,
+  DialogSection,
   DialogShell,
   type DialogShellProps,
   diffPatch,
@@ -23,8 +26,6 @@ import {
   EXPRESSION,
   ExpressionToggle,
   expressionError,
-  FieldError,
-  FieldLabel,
   type Flag,
   flagError,
   flagOf,
@@ -32,7 +33,6 @@ import {
   isScalar,
   type Json,
   KeyValueEditor,
-  LabelledField,
   labelled,
   type OpenOnAdd,
   orUndefined,
@@ -45,7 +45,6 @@ import {
   rowsError,
   rowsFrom,
   rowsTo,
-  Section,
   SectionMemory,
   type Strings,
   sameValue,
@@ -54,6 +53,7 @@ import {
   unchangedValue,
   updateAt,
   useSectionMemory,
+  YamlField,
 } from './editorFields'
 import { useGraphEditorStrings } from './editorStrings'
 import { expressionRefs } from './expressionRefs'
@@ -265,12 +265,12 @@ function runsOnError(fields: RunsOnFields, sshUsed: boolean, t: Strings): string
     if (!TARGET_MODES.includes(fields.mode.trim() as TargetMode)) {
       return t.runsOnNeedsMode
     }
-    return rowsError(fields.schedulingParams, PARAM_KEY, t.invalidKey, t)
+    return rowsError(fields.schedulingParams, PARAM_KEY, t.common.invalidName, t)
   }
   if (!fields.cluster.trim() || !fields.name.trim()) {
     return t.runsOnNeedsEnvironment
   }
-  return rowsError(fields.params, PARAM_KEY, t.invalidKey, t)
+  return rowsError(fields.params, PARAM_KEY, t.common.invalidName, t)
 }
 
 function sshHelp(key: (typeof SSH_KEYS)[number], t: Strings): string {
@@ -327,7 +327,7 @@ function SshEditor({
           onChange={(e) => set(key)(e.target.value)}
         />
       ))}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
     </LintScope>
   )
 }
@@ -348,7 +348,7 @@ function EnvSection({
 }) {
   const t = useGraphEditorStrings()
   return (
-    <Section
+    <DialogSection
       title={t.sectionEnvironment}
       description={description}
       open={rows.length > 0}
@@ -363,7 +363,7 @@ function EnvSection({
           valueSuggestions={refSuggestions(source)}
         />
       </LintScope>
-    </Section>
+    </DialogSection>
   )
 }
 
@@ -406,7 +406,7 @@ function outputsError(rows: OutputRow[], t: Strings): string | undefined {
   const names = rows.map((row) => row.name.trim())
   for (const [i, row] of rows.entries()) {
     if (!OUTPUT_KEY.test(names[i] ?? '')) {
-      return t.invalidKey
+      return t.common.invalidName
     }
     if (names.indexOf(names[i] ?? '') !== i) {
       return t.duplicateKey
@@ -461,21 +461,14 @@ function OutputsEditor({
           ) : (
             <>
               <div className="w-1/3">
-                <select
+                <Select<string>
                   aria-label={t.outputStep}
-                  value={row.step}
-                  onChange={(e) => update(i, { step: e.target.value })}
-                  className={fieldBoxClasses}
-                >
-                  <option value="" disabled>
-                    {t.outputStep}
-                  </option>
-                  {stepIds.map((id) => (
-                    <option key={id} value={id}>
-                      {id}
-                    </option>
-                  ))}
-                </select>
+                  placeholder={t.outputStep}
+                  items={stepIds.map((id) => ({ value: id, label: id }))}
+                  value={row.step || null}
+                  onValueChange={(step) => update(i, { step: step ?? '' })}
+                  className="font-mono"
+                />
               </div>
               <div className="flex-1">
                 <Input
@@ -503,17 +496,17 @@ function OutputsEditor({
             }
           />
           <IconButton
-            icon={<CloseIcon className="h-4 w-4" />}
-            label={t.removeRow}
+            icon={<CloseIcon />}
+            label={t.common.remove}
             variant="ghost"
             size="sm"
             onClick={() => onChange(removeAt(rows, i))}
           />
         </div>
       ))}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
       <AddRowButton
-        label={t.addRow}
+        label={t.common.add}
         onClick={() => onChange([...rows, { name: '', step: stepIds[0] ?? '', output: '' }])}
       />
     </div>
@@ -603,7 +596,9 @@ function entriesTo(entries: Row[][]): Json[] | undefined {
 function entriesError(entries: Row[][], t: Strings): string | undefined {
   for (const rows of entries) {
     const error =
-      rows.length === 0 ? t.invalidMatrixEntry : rowsError(rows, MATRIX_KEY, t.invalidKey, t)
+      rows.length === 0
+        ? t.invalidMatrixEntry
+        : rowsError(rows, MATRIX_KEY, t.common.invalidName, t)
     if (error) {
       return error
     }
@@ -634,28 +629,28 @@ function MatrixEntries({
 }) {
   const t = useGraphEditorStrings()
   return (
-    <div className="flex flex-col gap-2">
-      <FieldLabel
-        label={label}
-        yamlKey={yamlKey}
-        description={description}
-        actions={
-          <ExpressionToggle
-            active={text !== undefined}
-            onChange={(on) => onText(on ? '' : undefined)}
-          />
-        }
-      />
+    <YamlField
+      label={label}
+      yamlKey={yamlKey}
+      description={description}
+      error={error}
+      actions={
+        <ExpressionToggle
+          active={text !== undefined}
+          onChange={(on) => onText(on ? '' : undefined)}
+        />
+      }
+    >
       {text !== undefined ? (
         <Input
           mono
           aria-label={label}
+          aria-invalid={error ? true : undefined}
           value={text}
-          error={error}
           onChange={(e) => onText(e.target.value)}
         />
       ) : (
-        <>
+        <div className="flex flex-col gap-2">
           {withPositionKeys(entries).map(({ key, item: rows }, i) => (
             <div key={key} className="flex items-start gap-2">
               <div className="flex-1 rounded-md border theme-border p-2">
@@ -666,7 +661,7 @@ function MatrixEntries({
                 />
               </div>
               <IconButton
-                icon={<CloseIcon className="h-4 w-4" />}
+                icon={<CloseIcon />}
                 label={t.removeEntry}
                 variant="ghost"
                 size="sm"
@@ -674,14 +669,13 @@ function MatrixEntries({
               />
             </div>
           ))}
-          <FieldError message={error} />
           <AddRowButton
             label={t.addEntry}
             onClick={() => onChange([...entries, [{ key: '', value: '' }]])}
           />
-        </>
+        </div>
       )}
-    </div>
+    </YamlField>
   )
 }
 
@@ -716,6 +710,7 @@ function MatrixVariable({
           </div>
           <div className="flex-1">
             <ChoiceButtons
+              label={t.matrixValuesFrom}
               options={[
                 { value: 'values', label: t.matrixValuesListed },
                 { value: 'input', label: t.modeFromInput },
@@ -757,7 +752,7 @@ function MatrixVariable({
         )}
       </div>
       <IconButton
-        icon={<CloseIcon className="h-4 w-4" />}
+        icon={<CloseIcon />}
         label={t.removeVariable}
         variant="ghost"
         size="sm"
@@ -969,68 +964,64 @@ function JobForm({
         error={errors.name}
         onChange={(e) => setName(e.target.value)}
       />
-      <Section title={t.sectionDependencies} open>
-        <FieldLabel
+      <DialogSection title={t.sectionDependencies} open>
+        <YamlField
           label={t.fields.needs}
           yamlKey="needs"
           description={needsTyped ? t.help.needsExpression : t.help.needs}
+          error={(needsTyped && errors.needs) || needsLint}
           actions={<ExpressionToggle active={needsTyped} onChange={setNeedsTyped} />}
-        />
-        {needsTyped ? (
-          <Input
-            id={needsId}
-            mono
-            aria-label={t.fields.needs}
-            value={needsText}
-            error={errors.needs ?? (needsLint || undefined)}
-            onChange={(e) => setNeedsText(e.target.value)}
-          />
-        ) : others.length === 0 ? (
-          <div className="text-xs theme-muted-text">{t.noOtherJobs}</div>
-        ) : (
-          <div id={needsId} tabIndex={-1} className="flex flex-col gap-1.5">
-            {[...others, ...missing].map((other) => {
-              const entry = needs.find((need) => needTarget(need) === other)
-              const cycle = !entry && editing.dependsOn(allNeeds, other, job)
-              return (
-                <div key={other} className="flex items-center gap-2 text-sm">
-                  <label
-                    className={cx(
-                      'flex flex-1 items-center gap-2',
-                      cycle ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-                    )}
+        >
+          {needsTyped ? (
+            <Input
+              id={needsId}
+              mono
+              aria-label={t.fields.needs}
+              aria-invalid={errors.needs || needsLint ? true : undefined}
+              value={needsText}
+              onChange={(e) => setNeedsText(e.target.value)}
+            />
+          ) : others.length === 0 ? (
+            <div className="text-xs theme-muted-text">{t.noOtherJobs}</div>
+          ) : (
+            <div id={needsId} tabIndex={-1} className="flex flex-col gap-1.5">
+              {[...others, ...missing].map((other) => {
+                const entry = needs.find((need) => needTarget(need) === other)
+                const cycle = !entry && editing.dependsOn(allNeeds, other, job)
+                return (
+                  <div
+                    key={other}
+                    className="flex items-center gap-2 text-sm"
                     title={cycle ? t.dependsOnThisJob : undefined}
                   >
-                    <input
-                      type="checkbox"
-                      checked={!!entry}
-                      disabled={cycle}
-                      onChange={(e) => toggleNeed(other, e.target.checked)}
-                    />
-                    <span className="font-mono">{other}</span>
-                    {!Object.hasOwn(jobs, other) && (
-                      <span className="text-xs text-(--theme-error)">{t.missingJob}</span>
-                    )}
-                  </label>
-                  {entry && isMatrixJob(other) && (
-                    <label
-                      className="flex cursor-pointer items-center gap-1.5 text-xs theme-muted-text"
-                      title={t.help.waitForAny}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={entry.endsWith(':any')}
-                        onChange={(e) => toggleAny(other, e.target.checked)}
+                    <FieldOption disabled={cycle} className="flex flex-1 items-center gap-2">
+                      <Checkbox
+                        checked={!!entry}
+                        disabled={cycle}
+                        onCheckedChange={(on) => toggleNeed(other, on)}
                       />
-                      {t.waitForAny}
-                    </label>
-                  )}
-                </div>
-              )
-            })}
-            <FieldError message={needsLint || undefined} />
-          </div>
-        )}
+                      <span className="font-mono">{other}</span>
+                      {!Object.hasOwn(jobs, other) && (
+                        <span className="text-xs text-(--theme-error)">{t.missingJob}</span>
+                      )}
+                    </FieldOption>
+                    {entry && isMatrixJob(other) && (
+                      <span title={t.help.waitForAny}>
+                        <FieldOption className="flex items-center gap-1.5 text-xs theme-muted-text">
+                          <Checkbox
+                            checked={entry.endsWith(':any')}
+                            onCheckedChange={(on) => toggleAny(other, on)}
+                          />
+                          {t.waitForAny}
+                        </FieldOption>
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </YamlField>
         <ConditionField
           scope="job"
           label={t.fields.condition}
@@ -1040,38 +1031,38 @@ function JobForm({
           onChange={setCondition}
           source={source}
         />
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionRemoteHost}
         description={t.runsInWorkspace}
         open={!!sshTo(ssh, original['ssh'])}
         alert={!!errors.ssh}
       >
         <SshEditor fields={ssh} onChange={setSsh} error={errors.ssh} source={source} />
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionComputeEnvironment}
         description={t.runsOnHint}
         open={runsOnTyped ? !!runsOnText.trim() : !!runsOnTo(runsOn)}
         alert={!!errors.runsOn}
       >
         <LintScope at="runs-on">
-          <FieldLabel
+          <YamlField
             label={t.fields.runsOn}
             yamlKey="runs-on"
             description={t.help.runsOn}
+            error={errors.runsOn}
             actions={<ExpressionToggle active={runsOnTyped} onChange={setRunsOnTyped} />}
-          />
-          {runsOnTyped ? (
-            <Input
-              mono
-              aria-label={t.fields.runsOn}
-              value={runsOnText}
-              error={errors.runsOn}
-              onChange={(e) => setRunsOnText(e.target.value)}
-            />
-          ) : (
-            <>
+          >
+            {runsOnTyped ? (
+              <Input
+                mono
+                aria-label={t.fields.runsOn}
+                aria-invalid={errors.runsOn ? true : undefined}
+                value={runsOnText}
+                onChange={(e) => setRunsOnText(e.target.value)}
+              />
+            ) : (
               <ChoiceButtons
                 options={[
                   { value: 'name' as const, label: t.runsOnByName },
@@ -1080,97 +1071,97 @@ function JobForm({
                 value={runsOn.kind}
                 onChange={(kind) => setRunsOn({ ...runsOn, kind })}
               />
-              {runsOn.kind === 'name' ? (
-                <>
-                  <Input
-                    mono
-                    {...labelled(t.fields.environmentCluster, 'cluster')}
-                    description={t.help.environmentCluster}
-                    value={runsOn.cluster}
-                    onChange={(e) => setRunsOn({ ...runsOn, cluster: e.target.value })}
+            )}
+          </YamlField>
+          {!runsOnTyped &&
+            (runsOn.kind === 'name' ? (
+              <>
+                <Input
+                  mono
+                  {...labelled(t.fields.environmentCluster, 'cluster')}
+                  description={t.help.environmentCluster}
+                  value={runsOn.cluster}
+                  onChange={(e) => setRunsOn({ ...runsOn, cluster: e.target.value })}
+                />
+                <Input
+                  mono
+                  {...labelled(t.fields.environmentName, 'name')}
+                  description={t.help.environmentName}
+                  value={runsOn.name}
+                  onChange={(e) => setRunsOn({ ...runsOn, name: e.target.value })}
+                />
+                <YamlField
+                  label={t.fields.schedulingParams}
+                  yamlKey="params"
+                  description={t.help.schedulingParams}
+                >
+                  <KeyValueEditor
+                    rows={runsOn.params}
+                    onChange={(params) => setRunsOn({ ...runsOn, params })}
+                    error={undefined}
                   />
-                  <Input
-                    mono
-                    {...labelled(t.fields.environmentName, 'name')}
-                    description={t.help.environmentName}
-                    value={runsOn.name}
-                    onChange={(e) => setRunsOn({ ...runsOn, name: e.target.value })}
+                </YamlField>
+              </>
+            ) : (
+              <>
+                <YamlField
+                  label={t.fields.targetMode}
+                  yamlKey="mode"
+                  description={t.help.targetMode}
+                >
+                  <ChoiceButtons
+                    options={TARGET_MODES.map((mode) => ({
+                      value: mode,
+                      label: t.targetModes[mode],
+                    }))}
+                    value={runsOn.mode as TargetMode}
+                    onChange={(mode) => setRunsOn({ ...runsOn, mode })}
                   />
-                  <LabelledField
-                    label={t.fields.schedulingParams}
-                    yamlKey="params"
-                    description={t.help.schedulingParams}
-                  >
-                    <KeyValueEditor
-                      rows={runsOn.params}
-                      onChange={(params) => setRunsOn({ ...runsOn, params })}
-                      error={undefined}
-                    />
-                  </LabelledField>
-                </>
-              ) : (
-                <>
-                  <LabelledField
-                    label={t.fields.targetMode}
-                    yamlKey="mode"
-                    description={t.help.targetMode}
-                  >
-                    <ChoiceButtons
-                      options={TARGET_MODES.map((mode) => ({
-                        value: mode,
-                        label: t.targetModes[mode],
-                      }))}
-                      value={runsOn.mode as TargetMode}
-                      onChange={(mode) => setRunsOn({ ...runsOn, mode })}
-                    />
-                  </LabelledField>
-                  <Input
-                    mono
-                    {...labelled(t.fields.targetId, 'targetId')}
-                    description={t.help.targetId}
-                    value={runsOn.targetId}
-                    onChange={(e) => setRunsOn({ ...runsOn, targetId: e.target.value })}
+                </YamlField>
+                <Input
+                  mono
+                  {...labelled(t.fields.targetId, 'targetId')}
+                  description={t.help.targetId}
+                  value={runsOn.targetId}
+                  onChange={(e) => setRunsOn({ ...runsOn, targetId: e.target.value })}
+                />
+                <Input
+                  mono
+                  {...labelled(t.fields.environmentId, 'environmentId')}
+                  description={t.help.environmentId}
+                  value={runsOn.environmentId}
+                  onChange={(e) => setRunsOn({ ...runsOn, environmentId: e.target.value })}
+                />
+                <YamlField
+                  label={t.fields.schedulingParams}
+                  yamlKey="schedulingParams"
+                  description={t.help.schedulingParams}
+                >
+                  <KeyValueEditor
+                    rows={runsOn.schedulingParams}
+                    onChange={(schedulingParams) => setRunsOn({ ...runsOn, schedulingParams })}
+                    error={undefined}
                   />
-                  <Input
-                    mono
-                    {...labelled(t.fields.environmentId, 'environmentId')}
-                    description={t.help.environmentId}
-                    value={runsOn.environmentId}
-                    onChange={(e) => setRunsOn({ ...runsOn, environmentId: e.target.value })}
-                  />
-                  <LabelledField
-                    label={t.fields.schedulingParams}
-                    yamlKey="schedulingParams"
-                    description={t.help.schedulingParams}
-                  >
-                    <KeyValueEditor
-                      rows={runsOn.schedulingParams}
-                      onChange={(schedulingParams) => setRunsOn({ ...runsOn, schedulingParams })}
-                      error={undefined}
-                    />
-                  </LabelledField>
-                  <ToggleField
-                    label={t.fields.newWorker}
-                    yamlKey="newWorker"
-                    description={t.help.newWorker}
-                    checked={runsOn.newWorker === true}
-                    onChange={(newWorker) => setRunsOn({ ...runsOn, newWorker })}
-                  />
-                  <Input
-                    mono
-                    {...labelled(t.fields.workerId, 'workerId')}
-                    description={t.help.workerId}
-                    value={runsOn.workerId}
-                    onChange={(e) => setRunsOn({ ...runsOn, workerId: e.target.value })}
-                  />
-                </>
-              )}
-              <FieldError message={errors.runsOn} />
-            </>
-          )}
+                </YamlField>
+                <ToggleField
+                  label={t.fields.newWorker}
+                  yamlKey="newWorker"
+                  description={t.help.newWorker}
+                  checked={runsOn.newWorker === true}
+                  onChange={(newWorker) => setRunsOn({ ...runsOn, newWorker })}
+                />
+                <Input
+                  mono
+                  {...labelled(t.fields.workerId, 'workerId')}
+                  description={t.help.workerId}
+                  value={runsOn.workerId}
+                  onChange={(e) => setRunsOn({ ...runsOn, workerId: e.target.value })}
+                />
+              </>
+            ))}
         </LintScope>
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionMatrix}
         open={matrixOn}
         alert={
@@ -1199,8 +1190,7 @@ function JobForm({
           <>
             {/* The schema takes only variables; an expression matrix can be turned into them. */}
             {typeof rawMatrix === 'string' && (
-              <>
-                <FieldLabel label={t.fields.matrixSource} description={t.help.matrixMode} />
+              <YamlField label={t.fields.matrixSource} description={t.help.matrixMode}>
                 <ChoiceButtons
                   options={[
                     { value: 'variables', label: t.matrixFromVariables },
@@ -1214,7 +1204,7 @@ function JobForm({
                     }
                   }}
                 />
-              </>
+              </YamlField>
             )}
             {matrixMode === 'expression' ? (
               <Input
@@ -1237,7 +1227,7 @@ function JobForm({
                     onRemove={() => setMatrixRows((rows) => removeAt(rows, i))}
                   />
                 ))}
-                <FieldError message={errors.matrix} />
+                <ErrorText>{errors.matrix}</ErrorText>
                 <AddRowButton
                   label={t.addVariable}
                   onClick={() =>
@@ -1286,7 +1276,7 @@ function JobForm({
             />
           </>
         )}
-      </Section>
+      </DialogSection>
       <EnvSection
         description={t.help.jobEnv}
         rows={env}
@@ -1294,7 +1284,7 @@ function JobForm({
         error={errors.env}
         source={source}
       />
-      <Section
+      <DialogSection
         title={t.sectionOutputs}
         description={t.help.outputs}
         open={outputs.length > 0}
@@ -1306,8 +1296,8 @@ function JobForm({
           stepIds={stepIds}
           error={errors.outputs}
         />
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionAdvanced}
         open={!!workingDirectory || !!timeout}
         alert={!!errors.timeout}
@@ -1327,7 +1317,7 @@ function JobForm({
           error={errors.timeout}
           onChange={(e) => setTimeoutText(e.target.value)}
         />
-      </Section>
+      </DialogSection>
     </>
   )
   const shellProps: DialogShellProps = {
@@ -1504,15 +1494,16 @@ function StepForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <div className="text-xs theme-muted-text">{t.help.stepKind}</div>
-      <ChoiceButtons
-        options={[
-          { value: 'run', label: t.stepRun },
-          { value: 'uses', label: t.stepUses },
-        ]}
-        value={kind}
-        onChange={setKind}
-      />
+      <YamlField label={t.stepKind} description={t.help.stepKind}>
+        <ChoiceButtons
+          options={[
+            { value: 'run', label: t.stepRun },
+            { value: 'uses', label: t.stepUses },
+          ]}
+          value={kind}
+          onChange={setKind}
+        />
+      </YamlField>
       {kind === 'run' ? (
         <ScriptField
           label={t.fields.run}
@@ -1545,7 +1536,7 @@ function StepForm({
           />
         </>
       )}
-      <Section title={t.sectionCleanup} open={!!cleanup.trim()}>
+      <DialogSection title={t.sectionCleanup} open={!!cleanup.trim()}>
         <ScriptField
           label={t.fields.cleanup}
           yamlKey="cleanup"
@@ -1554,8 +1545,8 @@ function StepForm({
           onChange={setCleanup}
           source={source}
         />
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionBehavior}
         open={!!condition || !!timeout || ignoreErrors !== undefined || earlyCancel}
         alert={!!(errors.timeout || errors.ignoreErrors)}
@@ -1593,8 +1584,8 @@ function StepForm({
           checked={earlyCancel}
           onChange={setEarlyCancel}
         />
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionRetry}
         open={retryOn}
         alert={
@@ -1649,14 +1640,15 @@ function StepForm({
             />
           </>
         )}
-      </Section>
-      <Section
+      </DialogSection>
+      <DialogSection
         title={t.sectionRemoteHost}
         description={t.help.stepSsh}
         open={sshMode !== 'inherit'}
         alert={!!errors.ssh}
       >
         <ChoiceButtons
+          label={t.sectionRemoteHost}
           options={[
             { value: 'inherit', label: t.sshInherit },
             { value: 'custom', label: t.sshCustom },
@@ -1668,7 +1660,7 @@ function StepForm({
         {sshMode === 'custom' && (
           <SshEditor fields={ssh} onChange={setSsh} error={errors.ssh} source={source} />
         )}
-      </Section>
+      </DialogSection>
       <EnvSection
         description={t.help.stepEnv}
         rows={env}
@@ -1676,7 +1668,7 @@ function StepForm({
         error={errors.env}
         source={source}
       />
-      <Section
+      <DialogSection
         title={t.sectionAdvanced}
         open={!!workingDirectory || !!id || !!shell}
         alert={!!(errors.id || errors.shell)}
@@ -1707,7 +1699,7 @@ function StepForm({
             onChange={(e) => setShell(e.target.value)}
           />
         )}
-      </Section>
+      </DialogSection>
     </>
   )
   const shellProps: DialogShellProps = {
@@ -1725,23 +1717,23 @@ function StepForm({
     footerStart: (
       <>
         <IconButton
-          icon={<TrashIcon className="h-4 w-4" />}
+          icon={<TrashIcon />}
           label={t.deleteStep}
           variant="ghost"
           size="sm"
           onClick={() => (adding ? onClose() : edit({ type: 'deleteStep', job, index }))}
         />
         <IconButton
-          icon={<ArrowUpIcon className="h-4 w-4" />}
-          label={t.moveUp}
+          icon={<ArrowUpIcon />}
+          label={t.common.moveUp}
           variant="ghost"
           size="sm"
           disabled={dirty || pending || index === 0}
           onClick={() => edit({ type: 'moveStep', job, from: index, to: index - 1 })}
         />
         <IconButton
-          icon={<ArrowDownIcon className="h-4 w-4" />}
-          label={t.moveDown}
+          icon={<ArrowDownIcon />}
+          label={t.common.moveDown}
           variant="ghost"
           size="sm"
           disabled={dirty || pending || index >= steps.length - 1}
@@ -2173,7 +2165,7 @@ export function useSettingsViews(o: SettingsViewsOptions) {
               openOnAdd={o.openOnAdd}
               onSubmit={() => save(drafted())}
             >
-              <FieldError message={problem} />
+              <ErrorText>{problem}</ErrorText>
               <ProblemList problems={scoped.problems} />
               {shellProps.children}
             </DialogShell>

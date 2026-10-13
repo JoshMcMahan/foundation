@@ -1,10 +1,12 @@
-import { clsx as cx } from 'clsx'
+import { cx } from '../../cx'
+import { useChatConfig } from '../core/config'
 
 interface DragOverlayProps {
   className?: string
 }
 
 export default function DragOverlay({ className }: DragOverlayProps) {
+  const t = useChatConfig().strings.attachmentUpload
   return (
     <div
       className={cx(
@@ -13,8 +15,8 @@ export default function DragOverlay({ className }: DragOverlayProps) {
       )}
     >
       <div className="text-center">
-        <p className="text-lg font-medium text-blue-600">Drop files here</p>
-        <p className="text-sm text-blue-500/80">Release to upload</p>
+        <p className="text-lg font-medium text-blue-600">{t.dropFilesHere}</p>
+        <p className="text-sm text-blue-500/80">{t.releaseToUpload}</p>
       </div>
     </div>
   )

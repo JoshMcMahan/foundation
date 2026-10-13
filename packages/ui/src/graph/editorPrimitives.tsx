@@ -1,6 +1,6 @@
-import { clsx as cx } from 'clsx'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
+import { cx } from '../cx'
 
 export interface Point {
   x: number

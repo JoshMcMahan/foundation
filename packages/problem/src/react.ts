@@ -6,6 +6,13 @@ import { baseLanguage, sharedMessagesFor } from './messages.js'
 type Format = (key: string, values?: Record<string, string | number>) => string
 type Translator = Format & { has: (key: string) => boolean }
 
+/** A field the server rejected: where it sits in the form, and why, in the active language. */
+export interface FieldMessage {
+  /** The field's form path, such as `items[0].name`. */
+  path: string
+  message: string
+}
+
 /**
  * Returns a function that turns any error into a message in the active
  * language. When the server wrote the error in that language (see
@@ -16,6 +23,42 @@ type Translator = Format & { has: (key: string) => boolean }
  * from a server that doesn't localize, it is English.
  */
 export function useErrorMessage(): (err: unknown) => string {
+  const translate = useTranslate()
+  return useCallback(
+    (err: unknown) => {
+      if (err instanceof FieldError) return translate(err, undefined)
+      const apiError = toApiError(err)
+      const target =
+        apiError.code === 'validation' && apiError.fields.length === 1
+          ? (apiError.fields[0] ?? apiError)
+          : apiError
+      return translate(target, apiError.language)
+    },
+    [translate],
+  )
+}
+
+/**
+ * Returns a function that turns any error into the fields it rejects in the
+ * request body, each with its form path and its message in the active
+ * language, as `useErrorMessage` shows it. A form shows each under its field.
+ */
+export function useFieldMessages(): (err: unknown) => FieldMessage[] {
+  const translate = useTranslate()
+  return useCallback(
+    (err: unknown) => {
+      const apiError = err instanceof FieldError ? undefined : toApiError(err)
+      const fields = apiError ? apiError.fields : [err as FieldError]
+      return fields
+        .filter((field) => field.pointer !== undefined && field.path !== '')
+        .map((field) => ({ path: field.path, message: translate(field, apiError?.language) }))
+    },
+    [translate],
+  )
+}
+
+/** Translates an error, given the language the server wrote its detail in. */
+function useTranslate(): (target: ApiError | FieldError, language: string | undefined) => string {
   const app = useTranslations('apiErrors') as unknown as Translator
   const locale = useLocale()
   const shared = useMemo(
@@ -28,22 +71,7 @@ export function useErrorMessage(): (err: unknown) => string {
     [locale],
   )
   return useCallback(
-    (err: unknown) => {
-      let target: ApiError | FieldError
-      let language: string | undefined
-      if (err instanceof FieldError) {
-        target = err
-      } else {
-        target = toApiError(err)
-        language = target.language
-      }
-      if (
-        target instanceof ApiError &&
-        target.code === 'validation' &&
-        target.fields.length === 1
-      ) {
-        target = target.fields[0] ?? target
-      }
+    (target: ApiError | FieldError, language: string | undefined) => {
       const fromServer = target instanceof ApiError ? target.message : target.detail
       if (fromServer && sameLanguage(language, locale)) return fromServer
       if (app.has(target.code)) return app(target.code, target.params)

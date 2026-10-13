@@ -1,4 +1,3 @@
-import { clsx as cx } from 'clsx'
 import {
   type ComponentProps,
   createContext,
@@ -11,16 +10,18 @@ import {
   useState,
 } from 'react'
 import { Button } from '../components/Button'
-import { FilterPill } from '../components/FilterPill'
-import { ghostButtonClasses, primaryButtonClasses } from '../components/ghostButton'
+import { Checkbox } from '../components/Checkbox'
+import { ErrorText, Field, type FieldProps } from '../components/Field'
 import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
 import { withPositionKeys } from '../components/keys'
 import { Modal, ModalTitle } from '../components/Modal'
+import { Section } from '../components/Section'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { Switch } from '../components/Switch'
 import { Tooltip } from '../components/Tooltip'
 import type { FieldPatch } from '../editing'
-import { AddIcon, ChevronRightIcon, CloseIcon, ExpressionIcon } from '../icons'
+import { AddIcon, CloseIcon, ExpressionIcon } from '../icons'
 import { type GraphEditorStrings, useGraphEditorStrings } from './editorStrings'
 import { useFieldLint } from './fieldProblems'
 import { asRecord, type Json } from './records'
@@ -250,7 +251,9 @@ export function useSectionMemory(): Map<string, boolean> {
   return useState(() => new Map<string, boolean>())[0]
 }
 
-export function Section({
+/** A titled part of an editor dialog. It opens as it was last left in this
+ *  dialog, and opens itself when a problem inside would otherwise be hidden. */
+export function DialogSection({
   title,
   description,
   open = false,
@@ -266,47 +269,29 @@ export function Section({
   children: ReactNode
 }) {
   const memory = useContext(SectionMemory)
-  const [initial] = useState(() => {
-    const decided = memory?.get(title) ?? open
-    memory?.set(title, decided)
-    return decided
-  })
-  const details = useRef<HTMLDetailsElement>(null)
+  const [isOpen, setOpen] = useState(() => memory?.get(title) ?? open)
   useEffect(() => {
-    if (alert && details.current && !details.current.open) {
-      details.current.open = true
+    memory?.set(title, isOpen)
+  }, [memory, title, isOpen])
+  useEffect(() => {
+    if (alert) {
+      setOpen(true)
     }
   }, [alert])
   return (
-    <details
-      ref={details}
-      open={initial}
-      onToggle={(e) => memory?.set(title, e.currentTarget.open)}
-      className="group border-t theme-border"
-    >
-      <summary className="flex cursor-pointer select-none list-none items-center gap-1.5 py-2.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        <ChevronRightIcon
-          aria-hidden="true"
-          className="h-3.5 w-3.5 shrink-0 theme-muted-text transition-transform group-open:rotate-90 motion-reduce:transition-none"
-        />
-        {title}
-      </summary>
+    <Section title={title} open={isOpen} onOpenChange={setOpen} headingLevel={4}>
       <div className="flex flex-col gap-3 pb-4">
         {description && <div className="text-xs theme-muted-text">{description}</div>}
         {children}
       </div>
-    </details>
+    </Section>
   )
-}
-
-export function FieldError({ message }: { message: string | undefined }) {
-  return message ? <div className="text-xs text-(--theme-error)">{message}</div> : null
 }
 
 /** The YAML key a field sets, beside its name; left out where the name already says it. */
 export function KeyHint({ label, yamlKey }: { label: string; yamlKey: string }) {
   return label.trim().toLowerCase() === yamlKey.toLowerCase() ? null : (
-    <code aria-hidden="true" className="font-mono text-xs theme-muted-text">
+    <code aria-hidden="true" className="font-mono text-xs font-normal theme-muted-text">
       {yamlKey}
     </code>
   )
@@ -314,63 +299,44 @@ export function KeyHint({ label, yamlKey }: { label: string; yamlKey: string }) 
 
 /** Label props for an Input or Textarea that sets `yamlKey`. */
 export function labelled(label: string, yamlKey: string) {
-  return { label, labelHint: <KeyHint label={label} yamlKey={yamlKey} /> }
+  return { label, hint: <KeyHint label={label} yamlKey={yamlKey} /> }
 }
 
-/** A field's name and help text, for controls without their own label; `actions` sit at its right. */
-export function FieldLabel({
+/** A Field for a setting the YAML holds, with the key it sets beside its name. With `id`
+ *  its label names the one control that takes that id; without, it names its controls as a
+ *  group, as a list of rows or a set of choices wants. */
+export function YamlField({
   label,
   yamlKey,
   description,
-  htmlFor,
-  descriptionId,
   actions,
+  error,
+  required,
+  id,
+  children,
 }: {
   label: string
   yamlKey?: string | undefined
-  description: string
-  htmlFor?: string
-  descriptionId?: string
+  description?: ReactNode
   actions?: ReactNode
+  error?: ReactNode
+  required?: boolean | undefined
+  id?: string | undefined
+  children: FieldProps['children']
 }) {
-  const nameClass = 'text-[0.8125rem] font-medium'
-  const text = (
-    <div className="flex min-w-0 flex-col">
-      <div className="flex flex-wrap items-baseline gap-x-1.5">
-        {htmlFor ? (
-          <label htmlFor={htmlFor} className={nameClass}>
-            {label}
-          </label>
-        ) : (
-          <span className={nameClass}>{label}</span>
-        )}
-        {yamlKey && <KeyHint label={label} yamlKey={yamlKey} />}
-      </div>
-      <span id={descriptionId} className="text-xs theme-muted-text">
-        {description}
-      </span>
-    </div>
-  )
-  return actions ? (
-    <div className="flex items-start justify-between gap-3">
-      {text}
-      <div className="flex shrink-0 items-center gap-1">{actions}</div>
-    </div>
-  ) : (
-    text
-  )
-}
-
-/** A field's label and description above the editor that sets it. */
-export function LabelledField({
-  children,
-  ...label
-}: ComponentProps<typeof FieldLabel> & { children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <FieldLabel {...label} />
+    <Field
+      label={label}
+      hint={yamlKey && <KeyHint label={label} yamlKey={yamlKey} />}
+      description={description || undefined}
+      actions={actions}
+      error={error || undefined}
+      required={required}
+      id={id}
+      group={id === undefined}
+    >
       {children}
-    </div>
+    </Field>
   )
 }
 
@@ -388,11 +354,11 @@ export function ExpressionToggle({
   const t = useGraphEditorStrings()
   return (
     <IconButton
-      icon={<ExpressionIcon className="h-4 w-4" />}
+      icon={<ExpressionIcon />}
       label={active ? t.stopExpression : t.useExpression}
       size="sm"
       variant="ghost"
-      active={active}
+      data-selected={active || undefined}
       onClick={() => onChange(!active)}
     />
   )
@@ -405,6 +371,7 @@ export function ToggleField({
   checked,
   onChange,
   disabled,
+  error,
 }: {
   label: string
   yamlKey?: string
@@ -412,56 +379,44 @@ export function ToggleField({
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
+  error?: string | undefined
 }) {
+  const id = useId()
   return (
-    <div className="flex items-center justify-between gap-3">
-      <FieldLabel label={label} yamlKey={yamlKey} description={description} />
-      <Switch
-        checked={checked}
-        onCheckedChange={onChange}
-        aria-label={label}
-        {...(disabled ? { disabled } : {})}
-      />
-    </div>
+    <YamlField label={label} yamlKey={yamlKey} description={description} error={error} id={id}>
+      {(control) => (
+        <Switch
+          {...control}
+          nativeButton
+          render={<button type="button" />}
+          checked={checked}
+          onCheckedChange={onChange}
+          {...(disabled ? { disabled } : {})}
+        />
+      )}
+    </YamlField>
   )
 }
 
+/** One of a few choices. A YamlField around it names it; standing alone, `label` does. */
 export function ChoiceButtons<T extends string>({
+  label,
   options,
   value,
   onChange,
 }: {
+  label?: string | undefined
   options: { value: T; label: string }[]
   value: T
   onChange: (value: T) => void
 }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {options.map((option) => (
-        <FilterPill
-          key={option.value}
-          active={value === option.value}
-          onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </FilterPill>
-      ))}
-    </div>
-  )
+  return <SegmentedControl label={label} options={options} value={value} onValueChange={onChange} />
 }
 
 export function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        fullWidth={false}
-        icon={<AddIcon className="h-3 w-3" />}
-        iconPosition="left"
-        onClick={onClick}
-      >
+      <Button variant="ghost" size="sm" icon={<AddIcon />} onClick={onClick}>
         {label}
       </Button>
     </div>
@@ -504,9 +459,9 @@ export function KeyValueEditor({
           lint={lint}
         />
       ))}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
       <AddRowButton
-        label={addLabel ?? t.addRow}
+        label={addLabel ?? t.common.add}
         onClick={() => onChange([...rows, { key: '', value: '' }])}
       />
     </div>
@@ -561,14 +516,14 @@ function KeyValueRow({
           />
         </div>
         <IconButton
-          icon={<CloseIcon className="h-4 w-4" />}
-          label={t.removeRow}
+          icon={<CloseIcon />}
+          label={t.common.remove}
           variant="ghost"
           size="sm"
           onClick={onRemove}
         />
       </div>
-      <FieldError message={lint.message} />
+      <ErrorText>{lint.message}</ErrorText>
       {lint.fixes}
     </div>
   )
@@ -617,15 +572,15 @@ export function StringListEditor({
             />
           </div>
           <IconButton
-            icon={<CloseIcon className="h-4 w-4" />}
-            label={t.removeRow}
+            icon={<CloseIcon />}
+            label={t.common.remove}
             variant="ghost"
             size="sm"
             onClick={() => onChange(removeAt(values, i))}
           />
         </div>
       ))}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
       <AddRowButton label={addLabel} onClick={() => onChange([...values, ''])} />
     </div>
   )
@@ -653,24 +608,26 @@ export function SuggestedInput({
   const id = useId()
   const lint = useFieldLint(yamlKey, id, value, onChange)
   return (
-    <LabelledField
+    <YamlField
       label={label}
       yamlKey={yamlKey}
-      description={description ?? ''}
-      htmlFor={id}
-      {...(description ? { descriptionId: `${id}-help` } : {})}
+      description={description}
+      error={error ?? lint.message}
+      id={id}
     >
-      <SuggestionInput
-        id={id}
-        aria-describedby={description ? `${id}-help` : undefined}
-        value={value}
-        placeholder={placeholder}
-        suggestions={suggestions.map((option) => ({ value: option }))}
-        onValueChange={onChange}
-      />
-      <FieldError message={error ?? lint.message} />
-      {lint.fixes}
-    </LabelledField>
+      {(control) => (
+        <>
+          <SuggestionInput
+            {...control}
+            value={value}
+            placeholder={placeholder}
+            suggestions={suggestions.map((option) => ({ value: option }))}
+            onValueChange={onChange}
+          />
+          {lint.fixes}
+        </>
+      )}
+    </YamlField>
   )
 }
 
@@ -733,12 +690,7 @@ function OpenOnAddSwitch({ open, onChange }: OpenOnAdd) {
   return (
     <Tooltip content={t.openOnAddHelp}>
       <label className="flex cursor-pointer items-center gap-2 text-xs theme-muted-text">
-        <input
-          type="checkbox"
-          className="h-4 w-4 cursor-pointer accent-(--theme-element)"
-          checked={open}
-          onChange={(e) => onChange(e.target.checked)}
-        />
+        <Checkbox checked={open} onCheckedChange={(next) => onChange(next)} />
         {t.openOnAdd}
       </label>
     </Tooltip>
@@ -782,17 +734,12 @@ export function DialogShell({
           {footerStart}
           {openOnAdd && <OpenOnAddSwitch {...openOnAdd} />}
           <div className="flex-1" />
-          <button type="button" className={ghostButtonClasses} onClick={onClose}>
-            {t.cancel}
-          </button>
-          <button
-            type="button"
-            disabled={saveDisabled}
-            onClick={submit}
-            className={cx(primaryButtonClasses, 'disabled:cursor-not-allowed disabled:opacity-50')}
-          >
-            {t.save}
-          </button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {t.common.cancel}
+          </Button>
+          <Button variant="primary" size="sm" disabled={saveDisabled} onClick={submit}>
+            {t.common.save}
+          </Button>
         </div>
       </div>
     </Modal>

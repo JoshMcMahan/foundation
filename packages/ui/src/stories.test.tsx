@@ -11,9 +11,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as combobox from './components/Combobox.stories'
 import * as controls from './components/controls.stories'
+import * as fields from './components/fields.stories'
+import * as loading from './components/loading.stories'
 import * as menus from './components/Menu.stories'
+import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as primitives from './components/primitives.stories'
+import * as sections from './components/sections.stories'
+import * as toasts from './components/Toast.stories'
 import * as fileExplorer from './file-explorer/FileExplorer.stories'
 import * as form from './form/DynamicForm.stories'
 import * as layoutShowcase from './form/LayoutShowcase.stories'
@@ -47,9 +52,14 @@ vi.mock('react-zoom-pan-pinch', () => ({
 
 const SUITES = {
   primitives,
+  sections,
+  loading,
   combobox,
   controls,
+  fields,
   menus,
+  overlays,
+  toasts,
   pageHeader,
   logviewer,
   list,

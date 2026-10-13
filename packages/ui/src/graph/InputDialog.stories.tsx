@@ -52,6 +52,16 @@ export const EditString: StoryObj<typeof InputDialog> = {
     },
     inputs: INPUTS,
   },
+  // Every switch keeps the end of its row, whether or not the setting also takes an expression.
+  play: async () => {
+    const dialog = await screen.findByRole('dialog')
+    const rights = [...dialog.querySelectorAll('[role="switch"]')]
+      .map((el) => el.getBoundingClientRect())
+      .filter((box) => box.width > 0)
+      .map((box) => Math.round(box.right))
+    await expect(rights.length).toBeGreaterThan(1)
+    await expect(new Set(rights).size).toBe(1)
+  },
 }
 
 export const EditDropdown: StoryObj<typeof InputDialog> = {

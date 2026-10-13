@@ -1,11 +1,11 @@
 import type { DynamicFormSchema, LabelPosition } from '../types/fieldTypes'
 
 interface WizardNavigation {
-  /** Show step indicator (dots with connecting lines) */
+  /** Show where the wizard is: "Step 3 of 10", a bar of its pages and the list of them */
   showSteps?: boolean
   /** Allow clicking on completed steps to jump to them */
   allowJump?: boolean
-  /** Hide step numbers in step dots, show only titles */
+  /** Leave the numbers out of the list of steps, showing only titles */
   hideStepNumbers?: boolean
 }
 

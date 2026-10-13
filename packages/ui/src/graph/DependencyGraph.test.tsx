@@ -8,7 +8,6 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from '@testing-library/react'
 import type { ReactNode, Ref } from 'react'
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -223,7 +222,7 @@ describe('DependencyGraph inline subworkflows', () => {
     }
     render(<DependencyGraph run={placedRun} preview />)
     const jobsOf = (ids: string[]) => ids.map((id) => id.split('/').pop())
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     expect(jobsOf(nodeIds().filter((id) => id.includes('subworkflows/')))).toEqual([
       'publish',
       'prep',
@@ -236,7 +235,7 @@ describe('DependencyGraph inline subworkflows', () => {
     render(<DependencyGraph run={run} preview />)
     // Nothing expanded initially.
     expect(screen.queryByText('Prep')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     expect(screen.getByText('Prep')).toBeInTheDocument()
     expect(screen.getByText('Publish')).toBeInTheDocument()
   })
@@ -274,7 +273,7 @@ describe('DependencyGraph inline subworkflows', () => {
     render(<DependencyGraph run={matrixRun} preview />)
     // The matrix is collapsed, so the subworkflow nested in a member is hidden.
     expect(screen.queryByText('Inner')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     // Expand All opened the matrix group, its member's steps, and the subworkflow.
     expect(screen.getByText('Inner')).toBeInTheDocument()
   })
@@ -426,7 +425,7 @@ describe('DependencyGraph sidebar', () => {
     render(<DependencyGraph run={oneRun} />)
     // The sidebar comes first in the page.
     const row = screen.getAllByText('Build')[0]?.closest('button') as HTMLElement
-    expect(within(row).getByTestId('failed-indicator')).toBeInTheDocument()
+    expect(row.querySelector('[data-status="error"]')).toBeInTheDocument()
     fireEvent.click(row)
     expect(screen.getAllByTestId('compile').length).toBeGreaterThan(0)
   })
@@ -586,8 +585,8 @@ describe('DependencyGraph general log', () => {
   })
 
   const footerButtons = () =>
-    [...screen.getByTestId('log-footer').querySelectorAll('button')].map((b) =>
-      b.textContent?.trim(),
+    [...screen.getByTestId('log-footer').querySelectorAll('button')].map(
+      (b) => b.getAttribute('aria-label') ?? b.textContent?.trim(),
     )
 
   // The run's logs.out belongs to no job or step, so paging off it read step_ off
@@ -605,10 +604,10 @@ describe('DependencyGraph general log', () => {
     fireEvent.click(screen.getAllByText('Build')[0]!)
     fireEvent.click(screen.getAllByRole('button', { name: 'Open in new graph' })[0]!)
     fireEvent.click(screen.getByRole('button', { name: 'General log' }))
-    expect(footerButtons()).toEqual(['Prev', 'Next', 'Show Script'])
+    expect(footerButtons()).toEqual(['Previous step', 'Next step', 'Show Script'])
     // And paging still resolves to a real step rather than throwing.
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(footerButtons()).toEqual(['Prev', 'Next', 'Show Script'])
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(footerButtons()).toEqual(['Previous step', 'Next step', 'Show Script'])
   })
 })
 

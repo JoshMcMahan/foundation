@@ -1,10 +1,12 @@
-import { Drawer } from '@base-ui/react/drawer'
-import { clsx as cx } from 'clsx'
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useState } from 'react'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import type { OpenMenu } from '../../components/ContextMenu'
+import { fieldBox } from '../../components/fieldBox'
 import { focusOnMount } from '../../components/focus'
+import { IconButton } from '../../components/IconButton'
 import type { MenuEntry } from '../../components/MenuEntries'
+import { Tooltip } from '../../components/Tooltip'
+import { cx } from '../../cx'
 import { SidebarIcon } from '../../icons'
 import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../../list/index'
 
@@ -54,49 +56,6 @@ export function SidebarPanel({
   )
 }
 
-/** The list over the content of a layout too narrow to keep it beside the
- *  content. Place it in a positioned container: the drawer covers that
- *  container, not the window, so an embedded chat keeps to its own panel.
- *  A tap outside, Escape or a swipe to the left closes it, and focus returns
- *  where it was. */
-export function SidebarDrawer({
-  open,
-  onClose,
-  label,
-  children,
-}: {
-  open: boolean
-  onClose: () => void
-  label: string
-  children: ReactNode
-}) {
-  // The portal lands here, in the container, rather than in the body.
-  const container = useRef<HTMLDivElement>(null)
-  return (
-    <Drawer.Root
-      open={open}
-      onOpenChange={(next) => !next && onClose()}
-      swipeDirection="left"
-      // Traps focus without locking the page around an embedded chat.
-      modal="trap-focus"
-    >
-      <div ref={container} className="contents" />
-      {/* Kept mounted so the list keeps its scroll and search between openings. */}
-      <Drawer.Portal container={container} keepMounted className="contents">
-        <Drawer.Backdrop className="absolute inset-0 z-20 bg-black/40 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0" />
-        <Drawer.Viewport className="absolute inset-y-0 left-0 z-30 flex w-[min(20rem,85%)]">
-          <Drawer.Popup
-            aria-label={label}
-            className="flex w-full shadow-xl outline-none [transform:translateX(var(--drawer-swipe-movement-x))] transition-transform duration-300 ease-in-out data-ending-style:[transform:translateX(-100%)] data-starting-style:[transform:translateX(-100%)] data-swiping:select-none data-swiping:duration-0"
-          >
-            {children}
-          </Drawer.Popup>
-        </Drawer.Viewport>
-      </Drawer.Portal>
-    </Drawer.Root>
-  )
-}
-
 export function SidebarToggle({
   collapsed,
   onToggle,
@@ -112,19 +71,13 @@ export function SidebarToggle({
 }) {
   const label = collapsed ? openLabel : closeLabel
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      title={label}
-      aria-label={label}
+    <IconButton
+      label={label}
+      icon={<SidebarIcon />}
       aria-expanded={!collapsed}
-      className={cx(
-        'flex h-7 w-7 items-center justify-center rounded-md theme-muted-text transition-colors hover:theme-muted-panel hover:theme-text',
-        className,
-      )}
-    >
-      <SidebarIcon className="h-4 w-4" />
-    </button>
+      onClick={onToggle}
+      className={className}
+    />
   )
 }
 
@@ -151,22 +104,6 @@ export function SidebarGroupHeading({
   )
 }
 
-/** What a list says in place of its rows: none yet, no matches, or why it
- *  could not load. Plain text, so an empty list reads the same in every list. */
-export function SidebarPlaceholder({
-  children,
-  testId,
-}: {
-  children: ReactNode
-  testId?: string | undefined
-}) {
-  return (
-    <p data-testid={testId} className="px-2 pt-1 text-sm theme-muted-text">
-      {children}
-    </p>
-  )
-}
-
 /** A row's first line, the same in every list: what it is, and when it last
  *  moved, abbreviated, on the right. */
 export function SidebarRowTitle({
@@ -174,7 +111,8 @@ export function SidebarRowTitle({
   time,
 }: {
   children: ReactNode
-  time?: string | undefined
+  /** When it last changed, short: a compact `RelativeTime`. */
+  time?: ReactNode
 }) {
   return (
     <span className="flex min-w-0 flex-1 items-baseline gap-2">
@@ -224,33 +162,33 @@ export function SidebarRailItem({
   label,
   onSelect,
   testId,
-  tooltipProps,
   children,
 }: {
   selected: boolean
+  /** Names the icon-only button, and shows beside it on hover. */
   label: string
   onSelect: () => void
   testId?: string
-  tooltipProps?: Record<string, string>
   children: ReactNode
 }) {
   return (
     <li>
-      <button
-        type="button"
-        data-testid={testId}
-        aria-label={label}
-        aria-current={selected ? 'page' : undefined}
-        onClick={onSelect}
-        {...tooltipProps}
-        className={cx(
-          'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
-          HIGHLIGHT_HOVER,
-          selected && HIGHLIGHT_SELECTED,
-        )}
-      >
-        {children}
-      </button>
+      <Tooltip content={label} side="right">
+        <button
+          type="button"
+          data-testid={testId}
+          aria-label={label}
+          aria-current={selected ? 'page' : undefined}
+          onClick={onSelect}
+          className={cx(
+            'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+            HIGHLIGHT_HOVER,
+            selected && HIGHLIGHT_SELECTED,
+          )}
+        >
+          {children}
+        </button>
+      </Tooltip>
     </li>
   )
 }
@@ -300,7 +238,7 @@ export function RenameDialog({
           }}
           placeholder={placeholder}
           ref={focusOnMount}
-          className="w-full rounded-md border theme-border bg-(--theme-input-bg) px-3 py-2 text-sm theme-text placeholder:theme-muted-text focus:border-(--theme-element) focus:outline-none"
+          className={fieldBox()}
         />
       </label>
     </ConfirmModal>

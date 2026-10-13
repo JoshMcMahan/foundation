@@ -12,7 +12,6 @@ describe('StringField', () => {
         field={{ type: 'string', name: 'testField', ...field }}
         label="Test Label"
         labelPosition="top"
-        missing={false}
         disabled={false}
       />,
       values,

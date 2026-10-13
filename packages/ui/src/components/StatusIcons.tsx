@@ -1,6 +1,4 @@
-import { clsx as cx } from 'clsx'
-import type { IconBaseProps } from 'react-icons'
-import { FaCircleNotch } from 'react-icons/fa'
+import { cx } from '../cx'
 import { ErrorIcon, SuccessIcon } from '../icons'
 
 interface IBaseCheckmarkProps {
@@ -14,8 +12,4 @@ export function SuccessCheckmark({ className, colored = true }: IBaseCheckmarkPr
 
 export function ErrorCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
   return <ErrorIcon className={cx(colored && 'text-red-400', className)} />
-}
-
-export function LoaderIcon({ className, ...props }: IconBaseProps & { className?: string }) {
-  return <FaCircleNotch className={cx('animate-spin', className)} {...props} />
 }

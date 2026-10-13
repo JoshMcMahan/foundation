@@ -1,12 +1,16 @@
-import { clsx as cx } from 'clsx'
-import { DateTime } from 'luxon'
 import { useCallback, useMemo, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'
+import { EmptyState } from '../../components/EmptyState'
+import { Loader } from '../../components/Loader'
+import { useStrings } from '../../components/Provider'
+import { RelativeTime } from '../../components/relativeTime'
+import { toast } from '../../components/Toast'
+import { cx } from '../../cx'
+import { formatBytes } from '../../format'
 import { DownloadFileIcon, FileIcon, TrashIcon } from '../../icons'
 import { safeUrl } from '../../safeUrl'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
-import { formatFileSize } from '../utils'
 import { ATTACHMENTS_PAGE_SIZE, attachmentsPageKey } from './attachmentKeys'
 
 function triggerDownload(url: string, filename: string) {
@@ -23,8 +27,9 @@ function triggerDownload(url: string, filename: string) {
 }
 
 export default function AttachmentManager() {
-  const { adapter, notify } = useChat()
+  const { adapter } = useChat()
   const t = useChatConfig().strings.attachmentManager
+  const { common } = useStrings()
   const attachmentsAdapter = adapter.attachments
 
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -66,12 +71,12 @@ export default function AttachmentManager() {
         await attachmentsAdapter.remove(attachmentId)
         await mutate()
       } catch (error) {
-        notify.error(error instanceof Error ? error.message : String(error))
+        toast.error(error instanceof Error ? error.message : String(error))
       } finally {
         setDeleting(null)
       }
     },
-    [attachmentsAdapter, mutate, notify],
+    [attachmentsAdapter, mutate],
   )
 
   if (!attachmentsAdapter) {
@@ -89,11 +94,11 @@ export default function AttachmentManager() {
             <h1 className="text-2xl font-semibold mb-6 text-(--theme-panel)">{t.title}</h1>
 
             {isLoading && attachments.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-current border-t-transparent theme-muted-text" />
+              <div className="py-12">
+                <Loader size={32} />
               </div>
             ) : attachments.length === 0 ? (
-              <p className="text-center theme-muted-text py-12 text-sm">{t.empty}</p>
+              <EmptyState variant="bare" title={t.empty} />
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -146,11 +151,11 @@ export default function AttachmentManager() {
                               {att.filename || 'File'}
                             </p>
                             <p className="truncate theme-muted-text">
-                              {att.size ? formatFileSize(att.size) : ''}
+                              {att.size ? formatBytes(att.size) : ''}
                               {att.uploadedAt && (
                                 <>
                                   {att.size ? ' · ' : ''}
-                                  {DateTime.fromISO(att.uploadedAt).toRelative()}
+                                  <RelativeTime value={att.uploadedAt} />
                                 </>
                               )}
                             </p>
@@ -160,7 +165,7 @@ export default function AttachmentManager() {
                               type="button"
                               onClick={() => triggerDownload(downloadUrl, att.filename || 'File')}
                               className="p-1.5 rounded-lg hover:theme-hover theme-muted-text transition-colors"
-                              title={t.download}
+                              title={common.download}
                             >
                               <DownloadFileIcon className="w-4 h-4" />
                             </button>
@@ -169,7 +174,7 @@ export default function AttachmentManager() {
                               onClick={() => handleDelete(att.id)}
                               disabled={isDeleting}
                               className="p-1.5 rounded-lg hover:bg-red-500/15 theme-muted-text hover:text-red-600 transition-colors"
-                              title={t.delete}
+                              title={common.delete}
                             >
                               <TrashIcon className="w-4 h-4" />
                             </button>
@@ -188,7 +193,7 @@ export default function AttachmentManager() {
                       disabled={isValidating}
                       className="px-6 py-3 text-sm rounded-lg theme-muted-panel hover:theme-hover transition-colors disabled:opacity-50"
                     >
-                      {isValidating ? t.loading : t.loadMore}
+                      {isValidating ? common.loading : common.loadMore}
                     </button>
                   </div>
                 )}

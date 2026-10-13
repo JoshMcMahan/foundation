@@ -1,13 +1,14 @@
-import { clsx as cx } from 'clsx'
+import { cx } from '../cx'
 import { AlertIcon, InfoIcon } from '../icons'
+import { toneSurface } from './tone'
 
 type CalloutType = 'warning' | 'info' | 'error'
 
 function CalloutIcon({ type }: { type: CalloutType }) {
   if (type === 'warning' || type === 'error') {
-    return <AlertIcon className="h-6 w-6 mr-4 text-lg" />
+    return <AlertIcon aria-hidden="true" className="mr-3 h-5 w-5 shrink-0" />
   } else {
-    return <InfoIcon className="h-6 w-6 mr-4 text-lg" />
+    return <InfoIcon aria-hidden="true" className="mr-3 h-5 w-5 shrink-0" />
   }
 }
 
@@ -22,20 +23,12 @@ export default function Callout({
 }) {
   return (
     <div
-      className={cx(
-        className,
-        type === 'warning' && 'bg-orange-100 border-orange-500 text-orange-700',
-        type === 'error' && 'bg-red-100 border-red-500 text-red-700',
-        type === 'info' && 'bg-blue-100 border-blue-500 text-blue-700',
-        'border-t-4 rounded-b px-4 py-3 shadow-md my-4',
-      )}
-      role="alert"
+      className={cx(toneSurface[type], 'my-4 rounded-xl border px-4 py-3', className)}
+      role={type === 'info' ? 'note' : 'alert'}
     >
-      <div className="flex">
-        <div className="py-1">
-          <CalloutIcon type={type} />
-        </div>
-        <div>{children}</div>
+      <div className="flex text-sm">
+        <CalloutIcon type={type} />
+        <div className="min-w-0">{children}</div>
       </div>
     </div>
   )

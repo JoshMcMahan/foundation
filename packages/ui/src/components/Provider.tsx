@@ -1,51 +1,16 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { createContext, use, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useLocalStorage } from 'usehooks-ts'
 import type { WorkflowAction, WorkflowEditing } from '../editing'
 import type { WorkflowEngine } from '../engine'
-import type { GraphEditorStrings, InputsEditorStrings } from '../graph/editorStrings'
+import type { GraphEditorText, InputsEditorText } from '../graph/editorStrings'
 import type { RunLink } from '../graph/types'
 import { safeUrl } from '../safeUrl'
+import { useLocalPersistedState } from './persistedState'
+import { Toaster } from './Toast'
 import { TooltipProvider } from './Tooltip'
 
-export type UIToastId = string | number
-
-export interface UIToastOptions {
-  toastId?: UIToastId
-  /** false hides the default icon. */
-  icon?: false
-  closeButton?: boolean
-  autoClose?: number | false
-}
-
-export interface UIToastUpdate {
-  render?: ReactNode
-  type?: 'info' | 'success' | 'warning' | 'error'
-  /** false or null hides the icon. */
-  icon?: false | null
-  isLoading?: boolean
-  closeButton?: boolean | null
-  autoClose?: number | false | null
-}
-
-export interface UINotify {
-  info: (message: string) => void
-  success: (message: string) => void
-  warning: (message: string) => void
-  error: (message: string) => void
-  /** Persistent spinner toast; drive it with update/dismiss via the returned id. */
-  loading: (content: ReactNode, options?: UIToastOptions) => UIToastId
-  update: (id: UIToastId, update: UIToastUpdate) => void
-  /** Without an id, dismisses every open toast. */
-  dismiss: (id?: UIToastId) => void
-}
-
 export interface UIStrings {
-  loading: string
   modal: {
-    cancel: string
-    close: string
-    create: string
     creating: string
     addDescription: string
     advanced: string
@@ -53,12 +18,57 @@ export interface UIStrings {
     favorited: string
     favoriteHintOn: string
     favoriteHintOff: string
-    filter: string
   }
   common: {
-    copy: string
+    cancel: string
+    close: string
+    save: string
+    clear: string
+    delete: string
+    download: string
+    retry: string
+    reset: string
+    apply: string
+    dismiss: string
+    /** Names the region toasts appear in. */
+    notifications: string
+    rename: string
+    share: string
+    send: string
+    filter: string
+    loading: string
+    loadMore: string
+    showMore: string
+    showLess: string
+    previous: string
+    next: string
+    zoomIn: string
+    zoomOut: string
+    expandAll: string
+    collapseAll: string
+    moveUp: string
+    moveDown: string
+    undo: string
+    redo: string
+    duplicate: string
     copied: string
+    copyToClipboard: string
+    /** The toast after a copy that names nothing. */
+    copiedToClipboard: string
     copyFailed: string
+    /** `label` names what is copied, such as "email address". */
+    copyThing: (label: string) => string
+    copiedThing: (label: string) => string
+    copyThingFailed: (label: string) => string
+    /** A name field's rule: the characters a key or identifier allows. */
+    invalidName: string
+    invalidNumber: string
+    copy: string
+    /** A masked value's eye toggle, for a password or a secret. */
+    showValue: string
+    hideValue: string
+    expand: string
+    collapse: string
     showHiddenFields: string
     showHiddenFieldsHint: string
     jsonHasErrors: string
@@ -68,11 +78,43 @@ export interface UIStrings {
     sort: string
     userAvatar: string
     moreInfo: string
+    /** The name of a menu of actions on a page or row. */
+    actions: string
+    edit: string
+    submit: string
+    search: string
+    clearSearch: string
+    filterPlaceholder: string
+    breadcrumb: string
+    yes: string
+    no: string
+    /** Read after a link that opens a new tab. */
+    opensInNewTab: string
+    /** Names the handle that resizes a panel. */
+    resizePanel: string
+    /** A resizable panel's width, read aloud. */
+    panelWidth: (px: number) => string
+    refresh: string
+    refreshing: string
+    /** A refresh button's label once it knows when the data was fetched. */
+    updated: (ago: string) => string
   }
   dropdown: {
     select: (type: string) => string
     noOptionsFound: string
     showOptions: string
+    /** The row that adds typed text as a new value. */
+    add: (text: string) => string
+    /** In place of the placeholder once a field holds as many values as it takes. */
+    limitReached: (max: number) => string
+  }
+  datePicker: {
+    /** The button's text while no date is chosen. */
+    pickDate: string
+    /** Names the time beside the date. */
+    time: string
+    previousMonth: string
+    nextMonth: string
   }
   logviewer: {
     error: string
@@ -85,7 +127,6 @@ export interface UIStrings {
     hideDebug: string
     showDebug: string
     filterLogs: string
-    download: string
     beginningOfLog: string
     loadingOlderEntries: string
     loadOlderEntries: string
@@ -96,12 +137,12 @@ export interface UIStrings {
     timeRangeHelp: string
     timeRangeFrom: string
     timeRangeTo: string
-    apply: string
-    clear: string
     invalidStartTime: string
     invalidEndTime: string
     endBeforeStart: string
     endInFuture: string
+    follow: string
+    following: string
   }
   dag: {
     workflow: string
@@ -109,10 +150,6 @@ export interface UIStrings {
     status: string
     runtime: string
     submitted: string
-    expandAll: string
-    collapseAll: string
-    zoomIn: string
-    zoomOut: string
     resetView: string
     previousGraph: string
     nextGraph: string
@@ -123,6 +160,22 @@ export interface UIStrings {
     logLoadFailed: string
     statusLabel: (status: string) => string
     statusReason: (reason: string | undefined | null) => string | undefined
+    /** A run's general log, beside its summary. */
+    generalLog: string
+    previousStep: string
+    nextStep: string
+    /** The view toggle: the graph, and the list of jobs and steps. */
+    graphView: string
+    treeView: string
+    summary: string
+    dependsOn: string
+    subworkflow: string
+    annotations: string
+    annotationType: { error: string; warning: string; notice: string }
+    /** Where an annotation came from, under its message. */
+    annotationSource: (job: string, step: string) => string
+    /** A step without a name, numbered from 0 as the run reports it. */
+    stepNumber: (index: number) => string
   }
   jobActions: {
     openSubworkflowLogs: string
@@ -130,8 +183,8 @@ export interface UIStrings {
     openInNewGraph: string
   }
   /** The visual editor's text a host translates; the editor fills in the rest in English. */
-  graphEditor: Partial<GraphEditorStrings>
-  inputsEditor: Partial<InputsEditorStrings>
+  graphEditor: Partial<GraphEditorText>
+  inputsEditor: Partial<InputsEditorText>
   fileExplorer: {
     preview: {
       shareFile: string
@@ -140,11 +193,12 @@ export interface UIStrings {
       select: (name: string) => string
       viewDetails: string
       openFolder: string
-      delete: string
       detailsTab: string
       previewTab: string
       preview: string
       openFullPreview: string
+      /** Names the choice between a quick look and the full window. */
+      previewLayout: string
       quickLook: string
       fullWindow: string
       streamed: string
@@ -162,10 +216,6 @@ export interface UIStrings {
       unsupportedMessage: string
       notebookParseError: string
       copyUri: string
-      download: string
-      close: string
-      zoomIn: string
-      zoomOut: string
       previousFile: string
       nextFile: string
       csvRows: (count: number, columns: number) => string
@@ -185,7 +235,6 @@ export interface UIStrings {
       success: (name: string) => string
       error: (message: string) => string
       invalidTarget: string
-      noWriteAccess: string
       unsupported: string
       validation: {
         reserved: string
@@ -194,6 +243,9 @@ export interface UIStrings {
       }
     }
     readOnly: string
+    /** Names what a copy took, in its toast. */
+    fileLink: string
+    uri: string
     cors: {
       explanation: {
         title: string
@@ -202,7 +254,6 @@ export interface UIStrings {
         note: string
       }
       actions: {
-        retry: string
         addRules: string
       }
       propagating: {
@@ -220,13 +271,10 @@ export interface UIStrings {
     }
     selectedCount: (count: number) => string
     loadingMore: string
-    loadMore: string
-    retry: string
     partialCount: (count: number) => string
     notFound: {
       title: (name: string) => string
       description: string
-      retry: string
     }
     treeMoreCount: (count: number) => string
     treeMoreCountPartial: (count: number) => string
@@ -236,10 +284,7 @@ export interface UIStrings {
       noFilesForDownload: string
       downloadLinkFailed: string
       fileLinkFailed: string
-      fileLinkCopied: string
       noUri: string
-      uriCopied: string
-      uriCopyFailed: string
       storageUnavailable: string
       waitForCurrentUpload: string
       waitForUpload: string
@@ -260,24 +305,29 @@ export interface UIStrings {
       corsNoStorage: string
       corsAdded: string
       corsPropagating: string
+      previewUnsupported: string
     }
     chrome: {
       explorer: string
-      refresh: string
-      collapse: string
       upload: string
-      download: string
       downloadFromBrowser: string
       access: string
       manageAccess: string
-      delete: string
-      copyToClipboard: string
       selectAll: string
       name: string
       size: string
       created: string
       hash: string
       storageIconAlt: string
+      type: string
+      storages: string
+      modified: string
+      lastModified: string
+      contentType: string
+      storageClass: string
+      details: string
+      selectFiles: string
+      selectFolder: string
     }
     confirmUpload: {
       title: string
@@ -286,7 +336,6 @@ export interface UIStrings {
       noPath: string
       confirm: string
       target: string
-      totalSize: string
       sizeLimitTitle: string
       sizeLimitBody: (total: string, max: string) => string
       sizeLimitHint: string
@@ -294,7 +343,6 @@ export interface UIStrings {
     confirmDelete: {
       title: string
       text: string
-      action: string
     }
     empty: {
       nothingSelected: string
@@ -303,7 +351,6 @@ export interface UIStrings {
       dropHint: string
       readOnlyHint: string
       connectionIssue: string
-      tryAgain: string
       shareThisFile: string
     }
     upload: {
@@ -313,9 +360,7 @@ export interface UIStrings {
       eta: string
       uploading: string
       completeTitle: string
-      completeShort: string
       failedTitle: string
-      failedShort: string
       unknownTitle: string
       unknownShort: string
       cancelled: string
@@ -324,6 +369,8 @@ export interface UIStrings {
       totalSize: string
       size: string
       calculating: string
+      /** In place of the time left once only a few seconds remain. */
+      almostDone: string
       expandDetails: string
       minimizeDetails: string
       sessionNotQueued: (id: string, status: string) => string
@@ -336,9 +383,20 @@ export interface UIStrings {
       refreshFailed: (name: string, message: string) => string
       unknownError: string
       overallProgress: string
+      cancelFile: (name: string) => string
+      confirmCancelFile: string
+      confirmCancelAll: string
+      filesDone: (done: number, total: number) => string
+      progress: (uploading: number, done: number, total: number) => string
+      fileCount: (count: number) => string
+      keepPageOpen: string
     }
   }
   form: {
+    /** Under a field the form needs a value in. */
+    required: string
+    /** Under a field the server rejected without saying why. */
+    checkValue: string
     invalidDuration: string
     durationOutOfRange: (min: string, max: string) => string
     durationBelowMin: (min: string) => string
@@ -346,8 +404,24 @@ export interface UIStrings {
     copyTitle: (title: string, number: number) => string
     addCopy: (title: string) => string
     removeCopy: (title: string) => string
-    /** A wizard's row of step dots. */
+    /** A wizard's steps: what its list of them is called. */
     steps: string
+    /** Where a wizard is, numbered from 1. */
+    stepOf: (number: number, total: number) => string
+    /** The button that opens the list of a wizard's steps. */
+    allSteps: string
+    /** A step before the current one. */
+    stepDone: string
+    /** A step with a value to fix. */
+    stepNeedsAttention: string
+    previousStep: string
+    nextStep: string
+    /** A wizard's last button, unless its config names its own. */
+    runWizard: string
+    fixErrorsToContinue: string
+    stepFailed: string
+    /** A step's name in the list of steps, numbered from 1. */
+    stepLabel: (number: number, title: string) => string
   }
   time: {
     now: string
@@ -357,10 +431,6 @@ export interface UIStrings {
     years: (n: number) => string
   }
   list: {
-    copyMenu: string
-    copy: (label: string) => string
-    copied: (label: string) => string
-    couldntCopy: (label: string) => string
     moreActions: string
     /** A toolbar toggle's name in the overflow menu, where a row can't be pressed. */
     labelName: string
@@ -386,18 +456,15 @@ export interface UIStrings {
     displayProperties: string
     pinnedActions: string
     pinnedActionsHelp: string
-    reset: string
     none: string
-    filter: string
-    clear: string
     searchOptions: string
     /** `atLeast`: `total` is a floor, because the count was capped and more rows follow. */
     pager: (start: number, end: number, total: number, atLeast: boolean) => string
     perPage: string
     paginationPrevious: string
     paginationNext: string
-    paginationShowing: (name: string, start: number | string, end: number | string) => ReactNode
-    paginationShowingTimeRange: (name: string, startTime: string, endTime: string) => ReactNode
+    pagination: string
+    removeSearchTerm: (term: string) => string
   }
 }
 
@@ -529,7 +596,6 @@ export interface UISlots {
 export type WorkflowEngineSource = WorkflowEngine | (() => Promise<WorkflowEngine>)
 
 interface UIProviderValue {
-  notify: UINotify
   strings: UIStrings
   navigation: UINavigation
   data: UIData
@@ -543,30 +609,9 @@ const defaultUseRunFile = (): RunFileResult => ({
   error: undefined,
 })
 
-function useLocalStoragePersistedState<T>(
-  key: string,
-  defaultValue: T,
-): [T, Dispatch<SetStateAction<T>>] {
-  const [value, setValue] = useLocalStorage(key, defaultValue)
-  return [value, setValue]
-}
-
 const DEFAULTS: UIProviderValue = {
-  notify: {
-    info: () => {},
-    success: () => {},
-    warning: () => {},
-    error: () => {},
-    loading: () => 'toast',
-    update: () => {},
-    dismiss: () => {},
-  },
   strings: {
-    loading: 'Loading…',
     modal: {
-      cancel: 'Cancel',
-      close: 'Close',
-      create: 'Create',
       creating: 'Creating…',
       addDescription: 'Add description…',
       advanced: 'Advanced',
@@ -574,12 +619,52 @@ const DEFAULTS: UIProviderValue = {
       favorited: 'Favorited',
       favoriteHintOn: "Your item will be favorited when it's created",
       favoriteHintOff: "Favorite your item when it's created",
-      filter: 'Filter',
     },
     common: {
+      cancel: 'Cancel',
+      close: 'Close',
+      save: 'Save',
+      clear: 'Clear',
+      delete: 'Delete',
+      download: 'Download',
+      retry: 'Retry',
+      reset: 'Reset',
+      apply: 'Apply',
+      dismiss: 'Dismiss',
+      notifications: 'Notifications',
+      rename: 'Rename',
+      share: 'Share',
+      send: 'Send',
+      filter: 'Filter',
+      loading: 'Loading…',
+      loadMore: 'Load more',
+      showMore: 'Show more',
+      showLess: 'Show less',
+      previous: 'Previous',
+      next: 'Next',
+      zoomIn: 'Zoom in',
+      zoomOut: 'Zoom out',
+      expandAll: 'Expand all',
+      collapseAll: 'Collapse all',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      undo: 'Undo',
+      redo: 'Redo',
+      duplicate: 'Duplicate',
+      copied: 'Copied',
+      copyToClipboard: 'Copy to clipboard',
+      copiedToClipboard: 'Copied to clipboard',
+      copyFailed: "Couldn't copy to the clipboard",
+      copyThing: (label) => `Copy ${label}`,
+      copiedThing: (label) => `Copied ${label}`,
+      copyThingFailed: (label) => `Couldn't copy ${label}`,
+      invalidName: 'Use letters, numbers, dashes, and underscores.',
+      invalidNumber: 'Use a number.',
       copy: 'Copy',
-      copied: 'Copied!',
-      copyFailed: 'Failed to copy text to clipboard',
+      showValue: 'Show value',
+      hideValue: 'Hide value',
+      expand: 'Expand',
+      collapse: 'Collapse',
       showHiddenFields: 'Show hidden fields',
       add: 'Add',
       create: 'Create',
@@ -590,11 +675,34 @@ const DEFAULTS: UIProviderValue = {
       sort: 'Sort',
       userAvatar: 'User avatar',
       moreInfo: 'More information',
+      actions: 'Actions',
+      edit: 'Edit',
+      submit: 'Submit',
+      search: 'Search',
+      clearSearch: 'Clear search',
+      filterPlaceholder: 'Filter…',
+      breadcrumb: 'Breadcrumb',
+      yes: 'Yes',
+      no: 'No',
+      opensInNewTab: '(opens in a new tab)',
+      resizePanel: 'Resize panel',
+      panelWidth: (px) => `${px} pixels wide`,
+      refresh: 'Refresh',
+      refreshing: 'Refreshing',
+      updated: (ago) => `Updated ${ago}`,
     },
     dropdown: {
       select: (type) => `Select ${type}`,
       noOptionsFound: 'No options found',
       showOptions: 'Show options',
+      add: (text) => `Add “${text}”`,
+      limitReached: (max) => `Up to ${max}`,
+    },
+    datePicker: {
+      pickDate: 'Pick a date',
+      time: 'Time',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
     },
     logviewer: {
       error: 'Error:',
@@ -607,7 +715,6 @@ const DEFAULTS: UIProviderValue = {
       hideDebug: 'Hide Debug',
       showDebug: 'Show Debug',
       filterLogs: 'Filter logs',
-      download: 'Download',
       beginningOfLog: 'Beginning of log',
       loadingOlderEntries: 'Loading older entries…',
       loadOlderEntries: 'Load older entries',
@@ -619,12 +726,12 @@ const DEFAULTS: UIProviderValue = {
         'Times are interpreted in your local timezone. Applying a range re-queries the log source and replaces what is loaded. Setting an end time stops live tailing until you clear it.',
       timeRangeFrom: 'From',
       timeRangeTo: 'To',
-      apply: 'Apply',
-      clear: 'Clear',
       invalidStartTime: 'Start time is not a valid date.',
       invalidEndTime: 'End time is not a valid date.',
       endBeforeStart: 'End time must be after the start time.',
       endInFuture: 'End time cannot be in the future.',
+      follow: 'Follow',
+      following: 'Following',
     },
     dag: {
       workflow: 'Workflow',
@@ -632,10 +739,6 @@ const DEFAULTS: UIProviderValue = {
       status: 'Status',
       runtime: 'Runtime',
       submitted: 'Submitted',
-      expandAll: 'Expand All',
-      collapseAll: 'Collapse All',
-      zoomIn: 'Zoom in',
-      zoomOut: 'Zoom out',
       resetView: 'Reset View',
       previousGraph: 'Back to the previous graph',
       nextGraph: 'Forward to the next graph',
@@ -646,6 +749,18 @@ const DEFAULTS: UIProviderValue = {
       logLoadFailed: 'Log could not be loaded',
       statusLabel: (status) => status,
       statusReason: () => undefined,
+      generalLog: 'General log',
+      previousStep: 'Previous step',
+      nextStep: 'Next step',
+      graphView: 'DAG',
+      treeView: 'Tree',
+      summary: 'Summary',
+      dependsOn: 'depends on:',
+      subworkflow: '(subworkflow)',
+      annotations: 'Annotations',
+      annotationType: { error: 'Error', warning: 'Warning', notice: 'Notice' },
+      annotationSource: (job, step) => `in ${job} → ${step}`,
+      stepNumber: (index) => `step ${index}`,
     },
     jobActions: {
       openSubworkflowLogs: 'Open subworkflow logs',
@@ -662,11 +777,11 @@ const DEFAULTS: UIProviderValue = {
         select: (name: string) => `Select ${name}`,
         viewDetails: 'View details',
         openFolder: 'Open folder',
-        delete: 'Delete',
         detailsTab: 'Details',
         previewTab: 'Preview',
         preview: 'Preview',
         openFullPreview: 'Open full preview',
+        previewLayout: 'Preview layout',
         quickLook: 'Quick Look',
         fullWindow: 'Full window',
         streamed: 'Streamed',
@@ -688,10 +803,6 @@ const DEFAULTS: UIProviderValue = {
           "This file type can't be previewed in the browser. Download the file to view it.",
         notebookParseError: "This notebook couldn't be parsed.",
         copyUri: 'Copy URI',
-        download: 'Download',
-        close: 'Close',
-        zoomIn: 'Zoom in',
-        zoomOut: 'Zoom out',
         previousFile: 'Previous file',
         nextFile: 'Next file',
         csvRows: (count: number, columns: number) => `${count} rows · ${columns} columns`,
@@ -712,7 +823,6 @@ const DEFAULTS: UIProviderValue = {
         success: (name: string) => `Created ${name}.`,
         error: (message: string) => `Couldn't create folder: ${message}`,
         invalidTarget: 'Select a folder before creating a new folder.',
-        noWriteAccess: 'You do not have write access to this storage.',
         unsupported: 'Folder creation is not supported for this storage.',
         validation: {
           reserved: 'The folder name cannot be . or ..',
@@ -721,6 +831,8 @@ const DEFAULTS: UIProviderValue = {
         },
       },
       readOnly: 'Read-only',
+      fileLink: 'file link',
+      uri: 'URI',
       cors: {
         explanation: {
           title: 'CORS Configuration Required',
@@ -730,7 +842,6 @@ const DEFAULTS: UIProviderValue = {
           note: 'Note: Changes may take up to 30 seconds to propagate.',
         },
         actions: {
-          retry: 'Retry Connection',
           addRules: 'Add CORS Rules',
         },
         propagating: {
@@ -749,14 +860,11 @@ const DEFAULTS: UIProviderValue = {
       },
       selectedCount: (count: number) => `${count} selected`,
       loadingMore: 'Loading more items…',
-      loadMore: 'Load more',
-      retry: 'Retry',
       partialCount: (count: number) => `${count.toLocaleString()}+ items`,
       notFound: {
         title: (name: string) => `Couldn't find ${name}`,
         description:
           'It may have been moved or deleted, or it may sit further into a folder than we have listed.',
-        retry: 'Try again',
       },
       treeMoreCount: (count: number) => `${count.toLocaleString()} more`,
       treeMoreCountPartial: (count: number) => `${count.toLocaleString()}+ more`,
@@ -766,10 +874,7 @@ const DEFAULTS: UIProviderValue = {
         noFilesForDownload: 'No files selected for download.',
         downloadLinkFailed: 'Failed to generate download link',
         fileLinkFailed: 'Failed to generate file link',
-        fileLinkCopied: 'File link copied to clipboard',
         noUri: 'No URI available for this file.',
-        uriCopied: 'URI copied to clipboard',
-        uriCopyFailed: 'Failed to copy URI',
         storageUnavailable: 'This storage is not available at the moment. Please try again later.',
         waitForCurrentUpload:
           'Please wait for the current upload to finish before starting a new one.',
@@ -797,24 +902,29 @@ const DEFAULTS: UIProviderValue = {
         corsNoStorage: 'No storage selected',
         corsAdded: 'CORS rules added successfully',
         corsPropagating: 'CORS rules were added, but are still propagating. Try again in a moment.',
+        previewUnsupported: 'Preview is not supported for this storage.',
       },
       chrome: {
         explorer: 'Explorer',
-        refresh: 'Refresh',
-        collapse: 'Collapse',
         upload: 'Upload',
-        download: 'Download',
         downloadFromBrowser: 'From browser',
         access: 'Access',
         manageAccess: 'Manage Access',
-        delete: 'Delete',
-        copyToClipboard: 'Copy to clipboard',
         selectAll: 'Select all',
         name: 'Name',
         size: 'Size',
         created: 'Created',
         hash: 'Hash',
         storageIconAlt: 'An icon for the storage',
+        type: 'Type',
+        storages: 'Storages',
+        modified: 'Modified',
+        lastModified: 'Last modified',
+        contentType: 'Content type',
+        storageClass: 'Storage class',
+        details: 'Details',
+        selectFiles: 'Select files',
+        selectFolder: 'Select folder',
       },
       confirmUpload: {
         title: 'Confirm Upload',
@@ -824,7 +934,6 @@ const DEFAULTS: UIProviderValue = {
         noPath: 'No path selected',
         confirm: 'Confirm',
         target: 'Target:',
-        totalSize: 'Total Size:',
         sizeLimitTitle: 'Upload Size Limit Exceeded',
         sizeLimitBody: (total: string, max: string) =>
           `The total upload size (${total}) exceeds the maximum allowed limit of ${max}.`,
@@ -833,7 +942,6 @@ const DEFAULTS: UIProviderValue = {
       confirmDelete: {
         title: 'Confirm Delete',
         text: 'Are you sure you want to delete the following item(s)? Folders are deleted with everything inside them. This action cannot be undone.',
-        action: 'Delete',
       },
       empty: {
         nothingSelected: 'Nothing selected',
@@ -842,7 +950,6 @@ const DEFAULTS: UIProviderValue = {
         dropHint: 'Drag files or a folder here to upload.',
         readOnlyHint: 'You have read-only access to this storage.',
         connectionIssue: 'Connection issue',
-        tryAgain: 'Try again',
         shareThisFile: 'Share this file',
       },
       upload: {
@@ -852,9 +959,7 @@ const DEFAULTS: UIProviderValue = {
         eta: 'ETA:',
         uploading: 'Uploading...',
         completeTitle: 'Upload Complete!',
-        completeShort: 'Completed',
         failedTitle: 'Upload Failed',
-        failedShort: 'Failed',
         unknownTitle: 'Unknown Status',
         unknownShort: 'Unknown',
         cancelled: 'Cancelled',
@@ -862,7 +967,8 @@ const DEFAULTS: UIProviderValue = {
         failed: 'Failed',
         totalSize: 'Total size:',
         size: 'Size:',
-        calculating: 'Calculating...',
+        calculating: 'Calculating…',
+        almostDone: 'Almost done',
         expandDetails: 'Expand details',
         minimizeDetails: 'Minimize details',
         sessionNotQueued: (id: string, status: string) =>
@@ -879,9 +985,21 @@ const DEFAULTS: UIProviderValue = {
           `Failed to refresh storage data for ${name}. ${message}. Please try again.`,
         unknownError: 'Unknown error',
         overallProgress: 'Overall Progress',
+        cancelFile: (name) => `Cancel ${name}`,
+        confirmCancelFile: 'Cancel?',
+        confirmCancelAll: 'Cancel all uploading files?',
+        filesDone: (done: number, total: number) => `${done} / ${total} files done`,
+        progress: (uploading: number, done: number, total: number) =>
+          uploading > 0
+            ? `${uploading} uploading (${done} / ${total} done)`
+            : `${done} / ${total} done`,
+        fileCount: (count: number) => (count === 1 ? '1 file' : `${count.toLocaleString()} files`),
+        keepPageOpen: "Please don't refresh this page during upload to prevent any data loss.",
       },
     },
     form: {
+      required: 'Enter a value.',
+      checkValue: 'Check this value.',
       invalidDuration: 'Enter a duration as DD-HH:MM:SS or HH:MM:SS.',
       durationOutOfRange: (min, max) => `Must be between ${min} and ${max}.`,
       durationBelowMin: (min) => `Must be at least ${min}.`,
@@ -889,6 +1007,16 @@ const DEFAULTS: UIProviderValue = {
       addCopy: (title) => `+ Add ${title}`,
       removeCopy: (title) => `Remove ${title}`,
       steps: 'Steps',
+      stepOf: (number, total) => `Step ${number} of ${total}`,
+      allSteps: 'All steps',
+      stepDone: 'Done',
+      stepNeedsAttention: 'Needs a fix',
+      previousStep: 'Go to previous step',
+      nextStep: 'Go to next step',
+      runWizard: 'Execute',
+      fixErrorsToContinue: 'Please fix errors before proceeding',
+      stepFailed: 'An error occurred',
+      stepLabel: (number, title) => `Step ${number}: ${title}`,
     },
     time: {
       now: 'now',
@@ -898,10 +1026,6 @@ const DEFAULTS: UIProviderValue = {
       years: (n) => `${n}y`,
     },
     list: {
-      copyMenu: 'Copy',
-      copy: (label) => `Copy ${label}`,
-      copied: (label) => `Copied ${label}`,
-      couldntCopy: (label) => `Couldn't copy ${label}`,
       moreActions: 'More actions',
       labelName: 'name',
       labelEmail: 'email',
@@ -927,27 +1051,14 @@ const DEFAULTS: UIProviderValue = {
       pinnedActions: 'Pinned actions',
       pinnedActionsHelp:
         "Pinned actions show as quick buttons on the right of each row (on hover), alongside the ⋯ menu. Each only appears on rows where that action is available, so a row's buttons vary by its type and status.",
-      reset: 'Reset',
       none: 'None',
-      filter: 'Filter',
-      clear: 'Clear',
       searchOptions: 'Search options…',
       pager: (start, end, total, atLeast) => `${start}–${end} of ${total}${atLeast ? '+' : ''}`,
       perPage: 'Per page',
       paginationPrevious: 'Previous',
       paginationNext: 'Next',
-      paginationShowing: (name, start, end) => (
-        <>
-          Showing {name} <span className="font-medium">{start}</span> to{' '}
-          <span className="font-medium">{end}</span>
-        </>
-      ),
-      paginationShowingTimeRange: (name, startTime, endTime) => (
-        <>
-          Showing {name} from <span className="font-medium">{startTime}</span> to{' '}
-          <span className="font-medium">{endTime}</span>
-        </>
-      ),
+      pagination: 'Pagination',
+      removeSearchTerm: (term) => `Remove filter ${term}`,
     },
   },
   navigation: {
@@ -972,16 +1083,12 @@ const DEFAULTS: UIProviderValue = {
   },
   data: {
     useRunFile: defaultUseRunFile,
-    usePersistedState: useLocalStoragePersistedState,
+    usePersistedState: useLocalPersistedState,
   },
   slots: {},
 }
 
 const UIContext = createContext<UIProviderValue>(DEFAULTS)
-
-export function useNotify(): UINotify {
-  return useContext(UIContext).notify
-}
 
 export function useStrings(): UIStrings {
   return useContext(UIContext).strings
@@ -1123,7 +1230,6 @@ export function usePersistedState<T>(
 }
 
 export function UIProvider({
-  notify,
   strings,
   navigation,
   data,
@@ -1131,7 +1237,6 @@ export function UIProvider({
   engine,
   children,
 }: {
-  notify?: Partial<UINotify>
   strings?: {
     [G in keyof UIStrings]?: UIStrings[G] extends object ? Partial<UIStrings[G]> : UIStrings[G]
   }
@@ -1150,12 +1255,11 @@ export function UIProvider({
   }, [engine])
   const value = useMemo(
     () => ({
-      notify: { ...DEFAULTS.notify, ...notify },
       strings: {
-        loading: strings?.loading ?? DEFAULTS.strings.loading,
         modal: { ...DEFAULTS.strings.modal, ...strings?.modal },
         common: { ...DEFAULTS.strings.common, ...strings?.common },
         dropdown: { ...DEFAULTS.strings.dropdown, ...strings?.dropdown },
+        datePicker: { ...DEFAULTS.strings.datePicker, ...strings?.datePicker },
         logviewer: { ...DEFAULTS.strings.logviewer, ...strings?.logviewer },
         dag: { ...DEFAULTS.strings.dag, ...strings?.dag },
         jobActions: {
@@ -1183,11 +1287,12 @@ export function UIProvider({
       slots: slots ?? DEFAULTS.slots,
       engine,
     }),
-    [notify, strings, navigation, data, slots, engine],
+    [strings, navigation, data, slots, engine],
   )
   return (
     <UIContext.Provider value={value}>
       <TooltipProvider>{children}</TooltipProvider>
+      <Toaster />
     </UIContext.Provider>
   )
 }

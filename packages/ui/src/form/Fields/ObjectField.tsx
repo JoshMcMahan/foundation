@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { FieldGroup } from '../FieldGroup'
+import { Section } from '../../components/Section'
 import { FieldsFromOptions, resolveMetaOverrides } from '../Form'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField, DynamicFormSchema } from '../types/fieldTypes'
@@ -22,9 +22,9 @@ export default function ObjectField({
   const parentInfo = useMemo(() => ({ fieldNamePrefix: `${fieldName}.` }), [fieldName])
 
   return (
-    <FieldGroup
+    <Section
       title={field.label || label}
-      actions={tooltipComponent}
+      beside={tooltipComponent}
       collapsible={!field.noCollapse}
       defaultOpen={!field.collapsed}
     >
@@ -34,6 +34,6 @@ export default function ObjectField({
         spaceCompact={meta.spaceCompact}
         parentInfo={parentInfo}
       />
-    </FieldGroup>
+    </Section>
   )
 }

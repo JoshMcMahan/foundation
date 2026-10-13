@@ -1,15 +1,16 @@
-import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import type { ReactNode } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
+import { RelativeTime } from '../components/relativeTime'
 import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
+import { formatBytes } from '../format'
 import { EyeIcon } from '../icons'
 import { MoreButton, RowSelectCheckbox, rowContextMenuProps, useRowMenuActive } from '../list/index'
 import type { TreeNode } from './lib/types'
-import { formatFileSize } from './lib/utils'
 
 // Measured row pitch, hairline included. `height` on a `<tr>` is only a minimum,
 // so a value under the natural height is silently ignored and the virtualizer's
@@ -172,19 +173,13 @@ export function FileRow({
         </div>
       </Table.Item>
       <Table.Item className="truncate py-2.5 text-sm tabular-nums text-(--theme-muted-text-color)">
-        {typeof node.size === 'number' ? formatFileSize(node.size) : '—'}
+        {typeof node.size === 'number' ? formatBytes(node.size) : '—'}
       </Table.Item>
       <Table.Item className="truncate py-2.5 text-xs uppercase tracking-wider text-(--theme-muted-text-color)">
         {typeLabel}
       </Table.Item>
       <Table.Item className="truncate py-2.5 text-sm text-(--theme-muted-text-color)">
-        {!isDir && modifiedDt?.isValid ? (
-          <Tooltip content={modifiedDt.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)}>
-            <time dateTime={modifiedDt.toISO() ?? undefined}>{modifiedDt.toRelative()}</time>
-          </Tooltip>
-        ) : (
-          '—'
-        )}
+        {!isDir && modifiedDt?.isValid ? <RelativeTime value={modifiedDt} /> : '—'}
       </Table.Item>
       <Table.Item className="relative py-2.5">
         <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 pr-4">

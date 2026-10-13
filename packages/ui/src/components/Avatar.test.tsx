@@ -15,22 +15,26 @@ describe('avatarInitials', () => {
 })
 
 describe('Avatar', () => {
-  it('shows initials without an image', () => {
+  it('shows initials without an image, named for the person', () => {
     render(<Avatar name="Ada Lovelace" />)
-    expect(screen.getByText('AL')).toBeInTheDocument()
-    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Ada Lovelace' })).toHaveTextContent('AL')
   })
 
-  it('falls back to initials when the image fails, and retries a new URL', () => {
-    const { rerender } = render(<Avatar src="/a.png" name="Ada Lovelace" />)
-    fireEvent.error(screen.getByRole('img', { name: 'Ada Lovelace' }))
+  it('shows initials until the image loads, and keeps them when it fails', () => {
+    const { container, rerender } = render(<Avatar src="/a.png" name="Ada Lovelace" />)
+    const image = () => container.querySelector('img') as HTMLImageElement
+    expect(screen.getByText('AL')).toBeInTheDocument()
+    fireEvent.error(image())
     expect(screen.getByText('AL')).toBeInTheDocument()
 
+    // A new URL loads afresh.
     rerender(<Avatar src="/b.png" name="Ada Lovelace" />)
-    expect(screen.getByRole('img', { name: 'Ada Lovelace' })).toHaveAttribute('src', '/b.png')
+    expect(image()).toHaveAttribute('src', '/b.png')
+    fireEvent.load(image())
+    expect(screen.queryByText('AL')).not.toBeInTheDocument()
   })
 
-  it('labels a nameless image with the provider string', () => {
+  it('names a nameless avatar with the provider string', () => {
     render(
       <UIProvider strings={{ common: { userAvatar: 'Avatar del usuario' } }}>
         <Avatar src="/a.png" />

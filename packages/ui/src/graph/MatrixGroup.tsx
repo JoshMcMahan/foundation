@@ -1,6 +1,6 @@
 import { memo } from 'react'
-import { Indicator } from '../components/Indicator'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
+import { RunStatusIcon } from '../components/RunStatusIcon'
 import type { MatrixGroup, RunStatus } from '../engine'
 import { EditableJobRow } from './editorRows'
 import { GraphNode } from './GraphNode'
@@ -35,7 +35,7 @@ export function MatrixGroupSummaryItem({
         onClick={onToggle}
         className="cursor-pointer flex items-center gap-x-1.5 w-full text-left"
       >
-        <Indicator status={status} />
+        <RunStatusIcon status={status} />
         <div className="font-semibold">
           {t.matrixOf(matrixGroup.originaljob)}
           <span className="font-normal text-sm ml-1">
@@ -99,7 +99,7 @@ export const MatrixGroupNode = memo(function MatrixGroupNode({
       </div>
       {!isExpanded && (
         <div className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1">
-          {!preview && <Indicator status={aggStatus} />}
+          {!preview && <RunStatusIcon status={aggStatus} />}
           <span>{preview ? t.jobCount(matrixMembers.length) : statusLabel}</span>
         </div>
       )}

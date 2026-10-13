@@ -1,12 +1,13 @@
-import { clsx as cx } from 'clsx'
 import { Fragment } from 'react'
-import { FileIcon, RunningIcon, XIcon } from '../../icons'
+import { Loader } from '../../components/Loader'
+import { cx } from '../../cx'
+import { formatBytes } from '../../format'
+import { FileIcon, XIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import { fencePaste } from '../core/pasteLanguage'
 import { splitPastes } from '../core/pastes'
 import type { MessagePaste } from '../types'
 import Markdown from '../ui/Markdown'
-import { formatFileSize } from '../utils'
 
 /** A paste sent, or about to be sent, as its saved file. */
 export function PasteFileCard({
@@ -25,7 +26,7 @@ export function PasteFileCard({
   onRemove?: (() => void) | undefined
 }) {
   const t = useChatConfig().strings.paste
-  const detail = error ?? (saving ? t.saving : `${t.lines(lines)} · ${formatFileSize(bytes)}`)
+  const detail = error ?? (saving ? t.saving : `${t.lines(lines)} · ${formatBytes(bytes)}`)
   return (
     <div
       data-testid="paste-file-card"
@@ -44,9 +45,7 @@ export function PasteFileCard({
           {detail}
         </div>
       </div>
-      {saving && (
-        <RunningIcon className="h-3.5 w-3.5 flex-shrink-0 animate-spin theme-muted-text" />
-      )}
+      {saving && <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />}
       {onRemove && (
         <button
           type="button"

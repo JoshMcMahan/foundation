@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
-import { useSlots, useStrings } from '../components/Provider'
 import { FileIcon, FolderIcon } from '../icons'
 import { canPreview } from './FilePreview/previewType'
 import { FileRow, isTwoLineRow, ROW_HEIGHT_SHORT, ROW_HEIGHT_TALL } from './FileRow'
@@ -68,8 +67,6 @@ export function FileRowsWindow({
   onToggleCheck,
   onPreview,
 }: FileRowsWindowProps) {
-  const { storageIconUrl } = useSlots()
-  const storageIconAlt = useStrings().fileExplorer.chrome.storageIconAlt
   useNestedScrollerWarning(scrollEl, nodes.length)
   useRowPitchAudit(scrollEl, nodes, items)
 
@@ -95,7 +92,7 @@ export function FileRowsWindow({
           ) : null
         }
         const icon =
-          getNodeIcon(node, storageIconUrl, storageIconAlt) ??
+          getNodeIcon(node) ??
           (node.type === 'directory' ? (
             <FolderIcon className="h-4 w-4 text-sky-500/80" />
           ) : (

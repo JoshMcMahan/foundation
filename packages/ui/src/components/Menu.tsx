@@ -1,13 +1,8 @@
 import { Menu as BaseMenu } from '@base-ui/react/menu'
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
+import { cx } from '../cx'
 import { CheckIcon, ChevronRightIcon } from '../icons'
-import {
-  panelClassName,
-  panelItemClassName,
-  portalContainer,
-  positionerClassName,
-} from './floating'
+import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 
 // Root, Trigger, Group, RadioGroup and FilterProvider carry no styles, so callers
 // use Base UI's directly; the parts below give every menu one look.
@@ -37,7 +32,7 @@ export function MenuPopup({
   keepMounted = false,
 }: MenuPopupProps) {
   return (
-    <BaseMenu.Portal container={portalContainer()} keepMounted={keepMounted}>
+    <BaseMenu.Portal keepMounted={keepMounted}>
       <BaseMenu.Positioner
         side={side}
         align={align}

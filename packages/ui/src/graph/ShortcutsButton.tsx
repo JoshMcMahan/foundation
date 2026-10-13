@@ -1,8 +1,9 @@
-import { Fragment, useState } from 'react'
+import { Fragment } from 'react'
 import { IconButton } from '../components/IconButton'
+import { Popover } from '../components/Popover'
 import { KeyboardIcon } from '../icons'
 import { useGraphEditorStrings } from './editorStrings'
-import { ToolbarPopover } from './ToolbarPopover'
+import { toolbarPanel } from './toolbarPanel'
 
 /** What a gesture or key does; each combo is a set of keys, and a second combo does the same. */
 export interface Shortcut {
@@ -25,25 +26,14 @@ export const ALT_KEY =
 /** A toolbar button that opens the list of gestures and keys a pane takes. */
 export function ShortcutsButton({ groups }: { groups: ShortcutGroup[] }) {
   const t = useGraphEditorStrings()
-  const [open, setOpen] = useState(false)
   return (
-    <ToolbarPopover
-      label={t.shortcuts}
-      open={open}
-      onOpenChange={setOpen}
-      trigger={
-        <IconButton
-          icon={<KeyboardIcon className="h-4 w-4" />}
-          label={t.shortcuts}
-          size="sm"
-          variant="ghost"
-          showTooltip={!open}
-        />
-      }
+    <Popover
+      title={t.shortcuts}
+      {...toolbarPanel}
+      trigger={<IconButton icon={<KeyboardIcon />} label={t.shortcuts} size="sm" variant="ghost" />}
     >
-      <div className="text-[0.8125rem] font-semibold">{t.shortcuts}</div>
       {groups.map((group) => (
-        <section key={group.title} className="mt-3">
+        <section key={group.title} className="mt-3 first-of-type:mt-0">
           <h3 className="mb-1.5 text-xs font-semibold theme-muted-text">{group.title}</h3>
           {/* One key column width for every group, so the lists line up. */}
           <dl className="grid grid-cols-[8.5rem_1fr] items-baseline gap-x-3 gap-y-1.5">
@@ -70,6 +60,6 @@ export function ShortcutsButton({ groups }: { groups: ShortcutGroup[] }) {
           </dl>
         </section>
       ))}
-    </ToolbarPopover>
+    </Popover>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Combobox } from '../../components/Combobox'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field } from '../../components/Field'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -17,16 +18,8 @@ export interface IMultiDropdownField extends BaseField {
   parentValue?: string | boolean | number
 }
 
-export default function MultiDropdownField({
-  field,
-  label,
-  tooltipComponent,
-  labelPosition,
-  spaceCompact,
-  disabled,
-  missing,
-  onChange,
-}: FieldComponentProps<IMultiDropdownField>) {
+export default function MultiDropdownField(props: FieldComponentProps<IMultiDropdownField>) {
+  const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<MultiDropdownValue[] | undefined>(field.name ?? '')
   const dependent = useDependentOptions(field.options, field.depends_on)
@@ -42,17 +35,10 @@ export default function MultiDropdownField({
   }, [previousParent, parentValue, change])
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, describedBy }) => (
+    <Field {...fieldFrame(props)}>
+      {(control) => (
         <Combobox<MultiDropdownValue>
-          id={id}
-          aria-describedby={describedBy}
+          {...control}
           multiple
           items={items}
           value={value ?? []}
@@ -60,11 +46,9 @@ export default function MultiDropdownField({
             change(next)
             onChange?.(next)
           }}
-          required={!field.optional}
           disabled={disabled}
-          aria-invalid={missing}
         />
       )}
-    </FieldWrapper>
+    </Field>
   )
 }

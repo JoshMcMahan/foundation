@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { ErrorText } from '../components/Field'
 import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
 import {
@@ -14,12 +15,9 @@ import {
   asRecord,
   ChoiceButtons,
   EXPRESSION,
-  FieldError,
-  FieldLabel,
   isScalar,
   type Json,
   KeyValueEditor,
-  LabelledField,
   labelled,
   parseJson,
   parseScalar,
@@ -32,6 +30,7 @@ import {
   SuggestedInput,
   sameValue,
   ToggleField,
+  YamlField,
 } from './editorFields'
 import { useGraphEditorStrings, useInputsEditorStrings } from './editorStrings'
 import { FixButtons, LintScope, useFieldLint, useFieldProblems } from './fieldProblems'
@@ -244,7 +243,7 @@ export function withError(
       return t.missingInput(spec.key)
     }
     if (spec.kind === 'number' && value !== undefined && typeof value !== 'number') {
-      return t.invalidNumberInput
+      return t.common.invalidNumber
     }
     if (
       spec.kind === 'choice' &&
@@ -255,7 +254,7 @@ export function withError(
       return t.invalidChoice(spec.key)
     }
     if (spec.kind === 'flags') {
-      const error = rowsError(draft.values[slot(spec)] as Row[], INPUT_KEY, t.invalidKey, t)
+      const error = rowsError(draft.values[slot(spec)] as Row[], INPUT_KEY, t.common.invalidName, t)
       if (error) {
         return error
       }
@@ -263,7 +262,12 @@ export function withError(
   }
   return kind === 'action'
     ? undefined
-    : rowsError(draft.rows, kind === 'other' ? /^\$?[a-zA-Z0-9_-]+$/ : INPUT_KEY, t.invalidKey, t)
+    : rowsError(
+        draft.rows,
+        kind === 'other' ? /^\$?[a-zA-Z0-9_-]+$/ : INPUT_KEY,
+        t.common.invalidName,
+        t,
+      )
 }
 
 function SpecField({
@@ -299,14 +303,14 @@ function SpecField({
   switch (spec.kind) {
     case 'list':
       return (
-        <LabelledField label={label} yamlKey={spec.key} description={description}>
+        <YamlField label={label} yamlKey={spec.key} description={description}>
           <StringListEditor
             label={label}
             values={draft as string[]}
             onChange={onChange}
-            addLabel={t.addRow}
+            addLabel={t.common.add}
           />
-        </LabelledField>
+        </YamlField>
       )
     case 'bool':
       return (
@@ -320,31 +324,32 @@ function SpecField({
       )
     case 'flags':
       return (
-        <LabelledField label={label} yamlKey={spec.key} description={description}>
+        <YamlField label={label} yamlKey={spec.key} description={description}>
           <KeyValueEditor
             rows={draft as Row[]}
             onChange={onChange}
             error={undefined}
             valueSuggestions={references}
           />
-        </LabelledField>
+        </YamlField>
       )
     case 'target': {
       const target = draft as Record<string, string>
       return (
-        <div className="flex flex-col gap-2">
-          <FieldLabel label={label} yamlKey={spec.key} description={description} />
-          {(spec.fields ?? []).map((field) => (
-            <Input
-              key={field.key}
-              mono
-              {...labelled(field.label, field.key)}
-              description={field.description}
-              value={target[field.key] ?? ''}
-              onChange={(e) => onChange({ ...target, [field.key]: e.target.value })}
-            />
-          ))}
-        </div>
+        <YamlField label={label} yamlKey={spec.key} description={description}>
+          <div className="flex flex-col gap-2">
+            {(spec.fields ?? []).map((field) => (
+              <Input
+                key={field.key}
+                mono
+                {...labelled(field.label, field.key)}
+                description={field.description}
+                value={target[field.key] ?? ''}
+                onChange={(e) => onChange({ ...target, [field.key]: e.target.value })}
+              />
+            ))}
+          </div>
+        </YamlField>
       )
     }
     case 'textarea':
@@ -505,22 +510,23 @@ export function UsesPicker({
   )
   return (
     <div className="flex flex-col gap-2">
-      <FieldLabel label={t.fields.uses} yamlKey="uses" description={t.help.uses} />
-      <ChoiceButtons
-        options={[
-          { value: 'action', label: t.usesAction },
-          { value: 'workflow', label: t.usesWorkflow },
-          { value: 'marketplace', label: t.usesMarketplace },
-          { value: 'repository', label: t.usesRepository },
-        ]}
-        value={mode}
-        onChange={(next) => {
-          setMode(next)
-          if (next !== usesMode(uses, actions)) {
-            onUses('')
-          }
-        }}
-      />
+      <YamlField label={t.fields.uses} yamlKey="uses" description={t.help.uses}>
+        <ChoiceButtons
+          options={[
+            { value: 'action', label: t.usesAction },
+            { value: 'workflow', label: t.usesWorkflow },
+            { value: 'marketplace', label: t.usesMarketplace },
+            { value: 'repository', label: t.usesRepository },
+          ]}
+          value={mode}
+          onChange={(next) => {
+            setMode(next)
+            if (next !== usesMode(uses, actions)) {
+              onUses('')
+            }
+          }}
+        />
+      </YamlField>
       {mode === 'action' ? (
         select(Object.keys(actions), t.chooseAction, (value) => actions[value]?.description)
       ) : mode === 'workflow' ? (
@@ -530,7 +536,7 @@ export function UsesPicker({
       ) : (
         <RepositoryForm uses={uses} draft={draft} onUses={onUses} onDraft={onDraft} />
       )}
-      <FieldError message={error ?? lint.message} />
+      <ErrorText>{error ?? lint.message}</ErrorText>
     </div>
   )
 }
@@ -605,74 +611,80 @@ export function WithEditor({
           : [...draft.rows, { key, value, nested }]
     onChange({ ...draft, rows })
   }
+  const otherRows = (
+    <KeyValueEditor
+      rows={draft.rows.filter((row) => !knownKeys.has(row.key))}
+      onChange={(rows) =>
+        onChange({
+          ...draft,
+          rows: [...draft.rows.filter((row) => knownKeys.has(row.key)), ...rows],
+        })
+      }
+      error={undefined}
+      valueSuggestions={references}
+      lint
+    />
+  )
   return (
     <LintScope at="with">
-      <div className="flex flex-col gap-3">
-        <FieldLabel label={t.fields.with} yamlKey="with" description={t.help.with} />
-        {kind === 'action' &&
-          specsFor(uses, actions).map((spec) => (
-            <SpecField
-              key={slot(spec)}
-              spec={spec}
-              draft={draft.values[slot(spec)]}
-              references={references}
-              source={source}
-              onChange={(value) =>
-                onChange({
-                  ...draft,
-                  values: { ...draft.values, [slot(spec)]: value },
-                })
-              }
+      <YamlField label={t.fields.with} yamlKey="with" description={t.help.with} error={error}>
+        <div className="flex flex-col gap-3">
+          {kind === 'action' &&
+            specsFor(uses, actions).map((spec) => (
+              <SpecField
+                key={slot(spec)}
+                spec={spec}
+                draft={draft.values[slot(spec)]}
+                references={references}
+                source={source}
+                onChange={(value) =>
+                  onChange({
+                    ...draft,
+                    values: { ...draft.values, [slot(spec)]: value },
+                  })
+                }
+              />
+            ))}
+          {extras.map((key) => (
+            <ExtraKey
+              key={key}
+              name={key}
+              uses={uses}
+              draft={draft}
+              original={original}
+              onChange={onChange}
             />
           ))}
-        {extras.map((key) => (
-          <ExtraKey
-            key={key}
-            name={key}
-            uses={uses}
-            draft={draft}
-            original={original}
-            onChange={onChange}
-          />
-        ))}
-        {kind !== 'action' && (
-          <>
-            {known.map(([key, raw]) => {
-              const definition = asRecord(raw)
-              const label = String(definition['label'] ?? '')
-              const about = String(definition['description'] ?? '')
-              const type = String(definition['type'] ?? '')
-              return (
-                <SuggestedInput
-                  key={key}
-                  label={label || key}
-                  yamlKey={key}
-                  description={about || (typeNames[type] ?? type)}
-                  value={draft.rows.find((row) => row.key === key)?.value ?? ''}
-                  suggestions={references}
-                  onChange={(value) => setRow(key, value)}
-                />
-              )
-            })}
-            {known.length > 0 && (
-              <FieldLabel label={t.otherInputs} description={t.help.withInputs} />
-            )}
-            <KeyValueEditor
-              rows={draft.rows.filter((row) => !knownKeys.has(row.key))}
-              onChange={(rows) =>
-                onChange({
-                  ...draft,
-                  rows: [...draft.rows.filter((row) => knownKeys.has(row.key)), ...rows],
-                })
-              }
-              error={undefined}
-              valueSuggestions={references}
-              lint
-            />
-          </>
-        )}
-        <FieldError message={error} />
-      </div>
+          {kind !== 'action' && (
+            <>
+              {known.map(([key, raw]) => {
+                const definition = asRecord(raw)
+                const label = String(definition['label'] ?? '')
+                const about = String(definition['description'] ?? '')
+                const type = String(definition['type'] ?? '')
+                return (
+                  <SuggestedInput
+                    key={key}
+                    label={label || key}
+                    yamlKey={key}
+                    description={about || (typeNames[type] ?? type)}
+                    value={draft.rows.find((row) => row.key === key)?.value ?? ''}
+                    suggestions={references}
+                    onChange={(value) => setRow(key, value)}
+                  />
+                )
+              })}
+              {known.length > 0 ? (
+                <YamlField label={t.otherInputs} description={t.help.withInputs}>
+                  {otherRows}
+                </YamlField>
+              ) : (
+                otherRows
+              )}
+            </>
+          )}
+        </div>
+      </YamlField>
     </LintScope>
   )
 }
@@ -717,8 +729,8 @@ function ExtraKey({
         <span className="font-mono">{name}</span>
         <span className="text-xs text-(--theme-error)">{t.notActionInput}</span>
         <IconButton
-          icon={<CloseIcon className="h-4 w-4" />}
-          label={t.removeRow}
+          icon={<CloseIcon />}
+          label={t.common.remove}
           variant="ghost"
           size="sm"
           onClick={remove}

@@ -119,6 +119,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@daypicker/react": "^10.0.2",
     "@streamdown/code": "^2.0.0",
     "@streamdown/math": "^1.0.3",
     "@streamdown/mermaid": "^1.0.3",
@@ -129,13 +130,12 @@
     "css-tree": "^3.2.1",
     "dequal": "^2.0.3",
     "luxon": "^3.7.2",
-    "re-resizable": "^6.11.2",
     "react-icons": "5.7.0",
     "react-zoom-pan-pinch": "^4.2.0",
     "shiki": "^4.5.0",
     "streamdown": "^2.7.0",
     "swr": "^2.5.1",
-    "usehooks-ts": "^3.1.1"
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

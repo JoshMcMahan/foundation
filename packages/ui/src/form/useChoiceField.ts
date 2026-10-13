@@ -3,7 +3,7 @@ import { useEffect, useEffectEvent, useRef } from 'react'
 import { useFormContext } from 'react-hook-form'
 import type { ComboboxItems } from '../components/Combobox'
 import { useFieldValue } from './useFieldValue'
-import { type ChoiceItem, itemValue, leaves } from './utils/fieldItems'
+import { type ChoiceItem, findChoice, itemValue, leaves } from './utils/fieldItems'
 import { applySecondaryField } from './utils/secondaryField'
 
 export type { ChoiceItem }
@@ -33,11 +33,10 @@ export function useChoiceField({
   const { setValue } = useFormContext()
 
   const choose = (next: unknown) => {
-    const chosen = leaves(items).find(
-      (item): item is ChoiceItem => typeof item === 'object' && dequal(item.value, next),
-    )
-    applySecondaryField(secondaryField, chosen?.secondaryValue, (field, secondary) =>
-      setValue(field, secondary, { shouldDirty: true }),
+    applySecondaryField(
+      secondaryField,
+      findChoice(items, next)?.secondaryValue,
+      (field, secondary) => setValue(field, secondary, { shouldDirty: true }),
     )
     onChange?.(next)
     change(next)

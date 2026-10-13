@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, useTransition } from 'react'
+import { Checkbox } from '../../components/Checkbox'
 import { Combobox } from '../../components/Combobox'
 import { ConfirmModal } from '../../components/ConfirmModal'
-import Loader from '../../components/Loader'
+import { Loader } from '../../components/Loader'
+import { useStrings } from '../../components/Provider'
 import { Select } from '../../components/Select'
+import { toast } from '../../components/Toast'
 import { Tooltip } from '../../components/Tooltip'
 import { ShareIcon, TrashIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
@@ -23,8 +26,9 @@ interface ShareDialogProps {
 
 export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDialogProps) {
   const { strings } = useChatConfig()
+  const { common } = useStrings()
   const t = strings.shareConversation
-  const { adapter, notify } = useChat()
+  const { adapter } = useChat()
   const sharing = adapter.sharing
   const [permissions, setPermissions] = useState<SharePermission[]>([])
   const [teams, setTeams] = useState<ShareGroup[]>([])
@@ -65,14 +69,14 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
         setTeams(await sharing.listGroups())
       } catch (error) {
         console.error('Failed to load sharing data:', error)
-        notify.error(t.loadError)
+        toast.error(t.loadError)
       } finally {
         setLoading(false)
       }
     }
 
     loadData()
-  }, [isOpen, conversationId, sharing, notify, t.loadError])
+  }, [isOpen, conversationId, sharing, t.loadError])
 
   const handleSave = useCallback(() => {
     if (!sharing) {
@@ -130,11 +134,11 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
           }
         }
       } catch (error) {
-        notify.error(error instanceof Error ? error.message : String(error))
+        toast.error(error instanceof Error ? error.message : String(error))
         return
       }
 
-      notify.success(t.saveSuccess)
+      toast.success(t.saveSuccess)
       onClose()
     })
   }, [
@@ -146,7 +150,6 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
     orgCollaborateAccess,
     originalOrgCollaborateAccess,
     onClose,
-    notify,
     t.saveSuccess,
   ])
 
@@ -199,15 +202,15 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
       onClose={onClose}
       align="center"
       title={t.title}
-      confirmLabel={strings.modal.save}
-      cancelLabel={strings.modal.cancel}
+      confirmLabel={common.save}
+      cancelLabel={common.cancel}
       onConfirm={handleSave}
       confirmDisabled={saving}
     >
       <div className="space-y-4">
         {loading ? (
           <div className="py-4">
-            <Loader size={24} text={strings.modal.loading} />
+            <Loader size={24} label={common.loading} />
           </div>
         ) : (
           <>
@@ -216,26 +219,22 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
               <h3 className="font-medium text-sm mb-2">{t.orgAccess}</h3>
               <div className="space-y-2">
                 <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={orgViewAccess}
-                    onChange={(e) => {
-                      setOrgViewAccess(e.target.checked)
-                      if (!e.target.checked) {
+                    onCheckedChange={(on) => {
+                      setOrgViewAccess(on)
+                      if (!on) {
                         setOrgCollaborateAccess(false)
                       }
                     }}
-                    className="rounded"
                   />
                   <span className="text-sm">{t.orgCanView}</span>
                 </label>
                 <label className="flex items-center gap-2 ml-4">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={orgCollaborateAccess}
-                    onChange={(e) => setOrgCollaborateAccess(e.target.checked)}
+                    onCheckedChange={setOrgCollaborateAccess}
                     disabled={!orgViewAccess}
-                    className="rounded"
                   />
                   <span className="text-sm">{t.allowCollaboration}</span>
                 </label>
@@ -268,12 +267,12 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
                             aria-label={perm.teamName || perm.team}
                           />
                         </div>
-                        <Tooltip content={t.remove}>
+                        <Tooltip content={common.remove}>
                           <button
                             type="button"
                             onClick={() => handleRemoveTeam(perm.team)}
                             className="p-1 rounded hover:bg-red-500/10"
-                            aria-label={`${t.remove} ${perm.teamName || perm.team}`}
+                            aria-label={`${common.remove} ${perm.teamName || perm.team}`}
                           >
                             <TrashIcon className="w-3 h-3 text-red-500" />
                           </button>

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { keyedByContent } from '../components/keys'
+import { Popover } from '../components/Popover'
 import { Tooltip } from '../components/Tooltip'
 import { AlertIcon } from '../icons'
 import type { EditorProblem } from './editorApi'
 import { useGraphEditorStrings } from './editorStrings'
-import { ToolbarPopover } from './ToolbarPopover'
+import { toolbarPanel } from './toolbarPanel'
 
 /** A problem as a pane lists it; `pick` shows where it is, when an open pane can. */
 export interface ListedProblem extends EditorProblem {
@@ -20,10 +21,11 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
   }
   const label = t.problemCount(problems.length)
   return (
-    <ToolbarPopover
-      label={label}
+    <Popover
+      title={label}
       open={open}
       onOpenChange={setOpen}
+      {...toolbarPanel}
       trigger={
         // The open list already names the count.
         <Tooltip content={label} disabled={open}>
@@ -38,7 +40,6 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
         </Tooltip>
       }
     >
-      <div className="mb-2 text-[0.8125rem] font-semibold">{label}</div>
       <ul className="flex flex-col gap-0.5">
         {keyedByContent(problems, (problem) => `${problem.line}:${problem.message}`).map(
           ({ key, item: problem }) => {
@@ -70,6 +71,6 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
           },
         )}
       </ul>
-    </ToolbarPopover>
+    </Popover>
   )
 }

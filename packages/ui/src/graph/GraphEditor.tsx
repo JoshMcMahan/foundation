@@ -1,4 +1,3 @@
-import { clsx as cx } from 'clsx'
 import {
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
@@ -8,10 +7,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import { type MenuAnchor, useContextMenu } from '../components/ContextMenu'
+import { useContextMenu } from '../components/ContextMenu'
+import type { FloatingAnchor } from '../components/floating'
 import { IconButton } from '../components/IconButton'
 import { type MenuEntry, menuDivider } from '../components/MenuEntries'
 import { useWorkflowEditing } from '../components/Provider'
+import { useCopy } from '../components/useCopy'
+import { cx } from '../cx'
 import type {
   GraphEdit,
   GraphEditResult,
@@ -1069,7 +1071,7 @@ function useGraphEditorState({
       })
       return items.length > 0 ? [{ label, icon: <LinkIcon />, items }] : []
     }
-    const openJobMenu = (at: MenuAnchor, job: string) => {
+    const openJobMenu = (at: FloatingAnchor, job: string) => {
       const matrix = isMatrix(latest.current.source[job])
       const items: MenuEntry[] = [
         {
@@ -1078,7 +1080,7 @@ function useGraphEditorState({
           onClick: () => editJob(job),
         },
         {
-          label: t.duplicate,
+          label: t.common.duplicate,
           icon: <DuplicateIcon />,
           onClick: () => edit({ type: 'duplicateJob', job, layout: materialize() }),
         },
@@ -1116,7 +1118,7 @@ function useGraphEditorState({
       openMenu(at, items)
     }
 
-    const openStepMenu = (at: MenuAnchor, job: string, index: number) => {
+    const openStepMenu = (at: FloatingAnchor, job: string, index: number) => {
       openMenu(at, [
         {
           label: t.editStep,
@@ -1223,7 +1225,7 @@ function useGraphEditorState({
       return true
     }
 
-    const openEdgeMenu = (at: MenuAnchor, edge: EdgeSelection) => {
+    const openEdgeMenu = (at: FloatingAnchor, edge: EdgeSelection) => {
       const cols = gridRef.current?.cols ?? []
       const deps = boxOf(cols, edge.from)
       const targets = boxOf(cols, edge.to)
@@ -1522,6 +1524,7 @@ function useGraphEditorState({
     }
   }, [container, active, store])
 
+  const { copy } = useCopy()
   const editable = editor !== undefined
   useEffect(() => {
     if (!container || !editable) {
@@ -1595,7 +1598,7 @@ function useGraphEditorState({
         const text = api.copySelection()
         if (text) {
           e.preventDefault()
-          navigator.clipboard?.writeText(text).catch(() => {})
+          void copy(text, { quiet: true })
         }
       } else if (key === 'v' && !native) {
         e.preventDefault()
@@ -1655,7 +1658,7 @@ function useGraphEditorState({
       container.removeEventListener('pointerleave', onLeave)
       container.removeEventListener('pointerdown', onDown)
     }
-  }, [container, editable, api])
+  }, [container, editable, api, copy])
 
   return {
     api,
@@ -1773,7 +1776,7 @@ function EditorToolbar({
       {chip(true)}
       <BarDivider />
       <IconButton
-        icon={<RefreshIcon className="h-4 w-4" />}
+        icon={<RefreshIcon />}
         label={t.resetLayout}
         size="sm"
         variant="ghost"

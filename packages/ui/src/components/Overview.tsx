@@ -1,4 +1,5 @@
-import { clsx as cx } from 'clsx'
+import { cx } from '../cx'
+import { LoadingRegion, Skeleton } from './Skeleton'
 export function Overview({
   Icon,
   name,
@@ -22,20 +23,12 @@ export function Overview({
 }) {
   return (
     <div className={cx('flex items-center w-full', className)}>
-      {loading ? (
-        <div
-          className="shrink-0 animate-pulse rounded-full bg-(--theme-muted-panel-bg)"
-          style={{ width: iconSize, height: iconSize }}
-        />
-      ) : (
-        Icon
-      )}
+      {loading ? <Skeleton circle height={iconSize} className="shrink-0" /> : Icon}
       <div className="flex flex-col min-w-0 flex-1">
         {loading ? (
-          <div className="space-y-1">
-            <div className="h-3 animate-pulse rounded bg-(--theme-muted-panel-bg)" />
-            <div className="h-3 animate-pulse rounded bg-(--theme-muted-panel-bg)" />
-          </div>
+          <LoadingRegion className="space-y-1">
+            <Skeleton count={2} height={12} />
+          </LoadingRegion>
         ) : (
           <>
             <div className="font-semibold text-xl tracking-tight">{name}</div>

@@ -1,5 +1,5 @@
-import { clsx as cx } from 'clsx'
 import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from 'react'
+import { cx } from '../../cx'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { KeyboardShortcutsProvider } from '../core/KeyboardShortcutsProvider'

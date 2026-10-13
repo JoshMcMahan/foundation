@@ -3,10 +3,11 @@ import { render } from '@testing-library/react'
 import { act } from 'react'
 import type { ChatAdapter, StreamResult } from '../adapter/types'
 import ChatMessageList from '../components/ChatMessageList'
-import type { ChatModel, ChatNavigation, ChatNotify, Conversation } from '../types'
+import type { ChatModel, ChatNavigation, Conversation } from '../types'
 import { ChatProvider, useChat } from './ChatProvider'
 
-const SELECTED_MODEL_KEY = 'aiChatSelectedModel'
+const SELECTED_MODEL_KEY = 'aiChat.model'
+const MODEL_B = JSON.stringify('org:acme/model-b')
 
 const storage = new Map<string, string>()
 Object.defineProperty(window, 'localStorage', {
@@ -96,12 +97,6 @@ const navigation: ChatNavigation = {
   toNewChat: vi.fn(),
 }
 
-const notify: ChatNotify = {
-  success: vi.fn(),
-  error: vi.fn(),
-  info: vi.fn(),
-}
-
 let chat: ReturnType<typeof useChat>
 
 function Probe() {
@@ -112,12 +107,7 @@ function Probe() {
 async function renderProvider(adapter: ChatAdapter) {
   await act(async () => {
     render(
-      <ChatProvider
-        adapter={adapter}
-        currentUser={currentUser}
-        navigation={navigation}
-        notify={notify}
-      >
+      <ChatProvider adapter={adapter} currentUser={currentUser} navigation={navigation}>
         <Probe />
       </ChatProvider>,
     )
@@ -428,12 +418,7 @@ describe('queued message rendering', () => {
       },
     ]
     const { getByText, getByLabelText } = render(
-      <ChatProvider
-        adapter={adapter}
-        currentUser={currentUser}
-        navigation={navigation}
-        notify={notify}
-      >
+      <ChatProvider adapter={adapter} currentUser={currentUser} navigation={navigation}>
         <ChatMessageList
           messages={[]}
           allMessages={[]}
@@ -610,7 +595,7 @@ describe('model selection', () => {
   }
 
   it('prefers the last used model over the first one offered', async () => {
-    storage.set(SELECTED_MODEL_KEY, 'org:acme/model-b')
+    storage.set(SELECTED_MODEL_KEY, MODEL_B)
 
     await renderProvider(makeAdapter())
 
@@ -623,16 +608,16 @@ describe('model selection', () => {
     act(() => {
       chat.setSelectedProvider('org:acme/model-b')
     })
-    expect(storage.get(SELECTED_MODEL_KEY)).toBe('org:acme/model-b')
+    expect(storage.get(SELECTED_MODEL_KEY)).toBe(MODEL_B)
 
     act(() => {
       chat.setSelectedProvider(GONE)
     })
-    expect(storage.get(SELECTED_MODEL_KEY)).toBe('org:acme/model-b')
+    expect(storage.get(SELECTED_MODEL_KEY)).toBe(MODEL_B)
   })
 
   it('falls back to the last used model when a conversation names a model that is gone', async () => {
-    storage.set(SELECTED_MODEL_KEY, 'org:acme/model-b')
+    storage.set(SELECTED_MODEL_KEY, MODEL_B)
     const adapter = makeAdapter()
     vi.mocked(adapter.conversations.get).mockResolvedValue(conversationUsing(GONE))
 

@@ -1,8 +1,10 @@
-import { clsx as cx } from 'clsx'
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { Checkbox } from '../components/Checkbox'
 import { positionKeys } from '../components/keys'
 import { useLink, useStrings } from '../components/Provider'
+import { LoadingRegion, Skeleton } from '../components/Skeleton'
 import { Table } from '../components/Table'
+import { cx } from '../cx'
 import { ErrorIcon } from '../icons'
 
 const NAME_TEXT = 'font-medium text-[13px] leading-tight text-(--theme-app) truncate'
@@ -119,29 +121,19 @@ export function ListError({ error, noun = 'data' }: { error: unknown; noun?: str
 }
 
 export function ListSkeleton({ rows = 6 }: { rows?: number }) {
-  const { loading } = useStrings()
   return (
-    <div
-      role="status"
-      aria-label={loading}
-      className="divide-y border-b border-(--theme-border) divide-(--theme-border)"
-    >
+    <LoadingRegion className="divide-y border-b border-(--theme-border) divide-(--theme-border)">
       {positionKeys(rows, 'skeleton').map((key) => (
-        <div
-          key={key}
-          aria-hidden="true"
-          className="flex items-center gap-3 px-4 py-2.5 animate-pulse"
-        >
-          <div className="h-5 w-5 rounded bg-(--theme-muted-panel-bg)" />
+        <div key={key} className="flex items-center gap-3 px-4 py-2.5">
+          <Skeleton width={20} height={20} />
           <div className="space-y-1.5">
-            <div className="h-3 w-40 rounded bg-(--theme-muted-panel-bg)" />
-            <div className="h-2.5 w-24 rounded bg-(--theme-muted-panel-bg)" />
+            <Skeleton width={160} height={12} />
+            <Skeleton width={96} height={10} />
           </div>
-          <div className="ml-auto h-3 w-20 rounded bg-(--theme-muted-panel-bg)" />
+          <Skeleton width={80} height={12} className="ml-auto" />
         </div>
       ))}
-      <span className="sr-only">{loading}</span>
-    </div>
+    </LoadingRegion>
   )
 }
 
@@ -169,24 +161,21 @@ export function RowSelectCheckbox({
 }: {
   checked: boolean
   label: string
-  onToggle: (e: ReactMouseEvent) => void
+  /** Gets the press, a click or a key, so a host can extend a range on Shift. */
+  onToggle: (event: Event) => void
 }) {
   return (
-    <input
-      type="checkbox"
+    <Checkbox
       aria-label={label}
       checked={checked}
-      onChange={() => {}}
-      onClick={(e) => {
-        e.stopPropagation()
-        onToggle(e)
-      }}
+      onCheckedChange={(_, details) => onToggle(details.event)}
+      // The row opens on a click; ticking its box mustn't.
+      onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
         }
       }}
-      className="h-4 w-4 shrink-0 rounded border-(--theme-border) text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
     />
   )
 }
@@ -202,6 +191,7 @@ export function ListActionsHeader({
   actionCount?: number
   className?: string
 }) {
+  const { common } = useStrings()
   // No actions shown → no header (ListRow drops its matching cell too).
   if (view && !view.showActions) {
     return null
@@ -216,7 +206,7 @@ export function ListActionsHeader({
         className,
       )}
     >
-      <span className="sr-only">Actions</span>
+      <span className="sr-only">{common.actions}</span>
     </Table.Header>
   )
 }

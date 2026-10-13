@@ -12,7 +12,6 @@ describe('NumberField', () => {
         field={{ type: 'number', name: 'gpuCount', default: 1, ...field }}
         label="GPU Count"
         labelPosition="top"
-        missing={false}
         disabled={false}
       />,
       values,

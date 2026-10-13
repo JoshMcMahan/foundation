@@ -3,7 +3,7 @@ import { IntlProvider } from 'use-intl'
 import { describe, expect, it } from 'vitest'
 import { ApiError, FieldError } from './index.js'
 import { sharedMessages, sharedMessagesFor } from './messages.js'
-import { useErrorMessage } from './react.js'
+import { type FieldMessage, useErrorMessage, useFieldMessages } from './react.js'
 
 function render(err: unknown, locale = 'en', messages: Record<string, unknown> = {}) {
   let shown = ''
@@ -102,6 +102,57 @@ describe('useErrorMessage with a server that localizes', () => {
       ],
     }
     expect(render(body, 'es')).toBe('Máximo 64 caracteres.')
+  })
+})
+
+function fieldMessages(err: unknown, locale = 'en') {
+  let shown: FieldMessage[] = []
+  function Messages() {
+    shown = useFieldMessages()(err)
+    return null
+  }
+  renderToString(
+    <IntlProvider locale={locale} messages={{}} onError={() => {}}>
+      <Messages />
+    </IntlProvider>,
+  )
+  return shown
+}
+
+describe('useFieldMessages', () => {
+  const body = {
+    type: '/problems/validation',
+    status: 422,
+    code: 'validation',
+    language: 'es',
+    errors: [
+      { code: 'too_long', pointer: '#/hosts/0/name', params: { max: 64 }, detail: 'Máximo 64.' },
+      { code: 'required', pointer: '#/a~1b/m~0n' },
+      { code: 'invalid', parameter: 'page' },
+      { code: 'invalid', pointer: '#' },
+    ],
+  }
+
+  it('gives each body field its form path and its message in the active language', () => {
+    expect(fieldMessages(body, 'en')).toEqual([
+      { path: 'hosts[0].name', message: 'Must be at most 64 characters.' },
+      { path: 'a/b.m~n', message: sharedMessages.en.apiErrors.required },
+    ])
+  })
+
+  it("shows the server's detail when it wrote the active language", () => {
+    expect(fieldMessages(body, 'es')[0]).toEqual({ path: 'hosts[0].name', message: 'Máximo 64.' })
+  })
+
+  it('gives none for an error that names no field', () => {
+    expect(fieldMessages({ type: 'about:blank', status: 403 })).toEqual([])
+    expect(fieldMessages(new TypeError('Failed to fetch'))).toEqual([])
+  })
+
+  it('takes a lone field error', () => {
+    expect(fieldMessages(tooLong)).toEqual([
+      { path: 'name', message: 'Must be at most 64 characters.' },
+    ])
   })
 })
 

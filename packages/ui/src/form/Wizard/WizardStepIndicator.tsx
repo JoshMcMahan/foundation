@@ -1,9 +1,16 @@
-import { clsx as cx } from 'clsx'
-import { useEffect, useRef, useState } from 'react'
+import { Button } from '../../components/Button'
+import { Popover, useClosePopover } from '../../components/Popover'
 import { useStrings } from '../../components/Provider'
+import { cx } from '../../cx'
+import { AlertIcon, CheckIcon } from '../../icons'
 import type { WizardStepIndicatorProps } from './types'
 import { stepText } from './utils'
 
+type Status = 'done' | 'current' | 'upcoming' | 'invalid'
+
+/** Where a wizard is: "Step 3 of 10", a bar with a segment per page, and the list of every page,
+ *  from which a person jumps to one they may. It keeps one size from three pages to a hundred,
+ *  as a repeated page's copies can make, and at any width. */
 export function WizardStepIndicator({
   stepOrder,
   currentStep,
@@ -16,172 +23,151 @@ export function WizardStepIndicator({
 }: WizardStepIndicatorProps) {
   const { form: strings } = useStrings()
   const currentIndex = stepOrder.indexOf(currentStep)
-  // Many pages, as a repeated page's copies make, scroll in this row instead of widening the form, and
-  // the current one is brought into view within it without moving the page.
-  const row = useRef<HTMLOListElement>(null)
-  // A row that scrolls takes focus, so a keyboard can scroll it when none of its dots can be focused.
-  const [scrolls, setScrolls] = useState(false)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: more steps can overflow a row whose own size stays.
-  useEffect(() => {
-    const el = row.current
-    if (!el) {
-      return
-    }
-    const measure = () => setScrolls(el.scrollWidth > el.clientWidth)
-    measure()
-    if (typeof ResizeObserver === 'undefined') {
-      return
-    }
-    // Its steps too: a title that resolves to a longer word widens one without resizing the row.
-    const observer = new ResizeObserver(measure)
-    for (const box of [el, ...el.children]) {
-      observer.observe(box)
-    }
-    return () => observer.disconnect()
-  }, [stepOrder.length])
-  useEffect(() => {
-    const el = row.current
-    const step = el?.children[currentIndex]
-    if (!el || !step || el.scrollWidth <= el.clientWidth) {
-      return
-    }
-    const box = el.getBoundingClientRect()
-    const at = step.getBoundingClientRect()
-    if (at.left < box.left || at.right > box.right) {
-      el.scrollLeft += at.left - box.left - (box.width - at.width) / 2
-    }
-  }, [currentIndex])
-
-  const getStepStatus = (stepKey: string, index: number) => {
-    if (stepKey === currentStep) {
-      return 'active'
-    }
-    if (index < currentIndex) {
-      return 'completed'
-    }
-    return 'upcoming'
-  }
+  const statusOf = (key: string, index: number): Status =>
+    key === currentStep
+      ? 'current'
+      : invalidSteps.has(key)
+        ? 'invalid'
+        : index < currentIndex
+          ? 'done'
+          : 'upcoming'
 
   return (
-    <ol
-      ref={row}
-      aria-label={strings.steps}
-      tabIndex={scrolls ? 0 : undefined}
-      className="flex items-start justify-between w-full mb-2 gap-4 py-2 overflow-x-auto"
-    >
-      {stepOrder.map((stepKey, index) => {
-        const stepConfig = steps[stepKey]
-        const status = getStepStatus(stepKey, index)
-        const isInvalid = invalidSteps.has(stepKey)
-        const isClickable = allowJump && visitedSteps.has(stepKey) && stepKey !== currentStep
-
-        const isDotActive = status === 'active'
-        const isDotCompleted = status === 'completed'
-        const isDotUpcoming = status === 'upcoming'
-
-        return (
-          <li key={stepKey} className="flex flex-col items-center flex-1 relative">
-            {/* Step dot */}
-            <button
-              type="button"
-              onClick={() => onStepClick(stepKey)}
-              disabled={!isClickable}
-              aria-current={isDotActive ? 'step' : undefined}
-              className={cx(
-                'w-12 h-12 rounded-full border-3 flex items-center justify-center font-bold text-base transition-all duration-300 flex-shrink-0 relative',
-                {
-                  'cursor-pointer': isClickable,
-                  'cursor-not-allowed': !isClickable,
-                },
-                {
-                  // Active state uses theme colors
-                  'text-white': isDotActive,
-                  // Completed state
-                  'bg-green-500 border-green-600 text-white shadow-md':
-                    isDotCompleted && !isInvalid,
-                  // Upcoming state
-                  'bg-(--theme-border) theme-border theme-muted-text shadow-sm':
-                    isDotUpcoming && !isInvalid,
-                  // Invalid state
-                  'bg-red-50 border-red-500 text-red-600 shadow-sm':
-                    isInvalid && status !== 'active',
-                },
-              )}
-              style={
-                isDotActive
-                  ? {
-                      backgroundColor: 'var(--theme-element)',
-                      borderColor: 'var(--theme-element)',
-                      color: 'var(--theme-element-text)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                      zIndex: 10,
-                    }
-                  : { zIndex: 10 }
-              }
-              aria-label={`Step ${index + 1}: ${stepText(stepConfig?.title)}`}
-              title={stepText(stepConfig?.title)}
-            >
-              {!hideStepNumbers && (
-                <span className={cx({ hidden: status === 'completed' })}>{index + 1}</span>
-              )}
-              {status === 'completed' && (
-                <svg
-                  aria-hidden="true"
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </button>
-
-            {/* Connecting line to next step */}
-            {index < stepOrder.length - 1 && (
-              <div
-                className={cx('absolute h-1 transition-all duration-300', {
-                  'bg-green-500': index < currentIndex,
-                  'bg-(--theme-border)': index >= currentIndex,
-                  'opacity-25': index >= currentIndex,
-                })}
-                style={{
-                  top: '24px',
-                  left: 'calc(50% + 24px)',
-                  right: '-50%',
-                  boxShadow: index < currentIndex ? '0 1px 2px rgba(34, 197, 94, 0.2)' : 'none',
-                }}
-                aria-hidden="true"
+    <nav aria-label={strings.steps} className="mb-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-(--theme-muted-text-color)">
+          {strings.stepOf(currentIndex + 1, stepOrder.length)}
+        </p>
+        <Popover
+          trigger={
+            <Button size="xs" variant="ghost">
+              {strings.allSteps}
+            </Button>
+          }
+          title={strings.steps}
+          align="end"
+          className="w-72"
+        >
+          <ol className="-mx-1 flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+            {stepOrder.map((key, index) => (
+              <StepItem
+                key={key}
+                number={hideStepNumbers ? undefined : index + 1}
+                title={stepText(steps[key]?.title)}
+                description={steps[key]?.description && stepText(steps[key].description)}
+                status={statusOf(key, index)}
+                // A person jumps back to a page they've seen, never ahead past one they haven't.
+                onJump={
+                  allowJump && visitedSteps.has(key) && key !== currentStep
+                    ? () => onStepClick(key)
+                    : undefined
+                }
               />
+            ))}
+          </ol>
+        </Popover>
+      </div>
+      {/* The bar shows at a glance what the line above says, and the list names. */}
+      <div aria-hidden="true" className="mt-2 flex gap-1">
+        {stepOrder.map((key, index) => (
+          <span
+            key={key}
+            className={cx(
+              'h-1 min-w-0.5 flex-1 rounded-full',
+              segmentClasses[statusOf(key, index)],
             )}
+          />
+        ))}
+      </div>
+    </nav>
+  )
+}
 
-            {/* Step label and description */}
-            <div className="mt-2 text-center">
-              <div
-                className={cx('text-sm text-center transition-colors duration-300 max-w-30', {
-                  'font-bold text-green-600': isDotCompleted && !isInvalid,
-                  'font-bold text-red-600': isInvalid && status !== 'active',
-                  'font-semibold theme-muted-text': !isDotActive && !isDotCompleted && !isInvalid,
-                  'font-bold text-white': isDotActive,
-                })}
-                style={isDotActive ? { color: 'var(--theme-element)' } : {}}
-              >
-                {stepText(stepConfig?.title)}
-              </div>
-              {stepConfig?.description && (
-                <div className="text-xs theme-muted-text mt-1 text-center max-w-30">
-                  {stepText(stepConfig.description)}
-                </div>
-              )}
-            </div>
-          </li>
-        )
-      })}
-    </ol>
+const segmentClasses: Record<Status, string> = {
+  done: 'bg-(--theme-element)',
+  current: 'bg-(--theme-element)',
+  upcoming: 'bg-(--theme-border)',
+  invalid: 'bg-(--theme-error)',
+}
+
+function StepItem({
+  number,
+  title,
+  description,
+  status,
+  onJump,
+}: {
+  number: number | undefined
+  title: string
+  description: string | undefined
+  status: Status
+  onJump: (() => void) | undefined
+}) {
+  const { form: strings } = useStrings()
+  const close = useClosePopover()
+  const marker = (
+    <span
+      aria-hidden="true"
+      className={cx(
+        'flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold tabular-nums',
+        status === 'current' && 'bg-(--theme-element) text-(--theme-element-text)',
+        status === 'done' && 'bg-(--theme-muted-panel-bg) text-(--theme-element)',
+        status === 'upcoming' && 'border border-(--theme-border) text-(--theme-muted-text-color)',
+        status === 'invalid' && 'bg-(--theme-muted-panel-bg) text-(--theme-error)',
+      )}
+    >
+      {status === 'done' ? (
+        <CheckIcon className="size-2.5" />
+      ) : status === 'invalid' ? (
+        <AlertIcon className="size-3" />
+      ) : (
+        number
+      )}
+    </span>
+  )
+  const text = (
+    <span className="flex min-w-0 flex-col">
+      <span className={cx('truncate', status === 'current' && 'font-semibold')}>
+        {number === undefined ? (
+          title
+        ) : (
+          // Read with its number, which the marker shows.
+          <>
+            <span className="sr-only">{strings.stepLabel(number, title)}</span>
+            <span aria-hidden="true">{title}</span>
+          </>
+        )}
+      </span>
+      {status === 'done' && <span className="sr-only">{strings.stepDone}</span>}
+      {status === 'invalid' && (
+        <span className="text-xs text-(--theme-error)">{strings.stepNeedsAttention}</span>
+      )}
+      {description && (
+        <span className="text-xs text-(--theme-muted-text-color)">{description}</span>
+      )}
+    </span>
+  )
+  const row = 'flex w-full items-start gap-2 rounded-md px-1 py-1.5 text-left text-sm'
+  return (
+    <li aria-current={status === 'current' ? 'step' : undefined}>
+      {onJump ? (
+        <button
+          type="button"
+          className={cx(row, 'cursor-pointer hover:bg-(--theme-muted-panel-bg)')}
+          onClick={() => {
+            onJump()
+            close()
+          }}
+        >
+          {marker}
+          {text}
+        </button>
+      ) : (
+        <div className={cx(row, status === 'upcoming' && 'text-(--theme-muted-text-color)')}>
+          {marker}
+          {text}
+        </div>
+      )}
+    </li>
   )
 }

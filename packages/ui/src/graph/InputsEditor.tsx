@@ -1,4 +1,3 @@
-import { clsx as cx } from 'clsx'
 import {
   createContext,
   type ReactNode,
@@ -9,11 +8,15 @@ import {
   useRef,
   useState,
 } from 'react'
-import { type MenuAnchor, useContextMenu } from '../components/ContextMenu'
+import { useContextMenu } from '../components/ContextMenu'
+import { EmptyState } from '../components/EmptyState'
+import type { FloatingAnchor } from '../components/floating'
 import { IconButton } from '../components/IconButton'
 import { type MenuEntry, type MenuSearch, menuDivider } from '../components/MenuEntries'
+import { NumberInput } from '../components/NumberInput'
 import { useWorkflowEditing } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
 import type { GraphEdit, InputPath, WorkflowEditing } from '../editing'
 import { type FormEditing, FormEditingContext } from '../form/formEditing'
 import { type WizardPages, WizardPagesContext } from '../form/Wizard/wizardPages'
@@ -189,8 +192,13 @@ interface InputsEditorApi {
   definition: (path: InputPath) => Json
   edit: (path: InputPath) => void
   remove: (path: InputPath) => void
-  openMenu: (at: MenuAnchor, path: InputPath) => void
-  openTypeMenu: (at: MenuAnchor, parent: InputPath, index: number, placement?: Placement) => void
+  openMenu: (at: FloatingAnchor, path: InputPath) => void
+  openTypeMenu: (
+    at: FloatingAnchor,
+    parent: InputPath,
+    index: number,
+    placement?: Placement,
+  ) => void
   startDrag: (e: Press, path: InputPath | null, label: string, how?: DragHow) => void
   startResize: (e: Press, edge: Edge) => void
   /** Moves an edge by `delta` percent, as the arrow keys do. */
@@ -304,32 +312,6 @@ function inputsInBox(root: HTMLElement, box: Box): InputPath[] {
   return outermost(level.map(({ path }) => path))
 }
 
-function ChromeButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
-  children: ReactNode
-}) {
-  return (
-    <Tooltip content={label}>
-      <button
-        type="button"
-        aria-label={label}
-        className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app)"
-        onClick={(e) => {
-          e.stopPropagation()
-          onClick(e)
-        }}
-      >
-        {children}
-      </button>
-    </Tooltip>
-  )
-}
-
 /** An input's row: its field, with a toolbar of its type, drag grip and actions on hover. */
 function InputRow({
   path,
@@ -400,28 +382,42 @@ function InputRow({
           list={definition[editing.inputChildrenKey(definition['type']) ?? '']}
         />
       )}
-      <ChromeButton label={t.editInput} onClick={() => api.edit(path)}>
-        <EditIcon className="h-3 w-3" />
-      </ChromeButton>
-      <ChromeButton
-        label={t.addInputBelow}
+      <IconButton
+        size="xs"
+        label={t.editInput}
+        icon={<EditIcon />}
         onClick={(e) => {
+          e.stopPropagation()
+          api.edit(path)
+        }}
+      />
+      <IconButton
+        size="xs"
+        label={t.addInputBelow}
+        icon={<AddIcon />}
+        onClick={(e) => {
+          e.stopPropagation()
           api.openTypeMenu(e.currentTarget, parent, index + 1)
         }}
-      >
-        <AddIcon className="h-3 w-3" />
-      </ChromeButton>
-      <ChromeButton label={t.deleteInput} onClick={() => api.remove(path)}>
-        <MinusIcon className="h-3 w-3" />
-      </ChromeButton>
-      <ChromeButton
-        label={t.inputActions}
+      />
+      <IconButton
+        size="xs"
+        label={t.deleteInput}
+        icon={<MinusIcon />}
         onClick={(e) => {
+          e.stopPropagation()
+          api.remove(path)
+        }}
+      />
+      <IconButton
+        size="xs"
+        label={t.inputActions}
+        icon={<MoreIcon />}
+        onClick={(e) => {
+          e.stopPropagation()
           api.openMenu(e.currentTarget, path)
         }}
-      >
-        <MoreIcon className="h-3 w-3" />
-      </ChromeButton>
+      />
     </>
   )
   return (
@@ -522,16 +518,22 @@ function PageActions({
   if (!isWizard(list)) {
     return bar ? (
       <IconButton
-        icon={<FilesIcon className="h-4 w-4" />}
+        icon={<FilesIcon />}
         label={t.splitIntoPages}
         size="sm"
         variant="ghost"
         onClick={() => api.splitIntoPages(parent)}
       />
     ) : (
-      <ChromeButton label={t.splitIntoPages} onClick={() => api.splitIntoPages(parent)}>
-        <FilesIcon className="h-3 w-3" />
-      </ChromeButton>
+      <IconButton
+        size="xs"
+        label={t.splitIntoPages}
+        icon={<FilesIcon />}
+        onClick={(e) => {
+          e.stopPropagation()
+          api.splitIntoPages(parent)
+        }}
+      />
     )
   }
   return bar ? (
@@ -543,7 +545,7 @@ function PageActions({
         onClick={() => api.addPage(parent)}
       />
       <IconButton
-        icon={<CollapseIcon className="h-4 w-4" />}
+        icon={<CollapseIcon />}
         label={t.unsplitPages}
         size="sm"
         variant="ghost"
@@ -552,12 +554,24 @@ function PageActions({
     </>
   ) : (
     <>
-      <ChromeButton label={t.addPage} onClick={() => api.addPage(parent)}>
-        <PlusOutlineIcon className="h-3 w-3" />
-      </ChromeButton>
-      <ChromeButton label={t.unsplitPages} onClick={() => api.unsplitPages(parent)}>
-        <CollapseIcon className="h-3 w-3" />
-      </ChromeButton>
+      <IconButton
+        size="xs"
+        label={t.addPage}
+        icon={<PlusOutlineIcon />}
+        onClick={(e) => {
+          e.stopPropagation()
+          api.addPage(parent)
+        }}
+      />
+      <IconButton
+        size="xs"
+        label={t.unsplitPages}
+        icon={<CollapseIcon />}
+        onClick={(e) => {
+          e.stopPropagation()
+          api.unsplitPages(parent)
+        }}
+      />
     </>
   )
 }
@@ -581,24 +595,24 @@ function PageNumber({
   const t = useInputsEditorStrings()
   const shown = Math.min(Math.max(page, 0), Math.max(count - 1, 0))
   return (
-    <label className="flex h-7 items-center gap-1 px-1 text-xs theme-muted-text">
+    <div className="flex h-7 items-center gap-1 px-1 text-xs theme-muted-text">
       {t.page}
-      <input
-        type="number"
+      <NumberInput
+        size="sm"
         min={1}
         max={count}
+        step={1}
         value={shown + 1}
         aria-label={t.pageNumber}
-        className="h-6 w-10 rounded border theme-border bg-(--theme-input-bg) px-1 text-center text-(--theme-input) text-xs"
-        onChange={(e) => {
-          const typed = Number(e.target.value)
-          if (Number.isInteger(typed) && typed >= 1 && typed <= count) {
+        className="w-12"
+        onValueChange={(typed) => {
+          if (typed !== null && Number.isInteger(typed) && typed >= 1 && typed <= count) {
             onChange(typed - 1)
           }
         }}
       />
       <span>/ {count}</span>
-    </label>
+    </div>
   )
 }
 
@@ -1294,7 +1308,7 @@ export function InputsFormEditor({
     const unsplitPages = (parent: InputPath) =>
       sendAll(unsplitPagesEdits(listAt(parent), parent, childKeyAt(parent)))
     const openTypeMenu = (
-      at: MenuAnchor,
+      at: FloatingAnchor,
       parent: InputPath,
       index: number,
       placement?: Placement,
@@ -1480,12 +1494,12 @@ export function InputsFormEditor({
           search: typeSearch(t),
         },
         {
-          label: t.duplicate,
+          label: t.common.duplicate,
           icon: <DuplicateIcon />,
           onClick: () => send({ type: 'duplicateInput', path }),
         },
         {
-          label: t.moveUp,
+          label: t.common.moveUp,
           icon: <ArrowUpIcon />,
           disabled: index <= 0,
           onClick: () =>
@@ -1497,7 +1511,7 @@ export function InputsFormEditor({
             }),
         },
         {
-          label: t.moveDown,
+          label: t.common.moveDown,
           icon: <ArrowDownIcon />,
           disabled: index >= count - 1,
           onClick: () =>
@@ -1714,7 +1728,7 @@ export function InputsFormEditor({
           return
         }
         const selected = store.get().selection.includes(rowKey)
-        const title = e.target.closest<HTMLElement>('[data-field-label]')
+        const title = e.target.closest<HTMLElement>('[data-field-label], [data-section-title]')
         const ownTitle = title !== null && title.closest('[data-input-path]') === row
         // A field takes its own press; pressing one outside the selection lets the selection go.
         if (!ownTitle && e.target.closest(CONTROLS)) {
@@ -1882,7 +1896,7 @@ export function InputsFormEditor({
               store.set({ hovered: null, open: [], ...(keep ? {} : { edge: null }) })
             }}
           >
-            {empty && <div className="mb-3 text-sm theme-muted-text">{t.noInputs}</div>}
+            {empty && <EmptyState variant="bare" title={t.noInputs} />}
             <WizardPagesContext.Provider value={wizardPages}>
               {children}
             </WizardPagesContext.Provider>

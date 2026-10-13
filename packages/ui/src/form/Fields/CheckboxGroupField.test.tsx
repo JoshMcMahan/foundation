@@ -9,7 +9,6 @@ describe('CheckboxGroupField', () => {
     const { form } = renderInForm(
       <CheckboxGroupField
         labelPosition="top"
-        missing={false}
         disabled={false}
         field={{ type: 'checkbox-group', name: 'sizes', options: [1, 2, 4] }}
         label="Sizes"

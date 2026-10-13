@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { expect, screen, userEvent, within } from 'storybook/test'
@@ -11,6 +10,7 @@ import { HeaderAddButton, HeaderEditButton, PageHeader } from '../components/Pag
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
+import { cx } from '../cx'
 import {
   AddIcon,
   ClusterIcon,
@@ -95,16 +95,6 @@ function useMockHost() {
     setEvents((prev) => [line, ...prev].slice(0, 6))
   }, [])
 
-  const notify = useMemo(
-    () => ({
-      info: (message: string) => record(`notify.info — ${message}`),
-      success: (message: string) => record(`notify.success — ${message}`),
-      warning: (message: string) => record(`notify.warning — ${message}`),
-      error: (message: string) => record(`notify.error — ${message}`),
-    }),
-    [record],
-  )
-
   const navigation = useMemo(
     () => ({
       goTo: (to: string) => record(`navigation.goTo — ${to}`),
@@ -122,7 +112,7 @@ function useMockHost() {
 
   const slots = useMemo(() => ({ link: MockLink }), [])
 
-  return { events, notify, navigation, strings, slots }
+  return { events, navigation, strings, slots }
 }
 
 function HostBindingLog({ events }: { events: string[] }) {
@@ -148,12 +138,7 @@ function HostBindingLog({ events }: { events: string[] }) {
 function MockHost({ children }: { children: (host: ReturnType<typeof useMockHost>) => ReactNode }) {
   const host = useMockHost()
   return (
-    <UIProvider
-      notify={host.notify}
-      navigation={host.navigation}
-      strings={host.strings}
-      slots={host.slots}
-    >
+    <UIProvider navigation={host.navigation} strings={host.strings} slots={host.slots}>
       <BreadcrumbProvider>{children(host)}</BreadcrumbProvider>
     </UIProvider>
   )

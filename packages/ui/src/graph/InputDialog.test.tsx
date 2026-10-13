@@ -36,6 +36,7 @@ vi.mock('../editor/Monaco', () => ({
 }))
 
 import { chooseOption, optionsOf } from '../test/combobox'
+import { openSection, openSectionTitles } from '../test/section'
 import { INPUTS_EDITOR_STRINGS } from './editorStrings'
 import { InputDialog, inputTypes, offeredInputKeys } from './InputDialog'
 
@@ -68,10 +69,7 @@ describe('InputDialog', () => {
 
   // Like the job and step dialogs: a section starts open only when it holds something.
   it('opens only the sections that hold something', async () => {
-    const openSections = () =>
-      [...document.querySelectorAll('details')]
-        .filter((section) => section.open)
-        .map((section) => section.querySelector('summary')?.textContent)
+    const openSections = openSectionTitles
     open({ type: 'string' })
     expect(openSections()).toEqual([])
     cleanup()
@@ -85,7 +83,10 @@ describe('InputDialog', () => {
     open({ type: 'string' }, { isNew: true })
     expect(openSections()).toEqual(['Field'])
     // Nothing folds or unfolds on its own later, except to show a problem that blocks Save.
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['zone'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['zone'],
+    )
     expect(openSections()).toEqual(['Field', 'Settings'])
   })
 
@@ -103,7 +104,7 @@ describe('InputDialog', () => {
     )
     cleanup()
     onSave = open({ type: 'duration' })
-    fireEvent.change(screen.getByLabelText('Default'), {
+    fireEvent.change(screen.getByLabelText('Default', { selector: 'input' }), {
       target: { value: '${{ inputs.limit }}' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -120,11 +121,11 @@ describe('InputDialog', () => {
     const toggles = () => screen.getAllByRole('button', { name: 'Use an expression instead' })
     // The options' switch comes first, then the flags in Behavior.
     fireEvent.click(toggles()[0] as HTMLElement)
-    fireEvent.change(screen.getByLabelText('Options'), {
+    fireEvent.change(screen.getByLabelText('Options', { selector: 'input' }), {
       target: { value: '${{ inputs.choices }}' },
     })
-    const hidden = screen.getByText('Hidden', { selector: 'span' }).parentElement?.parentElement
-      ?.parentElement as HTMLElement
+    openSection('Behavior')
+    const hidden = screen.getByText('Hidden', { selector: 'label' }).parentElement as HTMLElement
     fireEvent.click(within(hidden).getByRole('button', { name: 'Use an expression instead' }))
     fireEvent.change(screen.getByLabelText('Hidden'), {
       target: { value: '${{ inputs.simple }}' },
@@ -147,13 +148,10 @@ describe('InputDialog', () => {
       type: 'checkbox-group',
       options: ['logs', 'checkpoints', 'all'],
     })
-    const row = screen.getByText('all also ticks').parentElement as HTMLElement
-    fireEvent.click(within(row).getByRole('button', { name: 'logs' }))
-    fireEvent.click(within(row).getByRole('button', { name: 'checkpoints' }))
-    expect(within(row).getByRole('button', { name: 'logs' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    const row = screen.getByRole('group', { name: 'all also ticks' })
+    fireEvent.click(within(row).getByRole('checkbox', { name: 'logs' }))
+    fireEvent.click(within(row).getByRole('checkbox', { name: 'checkpoints' }))
+    expect(within(row).getByRole('checkbox', { name: 'logs' })).toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -202,7 +200,10 @@ describe('InputDialog', () => {
 
   it('drops settings the new type does not take', async () => {
     const onSave = open({ type: 'string', placeholder: 'Name', label: 'X' })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['number'],
+    )
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.typeChangeNote)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
@@ -281,13 +282,13 @@ describe('InputDialog', () => {
     expect(screen.getByLabelText('Hint text')).toBeInTheDocument()
     expect(screen.queryByLabelText('Options depend on')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Per value of another input' }))
-    fireEvent.change(screen.getByLabelText('Options'), {
+    fireEvent.change(screen.getByLabelText('Options', { selector: 'textarea' }), {
       target: { value: '{"x": ["a"]}' },
     })
     expect(screen.queryByLabelText('Hint text')).toBeNull()
     const save = screen.getByRole('button', { name: 'Save' })
     expect(save).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('Options depend on'), {
+    fireEvent.change(screen.getByLabelText('Options depend on', { selector: 'input' }), {
       target: { value: '${{ inputs.k }}' },
     })
     fireEvent.click(save)
@@ -369,11 +370,13 @@ describe('InputDialog', () => {
       { type: 'group', items: { size: { type: 'number' } } },
       { siblings: ['size'] },
     )
+    openSection('Settings')
     fireEvent.click(screen.getByRole('switch', { name: 'Leave out the group name' }))
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.flattenClash('size'))).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     cleanup()
     const clean = open({ type: 'group', items: { size: { type: 'number' } } })
+    openSection('Settings')
     fireEvent.click(screen.getByRole('switch', { name: 'Leave out the group name' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(clean).toHaveBeenCalledWith(
@@ -387,7 +390,7 @@ describe('InputDialog', () => {
 
   it('reads and writes a duration as HH:MM:SS, stored in seconds', () => {
     const onSave = open({ type: 'duration', default: 3600 })
-    expect(screen.getByLabelText('Default')).toHaveValue('01:00:00')
+    expect(screen.getByLabelText('Default', { selector: 'input' })).toHaveValue('01:00:00')
     fireEvent.change(screen.getByLabelText('Minimum'), {
       target: { value: '90m' },
     })
@@ -459,6 +462,8 @@ describe('InputDialog', () => {
 
   it('gives a repeatable page a title per copy and its fewest and most copies from its dialog', () => {
     const onSave = open({ type: 'step', title: 'Host', multi: true, options: {} })
+    openSection('Field')
+    openSection('Settings')
     // The description's comes first, in the Field section.
     const [, titlePerCopy] = screen.getAllByRole('checkbox', { name: 'One per copy' })
     fireEvent.click(titlePerCopy as HTMLElement)
@@ -492,7 +497,7 @@ describe('InputDialog', () => {
       options: ['fp16', 'fp32'],
       optionLabelPosition: 'side',
     })
-    const input = screen.getByLabelText('Default')
+    const input = screen.getByLabelText('Default', { selector: 'input' })
     expect((await optionsOf(input)).map((option) => option.label)).toEqual(['fp16', 'fp32'])
     // A layout the schema doesn't know picks neither.
     for (const name of ['Side by side', 'One per line']) {
@@ -548,6 +553,7 @@ describe('InputDialog', () => {
 
   it('needs min, max and step once the slider is on', () => {
     open({ type: 'number' })
+    openSection('Settings')
     fireEvent.click(screen.getByRole('switch', { name: 'Slider' }))
     const save = screen.getByRole('button', { name: 'Save' })
     expect(save).toBeDisabled()
@@ -579,7 +585,10 @@ describe('InputDialog', () => {
     fireEvent.change(within(nested).getByLabelText('Name'), {
       target: { value: 'port' },
     })
-    await chooseOption(within(nested).getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
+    await chooseOption(
+      within(nested).getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['number'],
+    )
     fireEvent.click(within(nested).getByRole('button', { name: 'Save' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
@@ -642,7 +651,10 @@ describe('InputDialog in two views', () => {
 
   it('drops the old type’s settings after a trip to the YAML and back', async () => {
     const { onSave } = openViews({ type: 'string', placeholder: 'Name' })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['number'],
+    )
     toYaml()
     toForm()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -804,14 +816,20 @@ describe('InputDialog keeps what it does not show', () => {
 
   it('checks a kept setting the new type can’t hold, as options keyed by another input', async () => {
     open({ type: 'dropdown', options: { aws: ['a'] }, 'option-key': '${{ inputs.csp }}' })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['multi-dropdown'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['multi-dropdown'],
+    )
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.optionsByKeyDropdownOnly)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('carries a group’s fields into a list’s template', async () => {
     const onSave = open({ type: 'group', items: { host: { type: 'string' } } })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['list'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['list'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -826,7 +844,9 @@ describe('InputDialog keeps what it does not show', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add option' }))
     const values = screen.getAllByRole('textbox', { name: 'Value' })
     fireEvent.change(values[values.length - 1] as HTMLElement, { target: { value: '4' } })
-    fireEvent.change(screen.getByLabelText('Default'), { target: { value: '4' } })
+    fireEvent.change(screen.getByLabelText('Default', { selector: 'input' }), {
+      target: { value: '4' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -910,13 +930,15 @@ describe('InputDialog keeps what it does not show', () => {
 
   it('takes the opt-out value as a duration’s default, and only a number for it', () => {
     open({ type: 'duration', disableLabel: 'Never', disableValue: -1, default: -1 })
-    expect(screen.getByLabelText('Default')).toHaveValue('-1')
+    expect(screen.getByLabelText('Default', { selector: 'input' })).toHaveValue('-1')
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 
   it('takes the opt-out value typed as a duration’s default', () => {
     const onSave = open({ type: 'duration', disableLabel: 'Never', disableValue: -1 })
-    fireEvent.change(screen.getByLabelText('Default'), { target: { value: '-1' } })
+    fireEvent.change(screen.getByLabelText('Default', { selector: 'input' }), {
+      target: { value: '-1' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -947,7 +969,7 @@ describe('InputDialog keeps what it does not show', () => {
       options: '${{ inputs.features }}',
       implies: { all: ['logs'] },
     })
-    fireEvent.change(screen.getByLabelText('Options'), {
+    fireEvent.change(screen.getByLabelText('Options', { selector: 'input' }), {
       target: { value: '${{ inputs.flags }}' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -989,7 +1011,10 @@ describe('InputDialog keeps what it does not show', () => {
       type: 'checkbox-group',
       options: [{ value: 'cuda', label: 'CUDA', description: 'Needs the GPU drivers' }],
     })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['radio'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1005,7 +1030,10 @@ describe('InputDialog keeps what it does not show', () => {
       options: [{ value: 2, label: 'Two', description: 'Second' }],
       default: 2,
     })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['radio'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1015,7 +1043,10 @@ describe('InputDialog keeps what it does not show', () => {
     )
     cleanup()
     const boxes = open({ type: 'dropdown', options: [{ value: 'a', description: 123 }] })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['checkbox-group'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['checkbox-group'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(boxes).toHaveBeenCalledWith(
       'field',
@@ -1027,14 +1058,20 @@ describe('InputDialog keeps what it does not show', () => {
 
   it('asks for text options when JSON ones a radio can’t hold carry over', async () => {
     open({ type: 'multi-dropdown', options: [{ value: { id: 1 }, label: 'One' }] })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['radio'],
+    )
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.radioOptionShape)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('keeps a setting both types read alike exactly across a type change', async () => {
     const onSave = open({ type: 'password', label: ' Secret ', default: '  passphrase  ' })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['string'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['string'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1072,7 +1109,10 @@ describe('InputDialog keeps what it does not show', () => {
 
   it('writes a kept default as the new type reads it, and asks to change one it can’t hold', async () => {
     const onSave = open({ type: 'number', default: 5 })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['string'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['string'],
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1089,10 +1129,15 @@ describe('InputDialog keeps what it does not show', () => {
       ],
       default: ['a', 'b'],
     })
-    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['dropdown'])
+    await chooseOption(
+      screen.getByRole('combobox', { name: 'Type' }),
+      INPUTS_EDITOR_STRINGS.types['dropdown'],
+    )
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.keptValueDoesNotFit)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('Default'), { target: { value: 'a' } })
+    fireEvent.change(screen.getByLabelText('Default', { selector: 'input' }), {
+      target: { value: 'a' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(listed).toHaveBeenCalledWith(
       'field',

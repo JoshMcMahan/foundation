@@ -10,7 +10,7 @@ describe('resolveChatConfig strings', () => {
         thinking: { label: 'Reasoning' },
         thread: { viewOnly: 'Read only' },
         sidebar: { newChat: 'Start over' },
-        attachmentUpload: { remove: 'Trash' },
+        attachmentUpload: { dropFilesHere: 'Drop here' },
         attachmentManager: { title: 'Files' },
         branch: { previous: 'Back' },
       },
@@ -21,15 +21,14 @@ describe('resolveChatConfig strings', () => {
     expect(resolved.strings.thinking.label).toBe('Reasoning')
     expect(resolved.strings.thread.viewOnly).toBe('Read only')
     expect(resolved.strings.sidebar.newChat).toBe('Start over')
-    expect(resolved.strings.attachmentUpload.remove).toBe('Trash')
+    expect(resolved.strings.attachmentUpload.dropFilesHere).toBe('Drop here')
     expect(resolved.strings.attachmentManager.title).toBe('Files')
     expect(resolved.strings.branch.previous).toBe('Back')
     // sibling keys keep their defaults
     expect(resolved.strings.emptyState.addProvider).toBe(defaultChatStrings.emptyState.addProvider)
     expect(resolved.strings.input.sendMessage).toBe(defaultChatStrings.input.sendMessage)
     expect(resolved.strings.sidebar.deleteTitle).toBe(defaultChatStrings.sidebar.deleteTitle)
-    // untouched legacy groups still resolve
-    expect(resolved.strings.modal.cancel).toBe(defaultChatStrings.modal.cancel)
+    expect(resolved.strings.tools.noOutput).toBe(defaultChatStrings.tools.noOutput)
   })
 
   it('parameterized defaults interpolate', () => {

@@ -6,7 +6,6 @@ import RadioField from './RadioField'
 
 const baseProps = {
   labelPosition: 'top' as const,
-  missing: false,
   disabled: false,
 }
 
@@ -46,11 +45,11 @@ describe('RadioField', () => {
     expect(screen.getByRole('radio', { name: '2' })).toBeChecked()
   })
 
-  it('names the group by its label and marks it missing or disabled', () => {
+  it('names the group by its label and marks it invalid or disabled', () => {
     renderInForm(
       <RadioField
         {...baseProps}
-        missing
+        error="Pick a size."
         disabled
         field={{ type: 'radio', name: 'size', options: ['small', 'large'] }}
         label="Size"

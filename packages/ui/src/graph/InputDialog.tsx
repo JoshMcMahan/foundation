@@ -1,27 +1,28 @@
-import { clsx as cx } from 'clsx'
-import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { Checkbox, CheckboxGroup } from '../components/Checkbox'
 import { Combobox } from '../components/Combobox'
-import { FilterPill } from '../components/FilterPill'
+import { ErrorText, Field, FieldOption } from '../components/Field'
 import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
 import { withPositionKeys } from '../components/keys'
 import { useWorkflowEditing, useWorkflowEngine } from '../components/Provider'
+import { cx } from '../cx'
 import type { FieldPatch, GraphEdit, InputPath, WorkflowEditing } from '../editing'
 import { INPUT_YAML_PATH } from '../editor/settingsYaml'
 import { DynamicForm } from '../form/Form'
 import { FormEditingContext } from '../form/formEditing'
-import { formatDuration, parseDuration } from '../form/utils/duration'
+import { formatDurationText, parseDurationText } from '../form/utils/duration'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon, EditIcon, TrashIcon } from '../icons'
 import {
   AddRowButton,
   asRecord,
   ChoiceButtons,
+  DialogSection,
   DialogShell,
   diffPatch,
   EXPRESSION,
   ExpressionToggle,
   expressionError,
-  FieldError,
   type Flag,
   flagError,
   GrowingTextarea,
@@ -29,12 +30,10 @@ import {
   isScalar,
   type Json,
   KeyHint,
-  LabelledField,
   labelled,
   type OpenOnAdd,
   parseJson,
   parseScalar,
-  Section,
   SectionMemory,
   StringListEditor,
   SuggestedInput,
@@ -44,6 +43,7 @@ import {
   unchangedValue,
   useSectionMemory,
   withoutUndefined,
+  YamlField,
 } from './editorFields'
 import {
   type GraphEditorStrings,
@@ -53,7 +53,7 @@ import {
 } from './editorStrings'
 import { withInputLayouts } from './inputLayout'
 import { FlagField, type InputSource, inputRefs, ValueOrInputField } from './inputRefs'
-import { FIELD_TEXT_BOX, SuggestionInput } from './SuggestionInput'
+import { SuggestionInput } from './SuggestionInput'
 import type { SettingsView } from './settingsViews'
 import { NO_SCOPED, ViewSwitch, YamlPane, yamlProblem } from './settingsViews'
 
@@ -654,7 +654,7 @@ function OptionsEditor({
                 </div>
               )}
               <IconButton
-                icon={<CloseIcon className="h-4 w-4" />}
+                icon={<CloseIcon />}
                 label={t.removeOption}
                 variant="ghost"
                 size="sm"
@@ -703,7 +703,7 @@ function OptionsEditor({
           />
         </>
       )}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }
@@ -737,33 +737,32 @@ function ImpliesEditor({
   }
   const nameOf = (value: string) =>
     listed.find((option) => option.value === value)?.label.trim() || value
-  const toggle = (from: string, to: string) => {
-    const current = draft[from] ?? []
-    onChange({
-      ...draft,
-      [from]: current.includes(to) ? current.filter((value) => value !== to) : [...current, to],
-    })
-  }
   return (
     <div className="flex flex-col gap-2">
-      {listed.map((option) => (
-        <div key={option.value} className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-sm font-medium">{t.impliesWhen(nameOf(option.value))}</span>
-          {listed
-            .filter((other) => other.value !== option.value)
-            .map((other) => {
-              return (
-                <FilterPill
-                  key={other.value}
-                  active={(draft[option.value] ?? []).includes(other.value)}
-                  onClick={() => toggle(option.value, other.value)}
-                >
+      {listed.map((option) => {
+        const when = t.impliesWhen(nameOf(option.value))
+        return (
+          <CheckboxGroup
+            key={option.value}
+            aria-label={when}
+            value={draft[option.value] ?? []}
+            onValueChange={(next) => onChange({ ...draft, [option.value]: next })}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+          >
+            <span aria-hidden="true" className="mr-1 text-sm font-medium">
+              {when}
+            </span>
+            {listed
+              .filter((other) => other.value !== option.value)
+              .map((other) => (
+                <FieldOption key={other.value} className="flex items-center gap-1.5 text-sm">
+                  <Checkbox value={other.value} />
                   {nameOf(other.value)}
-                </FilterPill>
-              )
-            })}
-        </div>
-      ))}
+                </FieldOption>
+              ))}
+          </CheckboxGroup>
+        )
+      })}
     </div>
   )
 }
@@ -835,38 +834,35 @@ function TypeSelect({
   disabled: boolean
 }) {
   const t = useInputsEditorStrings()
-  const id = useId()
   const types = t.types as Record<string, string>
   const help = t.typeHelp as Record<string, string>
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-baseline gap-x-1.5">
-        <label htmlFor={id} className="text-[0.8125rem] font-medium text-(--theme-app)">
-          {t.inputType}
-        </label>
-        <KeyHint label={t.inputType} yamlKey="type" />
-      </div>
-      <Combobox
-        id={id}
-        value={value}
-        disabled={disabled}
-        className={FIELD_TEXT_BOX}
-        items={INPUT_TYPE_GROUPS.map(([group, list]) => ({
-          label: t.typeGroups[group],
-          items: list
-            .filter((type) => allowStep || type !== 'step' || value === 'step')
-            .map((type) => ({ label: types[type] ?? type, value: type })),
-        }))}
-        // A type this editor doesn't know shows as written.
-        itemToStringLabel={(type) => types[type] ?? type}
-        onValueChange={(next) => {
-          if (next) {
-            onChange(next)
-          }
-        }}
-      />
-      <span className="text-xs text-(--theme-muted-text-color)">{help[value] ?? t.help.type}</span>
-    </div>
+    <Field
+      label={t.inputType}
+      hint={<KeyHint label={t.inputType} yamlKey="type" />}
+      description={help[value] ?? t.help.type}
+    >
+      {(control) => (
+        <Combobox
+          {...control}
+          value={value}
+          disabled={disabled}
+          items={INPUT_TYPE_GROUPS.map(([group, list]) => ({
+            label: t.typeGroups[group],
+            items: list
+              .filter((type) => allowStep || type !== 'step' || value === 'step')
+              .map((type) => ({ label: types[type] ?? type, value: type })),
+          }))}
+          // A type this editor doesn't know shows as written.
+          itemToStringLabel={(type) => types[type] ?? type}
+          onValueChange={(next) => {
+            if (next) {
+              onChange(next)
+            }
+          }}
+        />
+      )}
+    </Field>
   )
 }
 
@@ -947,7 +943,7 @@ function draftOf(kind: Kind, value: unknown): unknown {
           }
     case 'duration':
       // A negative number is an opt-out value, such as -1, and shows as written.
-      return typeof value === 'number' && value >= 0 ? formatDuration(value) : text(value)
+      return typeof value === 'number' && value >= 0 ? formatDurationText(value) : text(value)
     case 'number':
       // A number written as text shows quoted, so typing the number is an edit that replaces it.
       return typeof value === 'string' &&
@@ -1072,7 +1068,7 @@ function writtenValue(kind: Kind, draft: unknown, context: ValueContext = {}): u
       if (EXPRESSION.test(raw)) {
         return raw
       }
-      return parseDuration(raw) ?? (/^-\d+$/.test(raw) ? Number(raw) : raw)
+      return parseDurationText(raw) ?? (/^-\d+$/.test(raw) ? Number(raw) : raw)
     }
     case 'ref':
     case 'choice':
@@ -1152,7 +1148,7 @@ function valueError(
     }
     case 'duration': {
       const raw = String(draft ?? '').trim()
-      return raw && !EXPRESSION.test(raw) && parseDuration(raw) === null
+      return raw && !EXPRESSION.test(raw) && parseDurationText(raw) === null
         ? t.invalidDurationText
         : undefined
     }
@@ -1164,7 +1160,7 @@ function valueError(
           : t.wholeNumberFrom(prop.wholeFrom)
       }
       return raw && !EXPRESSION.test(raw) && !Number.isFinite(Number(raw))
-        ? t.invalidNumber
+        ? t.common.invalidNumber
         : undefined
     }
     case 'flag':
@@ -1269,30 +1265,30 @@ function TemplateFields({
             </span>
             <div className="flex-1" />
             <IconButton
-              icon={<EditIcon className="h-3.5 w-3.5" />}
+              icon={<EditIcon />}
               label={t.editInput}
               variant="ghost"
               size="sm"
               onClick={() => setEditing({ name })}
             />
             <IconButton
-              icon={<ArrowUpIcon className="h-3.5 w-3.5" />}
-              label={t.moveUp}
+              icon={<ArrowUpIcon />}
+              label={t.common.moveUp}
               variant="ghost"
               size="sm"
               disabled={i === 0}
               onClick={() => move(i, i - 1)}
             />
             <IconButton
-              icon={<ArrowDownIcon className="h-3.5 w-3.5" />}
-              label={t.moveDown}
+              icon={<ArrowDownIcon />}
+              label={t.common.moveDown}
               variant="ghost"
               size="sm"
               disabled={i === names.length - 1}
               onClick={() => move(i, i + 1)}
             />
             <IconButton
-              icon={<TrashIcon className="h-3.5 w-3.5" />}
+              icon={<TrashIcon />}
               label={t.deleteInput}
               variant="ghost"
               size="sm"
@@ -1304,7 +1300,7 @@ function TemplateFields({
           </div>
         )
       })}
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
       <AddRowButton label={t.addField} onClick={() => setEditing({ create: true })} />
       {editing && (
         <InputDialog
@@ -1436,7 +1432,7 @@ function RowsField({
           }}
         />
       </FormEditingContext.Provider>
-      <FieldError message={error} />
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }
@@ -1512,20 +1508,18 @@ function PropField({
     case 'bool': {
       const fallback = prop.fallback ?? false
       return (
-        <div className="flex flex-col gap-1.5">
-          <ToggleField
-            {...field}
-            checked={typeof draft === 'boolean' ? draft : fallback}
-            onChange={(on) => onChange(on !== fallback ? on : original === on ? on : undefined)}
-          />
-          <FieldError message={error} />
-        </div>
+        <ToggleField
+          {...field}
+          error={error}
+          checked={typeof draft === 'boolean' ? draft : fallback}
+          onChange={(on) => onChange(on !== fallback ? on : original === on ? on : undefined)}
+        />
       )
     }
     case 'options': {
       const options = draft as OptionsDraft
       return (
-        <LabelledField
+        <YamlField
           {...field}
           actions={
             <ExpressionToggle
@@ -1547,25 +1541,24 @@ function PropField({
             keyed={inputType === 'dropdown'}
             described={inputType === 'checkbox-group'}
           />
-        </LabelledField>
+        </YamlField>
       )
     }
     case 'perCopy': {
       const perCopy = draft as PerCopyDraft
       return (
-        <LabelledField
+        <YamlField
           {...field}
           actions={
             <label className="flex cursor-pointer items-center gap-1.5 text-xs theme-muted-text">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={perCopy.list}
-                onChange={(e) =>
+                onCheckedChange={(list) =>
                   onChange({
                     ...perCopy,
-                    list: e.target.checked,
+                    list,
                     values:
-                      e.target.checked && perCopy.values.length === 0 && perCopy.text.trim()
+                      list && perCopy.values.length === 0 && perCopy.text.trim()
                         ? [perCopy.text]
                         : perCopy.values,
                   })
@@ -1591,15 +1584,15 @@ function PropField({
                 suggestions={[]}
                 onValueChange={(next) => onChange({ ...perCopy, text: next })}
               />
-              <FieldError message={error} />
+              <ErrorText>{error}</ErrorText>
             </>
           )}
-        </LabelledField>
+        </YamlField>
       )
     }
     case 'values':
       return (
-        <LabelledField
+        <YamlField
           {...field}
           actions={
             <ExpressionToggle
@@ -1619,11 +1612,11 @@ function PropField({
             onChange={onChange}
             error={error}
           />
-        </LabelledField>
+        </YamlField>
       )
     case 'rows':
       return (
-        <LabelledField
+        <YamlField
           {...field}
           actions={
             <ExpressionToggle
@@ -1639,7 +1632,7 @@ function PropField({
             onChange={onChange}
             error={error}
           />
-        </LabelledField>
+        </YamlField>
       )
     case 'duration':
       return (
@@ -1655,7 +1648,7 @@ function PropField({
       )
     case 'template':
       return (
-        <LabelledField
+        <YamlField
           {...field}
           actions={
             <ExpressionToggle
@@ -1684,20 +1677,20 @@ function PropField({
               onFieldKey={onFieldKey}
             />
           )}
-        </LabelledField>
+        </YamlField>
       )
     case 'implies':
       return (
-        <LabelledField {...field}>
+        <YamlField {...field}>
           <ImpliesEditor draft={draft as ImpliesDraft} options={optionRows} onChange={onChange} />
-        </LabelledField>
+        </YamlField>
       )
     case 'choice': {
       const choiceLabels = (t.choices as Record<string, Record<string, string> | undefined>)[
         prop.key
       ]
       return (
-        <LabelledField {...field}>
+        <YamlField {...field} error={error}>
           <ChoiceButtons
             options={(prop.choices ?? []).map((choice) => ({
               value: choice,
@@ -1706,8 +1699,7 @@ function PropField({
             value={String(draft ?? '') || (prop.choices?.[0] ?? '')}
             onChange={onChange}
           />
-          <FieldError message={error} />
-        </LabelledField>
+        </YamlField>
       )
     }
     case 'json':
@@ -2096,7 +2088,7 @@ function InputViews({
   }
   const nextName = name.trim()
   const nameError = !editing.isValidInputName(nextName)
-    ? t.invalidInputName
+    ? t.common.invalidName
     : (nextName !== props.name && props.siblings.includes(nextName)) ||
         newInputs.pending.some((input) => input.name === nextName)
       ? t.inputExists
@@ -2148,7 +2140,7 @@ function deleteButton(
 ): ReactNode {
   return (
     <IconButton
-      icon={<TrashIcon className="h-4 w-4" />}
+      icon={<TrashIcon />}
       label={t.deleteInput}
       variant="ghost"
       size="sm"
@@ -2296,7 +2288,7 @@ function InputForm({
   const trimmedName = draftName.trim()
   const errors: Record<string, string | undefined> = {
     name: !editing.isValidInputName(trimmedName)
-      ? t.invalidInputName
+      ? t.common.invalidName
       : siblings.includes(trimmedName) ||
           newInputs.pending.some((input) => input.name === trimmedName)
         ? t.inputExists
@@ -2341,7 +2333,7 @@ function InputForm({
     }
     // The opt-out value is sent as it is, so it can't be an expression.
     if (typeof optOut === 'string') {
-      errors[draftKey(DISABLE_VALUE)] = t.invalidNumber
+      errors[draftKey(DISABLE_VALUE)] = t.common.invalidNumber
     }
     // A default of the opt-out value starts the form with its box ticked.
     const defaultKey = draftKey(DURATION_DEFAULT)
@@ -2542,12 +2534,16 @@ function InputForm({
         <div className="text-xs theme-muted-text">{t.typeChangeNote}</div>
       )}
       {textProps.length > 0 && (
-        <Section title={t.sectionField} open={fieldOpen} alert={textProps.some(erred)}>
+        <DialogSection title={t.sectionField} open={fieldOpen} alert={textProps.some(erred)}>
           {textProps.map(renderProp)}
-        </Section>
+        </DialogSection>
       )}
       {settingProps.length > 0 && (
-        <Section title={t.sectionSettings} open={settingsOpen} alert={settingProps.some(erred)}>
+        <DialogSection
+          title={t.sectionSettings}
+          open={settingsOpen}
+          alert={settingProps.some(erred)}
+        >
           {settingProps.map((prop) =>
             prop === DISABLE_VALUE ? null : prop === DISABLE_LABEL ? (
               <OptOutCheckbox
@@ -2565,16 +2561,16 @@ function InputForm({
               renderProp(prop)
             ),
           )}
-        </Section>
+        </DialogSection>
       )}
       {behaviorProps.length > 0 && (
-        <Section
+        <DialogSection
           title={t.sectionBehavior}
           open={behaviorProps.some(holds)}
           alert={behaviorProps.some(erred)}
         >
           {behaviorProps.map(renderProp)}
-        </Section>
+        </DialogSection>
       )}
       {newInputs.dialog}
     </DialogShell>

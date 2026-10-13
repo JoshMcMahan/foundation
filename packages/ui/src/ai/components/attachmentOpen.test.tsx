@@ -15,13 +15,17 @@ vi.mock('../../icons', () => ({
   DownloadFileIcon: () => null,
   ThinkingIcon: () => null,
   ChevronRightIcon: () => null,
+  CloseIcon: () => null,
+  InfoIcon: () => null,
+  SuccessIcon: () => null,
+  WarningIcon: () => null,
 }))
 vi.mock('../ui/Markdown', () => ({
   __esModule: true,
   default: ({ children }: { children: string }) => <div>{children}</div>,
 }))
 vi.mock('./BranchNavigator', () => ({ __esModule: true, default: () => null }))
-vi.mock('../ui/Avatar', () => ({ Avatar: () => null }))
+vi.mock('../../components/Avatar', () => ({ Avatar: () => null }))
 
 const attachment: AttachmentRef = {
   id: 'att-1',

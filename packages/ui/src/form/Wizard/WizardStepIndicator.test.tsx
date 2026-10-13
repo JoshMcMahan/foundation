@@ -1,84 +1,65 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { act, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { StepFieldConfig } from './types'
 import { WizardStepIndicator } from './WizardStepIndicator'
 
 describe('WizardStepIndicator', () => {
-  const stepOrder = Array.from({ length: 10 }, (_, index) => `site[${index}]`)
+  const stepOrder = Array.from({ length: 24 }, (_, index) => `site[${index}]`)
   const steps: Record<string, StepFieldConfig> = Object.fromEntries(
     stepOrder.map((key, index) => [
       key,
       { type: 'step', title: `Site ${index + 1}`, options: {} } satisfies StepFieldConfig,
     ]),
   )
-  const indicator = (currentStep: string) => (
+  const indicator = (props: Partial<Parameters<typeof WizardStepIndicator>[0]> = {}) => (
     <WizardStepIndicator
       stepOrder={stepOrder}
-      currentStep={currentStep}
+      currentStep="site[2]"
       steps={steps}
-      visitedSteps={new Set()}
+      visitedSteps={new Set(stepOrder.slice(0, 3))}
       invalidSteps={new Set()}
       onStepClick={() => true}
+      {...props}
     />
   )
+  const openList = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'All steps' }))
+    return within(await screen.findByRole('dialog', { name: 'Steps' }))
+  }
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('says where the wizard is, however many pages it has', () => {
+    render(indicator())
+    expect(screen.getByRole('navigation', { name: 'Steps' })).toHaveTextContent('Step 3 of 24')
   })
 
-  it('scrolls its row to bring the current step into view when the steps overflow it', () => {
-    // A 300px row holding 1000px of steps, each 80px wide and 100px after the one before it.
-    vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(1000)
-    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(300)
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
-      this: Element,
-    ) {
-      // A step is the column holding its dot; anything else measures as the row.
-      const isStep = this.querySelector(':scope > button') !== null
-      const left = isStep ? [...(this.parentElement?.children ?? [])].indexOf(this) * 100 : 0
-      const width = isStep ? 80 : 300
-      return { left, right: left + width, width } as DOMRect
-    })
-    const scrolled = vi.spyOn(Element.prototype, 'scrollLeft', 'set')
-    const { rerender } = render(indicator('site[1]'))
-    expect(scrolled).not.toHaveBeenCalled()
-    rerender(indicator('site[8]'))
-    expect(scrolled).toHaveBeenLastCalledWith(800 - (300 - 80) / 2)
-    expect(screen.getByRole('button', { name: /^Step 9:/ })).toHaveAttribute('aria-current', 'step')
-    // With no dot to focus, the keyboard scrolls the row itself.
-    expect(screen.getByRole('list', { name: 'Steps' })).toHaveAttribute('tabindex', '0')
+  it('lists every page, the current one marked', async () => {
+    render(indicator())
+    const list = await openList()
+    expect(list.getAllByRole('listitem')).toHaveLength(24)
+    expect(list.getByText('Step 3: Site 3').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(list.getByText('Step 1: Site 1').closest('li')).toHaveTextContent('Done')
   })
 
-  it('takes no focus of its own when its steps fit', () => {
-    render(indicator('site[1]'))
-    expect(screen.getByRole('list', { name: 'Steps' })).not.toHaveAttribute('tabindex')
+  it('jumps to a page already seen, and to none ahead', async () => {
+    const onStepClick = vi.fn(() => true)
+    render(indicator({ allowJump: true, onStepClick }))
+    const list = await openList()
+    fireEvent.click(list.getByRole('button', { name: /Step 1: Site 1/ }))
+    expect(onStepClick).toHaveBeenCalledWith('site[0]')
+    expect(list.queryByRole('button', { name: /Step 9: Site 9/ })).toBeNull()
   })
 
-  it('takes focus once a step widens past the row, though the row keeps its size', () => {
-    const watched: Element[] = []
-    let resized = () => {}
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        constructor(callback: () => void) {
-          resized = callback
-        }
-        observe(box: Element) {
-          watched.push(box)
-        }
-        disconnect() {}
-      },
-    )
-    const width = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(300)
-    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(300)
-    render(indicator('site[1]'))
-    const row = screen.getByRole('list', { name: 'Steps' })
-    expect(watched).toEqual(expect.arrayContaining([row, ...row.children]))
-    width.mockReturnValue(1000)
-    act(() => resized())
-    expect(row).toHaveAttribute('tabindex', '0')
-    vi.unstubAllGlobals()
+  it('jumps nowhere unless the wizard allows it', async () => {
+    render(indicator())
+    const list = await openList()
+    expect(list.queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('marks a page with a value to fix', async () => {
+    render(indicator({ invalidSteps: new Set(['site[0]']) }))
+    const list = await openList()
+    expect(list.getByText('Step 1: Site 1').closest('li')).toHaveTextContent('Needs a fix')
   })
 })

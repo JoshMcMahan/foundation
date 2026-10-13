@@ -109,14 +109,14 @@ describe('DependencyGraph on many jobs', () => {
     const nested = nestedJobs(3, 4, 2)
     render(<DependencyGraph run={runOf(nested)} preview />)
     const top = nodes().length
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     // Every level's nodes, each namespaced by the subworkflows it sits in.
     const depth = (id: string) => id.split('subworkflows/').length - 1
     const ids = nodes().map((node) => node.id)
     expect(new Set(ids.map(depth))).toEqual(new Set([0, 1, 2, 3]))
     expect(ids.length).toBeGreaterThan(top)
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse All' }))
-    expect(screen.getByRole('button', { name: 'Expand All' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }))
+    expect(screen.getByRole('button', { name: 'Expand all' })).toBeInTheDocument()
   })
 
   // A node's box, which dims and fades, inside the element its id is on.
@@ -124,7 +124,7 @@ describe('DependencyGraph on many jobs', () => {
 
   it('dims a hovered level by a class only its own nodes answer to', () => {
     render(<DependencyGraph run={runOf(nestedJobs(2, 6, 3))} preview />)
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     const [top] = nodes()
     act(() => {
       fireEvent.mouseEnter(top as HTMLElement)

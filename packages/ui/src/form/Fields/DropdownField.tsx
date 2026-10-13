@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Autocomplete, Combobox, type ComboboxItems } from '../../components/Combobox'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field } from '../../components/Field'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useChoiceField } from '../useChoiceField'
@@ -18,16 +19,8 @@ export interface IDropdownField extends BaseField {
   placeholder?: string
 }
 
-export default function DropdownField({
-  field,
-  label,
-  labelPosition,
-  missing,
-  disabled,
-  onChange,
-  tooltipComponent,
-  spaceCompact,
-}: FieldComponentProps<IDropdownField>) {
+export default function DropdownField(props: FieldComponentProps<IDropdownField>) {
+  const { field, disabled, onChange } = props
   const { options } = useDependentOptions(field.options, field.depends_on)
   const items = useMemo(() => toFieldItems(options), [options])
   const [value, choose] = useChoiceField({
@@ -47,47 +40,28 @@ export default function DropdownField({
   )
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      description={field.description}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, describedBy }) => (
-        <div className="grow min-w-0">
-          {field.allowCustomValue ? (
-            <Autocomplete
-              id={id}
-              aria-describedby={describedBy}
-              aria-label={label}
-              aria-invalid={missing}
-              required={!field.optional}
-              disabled={disabled}
-              className="w-full"
-              placeholder={placeholder}
-              items={items as ComboboxItems<string>}
-              value={value == null ? '' : String(value)}
-              onValueChange={choose}
-            />
-          ) : (
-            <Combobox<unknown>
-              id={id}
-              aria-describedby={describedBy}
-              aria-label={label}
-              aria-invalid={missing}
-              required={!field.optional}
-              disabled={disabled}
-              className="w-full"
-              placeholder={placeholder}
-              items={items}
-              value={value ?? null}
-              onValueChange={choose}
-            />
-          )}
-        </div>
-      )}
-    </FieldWrapper>
+    <Field {...fieldFrame(props)}>
+      {(control) =>
+        field.allowCustomValue ? (
+          <Autocomplete
+            {...control}
+            disabled={disabled}
+            placeholder={placeholder}
+            items={items as ComboboxItems<string>}
+            value={value == null ? '' : String(value)}
+            onValueChange={choose}
+          />
+        ) : (
+          <Combobox<unknown>
+            {...control}
+            disabled={disabled}
+            placeholder={placeholder}
+            items={items}
+            value={value ?? null}
+            onValueChange={choose}
+          />
+        )
+      }
+    </Field>
   )
 }

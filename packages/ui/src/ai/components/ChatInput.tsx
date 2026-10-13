@@ -1,4 +1,3 @@
-import { clsx as cx } from 'clsx'
 import {
   type ClipboardEvent,
   forwardRef,
@@ -10,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { cx } from '../../cx'
 import { ArrowUpIcon, PlusOutlineIcon, StopSolidIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocalStorage } from 'usehooks-ts'
+import { buttonClasses } from '../components/buttonClasses'
+import { usePersistedState, useStrings } from '../components/Provider'
+import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
 import { SearchIcon, XIcon } from '../icons'
-import { listControlButtonClasses } from './ListViewControls'
-import { isTextEntryContext } from './textEntry'
 
 const NO_TERMS: string[] = []
 
@@ -11,7 +11,7 @@ const NO_TERMS: string[] = []
 export function useListSearch(enabled = true, storageKey?: string) {
   const [filter, setFilter] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [storedTerms, setStoredTerms] = useLocalStorage<string[]>(
+  const [storedTerms, setStoredTerms] = usePersistedState<string[]>(
     `${storageKey ?? 'list'}:searchTerms`,
     NO_TERMS,
   )
@@ -105,12 +105,14 @@ export type ListSearch = ReturnType<typeof useListSearch>
 export function ListSearchControl({
   search,
   placeholder,
-  label = 'Search',
+  label: labelProp,
 }: {
   search: ListSearch
   placeholder: string
   label?: string
 }) {
+  const { common, list } = useStrings()
+  const label = labelProp ?? common.search
   if (search.searchOpen || search.terms.length > 0) {
     return (
       <div className="flex min-h-7 w-72 max-w-[55vw] flex-wrap items-center gap-1.5 rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-0.5">
@@ -124,7 +126,7 @@ export function ListSearchControl({
             <button
               type="button"
               onClick={() => search.removeTerm(term)}
-              aria-label={`Remove filter ${term}`}
+              aria-label={list.removeSearchTerm(term)}
               className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
             >
               <XIcon className="w-2.5 h-2.5" />
@@ -153,7 +155,7 @@ export function ListSearchControl({
         <button
           type="button"
           onClick={search.clearSearch}
-          aria-label="Clear search"
+          aria-label={common.clearSearch}
           className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
         >
           <XIcon className="w-3 h-3" />
@@ -167,9 +169,9 @@ export function ListSearchControl({
         type="button"
         onClick={search.openSearch}
         aria-label={label}
-        className={listControlButtonClasses}
+        className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
       >
-        <SearchIcon className="w-3.5 h-3.5" />
+        <SearchIcon />
       </button>
     </Tooltip>
   )

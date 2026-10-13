@@ -13,6 +13,11 @@ vi.mock('../../icons', () => ({
   RunningIcon: () => <span />,
   StopSolidIcon: () => <span />,
   XIcon: () => <span />,
+  CloseIcon: () => null,
+  ErrorIcon: () => null,
+  InfoIcon: () => null,
+  SuccessIcon: () => null,
+  WarningIcon: () => null,
 }))
 
 const addFilesMock = vi.fn()

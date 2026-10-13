@@ -1,14 +1,14 @@
-import { Button } from '@base-ui/react/button'
 import { Toggle } from '@base-ui/react/toggle'
-import { clsx as cx } from 'clsx'
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronDownIcon, ChevronRightIcon, FavoriteIcon, FavoriteOutlineIcon } from '../icons'
+import type { ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { cx } from '../cx'
+import { ChevronDownIcon, FavoriteIcon, FavoriteOutlineIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
-import { Autocomplete, Combobox } from './Combobox'
+import { Button } from './Button'
+import { buttonClasses } from './buttonClasses'
+import { Combobox } from './Combobox'
 import { type ComboboxItems, comboboxLeaves } from './comboboxItems'
-import { ghostButtonClasses, primaryButtonClasses } from './ghostButton'
-import { InfoTip } from './InfoTip'
+import { Disclosure } from './Disclosure'
 import type { MenuEntry } from './MenuEntries'
 import { Modal } from './Modal'
 import { useStrings } from './Provider'
@@ -33,7 +33,9 @@ interface CreateModalProps {
   /** Normalize the name as the user types (e.g. strip disallowed characters). */
   sanitizeName?: (name: string) => string
   nameHint?: ((name: string) => ReactNode) | undefined
+  /** The dialog's fields: an `Input`, or a `Field` around any other control. */
   children?: ReactNode
+  /** Compact pills, such as `CreateModalSelect` and `CreateModalSwitch`, in a row under the name. */
   properties?: ReactNode
   advanced?: ReactNode
   submitDisabled?: boolean
@@ -79,14 +81,14 @@ export function CreateModal({
   onSubmit,
 }: CreateModalProps) {
   const t = useStrings().modal
-  const submitText = submitLabel ?? t.create
+  const { common } = useStrings()
+  const submitText = submitLabel ?? common.create
   const submittingText = submittingLabel ?? t.creating
   const descriptionText = descriptionPlaceholder ?? t.addDescription
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [favorite, setFavorite] = useState(false)
   const [nameFlash, setNameFlash] = useState(false)
   const [nameTouched, setNameTouched] = useState(false)
@@ -98,7 +100,6 @@ export function CreateModal({
       setName(initialName ?? '')
       setDescription('')
       setSubmitting(false)
-      setAdvancedOpen(false)
       setFavorite(false)
       setNameTouched(false)
       setInteracted(false)
@@ -265,24 +266,21 @@ export function CreateModal({
               )}
             </>
           )}
-          {children}
+          {/* The dialog's own fields, such as Input, Textarea or a Field around a picker. */}
+          {children && <div className="mb-3 flex flex-col gap-3">{children}</div>}
         </div>
         {properties && (
           <div className="flex flex-wrap items-center gap-1.5 px-4 pt-1 pb-3">{properties}</div>
         )}
         {advanced && (
           <div className="px-4 pb-3">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((o) => !o)}
-              className="inline-flex items-center gap-1 text-xs font-medium text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
+            <Disclosure
+              summary={t.advanced}
+              summaryClassName="text-xs font-medium text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
+              panelClassName="pt-2"
             >
-              <ChevronRightIcon
-                className={cx('w-3 h-3 transition-transform', advancedOpen && 'rotate-90')}
-              />
-              {t.advanced}
-            </button>
-            {advancedOpen && <div className="mt-2">{advanced}</div>}
+              {advanced}
+            </Disclosure>
           </div>
         )}
       </div>
@@ -293,17 +291,12 @@ export function CreateModal({
               pressed={favorite}
               onPressedChange={setFavorite}
               aria-label={t.favorite}
-              className={cx(
-                'inline-flex h-8 items-center gap-1.5 px-2.5 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring)',
-                favorite
-                  ? 'text-(--theme-favorite) bg-(--theme-favorite-muted)'
-                  : 'text-(--theme-muted-text-color) hover:text-(--theme-app) hover:bg-(--theme-muted-panel-bg)',
-              )}
+              className={buttonClasses({ variant: 'ghost', size: 'md' })}
             >
               {favorite ? (
-                <FavoriteIcon className="w-4 h-4 scale-110 transition-transform" />
+                <FavoriteIcon className="text-(--theme-favorite)" />
               ) : (
-                <FavoriteOutlineIcon className="w-4 h-4 transition-transform" />
+                <FavoriteOutlineIcon />
               )}
               {favorite ? t.favorited : t.favorite}
             </Toggle>
@@ -312,18 +305,19 @@ export function CreateModal({
           <span />
         )}
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onClose} className={ghostButtonClasses}>
-            {hideSubmit ? t.close : t.cancel}
-          </button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {hideSubmit ? common.close : common.cancel}
+          </Button>
           {!hideSubmit && (
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleSubmit}
               aria-disabled={!canSubmit}
-              className={`${primaryButtonClasses} aria-disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:hover:opacity-50`}
+              loading={submitting}
             >
               {submitting ? submittingText : submitText}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -331,122 +325,9 @@ export function CreateModal({
   )
 }
 
-const fieldInputClasses =
-  'w-full h-8 px-2.5 rounded-md border border-(--theme-border) bg-(--theme-input-bg) shadow-none text-sm text-(--theme-app) placeholder:text-(--theme-muted-text-color) transition-colors focus:outline-none focus:ring-0 focus:border-(--theme-element)'
-
-const fieldLabelClasses = 'block mb-1 text-xs font-medium text-(--theme-muted-text-color)'
-
-/** A field's label, with its help beside it rather than inside the label, so
- *  the label names the field and not the help button. */
-function FieldLabel({
-  id,
-  label,
-  tooltip,
-}: {
-  id: string
-  label: string
-  tooltip?: string | undefined
-}) {
-  return (
-    <div className={cx(fieldLabelClasses, 'flex items-center gap-1')}>
-      <label htmlFor={id}>{label}</label>
-      {tooltip && <InfoTip text={tooltip} />}
-    </div>
-  )
-}
-
-/** Labeled single-line input row for the dialog's extra fields. */
-export function CreateModalField({
-  label,
-  tooltip,
-  id,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & {
-  label: string
-  /** Help text surfaced via an info icon next to the label. */
-  tooltip?: string | undefined
-}) {
-  const fallbackId = useId()
-  const fieldId = id ?? fallbackId
-  return (
-    <div className="mb-3">
-      <FieldLabel id={fieldId} label={label} tooltip={tooltip} />
-      <input
-        type="text"
-        autoComplete="off"
-        data-1p-ignore
-        {...props}
-        id={fieldId}
-        className={fieldInputClasses}
-      />
-    </div>
-  )
-}
-
-/** Labeled multi-line field for credential blobs (JSON keys, PEM keys). */
-export function CreateModalTextarea({
-  label,
-  tooltip,
-  rows = 4,
-  id,
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & {
-  label: string
-  /** Help text surfaced via an info icon next to the label. */
-  tooltip?: string | undefined
-}) {
-  const fallbackId = useId()
-  const fieldId = id ?? fallbackId
-  return (
-    <div className="mb-3">
-      <FieldLabel id={fieldId} label={label} tooltip={tooltip} />
-      <textarea
-        autoComplete="off"
-        data-1p-ignore
-        rows={rows}
-        {...props}
-        id={fieldId}
-        className={cx(fieldInputClasses, 'h-auto py-2 font-mono text-xs leading-relaxed resize-y')}
-      />
-    </div>
-  )
-}
-
-/** Labeled input with suggestions; any text is allowed. */
-export function CreateModalAutocompleteField({
-  label,
-  tooltip,
-  value,
-  onValueChange,
-  items,
-  placeholder,
-}: {
-  label: string
-  /** Help text surfaced via an info icon next to the label. */
-  tooltip?: string
-  value: string
-  onValueChange: (value: string) => void
-  /** Suggestions, filtered by what's typed. */
-  items: string[]
-  placeholder?: string
-}) {
-  const id = useId()
-  return (
-    <div className="mb-3">
-      <FieldLabel id={id} label={label} tooltip={tooltip} />
-      <Autocomplete
-        id={id}
-        items={items}
-        value={value}
-        onValueChange={onValueChange}
-        placeholder={placeholder}
-      />
-    </div>
-  )
-}
-
-const pillClasses =
-  'inline-flex h-7 items-center gap-1.5 rounded-md border border-(--theme-border) px-2 text-xs font-medium transition-colors'
+// A property pill reads filled once it holds a value, and outlined while unset.
+const pillClasses = (set: boolean) =>
+  buttonClasses({ variant: set ? 'secondary' : 'outline', size: 'sm' })
 
 /** Compact property pill with an on/off switch. */
 export function CreateModalSwitch({
@@ -463,13 +344,7 @@ export function CreateModalSwitch({
 }) {
   return (
     <Tooltip content={tooltip}>
-      <label
-        className={cx(
-          pillClasses,
-          'cursor-pointer hover:bg-(--theme-muted-panel-bg)',
-          checked ? 'text-(--theme-app)' : 'text-(--theme-muted-text-color)',
-        )}
-      >
+      <label className={pillClasses(checked)}>
         <Switch size="sm" checked={checked} onCheckedChange={onCheckedChange} />
         {label}
       </label>
@@ -501,7 +376,7 @@ export function CreateModalSelect({
   /** Help text surfaced on hover (explains what the pill selects). */
   tooltip?: string
 }) {
-  const t = useStrings().modal
+  const { common } = useStrings()
   const selected = comboboxLeaves(items)
     .map((item) => (typeof item === 'string' ? { value: item, label: item } : item))
     .find((item) => item.value === value)
@@ -526,15 +401,7 @@ export function CreateModalSelect({
   if (disabled) {
     return (
       <Tooltip content={disabledReason ?? tooltip}>
-        <Button
-          disabled
-          focusableWhenDisabled
-          aria-label={label}
-          className={cx(
-            pillClasses,
-            'opacity-50 cursor-not-allowed text-(--theme-muted-text-color)',
-          )}
-        >
+        <Button disabled focusableWhenDisabled aria-label={label} variant="outline" size="sm">
           {pillContent}
         </Button>
       </Tooltip>
@@ -551,17 +418,10 @@ export function CreateModalSelect({
       }}
       itemToStringLabel={(next) => next}
       aria-label={label}
-      placeholder={t.filter}
+      placeholder={common.filter}
       triggerTooltip={tooltip}
       trigger={
-        <button
-          type="button"
-          className={cx(
-            pillClasses,
-            'cursor-pointer hover:bg-(--theme-muted-panel-bg)',
-            selectedLabel ? 'text-(--theme-app)' : 'text-(--theme-muted-text-color)',
-          )}
-        >
+        <button type="button" className={pillClasses(!!selectedLabel)}>
           {pillContent}
         </button>
       }

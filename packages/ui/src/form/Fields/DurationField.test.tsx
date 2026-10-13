@@ -26,7 +26,6 @@ function Harness({
         field={field}
         label={field.label ?? 'Duration'}
         labelPosition="top"
-        missing={false}
         disabled={false}
       />
       <Probe name={field.name ?? ''} />

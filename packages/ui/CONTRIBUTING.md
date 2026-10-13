@@ -36,6 +36,15 @@ compiled `dist/` output through `publishConfig`.
 - **Every story renders in a test**: `src/stories.test.tsx` and
   `src/ai/stories.test.tsx` compose and render each one.
 
+## Text
+
+Every word a component shows comes from strings a host can translate:
+`useStrings()` (UIProvider), the chat's `ChatStrings`, or the editor's strings,
+which carry `common` beside their own. Generic words (Cancel, Retry, Copy,
+Expand all) live once in `common`; a component's group holds only what is its
+own. Biome's `noJsxLiterals` fails on English written into JSX outside stories,
+tests and the two default string tables.
+
 ## Benchmark
 
 `pnpm bench` builds `bench/` as a host would and measures the dependency graph

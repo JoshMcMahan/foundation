@@ -35,6 +35,11 @@ vi.mock('../../icons', () => ({
   ChevronRightIcon: () => null,
   CheckIcon: () => null,
   ClockIcon: () => null,
+  CloseIcon: () => null,
+  ErrorIcon: () => null,
+  InfoIcon: () => null,
+  SuccessIcon: () => null,
+  WarningIcon: () => null,
 }))
 
 vi.mock('./agent/AgentMessageParts', () => ({

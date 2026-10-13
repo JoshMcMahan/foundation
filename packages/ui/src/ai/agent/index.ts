@@ -35,16 +35,17 @@ export {
   clip,
   fullToolArgs,
   isGroupableTool,
-  plural,
   resultFailed,
   rollupSentence,
   sanitizeLabel,
   sanitizePanelText,
   summarizeToolArgs,
   type ToolHeader,
+  type ToolSummaryOptions,
   toolHeaderFor,
   toolSummary,
 } from './toolfmt'
+export { defaultToolStrings, type ToolStrings } from './toolStrings'
 export {
   agentTypeLabel,
   askQuestionFromArgs,

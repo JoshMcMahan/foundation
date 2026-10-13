@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { CheckIcon, ClipboardIcon, CopyIcon, HiddenFalseIcon, HiddenTrueIcon } from '../icons'
-import { useNotify, useStrings } from './Provider'
+import { useStrings } from './Provider'
+import { useCopy } from './useCopy'
 
 interface ICopyToClipboardProps {
   as?: 'div' | 'button'
@@ -17,16 +17,9 @@ export default function CopyToClipboard({
   children,
   showIcon = true,
 }: ICopyToClipboardProps) {
-  const notify = useNotify()
-  const strings = useStrings()
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      notify.info('Copied to clipboard')
-    } catch {
-      notify.error('Failed to copy to clipboard')
-    }
-  }
+  const { common } = useStrings()
+  const { copy } = useCopy()
+  const handleCopy = () => void copy(text)
 
   const Element = as
   return (
@@ -37,7 +30,7 @@ export default function CopyToClipboard({
         ? { type: 'button' as const }
         : {
             role: 'button' as const,
-            'aria-label': strings.common.copy,
+            'aria-label': common.copy,
             tabIndex: 0,
             onKeyDown: (e: React.KeyboardEvent) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -68,20 +61,12 @@ export function CopyCodeBlock({
   isRevealed = false,
   onRevealToggle,
 }: CopyCodeBlockProps) {
-  const notify = useNotify()
-  const [copied, setCopied] = useState(false)
+  const { common } = useStrings()
+  const { copy, copied } = useCopy()
 
-  const handleCopy = async () => {
-    if (copied) {
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(textToCopy)
-      setCopied(true)
-      notify.info('Copied to clipboard')
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      notify.error('Failed to copy to clipboard')
+  const handleCopy = () => {
+    if (!copied) {
+      void copy(textToCopy)
     }
   }
 
@@ -101,8 +86,8 @@ export function CopyCodeBlock({
               onRevealToggle?.()
             }}
             className="p-2 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-150"
-            aria-label={isRevealed ? 'Hide secret' : 'Reveal secret'}
-            title={isRevealed ? 'Hide secret' : 'Reveal secret'}
+            aria-label={isRevealed ? common.hideValue : common.showValue}
+            title={isRevealed ? common.hideValue : common.showValue}
           >
             {isRevealed ? <HiddenFalseIcon /> : <HiddenTrueIcon />}
           </button>
@@ -114,7 +99,7 @@ export function CopyCodeBlock({
             handleCopy()
           }}
           className="p-2 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-150"
-          aria-label={copied ? 'Copied' : 'Copy to clipboard'}
+          aria-label={copied ? common.copied : common.copyToClipboard}
         >
           {copied ? <CheckIcon className="text-green-400" /> : <CopyIcon />}
         </button>

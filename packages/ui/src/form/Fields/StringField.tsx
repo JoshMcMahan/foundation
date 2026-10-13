@@ -1,7 +1,8 @@
-import { clsx as cx } from 'clsx'
 import { useMemo, useState } from 'react'
-import { EyeIcon, EyeOffIcon } from '../../icons'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field, RevealToggle } from '../../components/Field'
+import { fieldBox } from '../../components/fieldBox'
+import { cx } from '../../cx'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -21,16 +22,8 @@ export interface IStringField extends BaseField {
   prefillDefault?: boolean // if true, the form starts with the default as the value
 }
 
-export default function StringField({
-  field,
-  label,
-  labelPosition,
-  missing,
-  disabled,
-  onChange,
-  tooltipComponent,
-  spaceCompact,
-}: FieldComponentProps<IStringField>) {
+export default function StringField(props: FieldComponentProps<IStringField>) {
+  const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
   const [revealed, setRevealed] = useState(false)
@@ -61,30 +54,16 @@ export default function StringField({
   }
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      description={field.description}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, describedBy }) => {
+    <Field {...fieldFrame(props)}>
+      {(control) => {
         const input = (
           <input
-            id={id}
-            aria-describedby={describedBy}
+            {...control}
             data-1p-ignore
-            className={cx(
-              'w-full',
-              disabled && 'disabled',
-              missing && 'invalid',
-              password && 'pr-8',
-            )}
+            className={cx(fieldBox(), password && 'pr-9')}
             name={field.name}
             value={password && value === fallback ? '' : (value ?? '')}
             type={password && !revealed ? 'password' : 'text'}
-            aria-required={field.optional ? undefined : true}
             disabled={disabled}
             placeholder={
               password && field.placeholder === undefined
@@ -99,21 +78,12 @@ export default function StringField({
         return password ? (
           <div className="relative w-full">
             {input}
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 theme-muted-text"
-              onClick={() => setRevealed((shown) => !shown)}
-              disabled={disabled}
-              tabIndex={-1}
-              aria-label={revealed ? 'Hide value' : 'Show value'}
-            >
-              {revealed ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-            </button>
+            <RevealToggle revealed={revealed} onRevealedChange={setRevealed} disabled={disabled} />
           </div>
         ) : (
           input
         )
       }}
-    </FieldWrapper>
+    </Field>
   )
 }

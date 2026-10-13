@@ -3,6 +3,7 @@
 // data — the component renders the rows.
 
 import { sanitizeLabel } from './toolfmt'
+import { defaultToolStrings, type ToolStrings } from './toolStrings'
 
 export const MAX_EDIT_DIFF_LINES = 100
 export const MAX_WRITE_DIFF_LINES = 50
@@ -317,37 +318,24 @@ export function computeWriteRows(content: string): WriteModel {
 
 // One-line outcome under an edit tool's header, counting the whole edit rather
 // than the capped diff below it.
-export function editSummary(toolName: string, argsJSON: string): string {
+export function editSummary(
+  toolName: string,
+  argsJSON: string,
+  t: ToolStrings = defaultToolStrings,
+): string {
   const a = parseEditArgs(argsJSON)
   if (!a) {
     return ''
   }
-  const count = (n: number) => `${n} ${n === 1 ? 'line' : 'lines'}`
   if (toolName === 'EditFile') {
     const [added, removed] = lineDelta(
       splitLines(a.old_string ?? ''),
       splitLines(a.new_string ?? ''),
     )
-    if (added > 0 && removed > 0) {
-      return `Added ${count(added)}, removed ${count(removed)}`
-    }
-    if (added > 0) {
-      return `Added ${count(added)}`
-    }
-    if (removed > 0) {
-      return `Removed ${count(removed)}`
-    }
-    return ''
+    return t.edited(added, removed)
   }
-  if (toolName === 'WriteFile') {
-    if (a.content === undefined) {
-      return ''
-    }
-    let s = `Wrote ${count(splitLines(a.content).length)}`
-    if (a.path) {
-      s += ` to ${sanitizeLabel(a.path)}`
-    }
-    return s
+  if (toolName === 'WriteFile' && a.content !== undefined) {
+    return t.wrote(splitLines(a.content).length, a.path ? sanitizeLabel(a.path) : '')
   }
   return ''
 }

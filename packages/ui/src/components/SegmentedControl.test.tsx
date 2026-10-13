@@ -59,32 +59,16 @@ describe('SegmentedControl', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Week' })).toHaveFocus())
   })
 
-  it('renders page segments as navigation marking the current page', () => {
-    render(
-      <SegmentedControl
-        label="Views"
-        value="b"
-        options={[
-          { value: 'a', label: 'First', href: '/a' },
-          { value: 'b', label: 'Second', href: '/b' },
-        ]}
-      />,
-    )
-    expect(screen.getByRole('navigation', { name: 'Views' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Second' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'First' })).not.toHaveAttribute('aria-current')
-  })
-
   it('keeps each label as the accessible name and tooltip when only icons show', async () => {
     render(
       <SegmentedControl
         label="Views"
         value="a"
         iconOnly
-        options={[{ value: 'a', label: 'First', icon: <svg />, href: '/a' }]}
+        options={[{ value: 'a', label: 'First', icon: <svg /> }]}
       />,
     )
-    act(() => screen.getByRole('link', { name: 'First' }).focus())
+    act(() => screen.getByRole('button', { name: 'First' }).focus())
     await waitFor(() => expect(openTooltip()).toHaveTextContent('First'))
   })
 })

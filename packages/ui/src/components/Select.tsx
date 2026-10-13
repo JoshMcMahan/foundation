@@ -1,13 +1,9 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
-import { clsx as cx } from 'clsx'
 import type { ReactElement, ReactNode } from 'react'
+import { cx } from '../cx'
 import { AngleDownIcon, CheckIcon } from '../icons'
-import {
-  panelClassName,
-  panelItemClassName,
-  portalContainer,
-  positionerClassName,
-} from './floating'
+import { fieldBox } from './fieldBox'
+import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 import { Tooltip } from './Tooltip'
 
 export interface SelectItem<Value> {
@@ -28,23 +24,23 @@ export type SelectProps<Value, Multiple extends boolean | undefined = false> = O
   /** Applied to the trigger. */
   className?: string | undefined
   'aria-label'?: string | undefined
+  'aria-labelledby'?: string | undefined
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
+  'aria-required'?: boolean | undefined
   /** Renders the field as this button, for compact pickers such as a toolbar pill. The
    *  button shows the selection itself; `placeholder` and `className` then go unused. */
   trigger?: ReactElement | undefined
   /** A hint on the trigger button. */
   triggerTooltip?: ReactNode
+  /** `sm` for dense places such as toolbars and table cells. */
+  size?: 'sm' | 'md' | undefined
   /** The item a person is on as they move through the open list, then undefined once it
    *  closes, such as to preview a theme before it is chosen. */
   onItemHighlighted?: ((value: Value | undefined) => void) | undefined
 }
 
-const triggerClassName = cx(
-  'flex w-full items-center justify-between gap-2 rounded-md border border-(--theme-border) bg-(--theme-input-bg) py-2 pl-3 pr-2 text-left text-sm text-(--theme-app) cursor-pointer outline-none',
-  'focus-visible:border-(--theme-element) focus-visible:ring-1 focus-visible:ring-(--theme-element)',
-  'aria-invalid:border-(--theme-error) data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-input-disabled-text)',
-)
+const triggerClassName = 'flex cursor-pointer items-center justify-between gap-2 pr-1.5 text-left'
 
 /** Picks one value, or several with `multiple`, from a short list. Use
  *  Combobox when the list is long enough to need filtering. */
@@ -53,18 +49,23 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   placeholder,
   className,
   'aria-label': ariaLabel,
+  'aria-labelledby': labelledBy,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
+  'aria-required': required,
   trigger,
   triggerTooltip,
+  size = 'md',
   onItemHighlighted,
   ...rootProps
 }: SelectProps<Value, Multiple>) {
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   const triggerProps = {
     'aria-label': ariaLabel,
+    'aria-labelledby': labelledBy,
     'aria-describedby': describedBy,
     'aria-invalid': invalid || undefined,
+    'aria-required': required || undefined,
   }
   return (
     <BaseSelect.Root
@@ -82,7 +83,10 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
           <BaseSelect.Trigger {...triggerProps} render={trigger} />
         </Tooltip>
       ) : (
-        <BaseSelect.Trigger {...triggerProps} className={cx(triggerClassName, className)}>
+        <BaseSelect.Trigger
+          {...triggerProps}
+          className={cx(fieldBox({ size }), triggerClassName, className)}
+        >
           <BaseSelect.Value
             placeholder={placeholder}
             className="truncate data-placeholder:text-(--theme-muted-text-color)"
@@ -97,7 +101,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
           </BaseSelect.Icon>
         </BaseSelect.Trigger>
       )}
-      <BaseSelect.Portal container={portalContainer()}>
+      <BaseSelect.Portal>
         <BaseSelect.Positioner
           alignItemWithTrigger={false}
           sideOffset={4}
@@ -115,9 +119,9 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
                   key={String(item.value)}
                   value={item.value}
                   disabled={item.disabled}
-                  className={cx('grid grid-cols-[1rem_1fr]', panelItemClassName)}
                   // Select highlights an item by focusing it.
                   onFocus={onItemHighlighted && (() => onItemHighlighted(item.value))}
+                  className={cx('grid grid-cols-[1rem_1fr]', panelItemClassName)}
                 >
                   <BaseSelect.ItemIndicator className="col-start-1">
                     <CheckIcon className="size-3.5" />

@@ -1,6 +1,7 @@
 import { createContext, use, useRef } from 'react'
 import { keyedByContent } from '../components/keys'
-import { useNotify, useStrings } from '../components/Provider'
+import { useStrings } from '../components/Provider'
+import { toast } from '../components/Toast'
 import { mapWithConcurrency } from './lib/batch'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
 import type { TreeNode, UploadFileProgress, UploadNode, UploadSession } from './lib/types'
@@ -62,7 +63,6 @@ interface IFileExplorerProviderProps {
 }
 
 export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
-  const notify = useNotify()
   const t = useStrings().fileExplorer
   const uploadSessionMapRef = useRef<Map<string, UploadSession>>(new Map())
   const uploadQueueRef = useRef<string[]>([])
@@ -164,12 +164,12 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
     uploadSessionMapRef.current.set(sessionId, newSession)
     uploadQueueRef.current.push(sessionId)
-    notify.loading(
+    toast.loading(
       <UploadSessionToast session={newSession} queueLength={uploadQueueRef.current.length} />,
       {
-        toastId: sessionId,
+        id: sessionId,
         icon: false,
-        closeButton: false,
+        dismissible: false,
       },
     )
 
@@ -227,21 +227,17 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
   const startUploadSession = async (sessionId: string): Promise<void> => {
     const session = getUploadSessionById(sessionId)
     if (!session) {
-      notify.update(sessionId, {
-        render: t.messages.uploadInitFailed,
-        type: 'error',
-        isLoading: false,
-        closeButton: null,
+      toast.update(sessionId, {
+        message: t.messages.uploadInitFailed,
+        tone: 'error',
       })
       return
     }
 
     if (session.status !== 'queued') {
-      notify.update(sessionId, {
-        render: t.upload.sessionNotQueued(sessionId, session.status),
-        type: 'error',
-        isLoading: false,
-        closeButton: null,
+      toast.update(sessionId, {
+        message: t.upload.sessionNotQueued(sessionId, session.status),
+        tone: 'error',
       })
       return
     }
@@ -259,12 +255,11 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
     )
 
     try {
-      notify.update(sessionId, {
-        render: progressToast(),
+      toast.update(sessionId, {
+        message: progressToast(),
         icon: false,
-        isLoading: false,
-        closeButton: false,
-        autoClose: false,
+        dismissible: false,
+        timeout: false,
       })
 
       const results = await mapWithConcurrency(
@@ -348,12 +343,11 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
               session.progress.estimatedSecondsLeft = estimatedSecondsLeft
             }
 
-            notify.update(sessionId, {
-              render: progressToast(),
+            toast.update(sessionId, {
+              message: progressToast(),
               icon: false,
-              isLoading: false,
-              closeButton: false,
-              autoClose: false,
+              dismissible: false,
+              timeout: false,
             })
           }
 
@@ -372,8 +366,8 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
               status: isCancelled ? 'cancelled' : 'failed',
             })
 
-            notify.update(sessionId, {
-              render: progressToast({
+            toast.update(sessionId, {
+              message: progressToast({
                 ...session,
                 progress: {
                   completedFiles: 0,
@@ -383,9 +377,8 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
                 },
               }),
               icon: false,
-              isLoading: false,
-              closeButton: session.status === 'failed' || session.status === 'cancelled',
-              autoClose: false,
+              dismissible: session.status === 'failed' || session.status === 'cancelled',
+              timeout: false,
             })
 
             // Re-throw so the file counts as not uploaded in the overall toast
@@ -398,7 +391,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
       try {
         await session.refreshTargetNode(session.targetNode)
       } catch (err) {
-        notify.error(
+        toast.error(
           t.upload.refreshFailed(
             session.storageName,
             err instanceof Error ? err.message : t.upload.unknownError,
@@ -425,8 +418,8 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
 
       const successfulCount = results.length - failedResults.length
       if (actualFailedResults.length > 0) {
-        notify.update(sessionId, {
-          render: (
+        toast.update(sessionId, {
+          message: (
             <div className="text-md">
               <div className="font-medium mb-2">
                 {t.upload.failedSummary(actualFailedResults.length, results.length)}
@@ -446,42 +439,27 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
               </div>
             </div>
           ),
-          type: 'error',
-          icon: null,
-          isLoading: false,
-          closeButton: null,
+          tone: 'error',
         })
       } else if (abortedCount > 0 && successfulCount > 0) {
-        notify.update(sessionId, {
-          render: (
+        toast.update(sessionId, {
+          message: (
             <div className="w-full flex flex-col gap-1">
               <div>{t.upload.someUploaded(successfulCount)}</div>
               <div>{t.upload.someCancelled(abortedCount)}</div>
             </div>
           ),
-          type: 'success',
-          icon: null,
-          isLoading: false,
-          closeButton: null,
-          autoClose: null,
+          tone: 'success',
         })
       } else if (abortedCount > 0 && successfulCount === 0) {
-        notify.update(sessionId, {
-          render: t.upload.allCancelled(abortedCount),
-          type: 'info',
-          icon: null,
-          isLoading: false,
-          closeButton: null,
-          autoClose: null,
+        toast.update(sessionId, {
+          message: t.upload.allCancelled(abortedCount),
+          tone: 'info',
         })
       } else {
-        notify.update(sessionId, {
-          render: t.upload.allUploaded,
-          type: 'success',
-          icon: null,
-          isLoading: false,
-          closeButton: null,
-          autoClose: null,
+        toast.update(sessionId, {
+          message: t.upload.allUploaded,
+          tone: 'success',
         })
       }
 

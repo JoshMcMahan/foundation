@@ -1,7 +1,6 @@
 import { Autocomplete as BaseAutocomplete } from '@base-ui/react/autocomplete'
 import { Combobox as BaseCombobox } from '@base-ui/react/combobox'
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual'
-import { clsx as cx } from 'clsx'
 import { dequal } from 'dequal'
 import {
   type CSSProperties,
@@ -15,19 +14,16 @@ import {
   useRef,
   useState,
 } from 'react'
-import { CaretDownIcon, CheckIcon, XIcon } from '../icons'
+import { cx } from '../cx'
+import { AddIcon, CaretDownIcon, CheckIcon, XIcon } from '../icons'
 import {
   type ComboboxItem,
   type ComboboxItems,
   type ComboboxLeaf,
   isComboboxGroup as isGroup,
 } from './comboboxItems'
-import {
-  panelClassName,
-  panelItemClassName,
-  portalContainer,
-  positionerClassName,
-} from './floating'
+import { fieldBox } from './fieldBox'
+import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
@@ -48,6 +44,7 @@ interface FieldProps {
   'aria-labelledby'?: string | undefined
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
+  'aria-required'?: boolean | undefined
   /** Classes for the field box: border, background, size. */
   className?: string | undefined
 }
@@ -64,6 +61,13 @@ type SelectionProps<Value> =
       value?: readonly Value[] | undefined
       defaultValue?: readonly Value[] | undefined
       onValueChange?: ((value: NoInfer<Value>[]) => void) | undefined
+      /** Typed text the list doesn't have can be added as a value of its own, as tags are. The
+       *  values are then strings. For one free-text value, use Autocomplete. */
+      creatable?: (Value extends string ? boolean : never) | undefined
+      /** The most values the field takes; past it, only removing one lets another in. */
+      maxItems?: number | undefined
+      /** The longest text that can be typed, such as for a created value. */
+      maxLength?: number | undefined
     }
 
 export type ComboboxProps<Value = string> = FieldProps &
@@ -91,6 +95,8 @@ export interface AutocompleteProps extends FieldProps {
 interface Entry<Value> extends ComboboxItem<Value> {
   /** The heading the item sits under, which a query also matches. */
   group?: string | undefined
+  /** The row that adds the typed text, which every query keeps. */
+  created?: boolean | undefined
 }
 
 interface EntryGroup<Value> {
@@ -153,6 +159,7 @@ function useEntryFilter() {
   const match = useQueryMatch()
   return useCallback(
     <Value,>(entry: Entry<Value>, query: string) =>
+      entry.created === true ||
       match(
         query,
         entry.label,
@@ -165,14 +172,15 @@ function useEntryFilter() {
 
 const entryLabel = <Value,>(entry: Entry<Value> | null) => entry?.label ?? ''
 
-const fieldClassName =
-  'theme-input relative flex min-h-8 w-full items-center gap-1 rounded-md border text-sm focus-within:border-(--theme-element) focus-within:ring-1 focus-within:ring-(--theme-element) has-[[aria-invalid=true]]:border-(--theme-error) has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-input-disabled-text)'
+const fieldClassName = cx(
+  fieldBox({ within: true, multiline: true, padded: false }),
+  'relative flex items-center gap-1',
+)
 const inputClassName =
   'h-full min-w-12 flex-1 self-stretch border-0 bg-transparent py-1.5 pl-3 text-inherit outline-none placeholder:text-(--theme-muted-text-color) disabled:cursor-not-allowed'
 const triggerClassName =
   'flex shrink-0 items-center self-stretch px-2 text-(--theme-muted-text-color) disabled:cursor-not-allowed'
-const popupInputClassName =
-  'theme-input h-7 w-full rounded-md border px-2 text-sm outline-none placeholder:text-(--theme-muted-text-color) focus:border-(--theme-element)'
+const popupInputClassName = fieldBox({ size: 'sm' })
 
 /** A pick-from-the-list field: one value, or several with `multiple`. Typing filters the list. */
 export function Combobox<Value = string>(props: ComboboxProps<Value>) {
@@ -189,6 +197,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     'aria-labelledby': ariaLabelledBy,
     'aria-describedby': ariaDescribedBy,
     'aria-invalid': ariaInvalid,
+    'aria-required': ariaRequired,
     trigger,
     triggerTooltip,
   } = props
@@ -210,6 +219,39 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     value === undefined ? undefined : value === null ? null : entryOf(value)
 
   const selected = props.multiple ? undefined : toSingle(props.value)
+
+  // Multiple values: how many there are (counted here while uncontrolled), whether the field is
+  // full, and the row that adds the typed text when nothing listed or chosen already has it.
+  const [uncontrolledCount, setUncontrolledCount] = useState(
+    props.multiple ? (props.defaultValue?.length ?? 0) : 0,
+  )
+  const chosen = props.multiple ? (props.value ?? null) : null
+  const full =
+    props.multiple &&
+    props.maxItems !== undefined &&
+    (chosen?.length ?? uncontrolledCount) >= props.maxItems
+  const isChosen = (entry: Entry<Value>) =>
+    chosen?.some((value) => isItemEqualToValue(entry.value, value)) ?? false
+  const typed = inputValue?.trim() ?? ''
+  const lowered = typed.toLocaleLowerCase()
+  const sameText = (value: unknown, label?: string) =>
+    label?.toLocaleLowerCase() === lowered ||
+    (typeof value === 'string' && value.toLocaleLowerCase() === lowered)
+  const created: Entry<Value> | undefined =
+    props.multiple &&
+    props.creatable &&
+    typed !== '' &&
+    !full &&
+    !entries.flat.some((entry) => sameText(entry.value, entry.label)) &&
+    !chosen?.some((value) => sameText(value))
+      ? { value: typed as Value, label: t.add(typed), icon: <AddIcon />, created: true }
+      : undefined
+  const [first] = entries.items
+  const listItems = !created
+    ? entries.items
+    : first !== undefined && 'items' in first
+      ? [{ label: '', items: [created], order: -1 }, ...(entries.items as EntryGroup<Value>[])]
+      : [created, ...(entries.items as Entry<Value>[])]
   // The selection's icon sits in the field until the text no longer names it.
   const selectedIcon =
     selected?.icon && (inputValue === null || inputValue === selected.label) ? selected.icon : null
@@ -217,11 +259,15 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   const input = (
     <BaseCombobox.Input
       id={trigger ? undefined : id}
-      placeholder={placeholder}
+      placeholder={
+        full && props.maxItems !== undefined ? t.limitReached(props.maxItems) : placeholder
+      }
+      maxLength={props.multiple ? props.maxLength : undefined}
       aria-label={ariaLabel || undefined}
       aria-labelledby={ariaLabelledBy}
       aria-describedby={ariaDescribedBy}
       aria-invalid={ariaInvalid || undefined}
+      aria-required={ariaRequired || required || undefined}
       autoComplete="off"
       className={trigger ? popupInputClassName : inputClassName}
     />
@@ -231,7 +277,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     <BaseCombobox.Item
       key={rowProps.key}
       value={entry}
-      disabled={entry.disabled}
+      disabled={entry.disabled || (full && !isChosen(entry))}
       {...rowProps.props}
       className={itemClassName}
     >
@@ -251,6 +297,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
+          aria-required={ariaRequired || required || undefined}
           render={trigger}
         />
       </Tooltip>
@@ -316,7 +363,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     </>
   )
   const root = {
-    items: entries.items,
+    items: listItems,
     filter,
     isItemEqualToValue: (a: Entry<Value>, b: Entry<Value>) => isItemEqualToValue(a.value, b.value),
     itemToStringLabel: entryLabel,
@@ -326,6 +373,8 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     disabled,
     required,
     virtualized: true,
+    // Enter takes the leading row: what was typed, or the item that has that text already.
+    autoHighlight: Boolean(props.multiple && props.creatable),
     children: parts,
   }
   return props.multiple ? (
@@ -334,7 +383,10 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       multiple
       value={toEntries(props.value)}
       defaultValue={toEntries(props.defaultValue)}
-      onValueChange={(next) => props.onValueChange?.(next.map((entry) => entry.value))}
+      onValueChange={(next) => {
+        setUncontrolledCount(next.length)
+        props.onValueChange?.(next.map((entry) => entry.value))
+      }}
     />
   ) : (
     <BaseCombobox.Root<Entry<Value>>
@@ -361,6 +413,7 @@ export function Autocomplete({
   'aria-labelledby': ariaLabelledBy,
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
+  'aria-required': ariaRequired,
 }: AutocompleteProps) {
   const entries = useEntries(items)
   const filter = useEntryFilter()
@@ -389,6 +442,7 @@ export function Autocomplete({
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
+          aria-required={ariaRequired || required || undefined}
           autoComplete="off"
           className={inputClassName}
         />
@@ -492,7 +546,7 @@ function ListPopup<Value>({
   renderItem: (entry: Entry<Value>, row: RowProps) => ReactElement
 }) {
   return (
-    <BaseCombobox.Portal container={portalContainer()}>
+    <BaseCombobox.Portal>
       <BaseCombobox.Positioner align="start" sideOffset={4} className={positionerClassName}>
         <BaseCombobox.Popup className={cx('overflow-hidden', className, panelClassName)}>
           {header}

@@ -1,7 +1,8 @@
-import { clsx as cx } from 'clsx'
 import { useMemo, useRef } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
-import { FieldWrapper } from '../form/FieldWrapper'
+import { Field } from '../components/Field'
+import { cx } from '../cx'
+import { fieldFrame } from '../form/fieldFrame'
 import type { FieldComponentProps } from '../form/types/fieldComponentTypes'
 import type { BaseField } from '../form/types/fieldTypes'
 import { useFieldValue } from '../form/useFieldValue'
@@ -16,7 +17,7 @@ export interface IEditorField extends BaseField {
 }
 
 export default function EditorField(props: FieldComponentProps<IEditorField>) {
-  const { field, label, labelPosition, disabled, onChange, tooltipComponent, spaceCompact } = props
+  const { field, label, disabled, onChange } = props
   // The form names every field before it renders one.
   const fieldName = field.name ?? ''
 
@@ -42,13 +43,7 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
   }, [editorKeyPostfix])
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
+    <Field {...fieldFrame(props)}>
       <Editor
         key={fieldName + postfixKey}
         ariaLabel={label}
@@ -63,6 +58,6 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
         onChange={handleChange}
         language={field.options?.language || 'shell'}
       />
-    </FieldWrapper>
+    </Field>
   )
 }

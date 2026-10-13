@@ -50,7 +50,7 @@ describe('Input', () => {
   })
 
   it('describes the input with its description, and keeps a hint beside the label out of its name', () => {
-    render(<Input label="Email" description="Where receipts go." labelHint={<code>email</code>} />)
+    render(<Input label="Email" description="Where receipts go." hint={<code>email</code>} />)
 
     const input = screen.getByRole('textbox', { name: 'Email' })
     expect(input).toHaveAccessibleDescription('Where receipts go.')

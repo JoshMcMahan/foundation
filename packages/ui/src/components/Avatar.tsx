@@ -1,12 +1,12 @@
-import { clsx as cx } from 'clsx'
-import { useState } from 'react'
+import { Avatar as BaseAvatar } from '@base-ui/react/avatar'
+import { cx } from '../cx'
 import { useStrings } from './Provider'
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away'
 
 export interface AvatarProps {
-  /** Image URL; absent or failing to load shows the initials of `name`. */
+  /** Image URL. Until it loads, or when it fails, the initials of `name` show. */
   src?: string | null | undefined
   name?: string | undefined
   size?: AvatarSize | undefined
@@ -15,19 +15,19 @@ export interface AvatarProps {
 }
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
-  xs: 'w-4 h-4 text-[9px]',
-  sm: 'w-6 h-6 text-xs',
-  md: 'w-8 h-8 text-sm',
-  lg: 'w-10 h-10 text-base',
-  xl: 'w-12 h-12 text-lg',
-  '2xl': 'w-16 h-16 text-xl',
+  xs: 'size-4 text-[9px]',
+  sm: 'size-6 text-xs',
+  md: 'size-8 text-sm',
+  lg: 'size-10 text-base',
+  xl: 'size-12 text-lg',
+  '2xl': 'size-16 text-xl',
 }
 
 const STATUS_CLASSES: Record<AvatarStatus, string> = {
-  online: 'bg-green-500',
+  online: 'bg-(--theme-success)',
   offline: 'bg-(--theme-muted-text-color)',
-  busy: 'bg-red-500',
-  away: 'bg-yellow-500',
+  busy: 'bg-(--theme-error)',
+  away: 'bg-(--theme-warning)',
 }
 
 /** Up to two initials: the first and last word of a name split on spaces and dots. */
@@ -41,46 +41,51 @@ export function avatarInitials(name: string | undefined): string {
   return first?.toUpperCase() || '?'
 }
 
+/** A person's picture, or their initials while it loads or when it fails. It is
+ *  one image to assistive technology, named for the person, whichever shows. */
 export function Avatar({ src, name, size = 'md', status, className }: AvatarProps) {
-  const strings = useStrings()
-  // Track the failed URL rather than a sticky boolean so a changed URL retries
-  // instead of pinning to the initials fallback after a prior load error.
-  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
-  const showImage = !!src && erroredUrl !== src
-
+  const { common } = useStrings()
   return (
-    <div className={cx('relative inline-flex', className)}>
-      {showImage ? (
-        <img
-          src={src}
-          alt={name || strings.common.userAvatar}
-          loading="lazy"
-          onError={() => setErroredUrl(src)}
-          className={cx('rounded-full object-cover', SIZE_CLASSES[size])}
-        />
-      ) : (
-        <div
-          className={cx(
-            'rounded-full flex items-center justify-center font-medium',
-            'bg-gradient-to-br from-[var(--gradient-start,var(--theme-element))] to-[var(--gradient-mid,var(--theme-link))] text-white',
-            SIZE_CLASSES[size],
-          )}
+    <span
+      role="img"
+      aria-label={name || common.userAvatar}
+      className={cx('relative inline-flex shrink-0', className)}
+    >
+      <BaseAvatar.Root
+        className={cx(
+          'relative inline-flex items-center justify-center overflow-hidden rounded-full font-medium select-none',
+          SIZE_CLASSES[size],
+        )}
+      >
+        {src && (
+          <BaseAvatar.Image
+            // A changed URL starts loading afresh rather than keeping the last one's failure.
+            key={src}
+            src={src}
+            alt=""
+            loading="lazy"
+            keepMounted
+            className="absolute inset-0 size-full object-cover data-error:hidden data-loading:invisible"
+          />
+        )}
+        <BaseAvatar.Fallback
+          aria-hidden="true"
+          className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--gradient-start,var(--theme-element))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-element-text)"
         >
           {/* Two letters crowd a 16px circle and sit under the status dot. */}
           {size === 'xs' ? avatarInitials(name).charAt(0) : avatarInitials(name)}
-        </div>
-      )}
-
+        </BaseAvatar.Fallback>
+      </BaseAvatar.Root>
       {status && (
         <span
           data-testid="online-indicator"
           className={cx(
-            'absolute bottom-0 right-0 block rounded-full ring-2 ring-(--theme-app-bg)',
+            'absolute right-0 bottom-0 block rounded-full ring-2 ring-(--theme-app-bg)',
             STATUS_CLASSES[status],
-            size === 'xs' || size === 'sm' ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5',
+            size === 'xs' || size === 'sm' ? 'size-1.5' : 'size-2.5',
           )}
         />
       )}
-    </div>
+    </span>
   )
 }

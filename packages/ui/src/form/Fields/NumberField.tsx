@@ -1,8 +1,7 @@
-import { NumberField as BaseNumberField } from '@base-ui/react/number-field'
-import { clsx as cx } from 'clsx'
 import { useEffect } from 'react'
-import { AngleDownIcon, AngleUpIcon } from '../../icons'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field } from '../../components/Field'
+import { NumberInput } from '../../components/NumberInput'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -31,19 +30,8 @@ function toNumber(value: unknown): number | null {
   return null
 }
 
-const stepperClassName =
-  'flex flex-1 items-center justify-center px-1 theme-muted-text hover:theme-text data-disabled:opacity-40 data-disabled:cursor-not-allowed'
-
-export default function NumberField({
-  field,
-  label,
-  labelPosition,
-  missing,
-  disabled,
-  onChange,
-  tooltipComponent,
-  spaceCompact,
-}: FieldComponentProps<INumberField>) {
+export default function NumberField(props: FieldComponentProps<INumberField>) {
+  const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<unknown>(field.name ?? '')
 
@@ -59,17 +47,10 @@ export default function NumberField({
   }, [seed, change])
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      description={field.description}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, describedBy }) => (
-        <BaseNumberField.Root
-          id={id}
+    <Field {...fieldFrame(props)}>
+      {(control) => (
+        <NumberInput
+          {...control}
           name={field.name}
           value={toNumber(value)}
           onValueChange={(next) => {
@@ -81,32 +62,10 @@ export default function NumberField({
           max={field.max}
           step={field.step}
           disabled={disabled}
-          format={{ useGrouping: field.thousandsSeparator ?? false, maximumFractionDigits: 20 }}
-        >
-          <BaseNumberField.Group className="relative w-full">
-            <BaseNumberField.Input
-              aria-describedby={describedBy}
-              aria-required={field.optional ? undefined : true}
-              aria-invalid={missing || undefined}
-              data-1p-ignore
-              className={cx(
-                'w-full pr-6 tabular-nums',
-                disabled && 'disabled',
-                missing && 'invalid',
-              )}
-              placeholder={getPlaceholder(field.placeholder, field.default)}
-            />
-            <div className="absolute inset-y-px right-px flex flex-col">
-              <BaseNumberField.Increment className={stepperClassName}>
-                <AngleUpIcon aria-hidden="true" className="size-3" />
-              </BaseNumberField.Increment>
-              <BaseNumberField.Decrement className={stepperClassName}>
-                <AngleDownIcon aria-hidden="true" className="size-3" />
-              </BaseNumberField.Decrement>
-            </div>
-          </BaseNumberField.Group>
-        </BaseNumberField.Root>
+          format={{ useGrouping: field.thousandsSeparator ?? false }}
+          placeholder={getPlaceholder(field.placeholder, field.default)}
+        />
       )}
-    </FieldWrapper>
+    </Field>
   )
 }

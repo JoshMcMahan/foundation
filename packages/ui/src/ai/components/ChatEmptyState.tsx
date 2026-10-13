@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { keyedByContent } from '../../components/keys'
+import { useStrings } from '../../components/Provider'
 import { AddIcon, CloudIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -25,6 +26,7 @@ export default function ChatEmptyState({
   targetSession?: string | null | undefined
 }) {
   const { extraLinks, LinkComponent, slots, suggestedPrompts, strings } = useChatConfig()
+  const { common } = useStrings()
   const t = strings.emptyState
   const tInput = strings.input
   const {
@@ -121,7 +123,7 @@ export default function ChatEmptyState({
             <NoticeCard
               tone="warning"
               onDismiss={() => setSessionBannerDismissed(true)}
-              dismissLabel={strings.chrome.dismiss}
+              dismissLabel={common.dismiss}
             >
               <span className="block font-medium">
                 {t.sessionUnreachableTitle(targetSession?.split(':').pop() ?? '')}
@@ -132,7 +134,7 @@ export default function ChatEmptyState({
                 onClick={() => refreshModels()}
                 className="mt-1 font-medium underline-offset-2 hover:underline"
               >
-                {t.retry}
+                {common.retry}
               </button>
             </NoticeCard>
           </div>

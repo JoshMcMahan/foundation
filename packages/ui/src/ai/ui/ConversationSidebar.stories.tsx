@@ -1,17 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { useContextMenu } from '../../components/ContextMenu'
+import { Drawer } from '../../components/Drawer'
+import { EmptyState } from '../../components/EmptyState'
 import { StatusDot } from '../../components/StatusBadge'
 import { StoryViewport } from '../stories/harness'
-import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
 import {
-  SidebarDrawer,
-  SidebarPlaceholder,
-  SidebarRailItem,
-  SidebarRow,
-  SidebarRowTitle,
-  SidebarToggle,
-} from './sidebar'
+  ConversationSidebar,
+  type ConversationSidebarGroup,
+  sidebarDrawerProps,
+} from './ConversationSidebar'
+import { SidebarRailItem, SidebarRow, SidebarRowTitle, SidebarToggle } from './sidebar'
 
 const meta: Meta = {
   title: 'Chat/Conversation sidebar',
@@ -84,7 +83,7 @@ function TaskSidebar({
         groups={grouped(tasks)}
         getKey={(t) => t.id}
         cycle={{ current: open, onSelect: (t) => setOpenId(t.id) }}
-        placeholder={<SidebarPlaceholder>No tasks yet</SidebarPlaceholder>}
+        placeholder={<EmptyState variant="bare" title="No tasks yet" />}
         renderRow={(t) => (
           <SidebarRow
             selected={t.id === openId}
@@ -139,9 +138,9 @@ export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean }> = {
   ),
 }
 
-// A host composing its own list puts it in a SidebarDrawer on a narrow
-// screen: the drawer covers its positioned container, a tap outside, Escape
-// or a swipe to the left closes it, and the list fills it.
+// A host composing its own list puts it in a Drawer with sidebarDrawerProps on a
+// narrow screen: the drawer covers its positioned container, a tap outside,
+// Escape or a swipe to the left closes it, and the list fills it.
 export const InDrawer: StoryObj<{ open: boolean }> = {
   args: { open: true },
   render: (args) => {
@@ -160,14 +159,19 @@ export const InDrawer: StoryObj<{ open: boolean }> = {
               closeLabel="Close sidebar"
             />
           </div>
-          <SidebarDrawer open={open} onClose={() => setOpen(false)} label="Tasks">
+          <Drawer
+            {...sidebarDrawerProps}
+            open={open}
+            onClose={() => setOpen(false)}
+            aria-label="Tasks"
+          >
             <TaskSidebar
               tasks={TASKS}
               startCollapsed={false}
               fill
               onToggle={() => setOpen(false)}
             />
-          </SidebarDrawer>
+          </Drawer>
         </div>
       )
     }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { mockListLayout } from '../../test/combobox'
+import { mockListLayout } from '../../test/layout'
 import type { ChatAdapter } from '../adapter/types'
 import { makeStaticAdapter, StoryChat } from '../stories/harness'
 import ModelSelector from './ModelSelector'

@@ -1,5 +1,3 @@
-import { clsx as cx } from 'clsx'
-import { Duration } from 'luxon'
 import {
   type ReactNode,
   useCallback,
@@ -9,7 +7,10 @@ import {
   useRef,
   useState,
 } from 'react'
-import { durationToAbsHumanDuration } from '../../duration'
+import { useStrings } from '../../components/Provider'
+import { useElapsed } from '../../components/relativeTime'
+import { cx } from '../../cx'
+import { formatDuration } from '../../format'
 import { CheckIcon, ClockIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -17,7 +18,7 @@ import type { ApprovalAnswerValue, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
 import AgentMessageParts from './agent/AgentMessageParts'
 import ChatMessage from './ChatMessage'
-import { ReasoningBody, ReasoningToggle } from './Reasoning'
+import { Reasoning, ReasoningBody } from './Reasoning'
 
 interface ChatMessageListProps {
   messages: Message[]
@@ -94,6 +95,7 @@ export default function ChatMessageList({
   } = useChat()
   const isStreaming = isStreamingProp ?? providerStreaming
   const { strings } = useChatConfig()
+  const { common } = useStrings()
   const tThinking = strings.thinking
   // Stable across renders so memoized ChatMessage rows don't re-render on
   // every streamed token.
@@ -125,8 +127,6 @@ export default function ChatMessageList({
   const streamingContent = streamingMessage?.content
   const streamingMessageParts = streamingMessage?.parts
 
-  // Calculate elapsed thinking time
-  const [elapsedTime, setElapsedTime] = useState(0)
   const [finalThinkingDuration, setFinalThinkingDuration] = useState<number | null>(null)
   const [reasoningOpen, setReasoningOpen] = useState(false)
 
@@ -152,17 +152,6 @@ export default function ChatMessageList({
       setReasoningOpen(false)
     }
   }, [isStreaming])
-
-  useEffect(() => {
-    if (!thinkingStartTime || !isThinking) {
-      setElapsedTime(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - thinkingStartTime) / 1000))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [thinkingStartTime, isThinking])
 
   // Auto-scroll reasoning preview to bottom as content streams
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on content change
@@ -368,41 +357,33 @@ export default function ChatMessageList({
         {isStreaming && streamingReasoning && (
           <div key="thinking" className="animate-chat-enter">
             <div className={cx('pt-3', !flush && 'px-4')}>
-              <ReasoningToggle
-                open={reasoningOpen}
+              <Reasoning
+                label={
+                  <ThinkingLabel
+                    startedAt={isThinking ? thinkingStartTime : undefined}
+                    finalDuration={finalThinkingDuration}
+                  />
+                }
                 shimmer={isThinking}
-                onToggle={() =>
-                  onOpenReasoning
-                    ? onOpenReasoning(streamingReasoning, finalThinkingDuration)
-                    : setReasoningOpen((o) => !o)
+                open={reasoningOpen}
+                onOpenChange={setReasoningOpen}
+                onOpenPanel={
+                  onOpenReasoning &&
+                  (() => onOpenReasoning(streamingReasoning, finalThinkingDuration))
+                }
+                // While thinking, its tail, faded at the top, so the work shows without taking the page.
+                preview={
+                  isThinking && (
+                    <ReasoningBody className="chat-reasoning-tail">
+                      <div ref={reasoningScrollRef} className="max-h-20 overflow-y-hidden">
+                        <Markdown isStreaming>{streamingReasoning}</Markdown>
+                      </div>
+                    </ReasoningBody>
+                  )
                 }
               >
-                {isThinking
-                  ? elapsedTime > 0
-                    ? `${tThinking.label} (${elapsedTime}s)`
-                    : tThinking.ellipsis
-                  : tThinking.thoughtFor(
-                      finalThinkingDuration
-                        ? durationToAbsHumanDuration(Duration.fromMillis(finalThinkingDuration))
-                        : `${elapsedTime}s`,
-                    )}
-              </ReasoningToggle>
-
-              {/* Open: the whole reasoning. Closed while thinking: its tail,
-                    faded at the top, so the work shows without taking the page. */}
-              {reasoningOpen ? (
-                <ReasoningBody>
-                  <Markdown isStreaming={isThinking}>{streamingReasoning}</Markdown>
-                </ReasoningBody>
-              ) : (
-                isThinking && (
-                  <ReasoningBody className="chat-reasoning-tail">
-                    <div ref={reasoningScrollRef} className="max-h-20 overflow-y-hidden">
-                      <Markdown isStreaming>{streamingReasoning}</Markdown>
-                    </div>
-                  </ReasoningBody>
-                )
-              )}
+                <Markdown isStreaming={isThinking}>{streamingReasoning}</Markdown>
+              </Reasoning>
             </div>
           </div>
         )}
@@ -479,7 +460,7 @@ export default function ChatMessageList({
                       onClick={() => onRemoveQueued(msg.id)}
                       className="rounded font-medium underline-offset-2 hover:theme-text hover:underline"
                     >
-                      {strings.queue.removeShort}
+                      {common.remove}
                     </button>
                   </>
                 )}
@@ -504,4 +485,23 @@ export default function ChatMessageList({
       {inputElement && <div className="sticky bottom-0 z-10">{inputElement}</div>}
     </div>
   )
+}
+
+/** "Thinking (12s)" while it thinks, then how long it took. Its own component,
+ *  so the clock re-renders only this label, not the list. */
+function ThinkingLabel({
+  startedAt,
+  finalDuration,
+}: {
+  /** When the thinking under way began; unset once it ends. */
+  startedAt: number | null | undefined
+  /** How long it took, in milliseconds, once it has ended. */
+  finalDuration: number | null
+}) {
+  const t = useChatConfig().strings.thinking
+  const elapsed = useElapsed(startedAt)
+  if (startedAt) {
+    return elapsed ? `${t.label} (${formatDuration(elapsed)})` : t.ellipsis
+  }
+  return t.thoughtFor(formatDuration(finalDuration ?? 0))
 }

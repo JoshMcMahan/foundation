@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { CreateModal, CreateModalField, CreateModalTextarea } from './CreateModal'
+import { Autocomplete } from './Combobox'
+import { CreateModal } from './CreateModal'
+import { Field } from './Field'
+import { InfoTip } from './InfoTip'
+import { Input, Textarea } from './Input'
 
 function renderModal(onSubmit: (name: string) => Promise<boolean>) {
   return render(
@@ -18,6 +22,34 @@ function renderModal(onSubmit: (name: string) => Promise<boolean>) {
     />,
   )
 }
+
+describe('CreateModal fields', () => {
+  it('names a field with help by its label, not by the help button beside it', () => {
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Workflow"
+        namePlaceholder="Enter a new name"
+        onSubmit={vi.fn()}
+      >
+        <Input label="Region" hint={<InfoTip text="Where the workflow runs." />} />
+        <Field
+          label="Account"
+          hint={<InfoTip text="Who pays for it." />}
+          description="Billed monthly."
+        >
+          {(control) => <Autocomplete {...control} items={['research', 'teaching']} />}
+        </Field>
+      </CreateModal>,
+    )
+    expect(screen.getByRole('textbox', { name: 'Region' })).toBeInTheDocument()
+    const account = screen.getByRole('combobox', { name: 'Account' })
+    expect(account).toHaveAccessibleDescription('Billed monthly.')
+    // Help sits beside each label, a button of its own.
+    expect(screen.getAllByRole('button', { name: 'More information' })).toHaveLength(2)
+  })
+})
 
 describe('CreateModal submit state', () => {
   it('recovers the submit button when onSubmit rejects', async () => {
@@ -69,7 +101,7 @@ describe('CreateModal initial focus', () => {
         onSubmit={vi.fn().mockResolvedValue(true)}
         {...props}
       >
-        <CreateModalTextarea label="Public key" value="" onChange={vi.fn()} placeholder="" />
+        <Textarea label="Public key" value="" onChange={vi.fn()} placeholder="" />
       </CreateModal>,
     )
   }
@@ -119,10 +151,10 @@ describe('CreateModal panel mousedown', () => {
 
 describe('CreateModal fields with help', () => {
   it.each([
-    ['an input', CreateModalField],
-    ['a textarea', CreateModalTextarea],
-  ])('name %s by its label, not the help button beside it', (_, Field) => {
-    render(<Field label="Account ID" tooltip="The twelve digit ID" />)
+    ['an input', Input],
+    ['a textarea', Textarea],
+  ])('name %s by its label, not the help button beside it', (_, Control) => {
+    render(<Control label="Account ID" hint={<InfoTip text="The twelve digit ID" />} />)
     expect(screen.getByRole('textbox', { name: 'Account ID' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'More information' })).toBeInTheDocument()
   })

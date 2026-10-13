@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import {
   FormProvider,
@@ -28,7 +28,6 @@ vi.mock('hooks', () => ({
 
 vi.mock('@parallelworks/ui', async () => ({
   ...(await vi.importActual<typeof import('@parallelworks/ui')>('@parallelworks/ui')),
-  SectionHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Loader: () => <div data-testid="loader">Loading...</div>,
   Table: Object.assign(({ children }: { children?: ReactNode }) => <table>{children}</table>, {
     Item: ({ children }: { children?: ReactNode }) => <td>{children}</td>,
@@ -39,10 +38,16 @@ vi.mock('@parallelworks/ui', async () => ({
 }))
 
 vi.mock('@parallelworks/ui/icons', () => ({
+  AlertIcon: () => null,
   AngleRightIcon: () => null,
-  LoaderIcon: () => null,
+  CheckIcon: () => null,
   SuccessCheckmark: () => null,
   TrashIcon: () => null,
+  CloseIcon: () => null,
+  ErrorIcon: () => null,
+  InfoIcon: () => null,
+  SuccessIcon: () => null,
+  WarningIcon: () => null,
 }))
 
 vi.mock('./infraFieldRegistry', () => ({ INFRA_FIELD_COMPONENTS: {} }))
@@ -70,13 +75,6 @@ vi.mock('./fieldRegistry', async (importOriginal) => {
     },
   }
 })
-
-// A class, as the step row constructs one.
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
 
 import { testEngine } from '../test/engine'
 import { renderDynamicForm } from '../test/form'
@@ -131,6 +129,12 @@ function SetButton({
   return (
     <button type="button" data-testid={testId} onClick={() => setValue(name, value(getValues()))} />
   )
+}
+
+/** The wizard's list of every page, opened. */
+async function openSteps() {
+  fireEvent.click(screen.getByRole('button', { name: 'All steps' }))
+  return within(await screen.findByRole('dialog', { name: 'Steps' }))
 }
 
 describe('DynamicForm workflowForm prop', () => {
@@ -574,9 +578,10 @@ describe('a repeated wizard page’s copies', () => {
       />,
     )
     await screen.findByRole('heading', { name: 'Cluster a' })
-    expect(screen.getAllByText('Cluster c').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('first').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('third').length).toBeGreaterThan(0)
+    const steps = await openSteps()
+    expect(steps.getByText('Cluster c')).toBeInTheDocument()
+    expect(steps.getByText('first')).toBeInTheDocument()
+    expect(steps.getByText('third')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Add/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull()
   })
@@ -599,7 +604,9 @@ describe('a repeated wizard page’s copies', () => {
       />,
     )
     await screen.findByRole('heading', { name: 'Host 1' })
-    expect(screen.getAllByText('Host 2').length).toBeGreaterThan(0)
+    expect((await openSteps()).getByText('Host 2')).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Steps' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Steps' })).toBeNull())
     expect(screen.queryByRole('button', { name: 'Remove Host' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
     fireEvent.click(await screen.findByRole('button', { name: '+ Add Host' }))
@@ -677,8 +684,9 @@ describe('a repeated wizard page’s bounds', () => {
       />,
     )
     await screen.findByRole('heading', { name: 'Host 1' })
-    expect(screen.getAllByText('Host 2').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Host 3')).toBeNull()
+    const steps = await openSteps()
+    expect(steps.getByText('Host 2')).toBeInTheDocument()
+    expect(steps.queryByText('Host 3')).toBeNull()
     await waitFor(() =>
       expect(seen).toHaveBeenLastCalledWith(
         expect.objectContaining({ hosts: [{ cpus: 1 }, { cpus: 2 }] }),

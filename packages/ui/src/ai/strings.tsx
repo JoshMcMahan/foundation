@@ -1,14 +1,10 @@
 import type { ReactNode } from 'react'
+import { defaultToolStrings, type ToolStrings } from './agent/toolStrings'
 
 // English defaults for the package's user-facing strings. Hosts localize by
 // passing overrides through ChatUIConfig.strings.
 
 export interface ChatStrings {
-  modal: {
-    cancel: string
-    save: string
-    loading: string
-  }
   shareConversation: {
     title: string
     loadError: string
@@ -20,7 +16,6 @@ export interface ChatStrings {
     noGroups: string
     viewOnly: string
     canCollaborate: string
-    remove: string
     addGroups: string
     info: ReactNode
     shareButton: string
@@ -45,7 +40,6 @@ export interface ChatStrings {
     search: string
     loading: string
     failed: string
-    retry: string
     none: string
     /** Beside a provider another user registered and shared with the reader. */
     sharedBy: (owner: string) => string
@@ -55,6 +49,8 @@ export interface ChatStrings {
     notResponding: string
     /** Links the provider's settings from its issue banner, for its owner. */
     manageProvider: string
+    /** Sending before a model is chosen. */
+    selectFirst: string
   }
   allocationPicker: {
     choose: string
@@ -69,9 +65,6 @@ export interface ChatStrings {
     waitingNextStep: string
     /** Under a message the host has already handed to the running turn. */
     handedOver: string
-    /** The visible label of the remove control; `remove` names it for
-     *  assistive technology. */
-    removeShort: string
   }
   activity: {
     tokens: (input: string, output: string) => string
@@ -86,7 +79,6 @@ export interface ChatStrings {
     addProvider: string
     sessionUnreachableTitle: (session: string) => ReactNode
     sessionUnreachableBody: string
-    retry: string
   }
   input: {
     placeholder: string
@@ -107,7 +99,11 @@ export interface ChatStrings {
     label: string
     ellipsis: string
     thoughtFor: (duration: string) => string
+    /** A finished reasoning toggle's label when its duration is unknown. */
+    thoughtProcess: string
     activity: string
+    /** A finished turn's label when it ran tools without reasoning. */
+    ranToolCalls: (count: number) => string
   }
   thread: {
     viewOnly: string
@@ -119,9 +115,6 @@ export interface ChatStrings {
     groupThisMonth: string
     groupOlder: string
     untitled: string
-    rename: string
-    share: string
-    delete: string
     sharedWithYou: string
     openSidebar: string
     closeSidebar: string
@@ -136,26 +129,22 @@ export interface ChatStrings {
     noConversations: string
     deleteTitle: string
     deleteBody: string
-    deleteAction: string
     renameTitle: string
-    renameAction: string
     renameLabel: string
     renamePlaceholder: string
   }
   attachmentUpload: {
     fileTooLarge: (maxSize: string) => string
     maxFilesAllowed: (max: number) => string
-    remove: string
     dropFilesHere: string
+    releaseToUpload: string
     addFiles: string
+    maxSizePerFile: (size: string) => string
+    uploading: string
   }
   attachmentManager: {
     title: string
     empty: string
-    download: string
-    delete: string
-    loadMore: string
-    loading: string
   }
   branch: {
     previous: string
@@ -165,25 +154,20 @@ export interface ChatStrings {
     searchPlaceholder: string
     searchLabel: string
     noMatches: string
-    download: string
     exportError: string
     jumpToLatest: string
-    dismiss: string
+    /** The copy shortcut's note when no reply has come yet. */
+    noResponseToCopy: string
   }
   messageMeta: {
     stopped: string
-    showMore: string
-    showLess: string
     // {total} token count for the turn.
     tokens: (total: number) => string
     tokensBreakdown: (prompt: number, completion: number) => string
     copy: string
     edit: string
     regenerate: string
-    retry: string
     editPlaceholder: string
-    cancel: string
-    send: string
   }
   permissions: {
     choose: string
@@ -199,8 +183,6 @@ export interface ChatStrings {
     planHint: string
   }
   agentTranscript: {
-    showMore: string
-    showLess: string
     running: string
     done: string
     failed: string
@@ -220,7 +202,6 @@ export interface ChatStrings {
     denyCall: string
     denyWithFeedback: string
     feedbackPlaceholder: string
-    send: string
     answered: string
     writeOwnAnswer: string
     subagent: string
@@ -229,14 +210,11 @@ export interface ChatStrings {
     approvalPending: string
     approvalOptions: string
   }
+  /** One-line summaries of an agent's finished tool calls. */
+  tools: ToolStrings
 }
 
 export const defaultChatStrings: ChatStrings = {
-  modal: {
-    cancel: 'Cancel',
-    save: 'Save',
-    loading: 'Loading…',
-  },
   shareConversation: {
     title: 'Share Conversation',
     loadError: 'Failed to load sharing settings',
@@ -248,7 +226,6 @@ export const defaultChatStrings: ChatStrings = {
     noGroups: 'No groups have access yet',
     viewOnly: 'View only',
     canCollaborate: 'Can collaborate',
-    remove: 'Remove',
     addGroups: 'Add groups…',
     info: (
       <>
@@ -269,7 +246,6 @@ export const defaultChatStrings: ChatStrings = {
     waiting: 'Queued \u00b7 sends when this reply finishes',
     waitingNextStep: 'Queued \u00b7 reaches the agent after its current step',
     handedOver: 'Sent to the running turn',
-    removeShort: 'Remove',
   },
   providerIssue: {
     keyRejected: 'API key rejected',
@@ -287,12 +263,12 @@ export const defaultChatStrings: ChatStrings = {
     search: 'Search models\u2026',
     loading: 'Loading models\u2026',
     failed: 'Failed to load models',
-    retry: 'Retry',
     none: 'No models available',
     sharedBy: (owner) => `Shared by ${owner}`,
     connecting: 'Connecting\u2026',
     notResponding: 'Not responding',
     manageProvider: 'Manage provider',
+    selectFirst: 'Select a model first',
   },
   allocationPicker: {
     choose: 'Allocation',
@@ -312,7 +288,6 @@ export const defaultChatStrings: ChatStrings = {
     sessionUnreachableTitle: (session) => <>Session &ldquo;{session}&rdquo; is not reachable</>,
     sessionUnreachableBody:
       'The session may be offline or still starting up. You can select a different model to continue.',
-    retry: 'Retry',
   },
   input: {
     placeholder: 'Ask anything',
@@ -321,11 +296,12 @@ export const defaultChatStrings: ChatStrings = {
     attachFiles: 'Attach files',
     stopGenerating: 'Stop generating (Escape)',
     sendMessage: 'Send message (Enter)',
-    filesAttached: (count) => `${count} file${count > 1 ? 's' : ''} attached`,
+    filesAttached: (count) =>
+      count === 1 ? '1 file attached' : `${count.toLocaleString()} files attached`,
   },
   paste: {
     title: 'Pasted text',
-    lines: (count) => `${count.toLocaleString()} line${count === 1 ? '' : 's'}`,
+    lines: (count) => (count === 1 ? '1 line' : `${count.toLocaleString()} lines`),
     saving: 'Saving…',
     remove: 'Remove paste',
   },
@@ -333,7 +309,10 @@ export const defaultChatStrings: ChatStrings = {
     label: 'Thinking',
     ellipsis: 'Thinking...',
     thoughtFor: (duration) => `Thought for ${duration}`,
+    thoughtProcess: 'Thought process',
     activity: 'Activity',
+    ranToolCalls: (count) =>
+      count === 1 ? 'Ran 1 tool call' : `Ran ${count.toLocaleString()} tool calls`,
   },
   thread: {
     viewOnly: 'You have view only access',
@@ -345,9 +324,6 @@ export const defaultChatStrings: ChatStrings = {
     groupThisMonth: 'This Month',
     groupOlder: 'Older',
     untitled: 'Untitled',
-    rename: 'Rename',
-    share: 'Share',
-    delete: 'Delete',
     sharedWithYou: 'Shared with you',
     openSidebar: 'Open sidebar',
     closeSidebar: 'Close sidebar',
@@ -361,26 +337,22 @@ export const defaultChatStrings: ChatStrings = {
     noConversations: 'No conversations yet',
     deleteTitle: 'Delete Conversation',
     deleteBody: 'Are you sure you want to delete this conversation? This action cannot be undone.',
-    deleteAction: 'Delete',
     renameTitle: 'Rename Conversation',
-    renameAction: 'Rename',
     renameLabel: 'Conversation title',
     renamePlaceholder: 'Enter a new title',
   },
   attachmentUpload: {
     fileTooLarge: (maxSize) => `File too large. Maximum size is ${maxSize}`,
     maxFilesAllowed: (max) => `Maximum ${max} files allowed`,
-    remove: 'Remove',
     dropFilesHere: 'Drop files here',
+    releaseToUpload: 'Release to upload',
     addFiles: 'Add files (drag or click)',
+    maxSizePerFile: (size) => `Max ${size} per file`,
+    uploading: 'Uploading…',
   },
   attachmentManager: {
     title: 'Attachments',
     empty: 'No attachments yet',
-    download: 'Download',
-    delete: 'Delete',
-    loadMore: 'Load more',
-    loading: 'Loading...',
   },
   branch: {
     previous: 'Previous branch',
@@ -390,25 +362,19 @@ export const defaultChatStrings: ChatStrings = {
     searchPlaceholder: 'Search conversations',
     searchLabel: 'Search conversations (⌘/Ctrl+Shift+F)',
     noMatches: 'No conversations match your search',
-    download: 'Download',
     exportError: 'Failed to export conversation',
     jumpToLatest: 'Jump to latest',
-    dismiss: 'Dismiss',
+    noResponseToCopy: 'No response to copy',
   },
   messageMeta: {
     stopped: 'Stopped',
-    showMore: 'Show more',
-    showLess: 'Show less',
     tokens: (total) => `${total.toLocaleString()} tokens`,
     tokensBreakdown: (prompt, completion) =>
       `${prompt.toLocaleString()} in · ${completion.toLocaleString()} out`,
     copy: 'Copy message',
     edit: 'Edit message',
     regenerate: 'Regenerate response',
-    retry: 'Retry',
     editPlaceholder: 'Edit your message...',
-    cancel: 'Cancel',
-    send: 'Send',
   },
   permissions: {
     choose: 'Choose what the agent may do',
@@ -427,8 +393,6 @@ export const defaultChatStrings: ChatStrings = {
     planHint: 'The workspace is left unchanged while a plan is drafted.',
   },
   agentTranscript: {
-    showMore: 'Show more',
-    showLess: 'Show less',
     running: 'Running…',
     done: 'Done',
     failed: 'Failed',
@@ -447,7 +411,6 @@ export const defaultChatStrings: ChatStrings = {
     denyCall: 'No, deny this call',
     denyWithFeedback: 'No, and provide feedback to the agent',
     feedbackPlaceholder: 'Tell the agent what to do instead…',
-    send: 'Send',
     answered: 'Answered',
     writeOwnAnswer: 'Write my own answer…',
     subagent: 'Task',
@@ -456,4 +419,5 @@ export const defaultChatStrings: ChatStrings = {
     approvalPending: 'Waiting for an answer in the terminal',
     approvalOptions: 'Offered choices',
   },
+  tools: defaultToolStrings,
 }

@@ -2,26 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import ActivityLine, { activityWords, compactCount, formatElapsed } from './ActivityLine'
-
-describe('formatElapsed', () => {
-  it('prints the way the terminal status line does', () => {
-    expect(formatElapsed(0)).toBe('0s')
-    expect(formatElapsed(45.9)).toBe('45s')
-    expect(formatElapsed(133)).toBe('2m13s')
-    expect(formatElapsed(3723)).toBe('1h2m3s')
-    expect(formatElapsed(3600)).toBe('1h0m0s')
-    expect(formatElapsed(-5)).toBe('0s')
-  })
-})
-
-describe('compactCount', () => {
-  it('abbreviates thousands and millions', () => {
-    expect(compactCount(512)).toBe('512')
-    expect(compactCount(1234)).toBe('1.2k')
-    expect(compactCount(3_400_000)).toBe('3.4M')
-  })
-})
+import ActivityLine, { activityWords } from './ActivityLine'
 
 describe('ActivityLine', () => {
   beforeEach(() => {
@@ -41,11 +22,11 @@ describe('ActivityLine', () => {
         outputTokens={512}
       />,
     )
-    expect(screen.getByTestId('activity-meta')).toHaveTextContent('(2m13s · ↑1.2k ↓512 tokens)')
+    expect(screen.getByTestId('activity-meta')).toHaveTextContent('(2m 13s · ↑1.2K ↓512 tokens)')
     act(() => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByTestId('activity-meta')).toHaveTextContent('2m15s')
+    expect(screen.getByTestId('activity-meta')).toHaveTextContent('2m 15s')
   })
 
   it('shows one of the terminal status words, held for the turn', () => {

@@ -1,6 +1,6 @@
-import { clsx as cx } from 'clsx'
 import { type KeyboardEvent, useEffect, useId, useState } from 'react'
 import { panelClassName, panelItemClassName } from '../../components/floating'
+import { cx } from '../../cx'
 
 export interface SlashCommandOption {
   name: string

@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useForm, useFormState } from 'react-hook-form'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
+import { Button } from '../components/Button'
 import { DynamicForm, type FormValues } from './Form'
 
 const meta: Meta<typeof DynamicForm> = {
@@ -11,9 +13,10 @@ const meta: Meta<typeof DynamicForm> = {
       description: 'Host opt-in for validated CSS declarations on layout nodes.',
     },
     formJSONs: { control: 'object', description: 'Input definitions and optional $meta.layout.' },
-    missingFields: {
+    serverErrors: {
       control: 'object',
-      description: 'Field names the host marks as missing a value, set as `required` errors.',
+      description:
+        'Fields the server rejected, by any path (`hosts[0].cpus`, `#/hosts/0/cpus`), each with an optional message.',
     },
     onValuesChange: { action: 'values changed' },
   },
@@ -80,12 +83,53 @@ export const ClusterSettings: StoryObj<typeof DynamicForm> = {
   },
 }
 
-/** The host marks fields it found missing a value: the form sets them as errors, and only those
- * fields draw again. */
-export const MissingFields: StoryObj<typeof DynamicForm> = {
+/** The server rejected fields the form sent: each shows the server's message under it, or asks to
+ * check the value, until the person changes it. They never hold back a submit. */
+export const ServerErrors: StoryObj<typeof DynamicForm> = {
   args: {
     ...ClusterSettings.args,
-    missingFields: ['name', 'size'],
+    serverErrors: [
+      { path: 'settings.name', message: 'A cluster with this name already exists.' },
+      { path: '#/settings/nodes' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = await canvas.findByRole('textbox', { name: /Name/ }, { timeout: 5000 })
+    await waitFor(() =>
+      expect(name).toHaveAccessibleDescription('A cluster with this name already exists.'),
+    )
+    await expect(canvas.getByText('Check this value.')).toBeVisible()
+    await userEvent.type(name, '-2')
+    await waitFor(() => expect(name).not.toHaveAttribute('aria-invalid'))
+    await expect(canvas.getByText('Check this value.')).toBeVisible()
+  },
+}
+
+/** A field with neither `optional` nor a default needs a value: a submit, or Next in a wizard, says
+ * so under each empty one, and the message goes as the person fills it. */
+export const RequiredFields: StoryObj<typeof DynamicForm> = {
+  args: {
+    formJSONs: {
+      name: { type: 'string', label: 'Cluster name' },
+      size: { type: 'dropdown', label: 'Instance size', options: ['small', 'medium', 'large'] },
+      notes: { type: 'string', label: 'Notes', optional: true },
+      nodes: { type: 'number', label: 'Nodes', default: 2 },
+    },
+    initialValues: {},
+    skipValueParse: true,
+    onSubmit: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = await canvas.findByRole('textbox', { name: /Cluster name/ }, { timeout: 5000 })
+    await userEvent.click(canvas.getByRole('button', { name: 'Submit' }))
+    await waitFor(() => expect(name).toHaveAccessibleDescription('Enter a value.'))
+    await expect(canvas.getAllByText('Enter a value.')).toHaveLength(2)
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+    await userEvent.type(name, 'demo')
+    await waitFor(() => expect(name).not.toHaveAttribute('aria-invalid'))
+    await expect(canvas.getAllByText('Enter a value.')).toHaveLength(1)
   },
 }
 
@@ -97,9 +141,9 @@ function HostFormStory() {
       <DynamicForm form={form} formJSONs={FORM_JSONS} initialValues={{}} skipValueParse />
       <div className="flex items-center gap-3 text-[13px]">
         <span>{isDirty ? 'Unsaved changes' : 'No changes'}</span>
-        <button type="button" className="btn" onClick={() => form.reset()}>
+        <Button variant="secondary" onClick={() => form.reset()}>
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -192,6 +236,54 @@ export const Choices: StoryObj<typeof DynamicForm> = {
   },
 }
 
+/** Options in groups, one setting another field as it's chosen, and a switch whose states have
+ *  names of their own. */
+export const GroupedChoicesAndNamedStates: StoryObj<typeof DynamicForm> = {
+  args: {
+    formJSONs: {
+      region: {
+        type: 'dropdown',
+        label: 'Region',
+        secondaryField: 'zone',
+        options: [
+          {
+            category: 'Americas',
+            options: [
+              { label: 'US East', value: 'us-east', secondaryValue: 'us-east-1a' },
+              { label: 'US West', value: 'us-west', secondaryValue: 'us-west-2b' },
+            ],
+          },
+          {
+            category: 'Europe',
+            options: [
+              { label: 'EU Central', value: 'eu-central', secondaryValue: 'eu-central-1a' },
+            ],
+          },
+        ],
+      },
+      zone: { type: 'string', label: 'Zone', disabled: true },
+      visibility: {
+        type: 'boolean',
+        label: 'Visibility',
+        default: 'PRIVATE',
+        options: { onOption: 'PUBLIC', offOption: 'PRIVATE' },
+      },
+    },
+    workflowForm: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(
+      await canvas.findByRole('combobox', { name: 'Region' }, { timeout: 5000 }),
+    )
+    await userEvent.click(await screen.findByRole('option', { name: 'EU Central' }))
+    await waitFor(() =>
+      expect(canvas.getByRole('textbox', { name: 'Zone' })).toHaveValue('eu-central-1a'),
+    )
+    await expect(canvas.getByText('Private')).toBeVisible()
+  },
+}
+
 const WORKER_OPTIONS = {
   nodes: { type: 'number', label: 'Nodes', default: 2, width: '50%' },
   queue: {
@@ -203,17 +295,9 @@ const WORKER_OPTIONS = {
   },
 }
 
-/** A repeated page with more copies than the row of step dots holds: the dots scroll, the current one in
- * view. */
+/** A repeated page with many copies: the wizard says which page it's on, a bar marks every page,
+ *  and the list of them jumps back to one already seen. */
 export const RepeatedPageMany: StoryObj<typeof DynamicForm> = {
-  // A phone's width, where ten steps overflow. Inline, as story files don't feed the compiled classes.
-  decorators: [
-    (Story) => (
-      <div style={{ maxWidth: 360 }}>
-        <Story />
-      </div>
-    ),
-  ],
   args: {
     formJSONs: {
       $meta: { wizard: { mode: 'wizard', navigation: { allowJump: true } } },
@@ -229,10 +313,37 @@ export const RepeatedPageMany: StoryObj<typeof DynamicForm> = {
         options: { note: { type: 'string', label: 'Note' } },
       },
     },
-    initialValues: { sites: Array.from({ length: 9 }, () => ({ nodes: 2, queue: 'gpu' })) },
+    initialValues: { sites: Array.from({ length: 24 }, () => ({ nodes: 2, queue: 'gpu' })) },
     skipValueParse: true,
     workflowForm: true,
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const steps = await canvas.findByRole('navigation', { name: 'Steps' }, { timeout: 5000 })
+    await expect(steps).toHaveTextContent('Step 1 of 25')
+    await userEvent.click(canvas.getByRole('button', { name: 'Go to next step' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Go to next step' }))
+    await waitFor(() => expect(steps).toHaveTextContent('Step 3 of 25'))
+    await userEvent.click(within(steps).getByRole('button', { name: 'All steps' }))
+    const list = within(await screen.findByRole('dialog', { name: 'Steps' }))
+    await userEvent.click(list.getByRole('button', { name: /Step 1: Site 1/ }))
+    await waitFor(() => expect(steps).toHaveTextContent('Step 1 of 25'))
+    // However many pages, nothing scrolls sideways.
+    const page = canvasElement.ownerDocument.documentElement
+    await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth)
+  },
+}
+
+/** The same at a small phone's width. Inline, as story files don't feed the compiled classes. */
+export const RepeatedPageManyNarrow: StoryObj<typeof DynamicForm> = {
+  ...RepeatedPageMany,
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
 }
 
 /** A page with `multi` repeats: each copy is a page, its values a row under the page's name, with Add after
@@ -430,6 +541,22 @@ export const TopLabelsInNarrowColumns: StoryObj<typeof DynamicForm> = {
       </div>
     ),
   ],
+  // A label that wraps moves neither its required mark off its last word nor its control below
+  // its neighbor's.
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const workers = await canvas.findByRole(
+      'textbox',
+      { name: /Maximum number of concurrent workers/ },
+      { timeout: 5000 },
+    )
+    const retries = canvas.getByRole('textbox', { name: /Retry limit/ })
+    for (const input of [workers, retries]) {
+      const label = canvasElement.querySelector(`label[for="${input.id}"]`)
+      await expect(label?.querySelector('[aria-hidden="true"]')).toHaveTextContent('*')
+    }
+    await expect(workers.getBoundingClientRect().top).toBe(retries.getBoundingClientRect().top)
+  },
 }
 
 export const IndependentSections: StoryObj<typeof DynamicForm> = {

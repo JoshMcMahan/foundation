@@ -17,14 +17,14 @@ vi.mock('../components/Provider', async (importOriginal) =>
 const renders = new Map<string, number>()
 const count = (name: string) => renders.set(name, (renders.get(name) ?? 0) + 1)
 
-function CountedInput({ field, label, missing }: FieldComponentProps<BaseField>) {
+function CountedInput({ field, label, error }: FieldComponentProps<BaseField>) {
   const name = field.name ?? ''
   count(name)
   const [value, change] = useFieldValue<string | undefined>(name)
   return (
     <input
       aria-label={label}
-      aria-invalid={missing}
+      aria-invalid={error !== undefined}
       value={value ?? ''}
       onChange={(e) => change(e.target.value)}
     />
@@ -101,18 +101,19 @@ describe('a form of many fields', () => {
     expect(rendered()).toEqual(['f1', 'titled'])
   })
 
-  it('marks the fields the host reports missing, and renders only those', () => {
+  it('marks the fields the server rejected, and renders only those', () => {
     const { rerender } = renderForm()
     rerender(
       <DynamicForm
         formJSONs={schema}
         initialValues={{}}
         fields={fields}
-        missingFields={['f2', 'f3']}
+        serverErrors={[{ path: 'f2' }, { path: '#/f3', message: 'Taken.' }]}
       />,
     )
 
     expect(screen.getByRole('textbox', { name: 'F2' })).toBeInvalid()
+    expect(screen.getByRole('textbox', { name: 'F3' })).toBeInvalid()
     expect(screen.getByRole('textbox', { name: 'F4' })).toBeValid()
     expect(rendered()).toEqual(['f2', 'f3'])
   })

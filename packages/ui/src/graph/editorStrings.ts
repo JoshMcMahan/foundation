@@ -1,12 +1,10 @@
 // English defaults for the workflow editor; a host supplies translations through UIProvider.
 
 import { useMemo } from 'react'
-import { useStrings } from '../components/Provider'
+import { type UIStrings, useStrings } from '../components/Provider'
 import type { EditRefusalReason } from '../editing'
 
 export const GRAPH_EDITOR_STRINGS = {
-  undo: 'Undo',
-  redo: 'Redo',
   addJob: 'Job',
   addJobHint: 'Drag into the graph to add a job, or click to add one',
   addMatrixJob: 'Matrix job',
@@ -28,7 +26,6 @@ export const GRAPH_EDITOR_STRINGS = {
     'Drag onto a job to make it depend on the selected jobs. Drop on a circle to cover every job there.',
   selectionInHint:
     'Drag onto a job to make the selected jobs depend on it. Drop on a circle to cover every job there.',
-  duplicate: 'Duplicate',
   makeMatrix: 'Make matrix',
   editMatrix: 'Edit matrix',
   removeMatrix: 'Remove matrix',
@@ -100,14 +97,13 @@ export const GRAPH_EDITOR_STRINGS = {
   matrixBadge: 'matrix',
   jobName: 'Job name',
   stepName: 'Step name',
+  stepKind: 'Step type',
   invalidJobName: 'Use only lowercase letters, numbers, dashes, and underscores.',
   jobExists: 'A job with this name already exists.',
   matrixVariable: 'Variable',
   matrixValues: 'Values, separated by commas',
   addVariable: 'Add variable',
   removeVariable: 'Remove variable',
-  save: 'Save',
-  cancel: 'Cancel',
   editJob: 'Edit job',
   editStep: 'Edit step',
   sectionDependencies: 'Dependencies and condition',
@@ -139,13 +135,10 @@ export const GRAPH_EDITOR_STRINGS = {
   invalidDuration: 'Use seconds (300) or a duration such as 30s, 10m or 2h.',
   invalidExpressionValue: 'Type an expression here, such as one that reads an input.',
   invalidEnvKey: 'Use letters, numbers, and underscores.',
-  invalidKey: 'Use letters, numbers, dashes, and underscores.',
   duplicateKey: 'Each key must be unique.',
   remoteHostRequired: 'Fill in Host to connect to a remote machine.',
   key: 'Key',
   value: 'Value',
-  addRow: 'Add',
-  removeRow: 'Remove',
   /** A list's row, by the list's name and its place in it. */
   listItem: (list: string, n: number) => `${list}, item ${n}`,
   stepRun: 'Run commands',
@@ -154,8 +147,6 @@ export const GRAPH_EDITOR_STRINGS = {
   invalidShell: 'Use a bash or sh command.',
   missingInput: (name: string) => `Add the ${name} input.`,
   invalidCount: 'Use a whole number.',
-  moveUp: 'Move up',
-  moveDown: 'Move down',
   sshInherit: 'Same as the job',
   sshCustom: 'Another host',
   sshNone: 'Your workspace',
@@ -192,7 +183,6 @@ export const GRAPH_EDITOR_STRINGS = {
   labelsBeside: 'Beside the fields',
   labelsAbove: 'Above the fields',
   notActionInput: 'Not an input this takes. Remove it.',
-  invalidNumberInput: 'Use a number.',
   invalidChoice: (name: string) => `Use one of the listed values for ${name}.`,
   invalidUses:
     'Use workflow/NAME, marketplace/NAME, a github/ or gitlab/ address, or a built-in action.',
@@ -231,8 +221,8 @@ export const GRAPH_EDITOR_STRINGS = {
     success: 'Only if every job it needs succeeded',
   },
   modeFromInput: 'From an input',
-  clearValue: 'Clear',
   matrixValuesListed: 'Listed values',
+  matrixValuesFrom: 'Values from',
   outputName: 'Name',
   outputStep: 'Step',
   outputKey: 'Output',
@@ -248,6 +238,7 @@ export const GRAPH_EDITOR_STRINGS = {
   chooseMarketplace: 'Choose a marketplace workflow',
   otherInputs: 'Other inputs',
   viewForm: 'Form',
+  editorView: 'View',
   viewYaml: 'YAML',
   fixFieldsFirst: 'Fix the fields with errors first, so the YAML shows everything you entered.',
   yamlSyntax: (message: string) => `The YAML doesn’t parse: ${message}`,
@@ -434,7 +425,11 @@ export const GRAPH_EDITOR_STRINGS = {
   },
 }
 
-export type GraphEditorStrings = typeof GRAPH_EDITOR_STRINGS
+/** The editor's own text, which a host translates through UIProvider's `graphEditor`. */
+export type GraphEditorText = typeof GRAPH_EDITOR_STRINGS
+
+/** The editor's text with the shared words, such as Save and Remove, beside it. */
+export type GraphEditorStrings = GraphEditorText & { common: UIStrings['common'] }
 
 export const INPUTS_EDITOR_STRINGS = {
   addInput: 'Input',
@@ -459,18 +454,13 @@ export const INPUTS_EDITOR_STRINGS = {
   onePerCopy: 'One per copy',
   inputActions: 'Input actions',
   editInput: 'Edit input',
-  duplicate: 'Duplicate',
-  moveUp: 'Move up',
-  moveDown: 'Move down',
   deleteInput: 'Delete input',
   hidden: 'hidden',
   noInputs: 'No inputs yet. Add one to build the form users fill in to run this workflow.',
   noFields: 'No fields yet.',
   inputName: 'Name',
   inputType: 'Type',
-  invalidInputName: 'Use letters, numbers, dashes, and underscores.',
   inputExists: 'An input with this name already exists here.',
-  invalidNumber: 'Use a number.',
   invalidDurationText: 'Use HH:MM:SS or D-HH:MM:SS.',
   invalidWidth: 'Use a number of pixels, such as 320, or a percentage, such as 50%.',
   resizeInputs: 'Resize the inputs on each side',
@@ -754,16 +744,20 @@ export const INPUTS_EDITOR_STRINGS = {
   },
 }
 
-export type InputsEditorStrings = typeof INPUTS_EDITOR_STRINGS
+/** The input form editor's own text, which a host translates through UIProvider's `inputsEditor`. */
+export type InputsEditorText = typeof INPUTS_EDITOR_STRINGS
+
+/** The input form editor's text with the shared words beside it. */
+export type InputsEditorStrings = InputsEditorText & { common: UIStrings['common'] }
 
 /** The graph editor's strings: the host's translations over the English defaults. */
 export function useGraphEditorStrings(): GraphEditorStrings {
-  const overrides = useStrings().graphEditor
-  return useMemo(() => ({ ...GRAPH_EDITOR_STRINGS, ...overrides }), [overrides])
+  const { graphEditor: overrides, common } = useStrings()
+  return useMemo(() => ({ ...GRAPH_EDITOR_STRINGS, ...overrides, common }), [overrides, common])
 }
 
 /** The input form editor's strings: the host's translations over the English defaults. */
 export function useInputsEditorStrings(): InputsEditorStrings {
-  const overrides = useStrings().inputsEditor
-  return useMemo(() => ({ ...INPUTS_EDITOR_STRINGS, ...overrides }), [overrides])
+  const { inputsEditor: overrides, common } = useStrings()
+  return useMemo(() => ({ ...INPUTS_EDITOR_STRINGS, ...overrides, common }), [overrides, common])
 }

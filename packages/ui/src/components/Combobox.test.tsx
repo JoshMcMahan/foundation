@@ -184,6 +184,80 @@ describe('Combobox', () => {
       expect(onValueChange).toHaveBeenLastCalledWith([])
     })
   })
+
+  describe('creatable', () => {
+    function Tags({
+      initial = [],
+      maxItems,
+      onValueChange,
+    }: {
+      initial?: string[]
+      maxItems?: number
+      onValueChange?: (value: string[]) => void
+    }) {
+      const [value, setValue] = useState<string[]>(initial)
+      return (
+        <Combobox
+          multiple
+          creatable
+          maxItems={maxItems}
+          maxLength={12}
+          aria-label="Tags"
+          placeholder="Add a tag"
+          items={['python', 'gpu']}
+          value={value}
+          onValueChange={(next) => {
+            setValue(next)
+            onValueChange?.(next)
+          }}
+        />
+      )
+    }
+
+    // Typed, as a keyboard does it: Base UI highlights the leading row only for typed input.
+    const type = (input: HTMLElement, value: string) => {
+      input.focus()
+      fireEvent.input(input, { target: { value }, inputType: 'insertText' })
+    }
+
+    it('adds typed text the list lacks as a value with Enter', async () => {
+      const onValueChange = vi.fn()
+      render(<Tags onValueChange={onValueChange} />)
+      const input = screen.getByRole('combobox', { name: 'Tags' })
+      await open()
+      type(input, 'py')
+      // The add row leads, ahead of the suggestion the text also matches.
+      const options = await screen.findAllByRole('option')
+      expect(options.map((option) => option.textContent)).toEqual(['Add “py”', 'python'])
+      fireEvent.keyDown(input, { key: 'Enter' })
+      await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith(['py']))
+      expect(screen.getByRole('button', { name: 'Remove py' })).toBeInTheDocument()
+    })
+
+    it('offers no add row for text already listed or chosen, in any case', async () => {
+      render(<Tags initial={['gpu']} />)
+      const input = screen.getByRole('combobox', { name: 'Tags' })
+      await open()
+      type(input, 'PYTHON')
+      expect(await screen.findByRole('option', { name: 'python' })).toBeInTheDocument()
+      expect(screen.queryByRole('option', { name: /^Add/ })).not.toBeInTheDocument()
+      type(input, 'Gpu')
+      await waitFor(() =>
+        expect(screen.queryByRole('option', { name: /^Add/ })).not.toBeInTheDocument(),
+      )
+    })
+
+    it('takes no more than maxItems values, and limits typed length', async () => {
+      render(<Tags initial={['gpu', 'cpu']} maxItems={2} />)
+      const input = screen.getByRole('combobox', { name: 'Tags' })
+      expect(input).toHaveAttribute('maxLength', '12')
+      expect(input).toHaveAttribute('placeholder', 'Up to 2')
+      type(input, 'py')
+      const python = await screen.findByRole('option', { name: 'python' })
+      expect(python).toHaveAttribute('aria-disabled', 'true')
+      expect(screen.queryByRole('option', { name: /^Add/ })).not.toBeInTheDocument()
+    })
+  })
 })
 
 describe('Autocomplete', () => {

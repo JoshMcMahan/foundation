@@ -6,7 +6,7 @@ const WITH_DAYS = /^(\d+)-(\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?$/
 // to most users, and the MM:SS reading would silently make it 5 minutes.
 const WITHOUT_DAYS = /^(\d+):(\d{1,2}):(\d{1,2})$/
 
-export function parseDuration(text: string): number | null {
+export function parseDurationText(text: string): number | null {
   const trimmed = text.trim()
   let days = 0
   let hours: number
@@ -38,7 +38,7 @@ export function parseDuration(text: string): number | null {
   return days * 86400 + hours * 3600 + minutes * 60 + seconds
 }
 
-export function formatDuration(totalSeconds: number): string {
+export function formatDurationText(totalSeconds: number): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
     return ''
   }

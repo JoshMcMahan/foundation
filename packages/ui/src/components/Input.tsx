@@ -1,175 +1,111 @@
-import { clsx as cx } from 'clsx'
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
-import { forwardRef, useId, useState } from 'react'
-import { AlertIcon, EyeIcon, EyeOffIcon } from '../icons'
-import { RequiredMark } from './RequiredMark'
+import { forwardRef, useState } from 'react'
+import { cx } from '../cx'
+import { Field, type FieldControlProps, RevealToggle } from './Field'
+import { fieldBox } from './fieldBox'
 
-interface FieldProps {
+interface FramedProps {
+  /** Without a label the box stands alone; name it with `aria-label`. */
   label?: ReactNode
-  /** Shown beside the label, outside it, so it stays out of the field's name. */
-  labelHint?: ReactNode
-  /** Help text shown under the label. */
+  /** Beside the label and outside it, so it stays out of the field's name. */
+  hint?: ReactNode
+  /** Help under the field. */
   description?: ReactNode
-  error?: string | undefined
+  error?: ReactNode
   mono?: boolean
 }
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement>, FieldProps {}
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement>, FramedProps {}
 
-interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement>, FieldProps {}
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement>, FramedProps {}
 
-/** The box a text field draws, for other controls that should look like one. */
-export const fieldBoxClasses = cx(
-  'w-full py-3 px-4 bg-[var(--theme-muted-panel-bg)] border border-[var(--theme-border)] rounded-lg text-[var(--theme-app)] text-sm transition-all duration-200 box-border',
-  'focus:outline-none focus:border-[var(--theme-element)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-element)_25%,transparent)]',
-  'placeholder:text-[var(--theme-muted-text-color)]',
-)
-
-function LabelRow({
-  id,
-  label,
-  hint,
-  required,
-}: {
-  id: string
-  label: ReactNode
-  hint: ReactNode
-  required: boolean | undefined
-}) {
-  const element = (
-    <label className="text-[0.8125rem] font-medium text-[var(--theme-app)]" htmlFor={id}>
-      {label}
-      {required && <RequiredMark />}
-    </label>
-  )
-  return hint ? (
-    <div className="flex flex-wrap items-baseline gap-x-1.5">
-      {element}
-      {hint}
-    </div>
-  ) : (
-    element
-  )
-}
-
-// The label, help and error around a control, and the ids that tie them to it.
-function useFieldFrame(
-  { label, labelHint, description, error }: FieldProps,
-  ownId: string | undefined,
-  describedBy: string | undefined,
-  required: boolean | undefined,
-) {
-  const generatedId = useId()
-  const id = ownId ?? generatedId
-  const errorId = `${id}-error`
-  const descriptionId = `${id}-description`
-  return {
+/** The Field around a control when it has a label; the control alone when it doesn't. */
+function framed(
+  { label, hint, description, error }: FramedProps,
+  {
     id,
-    describedBy:
-      [describedBy, description ? descriptionId : undefined, error ? errorId : undefined]
-        .filter(Boolean)
-        .join(' ') || undefined,
-    frame: (control: ReactNode) => (
-      <div className="flex flex-col gap-1.5">
-        {label && <LabelRow id={id} label={label} hint={labelHint} required={required} />}
-        {description && (
-          <span id={descriptionId} className="-mt-1 text-xs text-(--theme-muted-text-color)">
-            {description}
-          </span>
-        )}
-        {control}
-        {error && (
-          <span
-            id={errorId}
-            role="alert"
-            className="text-[0.8125rem] text-[#ef4444] flex items-center gap-1.5"
-          >
-            <AlertIcon className="w-4 h-4" />
-            {error}
-          </span>
-        )}
-      </div>
-    ),
+    required,
+    disabled,
+  }: { id?: string | undefined; required?: boolean | undefined; disabled?: boolean | undefined },
+  control: (props: Partial<FieldControlProps>) => ReactNode,
+) {
+  if (label === undefined) {
+    return control(error ? { 'aria-invalid': true } : {})
   }
+  return (
+    <Field
+      label={label}
+      hint={hint}
+      description={description}
+      error={error}
+      required={required}
+      disabled={disabled}
+      id={id}
+    >
+      {control}
+    </Field>
+  )
 }
 
+/** A single-line text field. `type="password"` adds a button that shows what was typed. */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    { label, labelHint, description, error, className = '', mono, type, required, ...props },
-    ref,
-  ) => {
-    const [showPassword, setShowPassword] = useState(false)
-    const isPassword = type === 'password'
-    const field = useFieldFrame(
-      { label, labelHint, description, error },
-      props.id,
-      props['aria-describedby'],
-      required,
-    )
-    return field.frame(
-      <div className={isPassword ? 'relative w-full' : ''}>
+  ({ label, hint, description, error, className, mono, type, ...props }, ref) => {
+    const [revealed, setRevealed] = useState(false)
+    const secret = type === 'password'
+    return framed({ label, hint, description, error }, props, (control) => {
+      const input = (
         <input
           ref={ref}
-          type={isPassword && showPassword ? 'text' : type}
-          className={cx(
-            fieldBoxClasses,
-            'disabled:bg-[var(--theme-muted-panel-bg)] disabled:text-[var(--theme-muted-text-color)] disabled:cursor-not-allowed disabled:opacity-70',
-            mono && 'font-mono text-[0.8125rem]',
-            // Important: the box's own border color comes later in the stylesheet.
-            error && '!border-[#ef4444]',
-            isPassword && 'pr-11',
-            className,
-          )}
           {...props}
-          id={field.id}
-          required={required}
-          aria-invalid={error ? true : props['aria-invalid']}
-          aria-describedby={field.describedBy}
+          {...control}
+          aria-invalid={control['aria-invalid'] ?? props['aria-invalid']}
+          aria-describedby={
+            [props['aria-describedby'], control['aria-describedby']].filter(Boolean).join(' ') ||
+            undefined
+          }
+          type={secret && revealed ? 'text' : type}
+          className={cx(fieldBox(), mono && 'font-mono', secret && 'pr-9', className)}
         />
-        {isPassword && (
-          <button
-            type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--theme-muted-text-color)] cursor-pointer p-1 transition-colors duration-200 flex items-center justify-center hover:text-[var(--theme-app)]"
-            onClick={() => setShowPassword(!showPassword)}
-            tabIndex={-1}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-          </button>
-        )}
-      </div>,
-    )
+      )
+      return secret ? (
+        <div className="relative w-full">
+          {input}
+          <RevealToggle
+            revealed={revealed}
+            onRevealedChange={setRevealed}
+            disabled={props.disabled}
+          />
+        </div>
+      ) : (
+        input
+      )
+    })
   },
 )
 
 Input.displayName = 'Input'
 
+/** A multi-line text field that grows by hand. */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, labelHint, description, error, className = '', mono, required, ...props }, ref) => {
-    const field = useFieldFrame(
-      { label, labelHint, description, error },
-      props.id,
-      props['aria-describedby'],
-      required,
-    )
-    return field.frame(
+  ({ label, hint, description, error, className, mono, ...props }, ref) =>
+    framed({ label, hint, description, error }, props, (control) => (
       <textarea
         ref={ref}
+        {...props}
+        {...control}
+        aria-invalid={control['aria-invalid'] ?? props['aria-invalid']}
+        aria-describedby={
+          [props['aria-describedby'], control['aria-describedby']].filter(Boolean).join(' ') ||
+          undefined
+        }
         className={cx(
-          fieldBoxClasses,
-          'min-h-[140px] resize-y',
-          mono && 'font-mono text-[0.8125rem]',
-          error && '!border-[#ef4444]',
+          fieldBox({ multiline: true }),
+          'min-h-24 resize-y',
+          mono && 'font-mono',
           className,
         )}
-        {...props}
-        id={field.id}
-        required={required}
-        aria-invalid={error ? true : props['aria-invalid']}
-        aria-describedby={field.describedBy}
-      />,
-    )
-  },
+      />
+    )),
 )
 
 Textarea.displayName = 'Textarea'

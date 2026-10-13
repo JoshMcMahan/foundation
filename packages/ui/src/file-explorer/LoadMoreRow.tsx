@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import Loader from '../components/Loader'
+import { Loader } from '../components/Loader'
 import { useStrings } from '../components/Provider'
 import { useNearEnd } from './useNearEnd'
 
@@ -37,6 +37,7 @@ export function LoadMoreRow({
   onLoadMore,
 }: LoadMoreRowProps) {
   const t = useStrings().fileExplorer
+  const { common } = useStrings()
   const ref = useRef<HTMLTableRowElement>(null)
 
   useNearEnd(ref, {
@@ -56,21 +57,18 @@ export function LoadMoreRow({
               className="cursor-pointer underline theme-link"
               onClick={onLoadMore}
             >
-              {t.retry}
+              {common.retry}
             </button>
           </span>
         ) : loading ? (
-          <span className="flex items-center gap-2">
-            <Loader size={16} full={false} />
-            <span>{t.loadingMore}</span>
-          </span>
+          <Loader size={16} inline label={t.loadingMore} />
         ) : (
           <button
             type="button"
             className="cursor-pointer underline theme-link"
             onClick={onLoadMore}
           >
-            {t.loadMore}
+            {common.loadMore}
           </button>
         )}
       </td>

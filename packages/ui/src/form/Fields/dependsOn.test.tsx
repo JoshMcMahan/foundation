@@ -23,7 +23,6 @@ const byRegion = {
 const base = {
   label: 'Zone',
   labelPosition: 'top' as const,
-  missing: false,
   disabled: false,
 }
 

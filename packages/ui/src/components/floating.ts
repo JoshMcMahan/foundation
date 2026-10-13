@@ -1,16 +1,7 @@
 // One look for everything that floats: menus, selects, comboboxes, tooltips, infotips and hover cards.
 
-/** Popups portal into the host's .ds-root when it has one, so they inherit the
- *  design system's CSS variables; undefined lets the portal use document.body. */
-export function portalContainer(): HTMLElement | undefined {
-  if (typeof document === 'undefined') {
-    return undefined
-  }
-  return document.querySelector<HTMLElement>('.ds-root') ?? undefined
-}
-
 /** Above dialogs and sticky chrome; hidden while its anchor is scrolled out of view. */
-export const positionerClassName = 'z-[10000] outline-none data-anchor-hidden:invisible'
+export const positionerClassName = 'z-(--layer-popover) outline-none data-anchor-hidden:invisible'
 
 const enterExit =
   'origin-(--transform-origin) transition-[transform,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0'
@@ -30,3 +21,43 @@ export const tipArrowClassName =
 
 /** A hover card's surface; the card sets its own width and padding. */
 export const cardClassName = `overflow-hidden rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) text-(--theme-app) shadow-(--theme-shadow-lg) outline-none ${enterExit}`
+
+/** Where a popup opens: under an element, such as the button that opened it, or
+ *  at a pointer event's point, which then moves with the element it landed on. */
+export type FloatingAnchor =
+  | Element
+  | { clientX: number; clientY: number; currentTarget?: EventTarget | null }
+
+/** A popup positioner's anchor: an element, or a point that reads its place each frame. */
+export type PositionerAnchor =
+  | Element
+  | {
+      getBoundingClientRect: () => DOMRect | ReturnType<typeof pointRect>
+      contextElement?: Element
+    }
+
+function pointRect(x: number, y: number) {
+  return { x, y, left: x, top: y, right: x, bottom: y, width: 0, height: 0 }
+}
+
+export function toPositionerAnchor(at: FloatingAnchor): PositionerAnchor {
+  if (at instanceof Element) {
+    return at
+  }
+  const { clientX, clientY } = at
+  const on = at.currentTarget instanceof Element ? at.currentTarget : null
+  if (!on) {
+    return { getBoundingClientRect: () => pointRect(clientX, clientY) }
+  }
+  // The point keeps its place on the element, so the popup follows it as the page scrolls.
+  const start = on.getBoundingClientRect()
+  const dx = clientX - start.left
+  const dy = clientY - start.top
+  return {
+    contextElement: on,
+    getBoundingClientRect: () => {
+      const now = on.getBoundingClientRect()
+      return pointRect(now.left + dx, now.top + dy)
+    },
+  }
+}

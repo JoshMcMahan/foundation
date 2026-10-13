@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react'
-import Loader from '../components/Loader'
+import { ErrorText } from '../components/Field'
+import { Loader } from '../components/Loader'
 import { Tooltip } from '../components/Tooltip'
 import type { WorkflowEditing } from '../editing'
 import type { EditorMarker } from '../editor/Monaco'
 import type { NestedWorkflowText } from '../editor/nestedText'
-import { ChoiceButtons, FieldError, type Strings } from './editorFields'
+import { ChoiceButtons, type Strings } from './editorFields'
 import { useGraphEditorStrings } from './editorStrings'
 import { ProblemList, type ScopedProblem } from './fieldProblems'
 
@@ -40,6 +41,7 @@ export function ViewSwitch({
     <Tooltip content={t.help.view}>
       <div>
         <ChoiceButtons
+          label={t.editorView}
           options={[
             { value: 'yaml', label: t.viewYaml },
             { value: 'form', label: t.viewForm },
@@ -92,7 +94,7 @@ export function YamlPane({
           />
         </Suspense>
       </div>
-      <FieldError message={problem} />
+      <ErrorText>{problem}</ErrorText>
       <ProblemList problems={scoped.problems} />
     </div>
   )

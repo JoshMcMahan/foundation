@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { usePersistedState } from '../../components/Provider'
 
 /** The conversation list beside the thread: full width, a rail of icons, or
  *  not shown at all (the host offers its own way back). */
@@ -8,51 +9,36 @@ export type SidebarState = 'expanded' | 'collapsed' | 'hidden'
  *  or as a drawer over it. */
 export type SidebarPresentation = 'inline' | 'drawer'
 
-const SIDEBAR_STORAGE_KEY = 'aiChatSidebar'
-// Earlier releases kept only collapsed or not, as '1' or '0'.
-const LEGACY_COLLAPSED_STORAGE_KEY = 'aiChatSidebarCollapsed'
-
-export function readStoredSidebar(): SidebarState {
-  try {
-    const stored = globalThis.localStorage?.getItem(SIDEBAR_STORAGE_KEY)
-    if (stored === 'expanded' || stored === 'collapsed') {
-      return stored
-    }
-    return globalThis.localStorage?.getItem(LEGACY_COLLAPSED_STORAGE_KEY) === '1'
-      ? 'collapsed'
-      : 'expanded'
-  } catch {
-    return 'expanded'
-  }
-}
-
-// Only the reader's own choice between the column and the rail is
-// remembered; hiding the list is the host's call and would otherwise outlive
-// the page that made it.
-export function storeSidebar(state: SidebarState) {
-  if (state === 'hidden') {
-    return
-  }
-  try {
-    globalThis.localStorage?.setItem(SIDEBAR_STORAGE_KEY, state)
-  } catch {
-    // Storage unavailable: the sidebar still toggles, it just does not remember.
-  }
+/** The reader's own choice between the column and the rail, remembered through
+ *  the host's persisted state. Hiding the list is the host's call, so it lasts
+ *  only for the page that made it. */
+export function useOwnSidebar(): readonly [SidebarState, (state: SidebarState) => void] {
+  const [remembered, remember] = usePersistedState<SidebarState>('aiChat.sidebar', 'expanded')
+  const [hidden, setHidden] = useState(false)
+  const set = useCallback(
+    (state: SidebarState) => {
+      setHidden(state === 'hidden')
+      if (state !== 'hidden') {
+        remember(state)
+      }
+    },
+    [remember],
+  )
+  return [hidden ? 'hidden' : remembered === 'collapsed' ? 'collapsed' : 'expanded', set]
 }
 
 /** A value the host may own through a prop. Without the prop the provider
- *  keeps it; either way the change callback hears every change. The ref
- *  reads the latest value from callbacks that should not re-create. */
+ *  keeps it in `own`; either way the change callback hears every change. The
+ *  ref reads the latest value from callbacks that should not re-create. */
 export function useControllable<T>(
   controlled: T | undefined,
-  initial: () => T,
+  own: readonly [T, (value: T) => void],
   onChange: ((value: T) => void) | undefined,
-  remember?: (value: T) => void,
 ) {
-  const [own, setOwn] = useState(initial)
-  const value = controlled === undefined ? own : controlled
-  const latest = useRef({ value, controlled: controlled !== undefined, onChange, remember })
-  latest.current = { value, controlled: controlled !== undefined, onChange, remember }
+  const [ownValue, setOwn] = own
+  const value = controlled === undefined ? ownValue : controlled
+  const latest = useRef({ value, controlled: controlled !== undefined, onChange, setOwn })
+  latest.current = { value, controlled: controlled !== undefined, onChange, setOwn }
 
   const set = useCallback((next: T) => {
     const l = latest.current
@@ -60,8 +46,7 @@ export function useControllable<T>(
       return
     }
     if (!l.controlled) {
-      setOwn(next)
-      l.remember?.(next)
+      l.setOwn(next)
     }
     l.onChange?.(next)
   }, [])

@@ -27,7 +27,7 @@ function renderForm(formJSONs: Record<string, unknown>) {
 
 const fieldRow = (label: string) => {
   const labelEl = screen.getByText(label, { exact: true })
-  const row = labelEl.closest('.form-label')?.parentElement
+  const row = labelEl.closest('[data-field-label]')?.parentElement?.parentElement
   if (!row) {
     throw new Error(`no field row for label ${label}`)
   }

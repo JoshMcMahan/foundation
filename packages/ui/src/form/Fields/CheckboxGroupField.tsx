@@ -1,6 +1,8 @@
-import { clsx as cx } from 'clsx'
 import { useState } from 'react'
-import { FieldWrapper } from '../FieldWrapper'
+import { Checkbox } from '../../components/Checkbox'
+import { Field, FieldOption } from '../../components/Field'
+import { cx } from '../../cx'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -34,16 +36,8 @@ function union(manual: string[], forced: Set<string>): string[] {
   return [...manual, ...[...forced].filter((v) => !manual.includes(v))]
 }
 
-export default function CheckboxGroupField({
-  field,
-  label,
-  labelPosition,
-  missing,
-  disabled,
-  onChange,
-  tooltipComponent,
-  spaceCompact,
-}: FieldComponentProps<ICheckboxGroupField>) {
+export default function CheckboxGroupField(props: FieldComponentProps<ICheckboxGroupField>) {
+  const { field, error, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<Array<string | number> | undefined>(field.name ?? '')
   const implies = field.implies
@@ -80,60 +74,44 @@ export default function CheckboxGroupField({
   }
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ labelId, describedBy }) => (
-        <fieldset
-          aria-labelledby={labelId}
-          aria-describedby={describedBy}
-          className="flex min-w-0 max-w-lg flex-col gap-1"
-        >
-          {field.options?.map((raw) => {
-            const option = fieldOption(raw)
-            const locked = forced.has(option.value)
-            const optionDisabled = disabled || locked
-            return (
-              <label
-                key={field.name + option.value}
-                className={cx(
-                  // Negative inset so the row's hover fill bleeds past the
-                  // text while the checkbox stays flush with the field label.
-                  '-mx-2 flex items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors',
-                  optionDisabled
-                    ? 'cursor-not-allowed opacity-60'
-                    : 'cursor-pointer hover:bg-(--theme-hover) has-[:focus-visible]:bg-(--theme-hover)',
+    <Field {...fieldFrame(props, { group: true })}>
+      <div className="flex min-w-0 max-w-lg flex-col gap-1">
+        {field.options?.map((raw) => {
+          const option = fieldOption(raw)
+          const locked = forced.has(option.value)
+          const optionDisabled = disabled || locked
+          return (
+            <FieldOption
+              key={field.name + option.value}
+              disabled={optionDisabled}
+              className={cx(
+                // Negative inset so the row's hover fill bleeds past the
+                // text while the checkbox stays flush with the field label.
+                '-mx-2 flex items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors',
+                !optionDisabled &&
+                  'hover:bg-(--theme-hover) has-[:focus-visible]:bg-(--theme-hover)',
+              )}
+            >
+              <Checkbox
+                checked={manual.includes(option.value) || locked}
+                disabled={optionDisabled}
+                onCheckedChange={() => handleToggle(option.value)}
+                aria-invalid={error !== undefined || undefined}
+                // Down to the first line of a label that may wrap.
+                className="mt-0.5"
+              />
+              <div className="flex min-w-0 flex-col">
+                <span className="font-medium leading-tight theme-text">{option.label}</span>
+                {option.description && (
+                  <span className="mt-0.5 text-xs leading-snug theme-muted-text">
+                    {option.description}
+                  </span>
                 )}
-              >
-                <input
-                  type="checkbox"
-                  checked={manual.includes(option.value) || locked}
-                  disabled={optionDisabled}
-                  onChange={() => handleToggle(option.value)}
-                  className={cx(
-                    // min-h-0: the base input rule's 20px minimum would sit the box below the label's line.
-                    'h-4 min-h-0 w-4 rounded accent-(--theme-link)',
-                    optionDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
-                    missing && 'invalid',
-                  )}
-                />
-                <div className="flex min-w-0 flex-col">
-                  <span className="font-medium leading-tight theme-text">{option.label}</span>
-                  {option.description && (
-                    <span className="mt-0.5 text-xs leading-snug theme-muted-text">
-                      {option.description}
-                    </span>
-                  )}
-                </div>
-              </label>
-            )
-          })}
-        </fieldset>
-      )}
-    </FieldWrapper>
+              </div>
+            </FieldOption>
+          )
+        })}
+      </div>
+    </Field>
   )
 }

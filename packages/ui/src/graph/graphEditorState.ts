@@ -4,7 +4,7 @@ import {
   useContext,
   useSyncExternalStore,
 } from 'react'
-import type { MenuAnchor } from '../components/ContextMenu'
+import type { FloatingAnchor } from '../components/floating'
 import type { GraphEdit, GraphSlot, NeedRef, NudgeDirection, StepRef } from '../editing'
 import type { EditorProblem, RevealTarget } from './editorApi'
 import type { Box, Point, Store } from './editorPrimitives'
@@ -125,9 +125,9 @@ export interface GraphEditorApi {
   t: GraphEditorStrings
   isMatrixJob: (job: string) => boolean
   startDrag: (e: ReactPointerEvent, payload: DragPayload) => void
-  openJobMenu: (at: MenuAnchor, job: string) => void
-  openStepMenu: (at: MenuAnchor, job: string, index: number) => void
-  openEdgeMenu: (at: MenuAnchor, edge: EdgeSelection) => void
+  openJobMenu: (at: FloatingAnchor, job: string) => void
+  openStepMenu: (at: FloatingAnchor, job: string, index: number) => void
+  openEdgeMenu: (at: FloatingAnchor, edge: EdgeSelection) => void
   /**
    * Selects a connector alone, or with `add` adds it to the selected connectors or takes it out;
    * selected jobs or steps give way to it.

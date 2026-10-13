@@ -1,8 +1,8 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Dialog } from '@base-ui/react/dialog'
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
-import { portalContainer } from './floating'
+import { cx } from '../cx'
+import { pressedToast } from './Toast'
 
 /** The panel a modal draws by default; pass `panel={false}` to paint your own. */
 export const modalPanelClassName =
@@ -50,20 +50,24 @@ export function Modal({
     if (next) {
       return
     }
-    if (!dismissible && details.reason === 'escape-key') {
+    if (
+      (!dismissible && details.reason === 'escape-key') ||
+      (details.reason === 'outside-press' && pressedToast(details.event))
+    ) {
       details.cancel()
       return
     }
     onClose()
   }
   const content = (
-    <Dialog.Portal container={portalContainer()}>
-      <Dialog.Backdrop className={cx('fixed inset-0 z-[9990]', backdropClassName)} />
+    <Dialog.Portal>
+      <Dialog.Backdrop className={cx('fixed inset-0 z-(--layer-modal)', backdropClassName)} />
       <Dialog.Viewport
         className={cx(
-          // pb keeps tall panels (max-h-full) off the window's bottom edge.
-          'fixed inset-0 z-[9990] flex justify-center px-4 pb-8',
-          align === 'center' ? 'items-center' : 'items-start pt-[14vh]',
+          // pb keeps tall panels (max-h-full) off the window's bottom edge, and
+          // pt clears the toasts along the top so none covers the panel.
+          'fixed inset-0 z-(--layer-modal) flex justify-center px-4 pt-20 pb-8',
+          align === 'center' ? 'items-center' : 'items-start sm:pt-[max(14vh,5rem)]',
         )}
       >
         <Dialog.Popup

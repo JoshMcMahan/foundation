@@ -1,6 +1,7 @@
-import { clsx as cx } from 'clsx'
 import { useMemo } from 'react'
 import { Combobox, type ComboboxGroup } from '../../components/Combobox'
+import { useStrings } from '../../components/Provider'
+import { cx } from '../../cx'
 import { ChevronDownIcon, CloudIcon, RetryIcon, WarningTriangleIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -100,6 +101,7 @@ export default function ModelSelector({
     currentUser,
   } = useChat()
   const { strings } = useChatConfig()
+  const { common } = useStrings()
   const t = strings.modelPicker
 
   const targetSessionFound =
@@ -186,7 +188,7 @@ export default function ModelSelector({
           className="flex items-center gap-1 text-xs text-(--theme-element) hover:underline"
         >
           <RetryIcon className="h-2.5 w-2.5" />
-          {t.retry}
+          {common.retry}
         </button>
       </span>
     )

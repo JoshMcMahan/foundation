@@ -1,6 +1,6 @@
 import { PreviewCard } from '@base-ui/react/preview-card'
 import type { ReactElement, ReactNode } from 'react'
-import { cardClassName, portalContainer, positionerClassName } from './floating'
+import { cardClassName, positionerClassName } from './floating'
 
 export interface HoverCardProps {
   /** Mounted only while open, so a card that loads its own data loads on first hover. */
@@ -19,7 +19,7 @@ export function HoverCard({ card, children, defaultOpen = false }: HoverCardProp
   return (
     <PreviewCard.Root defaultOpen={defaultOpen}>
       <PreviewCard.Trigger delay={350} closeDelay={150} render={children} />
-      <PreviewCard.Portal container={portalContainer()}>
+      <PreviewCard.Portal>
         <PreviewCard.Positioner
           side="bottom"
           align="start"

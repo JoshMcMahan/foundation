@@ -1,6 +1,8 @@
 // The tool-formatting layer of a terminal coding agent. Pure functions over the recorded (name, args,
 // result) triple, so a replayed transcript renders like a live one.
 
+import { defaultToolStrings, type ToolStrings } from './toolStrings'
+
 export interface ToolHeader {
   label: string
   arg?: string
@@ -165,20 +167,6 @@ export function fullToolArgs(primary: string | undefined, argsJSON: string): str
   return formatToolArgs(primary, argsJSON, { valueClip: 0, totalClip: 0 })
 }
 
-export function plural(n: number, noun: string): string {
-  return `${n} ${pluralNoun(n, noun)}`
-}
-
-function pluralNoun(n: number, noun: string): string {
-  if (n === 1) {
-    return noun
-  }
-  if (/(?:s|x|ch|sh)$/.test(noun)) {
-    return `${noun}es`
-  }
-  return `${noun}s`
-}
-
 // limitToolResult appends this to an oversized result; summaries cut it off
 // before counting.
 const TOOL_OUTPUT_TRUNCATION_MARKER = '\n\n... output truncated to '
@@ -191,17 +179,13 @@ function trimToolOutputNotice(body: string): [string, boolean] {
   return [body, false]
 }
 
-function summarizeToolResult(result: string): string {
+function summarizeToolResult(result: string, t: ToolStrings): string {
   const trimmed = result.replace(/\n+$/, '')
   if (trimmed.trim() === '') {
-    return '(no output)'
+    return t.noOutput
   }
   const lines = trimmed.split('\n')
-  const first = clip((lines[0] ?? '').trim(), 100)
-  if (lines.length > 1) {
-    return `${first}  (+${lines.length - 1} lines)`
-  }
-  return first
+  return t.firstLine(clip((lines[0] ?? '').trim(), 100), lines.length - 1)
 }
 
 // Failures are recorded in-band as "Error: …"; history carries no flag.
@@ -259,12 +243,12 @@ function contentLines(body: string): [string[], string] {
   return [rest.split('\n'), note]
 }
 
-function readFileSummary(body: string): string {
+function readFileSummary(body: string, t: ToolStrings): string {
   if (body === '(empty file)') {
-    return 'Empty file'
+    return t.emptyFile
   }
   if (body.startsWith('Read image ')) {
-    return 'Read image'
+    return t.readImage
   }
   const [lines, note] = contentLines(body)
   let more = 0
@@ -272,10 +256,7 @@ function readFileSummary(body: string): string {
   if (m) {
     more = Number(m[1])
   }
-  if (more > 0) {
-    return `Read ${plural(lines.length, 'line')} (${more} more)`
-  }
-  return `Read ${plural(lines.length, 'line')}`
+  return t.readLines(lines.length, more)
 }
 
 // Path off a `path:line:text` ripgrep match; context lines and separators
@@ -290,12 +271,12 @@ function grepMatchPath(line: string, lineNums: boolean): string | null {
   return GREP_CONTENT_PATH.exec(line)?.[1] ?? null
 }
 
-function grepSearchSummary(argsJSON: string, body: string): string {
+function grepSearchSummary(argsJSON: string, body: string, t: ToolStrings): string {
   if (body === 'No matches found.' || body === 'No results after applying offset.') {
-    return 'No matches'
+    return t.noMatches
   }
   if (body.startsWith(RIPGREP_ERROR_PREFIX)) {
-    return summarizeToolResult(body)
+    return summarizeToolResult(body, t)
   }
   const [lines, note] = contentLines(body)
   let outputMode = ''
@@ -322,7 +303,7 @@ function grepSearchSummary(argsJSON: string, body: string): string {
       matches++
       files.add(path)
     }
-    s = `Found ${plural(matches, 'match')} in ${plural(files.size, 'file')}`
+    s = t.foundMatches(matches, files.size)
   } else if (outputMode === 'count') {
     let total = 0
     for (const l of lines) {
@@ -333,26 +314,20 @@ function grepSearchSummary(argsJSON: string, body: string): string {
         total += n
       }
     }
-    s = `Found ${plural(total, 'match')} in ${plural(lines.length, 'file')}`
+    s = t.foundMatches(total, lines.length)
   } else {
-    s = `Found ${plural(lines.length, 'file')}`
+    s = t.foundFiles(lines.length)
   }
-  if (note !== '') {
-    s += ' (truncated)'
-  }
-  return s
+  return note === '' ? s : t.truncated(s)
 }
 
-function globSearchSummary(body: string): string {
+function globSearchSummary(body: string, t: ToolStrings): string {
   if (body === 'No files matched the pattern.') {
-    return 'No files matched'
+    return t.noFilesMatched
   }
   const [lines, note] = contentLines(body)
-  let s = `Found ${plural(lines.length, 'file')}`
-  if (note !== '') {
-    s += ' (truncated)'
-  }
-  return s
+  const s = t.foundFiles(lines.length)
+  return note === '' ? s : t.truncated(s)
 }
 
 // Splits a Bash result into output and the exit code from the "Exit code: N"
@@ -371,24 +346,21 @@ export function bashExitCode(body: string): [string, number, boolean] {
   return [body.slice(0, i).replace(/\n+$/, ''), code, true]
 }
 
-function bashSummary(body: string): string {
+function bashSummary(body: string, t: ToolStrings): string {
   if (body === '(no output)') {
-    return '(no output)'
+    return t.noOutput
   }
   const [out, code, ok] = bashExitCode(body)
   if (!ok) {
-    return summarizeToolResult(body)
+    return summarizeToolResult(body, t)
   }
-  if (out === '') {
-    return `Exit ${code}`
-  }
-  return `Exit ${code} · ${plural(out.split('\n').length, 'line')}`
+  return t.exitCode(code, out === '' ? 0 : out.split('\n').length)
 }
 
-function webFetchSummary(body: string): string {
+function webFetchSummary(body: string, t: ToolStrings): string {
   const m = body.match(/^HTTP (\d+)/)
   if (!m) {
-    return summarizeToolResult(body)
+    return summarizeToolResult(body, t)
   }
   const status = Number(m[1])
   const sep = body.indexOf('\n\n')
@@ -396,62 +368,66 @@ function webFetchSummary(body: string): string {
     return clip(body.split('\n')[0] ?? '', 100)
   }
   const rest = body.slice(sep + 2)
-  return `HTTP ${status} · ${plural(rest.split('\n').length, 'line')}`
+  return t.httpStatus(status, rest.split('\n').length)
+}
+
+export interface ToolSummaryOptions {
+  /** The edit tools' own summary; passed in to keep this module free of the diff one. */
+  editSummary?: (toolName: string, argsJSON: string, strings: ToolStrings) => string
+  strings?: ToolStrings
 }
 
 // Condenses a finished tool call to one line from only the recorded triple.
-// editSummaryFn breaks the import cycle with the diff module.
 export function toolSummary(
   name: string,
   args: string,
   result: string,
   isError: boolean,
-  editSummaryFn?: (toolName: string, argsJSON: string) => string,
+  { editSummary, strings: t = defaultToolStrings }: ToolSummaryOptions = {},
 ): string {
   const [body, spilled] = trimToolOutputNotice(result.replace(/\n+$/, ''))
   if (isError || body.trim() === '' || isErrorResult(body)) {
-    return summarizeToolResult(result)
+    return summarizeToolResult(result, t)
   }
   let s: string
   switch (name) {
     case 'EditFile':
     case 'WriteFile': {
-      const e = editSummaryFn?.(name, args) ?? ''
-      return e !== '' ? e : summarizeToolResult(result)
+      const e = editSummary?.(name, args, t) ?? ''
+      return e !== '' ? e : summarizeToolResult(result, t)
     }
     case 'ReadFile':
-      s = readFileSummary(body)
+      s = readFileSummary(body, t)
       break
     case 'GrepSearch':
-      s = grepSearchSummary(args, body)
+      s = grepSearchSummary(args, body, t)
       break
     case 'GlobSearch':
-      s = globSearchSummary(body)
+      s = globSearchSummary(body, t)
       break
     case 'Bash':
-      s = bashSummary(body)
+      s = bashSummary(body, t)
       break
     case 'WebFetch':
-      s = webFetchSummary(body)
+      s = webFetchSummary(body, t)
       break
     default:
-      return summarizeToolResult(result)
+      return summarizeToolResult(result, t)
   }
-  if (spilled) {
-    s += ' (output truncated)'
-  }
-  return s
+  return spilled ? t.outputTruncated(s) : s
 }
 
-const ROLLUP_CATEGORIES: [(name: string) => boolean, (n: number) => string][] = [
-  [(n) => n === 'GrepSearch' || n === 'GlobSearch', (n) => `searched for ${plural(n, 'pattern')}`],
-  [(n) => n === 'ReadFile', (n) => `read ${plural(n, 'file')}`],
-  [(n) => n === 'Bash', (n) => `ran ${plural(n, 'shell command')}`],
-  [(n) => n === 'WebFetch', (n) => `fetched ${plural(n, 'URL')}`],
-  [(n) => n === 'Skill', (n) => `loaded ${plural(n, 'skill')}`],
-  [(n) => n === 'SendMessage', (n) => `sent ${plural(n, 'message')}`],
-  [(n) => n.startsWith('mcp__'), (n) => `called ${plural(n, 'MCP tool')}`],
-  [() => true, (n) => `ran ${plural(n, 'tool')}`],
+type RollupClause = keyof Omit<ToolStrings['rollup'], 'sentence'>
+
+const ROLLUP_CATEGORIES: [(name: string) => boolean, RollupClause][] = [
+  [(n) => n === 'GrepSearch' || n === 'GlobSearch', 'searched'],
+  [(n) => n === 'ReadFile', 'read'],
+  [(n) => n === 'Bash', 'ranCommands'],
+  [(n) => n === 'WebFetch', 'fetched'],
+  [(n) => n === 'Skill', 'loadedSkills'],
+  [(n) => n === 'SendMessage', 'sentMessages'],
+  [(n) => n.startsWith('mcp__'), 'calledMcpTools'],
+  [() => true, 'ranTools'],
 ]
 
 // Tools whose calls carry standalone weight in a transcript; they end a
@@ -463,7 +439,7 @@ export function isGroupableTool(name: string): boolean {
 }
 
 // "Searched for 7 patterns, read 6 files"
-export function rollupSentence(names: string[]): string {
+export function rollupSentence(names: string[], t: ToolStrings = defaultToolStrings): string {
   const counts = ROLLUP_CATEGORIES.map(() => 0)
   for (const name of names) {
     for (let i = 0; i < ROLLUP_CATEGORIES.length; i++) {
@@ -480,15 +456,11 @@ export function rollupSentence(names: string[]): string {
     if (n > 0) {
       const cat = ROLLUP_CATEGORIES[i]
       if (cat) {
-        parts.push(cat[1](n))
+        parts.push(t.rollup[cat[1]](n))
       }
     }
   }
-  if (parts.length === 0) {
-    return ''
-  }
-  const s = parts.join(', ')
-  return s.charAt(0).toUpperCase() + s.slice(1)
+  return parts.length === 0 ? '' : t.rollup.sentence(parts)
 }
 
 // Renderable agent colors, ordered for auto-assignment (red last so it keeps

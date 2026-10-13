@@ -1,5 +1,7 @@
-import { clsx as cx } from 'clsx'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field } from '../../components/Field'
+import { fieldBox } from '../../components/fieldBox'
+import { cx } from '../../cx'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -12,38 +14,16 @@ export interface ITextAreaField extends BaseField {
 }
 
 export default function TextAreaField(props: FieldComponentProps<ITextAreaField>) {
-  const {
-    field,
-    label,
-    labelPosition,
-    missing,
-    disabled,
-    onChange,
-    tooltipComponent,
-    spaceCompact,
-  } = props
+  const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      description={field.description}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, describedBy }) => (
+    <Field {...fieldFrame(props)}>
+      {(control) => (
         <textarea
-          className={cx(
-            'theme-input h-[82px] w-full rounded leading-4 overflow-y-scroll',
-            disabled && 'disabled',
-            missing && 'border-red-600 focus:border-red-600 focus:ring-red-500',
-          )}
-          id={id}
-          aria-describedby={describedBy}
-          aria-required={field.optional ? undefined : true}
+          {...control}
+          className={cx(fieldBox({ multiline: true }), 'h-20 resize-y')}
           name={field.name}
           value={value ?? ''}
           placeholder={getPlaceholder(field.placeholder, field.default)}
@@ -54,6 +34,6 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
           }}
         />
       )}
-    </FieldWrapper>
+    </Field>
   )
 }

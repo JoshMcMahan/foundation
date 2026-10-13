@@ -1,7 +1,7 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode, PointerEvent as ReactPointerEvent } from 'react'
 import { IconButton } from '../components/IconButton'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
 import { RedoIcon, SettingsIcon, UndoIcon } from '../icons'
 import type { DependencyGraphEditor } from './editorApi'
 import type { Point } from './editorPrimitives'
@@ -98,16 +98,16 @@ export function EditorBar({
         </>
       )}
       <IconButton
-        icon={<UndoIcon className="h-4 w-4" />}
-        label={t.undo}
+        icon={<UndoIcon />}
+        label={t.common.undo}
         size="sm"
         variant="ghost"
         disabled={!editor.canUndo}
         onClick={editor.onUndo}
       />
       <IconButton
-        icon={<RedoIcon className="h-4 w-4" />}
-        label={t.redo}
+        icon={<RedoIcon />}
+        label={t.common.redo}
         size="sm"
         variant="ghost"
         disabled={!editor.canRedo}
@@ -117,7 +117,7 @@ export function EditorBar({
       {children}
       {editor.onOpenSettings && (
         <IconButton
-          icon={<SettingsIcon className="h-4 w-4" />}
+          icon={<SettingsIcon />}
           label={t.workflowSettings}
           size="sm"
           variant="ghost"

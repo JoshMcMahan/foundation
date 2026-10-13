@@ -1,4 +1,3 @@
-export { durationToAbsHumanDuration } from '../duration'
 export * from './adapter/types'
 export * from './agent/index'
 export { default as AllocationSelector } from './components/AllocationSelector'
@@ -8,11 +7,7 @@ export {
   type AttachmentUploadHandle,
   default as AttachmentUpload,
 } from './components/AttachmentUpload'
-export {
-  compactCount,
-  default as ActivityLine,
-  formatElapsed,
-} from './components/agent/ActivityLine'
+export { default as ActivityLine } from './components/agent/ActivityLine'
 export {
   ApprovalBlock,
   default as AgentMessageParts,
@@ -103,20 +98,18 @@ export * from './types'
 export {
   ConversationSidebar,
   type ConversationSidebarGroup,
-  useResizableSidebarWidth,
+  sidebarDrawerProps,
 } from './ui/ConversationSidebar'
 export { NoticeBar, NoticeCard, type NoticeTone, OutputCard } from './ui/Notice'
 export {
   RenameDialog,
   type RowDialogStrings,
-  SidebarDrawer,
   SidebarGroupHeading,
   SidebarPanel,
-  SidebarPlaceholder,
   SidebarRailItem,
   SidebarRow,
   SidebarRowTitle,
   SidebarToggle,
   useRowDialogs,
 } from './ui/sidebar'
-export { formatFileSize, isMac, isOrgModel } from './utils'
+export { isMac, isOrgModel } from './utils'

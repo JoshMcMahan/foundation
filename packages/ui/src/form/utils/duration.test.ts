@@ -1,6 +1,6 @@
-import { collectPartitionDurationIssues, formatDuration, parseDuration } from './duration'
+import { collectPartitionDurationIssues, formatDurationText, parseDurationText } from './duration'
 
-describe('parseDuration', () => {
+describe('parseDurationText', () => {
   it.each([
     ['1-00:00:00', 86400],
     ['00:05:00', 300],
@@ -13,7 +13,7 @@ describe('parseDuration', () => {
     [' 02:00:00 ', 7200],
     ['1-23:59:59', 172799],
   ])('parses %s as %d seconds', (text, expected) => {
-    expect(parseDuration(text)).toBe(expected)
+    expect(parseDurationText(text)).toBe(expected)
   })
 
   it.each([
@@ -32,11 +32,11 @@ describe('parseDuration', () => {
     '1.5:00:00',
     '1:00:00:00',
   ])('rejects %s', (text) => {
-    expect(parseDuration(text)).toBeNull()
+    expect(parseDurationText(text)).toBeNull()
   })
 })
 
-describe('formatDuration', () => {
+describe('formatDurationText', () => {
   it.each([
     [300, '00:05:00'],
     [7200, '02:00:00'],
@@ -46,19 +46,19 @@ describe('formatDuration', () => {
     [10368000, '120-00:00:00'],
     [0, '00:00:00'],
   ])('formats %d as %s', (seconds, expected) => {
-    expect(formatDuration(seconds)).toBe(expected)
+    expect(formatDurationText(seconds)).toBe(expected)
   })
 
   it('returns empty string for non-finite or negative input', () => {
-    expect(formatDuration(Number.NaN)).toBe('')
-    expect(formatDuration(Number.POSITIVE_INFINITY)).toBe('')
-    expect(formatDuration(-5)).toBe('')
+    expect(formatDurationText(Number.NaN)).toBe('')
+    expect(formatDurationText(Number.POSITIVE_INFINITY)).toBe('')
+    expect(formatDurationText(-5)).toBe('')
   })
 
   it.each([30, 300, 7200, 86400, 131400, 604800])(
     'round-trips %d through format and parse',
     (seconds) => {
-      expect(parseDuration(formatDuration(seconds))).toBe(seconds)
+      expect(parseDurationText(formatDurationText(seconds))).toBe(seconds)
     },
   )
 })

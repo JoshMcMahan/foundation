@@ -255,3 +255,42 @@ function AutocompleteDemo(args: FieldArgs) {
 export const FreeText: StoryObj<FieldArgs> = {
   render: (args) => <AutocompleteDemo {...args} />,
 }
+
+interface TagsArgs extends FieldArgs {
+  maxItems: number
+  maxLength: number
+}
+
+function TagsDemo({ maxItems, maxLength, ...args }: TagsArgs) {
+  const [tags, setTags] = useState<string[]>(['python'])
+  return (
+    <Combobox
+      multiple
+      creatable
+      maxItems={maxItems}
+      maxLength={maxLength}
+      aria-label="Tags"
+      items={['python', 'gpu', 'genomics', 'machine-learning', 'visualization']}
+      value={tags}
+      // Tags read alike however they were typed.
+      onValueChange={(next) => setTags([...new Set(next.map((tag) => tag.toLowerCase()))])}
+      disabled={args.disabled}
+      aria-invalid={args.invalid}
+      placeholder="Add a tag"
+    />
+  )
+}
+
+/** Tags: pick suggestions or type new ones, Enter adding what was typed, up to a limit. */
+export const Tags: StoryObj<TagsArgs> = {
+  args: { maxItems: 4, maxLength: 30 },
+  render: (args) => <TagsDemo {...args} />,
+  play: async ({ canvasElement, args }) => {
+    if (args.disabled) {
+      return
+    }
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('combobox', { name: 'Tags' }), 'Climate{Enter}')
+    await expect(await canvas.findByRole('button', { name: 'Remove climate' })).toBeInTheDocument()
+  },
+}

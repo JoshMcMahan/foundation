@@ -1,3 +1,4 @@
+import { Checkbox } from '../components/Checkbox'
 import { useStrings } from '../components/Provider'
 import { Table } from '../components/Table'
 import { ListActionsHeader } from '../list/index'
@@ -21,29 +22,23 @@ export function FileTableHeaders({
     <>
       <Table.Header caps={false} className="py-2" style={{ minWidth: 200 }}>
         <div className="flex items-center gap-2.5">
-          <input
-            type="checkbox"
+          <Checkbox
             aria-label={t.chrome.selectAll}
-            className="h-4 w-4 cursor-pointer rounded border-(--theme-border) text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-            ref={(el) => {
-              if (el) {
-                el.indeterminate = someSelected && !allSelected
-              }
-            }}
-            onChange={onSelectAll}
             checked={allSelected}
+            indeterminate={someSelected && !allSelected}
+            onCheckedChange={() => onSelectAll()}
           />
           <span>{t.chrome.name}</span>
         </div>
       </Table.Header>
       <Table.Header caps={false} className="w-[14%] py-2">
-        Size
+        {t.chrome.size}
       </Table.Header>
       <Table.Header caps={false} className="w-[14%] py-2">
-        Type
+        {t.chrome.type}
       </Table.Header>
       <Table.Header caps={false} className="w-[22%] py-2">
-        Last Modified
+        {t.chrome.lastModified}
       </Table.Header>
       <ListActionsHeader actionCount={1} />
     </>

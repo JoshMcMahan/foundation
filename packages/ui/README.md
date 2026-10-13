@@ -17,8 +17,77 @@ so an application ships only what it imports:
 | `./ai`, `./ai/openai`, `./ai/mock` | chat interface and adapters |
 | `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css` | stylesheets |
 
-Hosts bind notifications, strings, navigation, data hooks and the workflow
-engine through `UIProvider`.
+Hosts bind strings, navigation, data hooks and the workflow engine through
+`UIProvider`, which also shows the package's toasts.
+
+## Which component?
+
+Each need has one component. Reach for it before styling markup by hand.
+
+| Need | Use |
+| --- | --- |
+| An action | `Button`; `IconButton` for an icon alone, named by its tooltip |
+| A link or another component's trigger that looks like a button | `buttonClasses()` |
+| A link out of the app | `ExternalLink` |
+| Work under way | `Loader`; `Skeleton` in a `LoadingRegion` for the shape of content still loading |
+| Nothing to show yet, or nothing matches | `EmptyState` |
+| A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
+| A number, a date | `NumberInput`, `DatePicker` |
+| On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on |
+| One of a few choices, all shown | `RadioGroup` in a form; `SegmentedControl` in a toolbar, or as a field's control in a `Field group` |
+| Narrowing what is shown by typing | `SearchInput`; `ListSearchControl` on a list page's toolbar |
+| A value from a list | `Select`, or `Combobox` when the list needs filtering |
+| Free text with suggestions, or tags | `Autocomplete`; `Combobox` with `multiple creatable` |
+| A range | `Slider` |
+| A titled part of a page or form | `Section` |
+| More detail under a line | `Disclosure` |
+| Views of one thing | `Tabs` |
+| A list of actions | `ActionMenu`; `useContextMenu` for a right-click or a row's menu |
+| A panel of controls anchored to a trigger | `Popover` |
+| A hint for a control | `Tooltip`; `InfoTip` for help everyone must reach |
+| A preview of what a link leads to | `HoverCard` |
+| A task that blocks the page | `Modal`; `ConfirmModal` to confirm one action |
+| A panel beside the page | `Drawer` |
+| A passing notice, or the progress of work in the background | `toast` |
+| How full something is, how far a task has come | `Meter`, `ProgressBar` |
+| Pages of a long list | `Pagination` |
+| A grouped page of settings | `SettingsCard` with `SettingRow`s |
+| A person | `Avatar` |
+| A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
+| A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
+| A copy action | `useCopy`, or `CopyToClipboard` for its button |
+| A live relative time or duration | `RelativeTime`, `Elapsed` |
+| Rendered Markdown | `Markdown` |
+| A value that survives a reload | `usePersistedState` |
+
+Some pairs look alike and are split on purpose:
+
+- **Section or Disclosure.** A `Section` is a titled part of a page or form: its
+  title is a heading in the page's outline, and folding it keeps its fields
+  mounted. A `Disclosure` is a line inside content that reveals detail beneath
+  it, such as a tool call's arguments, and adds nothing to the outline.
+- **Popover or HoverCard.** A `Popover` opens on a press and holds controls or a
+  list, so keyboard and touch reach it. A `HoverCard` opens on hover or focus
+  and only previews what its anchor already leads to; nothing in it may be
+  reachable only there.
+- **Menu or Popover.** A menu is a list of actions or choices that closes once
+  one is picked, with arrow-key navigation and type-ahead. Anything else
+  anchored to a trigger, such as a form or a filter panel, is a `Popover`.
+- **Tabs or SegmentedControl.** `Tabs` switch between views or pages of one
+  thing, each with its own panel or route. A `SegmentedControl` sets a value,
+  such as a time range, that changes what one view shows. `Tabs` with
+  `variant="segmented"` look the same, so the choice rests on what pressing does.
+- **SearchInput or ListSearchControl.** A `SearchInput` is a box that is
+  always shown and narrows what sits beside it, such as a panel's rows or a
+  log's lines. `ListSearchControl` belongs to a list page's toolbar: it folds to
+  a button, opens on ⌘F or `/`, and keeps terms as chips the list remembers.
+- **StatusBadge or RunStatusIcon.** A `StatusBadge` says a status in words in
+  its tone, for anything. A `RunStatusIcon` shows the status of something that
+  ran as an icon beside its name, and turns while it runs; `runStatusTone` gives
+  a badge for the same status the same tone.
+- **Select or Combobox.** A `Select` picks from a short list it shows in full.
+  A `Combobox` filters as you type, for a list long enough to search, and is the
+  one that takes several values, new ones, or free text (`Autocomplete`).
 
 ## Theme contract
 
@@ -55,10 +124,87 @@ so its precedence does not depend on where it loads. It includes Tailwind's
 preflight reset; a host with its own Tailwind build should use the `@source`
 route instead to avoid a double preflight.
 
+## Buttons and spinners
+
+Every pressable thing has one look, from `buttonClasses({ variant, size, iconOnly })`:
+
+| Variant | For |
+| --- | --- |
+| `primary` | the one action a view leads to |
+| `secondary` | actions beside it |
+| `outline`, `ghost` | toolbar and inline actions, bordered or not |
+| `danger` | confirming what can't be undone |
+
+Sizes are `xs`, `sm` and `md`. `Button` and `IconButton` apply it. An
+`IconButton` is named by its tooltip, and takes `pressed` for a toggle and
+`dot` for an indicator. Pass `buttonClasses()` to a host link or to another
+component's trigger rather than styling a button by hand. A pressed toggle
+(`aria-pressed`) and an open popup's trigger read as selected.
+
+`Loader` is the one spinner. Inside a button, or beside text that already
+says what is happening, use `<Loader inline decorative />`.
+
+## Toasts
+
+`toast` shows a notice from anywhere, a component or not. `UIProvider` renders
+them along the top of the window, above dialogs, where they clear a modal's
+panel and stay usable while it is open: pressing one doesn't close the dialog.
+A screen reader hears each one; errors interrupt, the rest wait for a pause.
+
+```ts
+import { toast } from '@parallelworks/ui'
+
+toast.success('Saved')
+toast.error('Could not save', { action: { label: 'Retry', onClick: save } })
+
+const id = toast.loading('Uploading…')
+toast.update(id, { tone: 'success', message: 'Uploaded' })
+
+await toast.promise(save(), { loading: 'Saving…', success: 'Saved', error: 'Could not save' })
+```
+
+Tones are `info`, `success`, `warning` and `error`. A toast closes itself after
+five seconds, eight for a warning or an error, pausing while the pointer or focus
+is on it; `timeout: false` keeps it. `loading` stays until an update settles it
+into a tone. Pass an `id` to replace a toast rather than stack another.
+
+## Host chrome
+
+Popups, dialogs and drawers portal to `<body>` and read the tokens from the
+document root. A host with fixed chrome tells overlays where it is, on the same
+root:
+
+| Variable            | Meaning                                                                 |
+| ------------------- | ----------------------------------------------------------------------- |
+| `--app-inset-top`   | The height of a fixed top bar. A drawer starts below it.                |
+| `--app-inset-start` | The width of a fixed sidebar on the start side. A drawer at its widest leaves that strip, and never less than 2.5rem. |
+
+```ts
+document.documentElement.style.setProperty('--app-inset-top', '56px')
+document.documentElement.style.setProperty('--app-inset-start', '220px')
+```
+
+Everything the package lays over the page stacks on one scale, set on the
+document root by `base.css`. Give the host's own fixed elements a place on it,
+such as `z-index: 100` for a top bar, rather than a z-index chosen to win:
+
+| Variable          | Default | For                                                    |
+| ----------------- | ------- | ------------------------------------------------------ |
+| `--layer-sticky`  | 10      | toolbars and tab strips that stick as the page scrolls |
+| `--layer-header`  | 20      | the page header, which sticks above them               |
+| `--layer-overlay` | 1000    | a panel over the page, such as a full-screen log       |
+| `--layer-drawer`  | 1100    | drawers                                                |
+| `--layer-modal`   | 1200    | modals                                                 |
+| `--layer-popover` | 1300    | menus, selects, popovers, hover cards and tooltips, so one opens over the dialog it belongs to |
+| `--layer-toast`   | 1400    | toasts                                                 |
+
+In Tailwind, `z-(--layer-modal)` reads one. Override a value on `:root` to move
+a layer; the defaults sit in a cascade layer, so the host's own rule wins.
+
 ## Icons
 
 ```tsx
-import { AddIcon, LoaderIcon, TrashIcon } from '@parallelworks/ui/icons'
+import { AddIcon, TrashIcon } from '@parallelworks/ui/icons'
 ```
 
 The barrel re-exports a curated, stable set of icon names over `react-icons`
@@ -138,7 +284,6 @@ export function Chat() {
       adapter={createMockChatAdapter()}
       currentUser={{ id: 'u1', username: 'you', name: 'You' }}
       navigation={{ toConversation: id => {}, toNewChat: () => {}, toAttachments: () => {} }}
-      notify={{ success: console.log, error: console.error, info: console.log }}
     >
       <ChatLayout>
         <ChatThread />
@@ -191,13 +336,36 @@ const { isDirty } = useFormState({ control: form.control })
 
 `form.getValues()`, `form.reset()` and `formState.isDirty` then work as
 react-hook-form documents them. Without `form`, the form keeps its own;
-`onValuesChange` reports each change either way. `missingFields` marks fields
-as `required` errors.
+`onValuesChange` reports each change either way.
+
+## Validation
+
+A field with neither `optional` nor a `default` needs a value. A submit, or
+Next on a wizard page, checks the fields the form shows, says "Enter a value."
+under each empty one and holds until it is filled; once a field shows an
+error it checks again with each change. A hidden field, a disabled one and a
+boolean never hold the form.
+
+`serverErrors` shows what the server rejected, each under its field until the
+person changes it. A path may come in any convention: a workflow's
+`hosts[0].cpus`, a problem response's JSON Pointer `#/hosts/0/cpus`, or
+`hosts.0.cpus`. Without a message the field says to check its value. They
+never hold back Next or a submit, since the server checks again, and a wizard
+turns to the first page holding one. From a problem response:
+
+```tsx
+const fieldMessages = useFieldMessages() // @parallelworks/problem/react
+<DynamicForm serverErrors={save.error ? fieldMessages(save.error) : undefined} … />
+```
+
+A field component receives the form's message as `error`; `fieldFrame(props)`
+shows it through `Field`.
 
 Each field subscribes only to what it reads, so typing renders the edited
 field and whatever reads it, not the whole form. A host field component,
 passed through `fields` or `slots.formFields`, binds the same way: its own
-value with `useFieldValue(field.name)` (or `useController`), another input's
+value with `useFieldValue(field.name)`, which also gives the form the field's
+rules (a component's own `useController` would drop them), another input's
 with `useFieldAt(path)` or `useWatch`, and a pick from a list with
 `useChoiceField`, which applies `autoselect` and `secondaryField`.
 
@@ -249,7 +417,10 @@ clamped to the current grid's column count. `gap` accepts `none`, `sm`, `md`
 `$meta.labelPosition` still overrides them.
 
 A grid defaults to `align: independent`: its children start at the top and their
-contents flow independently. Set `align: rows` when every immediate child is a
+contents flow independently, except that fields side by side line up their
+controls. A label that wraps to two lines sits at the foot of a label row the
+fields in that row share, so its control stays level with its neighbors'.
+Set `align: rows` when every immediate child is a
 section. Adjacent sections then share a header row and one row per direct child.
 A description, help text, or validation message increases the shared row height,
 so the following rows stay aligned. A nested grid counts as one child row.

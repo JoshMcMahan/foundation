@@ -1,9 +1,9 @@
-import { Popover } from '@base-ui/react/popover'
-import { clsx as cx } from 'clsx'
 import { Fragment, type ReactNode } from 'react'
+import { cx } from '../cx'
 import { TooltipIcon } from '../icons'
-import { portalContainer, positionerClassName, tipArrowClassName, tipClassName } from './floating'
+import { ExternalLink } from './ExternalLink'
 import { keyedByContent } from './keys'
+import { Popover } from './Popover'
 import { useStrings } from './Provider'
 import type { TooltipSide } from './Tooltip'
 
@@ -17,15 +17,9 @@ function formatLine(line: string) {
       nodes.push(line.slice(last, match.index))
     }
     nodes.push(
-      <a
-        key={match.index}
-        href={match[2]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline"
-      >
+      <ExternalLink key={match.index} href={match[2]} className="underline">
         {match[1]}
-      </a>,
+      </ExternalLink>,
     )
     last = match.index + match[0].length
   }
@@ -66,22 +60,21 @@ export function InfoTip({ text, side = 'top', className, children }: InfoTipProp
     return children ? <span className={className}>{children}</span> : null
   }
   return (
-    <Popover.Root>
-      <Popover.Trigger
-        openOnHover
-        aria-label={children ? undefined : t.moreInfo}
-        className={cx('inline-flex items-center cursor-help', !children && 'tooltip', className)}
-      >
-        {children ?? <TooltipIcon aria-hidden="true" />}
-      </Popover.Trigger>
-      <Popover.Portal container={portalContainer()}>
-        <Popover.Positioner side={side} sideOffset={8} className={positionerClassName}>
-          <Popover.Popup className={cx('max-w-sm text-left', tipClassName)}>
-            <Popover.Arrow className={tipArrowClassName} />
-            {formatInfoTipContent(text)}
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+    <Popover
+      variant="tip"
+      openOnHover
+      side={side}
+      trigger={
+        <button
+          type="button"
+          aria-label={children ? undefined : t.moreInfo}
+          className={cx('inline-flex items-center cursor-help', !children && 'tooltip', className)}
+        >
+          {children ?? <TooltipIcon aria-hidden="true" />}
+        </button>
+      }
+    >
+      {formatInfoTipContent(text)}
+    </Popover>
   )
 }

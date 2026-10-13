@@ -1,10 +1,11 @@
-import { clsx as cx } from 'clsx'
 import type { ComponentType, ReactNode } from 'react'
 import { Fragment, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { cx } from '../cx'
 import { AddIcon, ChevronRightIcon, EditIcon, MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
 import { useBreadcrumb } from './Breadcrumbs'
+import { buttonClasses } from './buttonClasses'
 import { keyedByContent } from './keys'
 import type { MenuEntry } from './MenuEntries'
 import { useLink, useSlots, useStrings } from './Provider'
@@ -21,10 +22,8 @@ export interface PageHeaderCrumb {
   href?: string
 }
 
-export const headerActionButtonClasses =
-  'flex items-center justify-center w-6 h-6 rounded-md shrink-0 cursor-pointer text-(--theme-muted-text-color) hover:text-(--theme-app) hover:bg-(--theme-muted-panel-bg) transition-colors'
-const headerAddButtonClasses =
-  'inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-md border border-(--theme-border) px-2 text-xs font-medium cursor-pointer text-(--theme-muted-text-color) hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) transition-colors'
+const headerActionButtonClasses = buttonClasses({ variant: 'ghost', size: 'xs', iconOnly: true })
+const headerAddButtonClasses = buttonClasses({ variant: 'outline', size: 'xs' })
 
 /** With menu, the plus opens a chooser; otherwise navigates to or calls the
  * single action. `word` is the visible verb; `label` stays the full action for
@@ -79,10 +78,7 @@ export function HeaderAddButton({
         onClick={disabled ? undefined : onClick}
         aria-label={hint ? `${label}. ${hint}` : label}
         aria-disabled={disabled || undefined}
-        className={cx(
-          headerAddButtonClasses,
-          'aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent aria-disabled:hover:text-(--theme-muted-text-color)',
-        )}
+        className={headerAddButtonClasses}
       >
         {content}
       </button>
@@ -91,18 +87,17 @@ export function HeaderAddButton({
 }
 
 /** The header's "…" menu of actions on the page's subject. */
-export function HeaderActionMenu({
-  items,
-  label = 'Actions',
-}: {
-  items: MenuEntry[]
-  label?: string
-}) {
+export function HeaderActionMenu({ items, label }: { items: MenuEntry[]; label?: string }) {
+  const { common } = useStrings()
   if (items.length === 0) {
     return null
   }
   return (
-    <ActionMenu items={items} label={label} triggerClassName={headerActionButtonClasses}>
+    <ActionMenu
+      items={items}
+      label={label ?? common.actions}
+      triggerClassName={headerActionButtonClasses}
+    >
       <MoreIcon className="w-3.5 h-3.5" />
     </ActionMenu>
   )
@@ -111,7 +106,7 @@ export function HeaderActionMenu({
 export function HeaderEditButton({
   href,
   onClick,
-  label = 'Edit',
+  label: labelProp,
   disabled,
   tooltip,
 }: {
@@ -122,6 +117,8 @@ export function HeaderEditButton({
   tooltip?: string | undefined
 }) {
   const Link = useLink()
+  const { common } = useStrings()
+  const label = labelProp ?? common.edit
   return (
     <Tooltip content={tooltip ?? label}>
       {href && !disabled ? (
@@ -134,10 +131,7 @@ export function HeaderEditButton({
           onClick={onClick}
           disabled={disabled}
           aria-label={label}
-          className={cx(
-            headerActionButtonClasses,
-            disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
-          )}
+          className={headerActionButtonClasses}
         >
           <EditIcon className="w-3 h-3" />
         </button>
@@ -236,6 +230,7 @@ export function PageHeader({
   const { setHidden } = useBreadcrumb()
   const Link = useLink()
   const { breadcrumbPin, navToggle } = useSlots()
+  const { common } = useStrings()
   // This header is the page's own breadcrumb trail, so keep the global strip out
   // of the way while it's mounted — pages no longer need useClearBreadcrumbs().
   useLayoutEffect(() => {
@@ -251,7 +246,7 @@ export function PageHeader({
 
   const crumbRow = crumbs.length > 0 && (
     <div className="flex items-center gap-1.5 min-w-0">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 min-w-0 text-[13px]">
+      <nav aria-label={common.breadcrumb} className="flex items-center gap-2 min-w-0 text-[13px]">
         {keyedByContent(
           crumbs,
           (c) => c.href ?? (typeof c.label === 'string' ? c.label : 'crumb'),
@@ -307,7 +302,7 @@ export function PageHeader({
   return (
     <div
       className={cx(
-        sticky && cx('sticky z-20', stickyTopClassName),
+        sticky && cx('sticky z-(--layer-header)', stickyTopClassName),
         'w-full bg-(--theme-app-bg)',
         className,
       )}

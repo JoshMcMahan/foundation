@@ -1,4 +1,4 @@
-import { clsx as cx } from 'clsx'
+import { cx } from '../../cx'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 

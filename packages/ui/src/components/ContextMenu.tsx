@@ -1,13 +1,8 @@
 import { Menu } from '@base-ui/react/menu'
 import { useCallback, useRef, useState } from 'react'
+import { type FloatingAnchor, type PositionerAnchor, toPositionerAnchor } from './floating'
 import { MenuPopup } from './Menu'
 import { MenuEntries, type MenuEntry, MenuFilter, type MenuSearch } from './MenuEntries'
-
-/** Where a menu opens: under an element, such as the button that opened it, or
- *  at a pointer event's point, which then moves with the element it landed on. */
-export type MenuAnchor =
-  | Element
-  | { clientX: number; clientY: number; currentTarget?: EventTarget | null }
 
 export interface OpenMenuOptions {
   search?: MenuSearch | undefined
@@ -15,38 +10,10 @@ export interface OpenMenuOptions {
   onClose?: (() => void) | undefined
 }
 
-export type OpenMenu = (at: MenuAnchor, items: MenuEntry[], options?: OpenMenuOptions) => void
-
-type Anchor = NonNullable<Menu.Positioner.Props['anchor']>
-
-function pointRect(x: number, y: number) {
-  return { x, y, left: x, top: y, right: x, bottom: y, width: 0, height: 0 }
-}
-
-function toAnchor(at: MenuAnchor): Anchor {
-  if (at instanceof Element) {
-    return at
-  }
-  const { clientX, clientY } = at
-  const on = at.currentTarget instanceof Element ? at.currentTarget : null
-  if (!on) {
-    return { getBoundingClientRect: () => pointRect(clientX, clientY) }
-  }
-  // The point keeps its place on the element, so the menu follows it as the page scrolls.
-  const start = on.getBoundingClientRect()
-  const dx = clientX - start.left
-  const dy = clientY - start.top
-  return {
-    contextElement: on,
-    getBoundingClientRect: () => {
-      const now = on.getBoundingClientRect()
-      return pointRect(now.left + dx, now.top + dy)
-    },
-  }
-}
+export type OpenMenu = (at: FloatingAnchor, items: MenuEntry[], options?: OpenMenuOptions) => void
 
 interface Opened extends OpenMenuOptions {
-  anchor: Anchor
+  anchor: PositionerAnchor
   items: MenuEntry[]
 }
 
@@ -74,7 +41,7 @@ export function useContextMenu() {
       }
       // A new menu supersedes an open one, whose opener lets go of it first.
       release()
-      const next = { ...options, anchor: toAnchor(at), items }
+      const next = { ...options, anchor: toPositionerAnchor(at), items }
       owner.current = next
       setOpened(next)
       setOpen(true)

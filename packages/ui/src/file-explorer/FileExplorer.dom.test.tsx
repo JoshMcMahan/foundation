@@ -427,7 +427,7 @@ describe('FileExplorer listing failures', () => {
     expect(script.callsFor('a/')).toHaveLength(1)
 
     script.recover('a/')
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByLabelText('Select one.txt')).toBeInTheDocument()
     expect(script.callsFor('a/')).toHaveLength(2)
@@ -439,7 +439,7 @@ describe('FileExplorer listing failures', () => {
     script.fixture.set('', [[dir('a/'), dir('b/'), dir('nope/')]])
     script.fixture.set('nope/', [[file('nope/found.txt')]])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByLabelText('Select found.txt')).toBeInTheDocument()
     expect(script.calls).toEqual([listCall(''), listCall(''), listCall('nope/')])
@@ -457,10 +457,11 @@ describe('FileExplorer listing failures', () => {
     await waitFor(() => expect(script.callsFor('')).toHaveLength(2))
     script.failWith('', new Error('boom'))
     await script.release('', '1')
-    await screen.findByText("Couldn't find deep")
+    const notFound = (await screen.findByText("Couldn't find deep")).parentElement as HTMLElement
     script.recover('')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    // The tree's failed row has its own Retry; this is the panel's.
+    fireEvent.click(within(notFound).getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByLabelText('Select found.txt')).toBeInTheDocument()
     expect(script.calls).toEqual([

@@ -1,7 +1,6 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { dangerButtonClasses, ghostButtonClasses, primaryButtonClasses } from './ghostButton'
+import { Button } from './Button'
 import { Modal, ModalDescription, ModalTitle } from './Modal'
 import { useStrings } from './Provider'
 
@@ -35,7 +34,7 @@ export function ConfirmModal({
   /** When false, the dialog stays open after a successful confirm. */
   closeOnConfirm?: boolean
 }) {
-  const strings = useStrings()
+  const { common } = useStrings()
   const [pending, setPending] = useState(false)
   const firedRef = useRef(false)
 
@@ -88,26 +87,18 @@ export function ConfirmModal({
         {children !== null && children !== undefined && <div className="mt-4">{children}</div>}
       </div>
       <div className="mt-5 flex items-center justify-end gap-2 border-t border-(--theme-border) px-5 py-3">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={pending}
-          className={cx(ghostButtonClasses, pending && 'cursor-wait')}
-        >
-          {cancelLabel ?? strings.modal.cancel}
-        </button>
-        <button
-          type="button"
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={pending}>
+          {cancelLabel ?? common.cancel}
+        </Button>
+        <Button
+          variant={destructive ? 'danger' : 'primary'}
+          size="sm"
           onClick={runConfirm}
-          disabled={confirmDisabled || pending}
-          className={cx(
-            destructive ? dangerButtonClasses : primaryButtonClasses,
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            pending && 'cursor-wait',
-          )}
+          disabled={confirmDisabled}
+          loading={pending}
         >
           {confirmLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   )

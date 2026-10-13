@@ -1,37 +1,63 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
+import { Disclosure } from '../../components/Disclosure'
+import { cx } from '../../cx'
 import { ChevronRightIcon } from '../../icons'
 
-/** The line a turn's reasoning folds under. It opens the reasoning in place,
- *  above the answer it led to, rather than in a panel the eye has to cross
- *  the page to read. */
-export function ReasoningToggle({
-  open,
-  onToggle,
+const toggleClasses =
+  '-ml-1 rounded-md px-1 py-0.5 text-sm theme-muted-text transition-colors hover:theme-text'
+
+/** A turn's reasoning, folded under a line such as "Thought for 5s". It opens
+ *  in place, above the answer it led to, rather than in a panel the eye has to
+ *  cross the page to read; with `onOpenPanel` the host shows it elsewhere
+ *  instead. */
+export function Reasoning({
+  label,
   shimmer = false,
+  open,
+  onOpenChange,
+  onOpenPanel,
+  preview,
   children,
 }: {
-  open: boolean
-  onToggle: () => void
+  label: ReactNode
   /** While the model is still thinking the label shimmers. */
   shimmer?: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** Shows the reasoning in the host's own panel in place of opening it here. */
+  onOpenPanel?: (() => void) | undefined
+  /** Shown under the folded line, such as the latest lines while it streams. */
+  preview?: ReactNode
   children: ReactNode
 }) {
+  const shown = <span className={cx(shimmer && 'animate-shimmer text-shimmer')}>{label}</span>
+  if (onOpenPanel) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={onOpenPanel}
+          className={cx('flex items-center gap-1', toggleClasses)}
+        >
+          {shown}
+          <ChevronRightIcon aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+        {preview}
+      </>
+    )
+  }
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      className="group/reasoning -ml-1 flex items-center gap-x-1 rounded-md px-1 py-0.5 text-sm theme-muted-text transition-colors hover:theme-text"
-    >
-      <span className={cx(shimmer && 'animate-shimmer text-shimmer')}>{children}</span>
-      <ChevronRightIcon
-        className={cx(
-          'h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none',
-          open && 'rotate-90',
-        )}
-      />
-    </button>
+    <>
+      <Disclosure
+        summary={shown}
+        open={open}
+        onOpenChange={onOpenChange}
+        summaryClassName={toggleClasses}
+      >
+        <ReasoningBody>{children}</ReasoningBody>
+      </Disclosure>
+      {!open && preview}
+    </>
   )
 }
 

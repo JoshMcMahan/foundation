@@ -1,7 +1,5 @@
 export {
   ActionToolbar,
-  stickyTabsClasses,
-  stickyTabsUnderHeaderClasses,
   stickyToolbarClasses,
   type ToolbarAction,
   ToolbarButton,
@@ -16,7 +14,6 @@ export {
   type ListSection,
   useListNavigate,
 } from './ListPage'
-export { LIST_PAGE_SIZES, ListPager } from './ListPager'
 export {
   actionsColumnWidth,
   GroupRow,
@@ -29,12 +26,7 @@ export {
   NameCell,
   RowSelectCheckbox,
 } from './ListTable'
-export {
-  AnchoredPopover,
-  ListDisplayMenu,
-  ListFilterMenu,
-  listControlButtonClasses,
-} from './ListViewControls'
+export { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 export {
   ListCount,
   type ListSearch,
@@ -63,7 +55,6 @@ export {
   useCopySubmenu,
   useRowMenuActive,
 } from './rowMenu'
-export { isTextEntryContext } from './textEntry'
 export {
   HoverCardRow,
   UserHoverCard,

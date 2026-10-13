@@ -1,5 +1,5 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
+import { cx } from '../../cx'
 import { AlertCircleIcon, CloseIcon, InfoCircleIcon } from '../../icons'
 
 export type NoticeTone = 'neutral' | 'info' | 'warning' | 'danger'

@@ -2,16 +2,26 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { RunStatus } from '../engine'
+import { formatBytes } from '../format'
+import { Avatar } from './Avatar'
+import { Button } from './Button'
+import { buttonClasses } from './buttonClasses'
 import Callout from './Callout'
 import { Autocomplete, Combobox } from './Combobox'
 import { ConfirmModal } from './ConfirmModal'
-import { CreateModal, CreateModalField } from './CreateModal'
-import { primaryButtonClasses } from './ghostButton'
-import { Indicator } from './Indicator'
+import { CreateModal, CreateModalSwitch } from './CreateModal'
+import { DatePicker } from './DatePicker'
+import { EmptyState } from './EmptyState'
+import { ExternalLink } from './ExternalLink'
 import { InfoTip } from './InfoTip'
-import Loader from './Loader'
+import { Input } from './Input'
+import { Loader } from './Loader'
+import { type BarTone, Meter, ProgressBar } from './Meter'
 import { Modal, ModalDescription, type ModalProps, ModalTitle } from './Modal'
+import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
+import { RunStatusIcon, runStatusTone } from './RunStatusIcon'
+import { Elapsed, RelativeTime } from './relativeTime'
 import { SegmentedControl } from './SegmentedControl'
 import { Select } from './Select'
 import { StatusBadge, StatusDot } from './StatusBadge'
@@ -24,7 +34,7 @@ const meta: Meta = {
 }
 export default meta
 
-const INDICATOR_STATUSES: RunStatus[] = [
+const RUN_STATUSES: RunStatus[] = [
   'running',
   'completed',
   'error',
@@ -36,17 +46,26 @@ const INDICATOR_STATUSES: RunStatus[] = [
   '',
 ]
 
-export const Indicators: StoryObj = {
+/** A run status as an icon beside what ran, and in words as a badge in the same tone. */
+export const RunStatuses: StoryObj = {
   render: () => (
-    <div className="flex flex-col gap-2">
-      {INDICATOR_STATUSES.map((status) => (
-        <div key={status || 'none'} className="flex items-center gap-3">
-          <Indicator status={status} />
-          <span className="text-sm">{status || '(no status)'}</span>
+    <div className="flex flex-col gap-2 text-sm">
+      {RUN_STATUSES.map((status) => (
+        <div key={status || 'none'} className="flex items-center gap-6">
+          <span className="flex w-20 items-center gap-2">
+            <RunStatusIcon status={status} />
+            build
+          </span>
+          <StatusBadge variant={runStatusTone(status)}>{status || 'not run'}</StatusBadge>
         </div>
       ))}
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: 'error' })).toBeVisible()
+    await expect(canvas.getByRole('img', { name: 'completed' })).toBeVisible()
+  },
 }
 
 export const Badges: StoryObj = {
@@ -66,24 +85,64 @@ export const Badges: StoryObj = {
   ),
 }
 
+/** Callouts in the theme's tones: a note for guidance, an alert for a warning or an error. */
 export const Feedback: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-4 max-w-xl">
       <Callout type="info">Informational callout with guidance.</Callout>
       <Callout type="warning">Something needs attention.</Callout>
       <Callout type="error">Something went wrong.</Callout>
-      <Loader text="Loading resources" size={40} />
+      <Loader label="Loading resources" size={40} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('alert')).toHaveLength(2)
+    await expect(canvas.getByRole('note')).toHaveTextContent('Informational callout')
+  },
 }
 
-export const Loaders: StoryObj<{ size: number; text: string }> = {
-  args: { size: 48, text: 'Loading resources' },
-  argTypes: { size: { control: { type: 'range', min: 16, max: 160 } } },
-  render: (args) => (
-    <div className="flex items-start" style={{ gap: 48 }}>
-      <Loader {...args} variant="spinner" full={false} />
-      <Loader {...args} variant="logo" full={false} />
+/** A picture, or initials until it loads and when it fails; one image to assistive
+ *  technology either way. */
+export const Avatars: StoryObj = {
+  render: () => (
+    <div className="flex items-end gap-3">
+      <Avatar name="Ada Lovelace" size="xs" />
+      <Avatar name="Ada Lovelace" size="sm" status="online" />
+      <Avatar name="Grace Hopper" size="md" status="away" />
+      <Avatar name="Alan Turing" size="lg" status="busy" />
+      <Avatar name="Katherine Johnson" src="/missing-avatar.png" size="xl" status="offline" />
+      <Avatar size="2xl" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: 'Grace Hopper' })).toHaveTextContent('GH')
+    // A picture that fails keeps the initials.
+    await waitFor(() =>
+      expect(canvas.getByRole('img', { name: 'Katherine Johnson' })).toHaveTextContent('KJ'),
+    )
+  },
+}
+
+/** Where there is nothing yet: a panel stands in for a whole list, and bare sits
+ *  inside something that already frames it. */
+export const EmptyStates: StoryObj<{ variant: 'panel' | 'bare' }> = {
+  args: { variant: 'panel' },
+  argTypes: { variant: { control: 'inline-radio', options: ['panel', 'bare'] } },
+  render: ({ variant }) => (
+    <div className="max-w-xl">
+      <EmptyState
+        variant={variant}
+        icon={<span aria-hidden="true">∅</span>}
+        title="No clusters yet"
+        description="Connect machines you run, or start new ones in the cloud."
+        action={
+          <Button variant="primary" size="sm">
+            Add cluster
+          </Button>
+        }
+      />
     </div>
   ),
 }
@@ -92,9 +151,9 @@ function ModalDemo({ align, dismissible }: Pick<ModalProps, 'align' | 'dismissib
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-info" onClick={() => setOpen(true)}>
+      <Button variant="primary" onClick={() => setOpen(true)}>
         Open modal
-      </button>
+      </Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -107,9 +166,9 @@ function ModalDemo({ align, dismissible }: Pick<ModalProps, 'align' | 'dismissib
           Focus stays inside until the modal closes, then returns to the button that opened it.
         </ModalDescription>
         <div className="mt-5 flex justify-end">
-          <button type="button" className={primaryButtonClasses} onClick={() => setOpen(false)}>
+          <Button variant="primary" onClick={() => setOpen(false)}>
             Done
-          </button>
+          </Button>
         </div>
       </Modal>
     </>
@@ -154,9 +213,9 @@ function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-info" onClick={() => setOpen(true)}>
+      <Button variant="primary" onClick={() => setOpen(true)}>
         Open modal
-      </button>
+      </Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
@@ -197,11 +256,12 @@ export const DestructiveConfirmModal: StoryObj = {
 
 function CreateModalDemo() {
   const [open, setOpen] = useState(false)
+  const [shared, setShared] = useState(false)
   return (
     <>
-      <button type="button" className="btn btn-info" onClick={() => setOpen(true)}>
+      <Button variant="primary" onClick={() => setOpen(true)}>
         New widget
-      </button>
+      </Button>
       <CreateModal
         open={open}
         onClose={() => setOpen(false)}
@@ -209,7 +269,10 @@ function CreateModalDemo() {
         namePlaceholder="widget-name"
         validateName={(name) => (name.includes(' ') ? 'No spaces allowed' : null)}
         onSubmit={async () => true}
-        properties={<CreateModalField label="Size" placeholder="medium" />}
+        properties={
+          <CreateModalSwitch label="Public" checked={shared} onCheckedChange={setShared} />
+        }
+        advanced={<Input label="Region" placeholder="nearest" />}
       />
     </>
   )
@@ -222,6 +285,11 @@ export const CreateModalStory: StoryObj = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'New widget' }))
     await expect(await screen.findByPlaceholderText('widget-name')).toBeVisible()
+    // Secondary detail waits behind its own toggle.
+    const advanced = screen.getByRole('button', { name: 'Advanced' })
+    await expect(advanced).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(advanced)
+    await waitFor(() => expect(screen.getByPlaceholderText('nearest')).toBeVisible())
   },
 }
 
@@ -334,19 +402,13 @@ export const Tooltips: StoryObj<{ side: 'top' | 'bottom' | 'left' | 'right' }> =
     <div className="flex flex-col items-start gap-6 p-8 text-sm">
       <div className="flex items-center gap-6">
         <Tooltip content="Saves the draft" side={side}>
-          <button type="button" className="btn">
-            Save
-          </button>
+          <Button variant="secondary">Save</Button>
         </Tooltip>
         <Tooltip content="Search the list" shortcut="⌘+F" side={side}>
-          <button type="button" className="btn">
-            Search
-          </button>
+          <Button variant="secondary">Search</Button>
         </Tooltip>
         <Tooltip content="Nothing to undo" side={side} disabled>
-          <button type="button" className="btn">
-            Disabled tooltip
-          </button>
+          <Button variant="secondary">Disabled tooltip</Button>
         </Tooltip>
       </div>
       <Tooltip content={longName} overflowOnly side={side}>
@@ -373,7 +435,7 @@ export const InfoTips: StoryObj = {
         <InfoTip text={'How many times a job reruns.\nSee [the docs](https://example.com).'} />
       </span>
       <InfoTip text="The runner stopped responding." className="gap-1">
-        <Indicator status="error" />
+        <RunStatusIcon status="error" />
         Failed
       </InfoTip>
     </div>
@@ -381,7 +443,7 @@ export const InfoTips: StoryObj = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'More information' }))
-    await waitFor(() => expect(screen.getByRole('link', { name: 'the docs' })).toBeVisible())
+    await waitFor(() => expect(screen.getByRole('link', { name: /^the docs/ })).toBeVisible())
   },
 }
 
@@ -390,10 +452,15 @@ export const OverviewLoading: StoryObj = {
   render: () => <Overview Icon={null} name="Resource" loading className="max-w-sm gap-3" />,
 }
 
-export const Switches: StoryObj<{ size: 'sm' | 'md'; disabled: boolean; invalid: boolean }> = {
-  args: { size: 'md', disabled: false, invalid: false },
+export const Switches: StoryObj<{
+  size: 'sm' | 'md'
+  disabled: boolean
+  invalid: boolean
+  stateNames: boolean
+}> = {
+  args: { size: 'md', disabled: false, invalid: false, stateNames: true },
   argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
-  render: ({ size, disabled, invalid }) => (
+  render: ({ size, disabled, invalid, stateNames }) => (
     <div className="flex flex-col gap-3 text-sm">
       <label className="flex items-center gap-2">
         <Switch size={size} disabled={disabled} aria-invalid={invalid || undefined} />
@@ -408,13 +475,31 @@ export const Switches: StoryObj<{ size: 'sm' | 'md'; disabled: boolean; invalid:
         />
         Automatic updates
       </label>
+      {/* States with names of their own show the current one beside the switch. */}
+      <div className="flex items-center gap-2">
+        <span id="visibility-label">Visibility</span>
+        <Switch
+          aria-labelledby="visibility-label"
+          size={size}
+          disabled={disabled}
+          aria-invalid={invalid || undefined}
+          onLabel={stateNames ? 'Public' : undefined}
+          offLabel={stateNames ? 'Private' : undefined}
+        />
+      </div>
     </div>
   ),
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const notifications = canvas.getByRole('switch', { name: 'Email notifications' })
     await userEvent.click(notifications)
     await expect(notifications).toHaveAttribute('aria-checked', 'true')
+    if (args.stateNames && !args.disabled) {
+      await expect(canvas.getByText('Private')).toBeVisible()
+      await userEvent.click(canvas.getByRole('switch', { name: 'Visibility' }))
+      await waitFor(() => expect(canvas.getByText('Public')).toBeVisible())
+      await expect(canvas.getByText('Private')).not.toBeVisible()
+    }
   },
 }
 
@@ -424,19 +509,28 @@ const SIZES = [
   { value: 'large', label: 'Large', disabled: true },
 ]
 
-function SelectsDemo({ disabled, invalid }: { disabled: boolean; invalid: boolean }) {
-  const [size, setSize] = useState<string | null>(null)
+function SelectsDemo({
+  disabled,
+  invalid,
+  size,
+}: {
+  disabled: boolean
+  invalid: boolean
+  size: 'sm' | 'md'
+}) {
+  const [instance, setInstance] = useState<string | null>(null)
   const [regions, setRegions] = useState<string[]>(['us-east'])
   return (
     <div className="flex max-w-xs flex-col gap-4">
       <Select
         aria-label="Instance size"
         items={SIZES}
-        value={size}
-        onValueChange={setSize}
+        value={instance}
+        onValueChange={setInstance}
         placeholder="Pick a size"
         disabled={disabled}
         aria-invalid={invalid}
+        size={size}
       />
       <Select
         multiple
@@ -451,13 +545,15 @@ function SelectsDemo({ disabled, invalid }: { disabled: boolean; invalid: boolea
         placeholder="Pick regions"
         disabled={disabled}
         aria-invalid={invalid}
+        size={size}
       />
     </div>
   )
 }
 
-export const Selects: StoryObj<{ disabled: boolean; invalid: boolean }> = {
-  args: { disabled: false, invalid: false },
+export const Selects: StoryObj<{ disabled: boolean; invalid: boolean; size: 'sm' | 'md' }> = {
+  args: { disabled: false, invalid: false, size: 'md' },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
   render: (args) => <SelectsDemo {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -486,10 +582,7 @@ function SelectTriggerDemo({ disabled }: { disabled: boolean }) {
       disabled={disabled}
       triggerTooltip="How the agent edits files"
       trigger={
-        <button
-          type="button"
-          className="inline-flex h-7 items-center rounded-md border border-(--theme-border) px-2 text-xs font-medium"
-        >
+        <button type="button" className={buttonClasses({ variant: 'outline', size: 'sm' })}>
           {MODES.find((m) => m.value === mode)?.label}
         </button>
       }
@@ -521,16 +614,18 @@ function SelectPreviewDemo() {
   const shown = previewing ?? theme
   return (
     <div className="flex max-w-xs flex-col gap-3 text-sm">
+      {/* Above the Select, so the open list doesn't cover it. */}
+      <span data-testid="applied">
+        {previewing ? 'Previewing' : 'Applied'}: {THEMES.find((t) => t.value === shown)?.label}
+      </span>
       <Select
         aria-label="Theme"
+        size="sm"
         items={THEMES}
         value={theme}
         onValueChange={setTheme}
         onItemHighlighted={setPreviewing}
       />
-      <span data-testid="applied">
-        {previewing ? 'Previewing' : 'Applied'}: {THEMES.find((t) => t.value === shown)?.label}
-      </span>
     </div>
   )
 }
@@ -549,5 +644,266 @@ export const SelectPreview: StoryObj = {
     await waitFor(() => expect(canvas.getByTestId('applied')).toHaveTextContent('Previewing: Dark'))
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(canvas.getByTestId('applied')).toHaveTextContent('Applied: Light'))
+  },
+}
+
+type NumberFormat = 'plain' | 'grouped' | 'currency' | 'unit'
+
+const NUMBER_FORMATS: Record<NumberFormat, Intl.NumberFormatOptions> = {
+  plain: {},
+  grouped: { useGrouping: true },
+  currency: { style: 'currency', currency: 'USD' },
+  unit: { style: 'unit', unit: 'gigabyte' },
+}
+
+function NumberInputDemo({
+  format,
+  steppers,
+  disabled,
+  invalid,
+}: {
+  format: NumberFormat
+  steppers: boolean
+  disabled: boolean
+  invalid: boolean
+}) {
+  const [value, setValue] = useState<number | null>(2500)
+  return (
+    <div className="flex max-w-xs flex-col gap-2 text-sm">
+      <label htmlFor="budget" className="font-medium">
+        Budget
+      </label>
+      <NumberInput
+        id="budget"
+        value={value}
+        onValueChange={setValue}
+        min={0}
+        step={100}
+        format={NUMBER_FORMATS[format]}
+        steppers={steppers}
+        disabled={disabled}
+        aria-invalid={invalid}
+      />
+      <span data-testid="number-value">{value === null ? 'empty' : value}</span>
+    </div>
+  )
+}
+
+/** A number with Intl formatting, held as a number; steppers move it by `step` within range. */
+export const NumberInputs: StoryObj<{
+  format: NumberFormat
+  steppers: boolean
+  disabled: boolean
+  invalid: boolean
+}> = {
+  args: { format: 'grouped', steppers: true, disabled: false, invalid: false },
+  argTypes: {
+    format: { control: 'inline-radio', options: ['plain', 'grouped', 'currency', 'unit'] },
+  },
+  render: (args) => <NumberInputDemo {...args} />,
+  play: async ({ canvasElement, args }) => {
+    if (args.disabled) {
+      return
+    }
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('textbox', { name: 'Budget' })
+    await userEvent.clear(input)
+    await userEvent.type(input, '1234')
+    await waitFor(() => expect(canvas.getByTestId('number-value')).toHaveTextContent('1234'))
+  },
+}
+
+function DatePickerDemo({
+  withTime,
+  bounded,
+  required,
+  disabled,
+  invalid,
+}: {
+  withTime: boolean
+  bounded: boolean
+  required: boolean
+  disabled: boolean
+  invalid: boolean
+}) {
+  const [value, setValue] = useState(withTime ? '2026-03-14T09:30' : '2026-03-14')
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      <span id="starts-label" className="font-medium">
+        Starts
+      </span>
+      <DatePicker
+        aria-labelledby="starts-label"
+        value={value}
+        onValueChange={setValue}
+        withTime={withTime}
+        timeStep={900}
+        min={bounded ? (withTime ? '2026-03-10T08:00' : '2026-03-10') : undefined}
+        max={bounded ? (withTime ? '2026-03-31T18:00' : '2026-03-31') : undefined}
+        required={required}
+        disabled={disabled}
+        aria-invalid={invalid}
+      />
+      <span data-testid="date-value">{value || 'empty'}</span>
+    </div>
+  )
+}
+
+/** A day from a calendar in the reader's locale; with a time, a time input beside it. The
+ *  value reads as a native date or datetime-local input's would. */
+export const DatePickers: StoryObj<{
+  withTime: boolean
+  bounded: boolean
+  required: boolean
+  disabled: boolean
+  invalid: boolean
+}> = {
+  args: { withTime: true, bounded: true, required: false, disabled: false, invalid: false },
+  render: (args) => <DatePickerDemo key={String(args.withTime)} {...args} />,
+  play: async ({ canvasElement, args }) => {
+    if (args.disabled) {
+      return
+    }
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Starts' }))
+    const grid = await screen.findByRole('grid')
+    const day = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(
+      new Date(2026, 2, 20),
+    )
+    await userEvent.click(within(grid).getByRole('button', { name: day }))
+    await waitFor(() =>
+      expect(canvas.getByTestId('date-value')).toHaveTextContent(
+        args.withTime ? '2026-03-20T09:30' : '2026-03-20',
+      ),
+    )
+  },
+}
+
+const GB = 1024 ** 3
+
+/** Readings against levels: amber past `warnAt`, red past `errorAt`. */
+export const Meters: StoryObj<{ value: number; showValue: 'beside' | 'tooltip' }> = {
+  args: { value: 62, showValue: 'beside' },
+  argTypes: {
+    value: { control: { type: 'range', min: 0, max: 100 } },
+    showValue: { control: 'inline-radio', options: ['beside', 'tooltip'] },
+  },
+  render: ({ value, showValue }) => (
+    <div className="flex w-72 flex-col gap-6 p-8">
+      <Meter
+        value={value}
+        showValue={showValue}
+        label="Storage"
+        detail={`${formatBytes((value / 100) * 50 * GB)} of ${formatBytes(50 * GB)}`}
+      />
+      <Meter value={85} label="Memory" />
+      <Meter value={96} label="Quota" />
+      <Meter value={12} tone="error" label="Frozen allocation" />
+      <Meter value={6} max={16} format={{}} label="Cores in use" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('meter')).toHaveLength(5)
+    await expect(canvas.getByRole('meter', { name: 'Memory' })).toHaveTextContent('85%')
+  },
+}
+
+const PROGRESS: { label: string; value: number | null; tone: BarTone; status?: string }[] = [
+  { label: 'results.csv', value: 42, tone: 'accent' },
+  { label: 'model.bin', value: 100, tone: 'success', status: 'Completed' },
+  { label: 'archive.tar', value: 64, tone: 'error', status: 'Failed' },
+  { label: 'notes.txt', value: 18, tone: 'muted', status: 'Cancelled' },
+  { label: 'Preparing', value: null, tone: 'accent' },
+]
+
+/** Tasks under way, settled ones with a status in place of the percentage. */
+export const ProgressBars: StoryObj<{ size: 'sm' | 'md' | 'lg' }> = {
+  args: { size: 'md' },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
+  render: ({ size }) => (
+    <div className="flex w-72 flex-col gap-6 p-8">
+      {PROGRESS.map(({ label, value, tone, status }) => (
+        <ProgressBar
+          key={label}
+          value={value}
+          tone={tone}
+          status={status}
+          label={label}
+          size={size}
+          detail={value === 42 ? '21 MB / 50 MB' : undefined}
+        />
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('progressbar', { name: 'results.csv' })).toHaveTextContent('42%')
+    await expect(canvas.getByRole('progressbar', { name: 'model.bin' })).toHaveTextContent(
+      'Completed',
+    )
+  },
+}
+
+const MINUTE = 60_000
+
+/** Times that keep counting while on screen, long or compact, with the exact
+ *  time on hover. */
+export const RelativeTimes: StoryObj<{ format: 'long' | 'compact' }> = {
+  args: { format: 'long' },
+  argTypes: { format: { control: 'inline-radio', options: ['long', 'compact'] } },
+  render: ({ format }) => {
+    const now = Date.now()
+    return (
+      <div className="flex flex-col gap-2 p-8 text-sm">
+        {[0.2, 5, 90, 60 * 30, 60 * 24 * 400].map((minutes) => (
+          <RelativeTime key={minutes} value={now - minutes * MINUTE} format={format} />
+        ))}
+      </div>
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText(args.format === 'compact' ? '5m' : '5 minutes ago'),
+    ).toBeInTheDocument()
+  },
+}
+
+/** How long something ran: counting while it has no end, fixed once it has one. */
+export const ElapsedTimes: StoryObj<{ running: boolean }> = {
+  args: { running: true },
+  render: ({ running }) => {
+    const now = Date.now()
+    return (
+      <div className="flex flex-col gap-2 p-8 text-sm tabular-nums">
+        <Elapsed start={now - 75_000} running={running} />
+        <Elapsed start={now - 3 * 60 * MINUTE} end={now - 60 * MINUTE - 4_000} />
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('1h 59m 56s').tagName).toBe('TIME')
+    await waitFor(() => expect(canvas.getByText(/^1m 1[5-9]s$/)).toBeInTheDocument())
+  },
+}
+
+/** Links that leave the page open a new tab and say so to screen readers. */
+export const ExternalLinks: StoryObj = {
+  render: () => (
+    <div className="flex items-center gap-6 p-8 text-sm">
+      <ExternalLink href="https://example.com" className="link">
+        Documentation
+      </ExternalLink>
+      <ExternalLink href="https://example.com" className="link" icon>
+        Status page
+      </ExternalLink>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole('link', { name: /^Status page/ })
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   },
 }

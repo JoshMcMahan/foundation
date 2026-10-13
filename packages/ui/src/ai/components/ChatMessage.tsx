@@ -1,7 +1,11 @@
-import { clsx as cx } from 'clsx'
-import { DateTime, Duration } from 'luxon'
+import { DateTime } from 'luxon'
 import { type KeyboardEvent, memo, useEffect, useRef, useState } from 'react'
-import { durationToAbsHumanDuration } from '../../duration'
+import { Avatar } from '../../components/Avatar'
+import { useStrings } from '../../components/Provider'
+import { RelativeTime } from '../../components/relativeTime'
+import { useCopy } from '../../components/useCopy'
+import { cx } from '../../cx'
+import { formatBytes, formatDuration } from '../../format'
 import {
   CheckIcon,
   CopyIcon,
@@ -15,14 +19,12 @@ import {
 import { safeUrl } from '../../safeUrl'
 import { useChatConfig } from '../core/config'
 import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
-import { Avatar } from '../ui/Avatar'
 import Markdown from '../ui/Markdown'
 import { chatProseClasses } from '../ui/prose'
-import { formatFileSize } from '../utils'
 import AgentMessageParts from './agent/AgentMessageParts'
 import BranchNavigator from './BranchNavigator'
 import { UserMessageText } from './PastedText'
-import { ReasoningBody, ReasoningToggle } from './Reasoning'
+import { Reasoning } from './Reasoning'
 
 interface ChatMessageProps {
   message: Message
@@ -47,13 +49,6 @@ interface ChatMessageProps {
   onApprovalAnswer?: ((id: string, answer: ApprovalAnswerValue) => void) | undefined
   /** Drops the row's horizontal padding, for hosts that constrain the column themselves. */
   flush?: boolean | undefined
-}
-
-function formatDuration(ms: number | null | undefined): string {
-  if (!ms) {
-    return ''
-  }
-  return durationToAbsHumanDuration(Duration.fromMillis(ms))
 }
 
 // Threshold sits above the CSS clamp height (600px) so borderline messages
@@ -123,8 +118,9 @@ function ChatMessage({
   const showTurnDurationLabel =
     !isUser && !isStreaming && !hasReasoning && (!!message.reasoningDuration || toolCallCount > 0)
 
-  const t = useChatConfig().strings.messageMeta
-  const [copied, setCopied] = useState(false)
+  const { messageMeta: t, thinking: tThinking } = useChatConfig().strings
+  const { common } = useStrings()
+  const { copy, copied } = useCopy()
   const [showActions, setShowActions] = useState(false)
   const [editContent, setEditContent] = useState(message.content || '')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -229,9 +225,7 @@ function ChatMessage({
 
   const copyToClipboard = async () => {
     if (message.content) {
-      await navigator.clipboard.writeText(message.content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await copy(message.content, { quiet: true })
     }
   }
 
@@ -263,7 +257,7 @@ function ChatMessage({
               onClick={onCancelEdit}
               className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors chat-tint hover:chat-tint-strong text-(--theme-panel)"
             >
-              {t.cancel}
+              {common.cancel}
             </button>
             <button
               type="button"
@@ -271,7 +265,7 @@ function ChatMessage({
               disabled={!editContent.trim()}
               className="px-4 py-1.5 text-sm font-medium rounded-full transition-colors hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed bg-(--theme-panel) text-(--theme-panel-bg)"
             >
-              {t.send}
+              {common.send}
             </button>
           </div>
         </div>
@@ -288,23 +282,22 @@ function ChatMessage({
                 reasoning, a bare duration, or tool-call work */}
             {showReasoningButton && (
               <div className="mb-2">
-                <ReasoningToggle
+                <Reasoning
+                  label={
+                    message.reasoningDuration
+                      ? tThinking.thoughtFor(formatDuration(message.reasoningDuration))
+                      : tThinking.thoughtProcess
+                  }
                   open={reasoningOpen}
-                  onToggle={() =>
-                    onOpenReasoning
-                      ? onOpenReasoning(message.reasoning || '', message.reasoningDuration ?? null)
-                      : setReasoningOpen((o) => !o)
+                  onOpenChange={setReasoningOpen}
+                  onOpenPanel={
+                    onOpenReasoning &&
+                    (() =>
+                      onOpenReasoning(message.reasoning || '', message.reasoningDuration ?? null))
                   }
                 >
-                  {message.reasoningDuration
-                    ? `Thought for ${formatDuration(message.reasoningDuration)}`
-                    : 'Thought process'}
-                </ReasoningToggle>
-                {reasoningOpen && (
-                  <ReasoningBody>
-                    <Markdown>{message.reasoning || ''}</Markdown>
-                  </ReasoningBody>
-                )}
+                  <Markdown>{message.reasoning || ''}</Markdown>
+                </Reasoning>
               </div>
             )}
             {showTurnDurationLabel && (
@@ -312,8 +305,8 @@ function ChatMessage({
                 <div className="flex items-center gap-x-1.5 text-sm theme-muted-text">
                   <span>
                     {message.reasoningDuration
-                      ? `Thought for ${formatDuration(message.reasoningDuration)}`
-                      : `Ran ${toolCallCount} tool ${toolCallCount === 1 ? 'call' : 'calls'}`}
+                      ? tThinking.thoughtFor(formatDuration(message.reasoningDuration))
+                      : tThinking.ranToolCalls(toolCallCount)}
                   </span>
                 </div>
               </div>
@@ -342,9 +335,10 @@ function ChatMessage({
               otherAuthor ? (
                 <div className="flex items-end gap-2">
                   <Avatar
-                    src={otherAuthor.avatarUrl ?? undefined}
+                    src={otherAuthor.avatarUrl}
                     name={otherAuthor.name || otherAuthor.username}
-                    className="flex-shrink-0 mb-0.5"
+                    size="sm"
+                    className="mb-0.5"
                   />
                   <div
                     className={cx(
@@ -380,7 +374,7 @@ function ChatMessage({
                 onClick={() => setExpanded((e) => !e)}
                 className="text-xs font-medium theme-muted-text hover:theme-text transition-colors"
               >
-                {expanded ? t.showLess : t.showMore}
+                {expanded ? common.showLess : common.showMore}
               </button>
             )}
 
@@ -402,7 +396,7 @@ function ChatMessage({
                     className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-500/15 rounded transition-colors"
                   >
                     <RetryIcon className="w-3 h-3" />
-                    {t.retry}
+                    {common.retry}
                   </button>
                 )}
               </div>
@@ -454,7 +448,7 @@ function ChatMessage({
                         <FileIcon className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate max-w-[150px]">{att.filename || 'File'}</span>
                         {att.size ? (
-                          <span className="theme-muted-text">({formatFileSize(att.size)})</span>
+                          <span className="theme-muted-text">({formatBytes(att.size)})</span>
                         ) : null}
                         <DownloadFileIcon className="w-3 h-3 flex-shrink-0" />
                       </button>
@@ -476,7 +470,7 @@ function ChatMessage({
                       <FileIcon className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="truncate max-w-[150px]">{att.filename || 'File'}</span>
                       {att.size ? (
-                        <span className="theme-muted-text">({formatFileSize(att.size)})</span>
+                        <span className="theme-muted-text">({formatBytes(att.size)})</span>
                       ) : null}
                     </div>
                   )
@@ -548,11 +542,7 @@ function ChatMessage({
                       showActions ? 'opacity-100' : 'opacity-0',
                     )}
                   >
-                    {timestamp && (
-                      <span title={timestamp.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)}>
-                        {timestamp.toRelative()}
-                      </span>
-                    )}
+                    <RelativeTime value={timestamp} />
                     {!isUser && message.model && <span>{message.model}</span>}
                     {!isUser && totalTokens ? (
                       <span

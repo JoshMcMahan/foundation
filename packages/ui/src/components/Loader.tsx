@@ -1,5 +1,6 @@
-import { clsx as cx } from 'clsx'
-import { LoaderIcon } from '../icons'
+import { FaCircleNotch } from 'react-icons/fa'
+import { cx } from '../cx'
+import { useStrings } from './Provider'
 
 const RIPPLE_STAGGER_S = 0.22
 
@@ -10,39 +11,64 @@ const LOGO_RINGS = [
   'M62.68,32.14A30.54,30.54,0,1,1,1.6,32.14,30.54,30.54,0,1,1,62.68,32.14',
 ]
 
-interface LoaderProps {
+export interface LoaderProps {
+  /** The spinner's size, in pixels or any CSS length. */
   size?: number | string
-  text?: string | undefined
-  textSize?: number
-  color?: string
-  full?: boolean
-  loaderStyle?: React.CSSProperties
+  /** Shown under the spinner, and its accessible name. Without one, the
+   *  loader is named with the provider's `loading` string. */
+  label?: string | undefined
   variant?: 'spinner' | 'logo'
+  /** Sits in a line of text or a button instead of centring in its own row. */
+  inline?: boolean
+  /** The spinner's color, such as `currentColor` inside a button. */
+  color?: string | undefined
+  /** Beside text that already says what is happening, such as a busy button's
+   *  label: hidden from assistive technology, and in the text's color. */
+  decorative?: boolean
 }
 
-export default function Loader({
+/** Something on the way that has no shape to sketch yet. When its shape is
+ *  known, such as rows of a list, sketch it with `Skeleton` instead. */
+export function Loader({
   size = 48,
-  text,
-  textSize = 12,
-  full = true,
-  color = '',
-  loaderStyle = {},
+  label,
   variant = 'spinner',
+  inline = false,
+  color,
+  decorative = false,
 }: LoaderProps) {
-  const loaderColor = color || 'text-(--theme-element,#3b82f6)'
+  const { loading } = useStrings().common
   const dimension = typeof size === 'number' ? `${size}px` : size
+  const spinner = (
+    <FaCircleNotch
+      aria-hidden="true"
+      className="animate-spin motion-reduce:animate-none"
+      style={{ fontSize: dimension }}
+    />
+  )
+  if (decorative) {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex shrink-0"
+        style={color ? { color } : undefined}
+      >
+        {spinner}
+      </span>
+    )
+  }
   return (
-    <div
+    <span
       role="status"
-      aria-label={text || 'Loading'}
+      aria-label={label || loading}
       className={cx(
-        full && 'w-full',
-        'flex flex-col flex-wrap justify-center items-center gap-y-1',
+        'items-center',
+        inline ? 'inline-flex gap-2' : 'flex w-full flex-col justify-center gap-y-1',
       )}
     >
-      <div
-        className={cx('w-full flex justify-center items-center', loaderColor)}
-        style={loaderStyle}
+      <span
+        className={cx('inline-flex', !color && 'text-(--theme-element,#3b82f6)')}
+        style={color ? { color } : undefined}
       >
         {variant === 'logo' ? (
           <svg
@@ -66,14 +92,10 @@ export default function Loader({
             ))}
           </svg>
         ) : (
-          <LoaderIcon className="animate-spin" style={{ fontSize: dimension }} />
+          spinner
         )}
-      </div>
-      {text && (
-        <div className="text-center italic" style={{ fontSize: `${textSize}px` }}>
-          {text}
-        </div>
-      )}
-    </div>
+      </span>
+      {label && <span className="text-center text-sm theme-muted-text">{label}</span>}
+    </span>
   )
 }

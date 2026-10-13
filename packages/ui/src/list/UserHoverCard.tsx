@@ -1,8 +1,10 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { Avatar } from '../components/Avatar'
-import { type UILinkComponent, useLink, useNotify, useStrings } from '../components/Provider'
+import { type UILinkComponent, useLink, useStrings } from '../components/Provider'
+import { LoadingRegion, Skeleton } from '../components/Skeleton'
 import { Tooltip } from '../components/Tooltip'
+import { useCopy } from '../components/useCopy'
+import { cx } from '../cx'
 import { CopyIcon } from '../icons'
 
 /** A person's card, for `HoverCard`'s `card`. */
@@ -33,8 +35,8 @@ export function UserHoverCard({
   loading = false,
   children,
 }: UserHoverCardProps) {
-  const strings = useStrings()
-  const notify = useNotify()
+  const { common, list: t } = useStrings()
+  const { copy } = useCopy()
   const SlotLink = useLink()
   const Link = linkComponent ?? SlotLink
   const displayName = name || username
@@ -64,14 +66,9 @@ export function UserHoverCard({
     </>
   )
 
-  const t = strings.list
   // Hosts pass a handle or an email address as the username; name what is copied.
   const copyLabel = EMAIL.test(username) ? t.labelEmail : t.labelUsername
-  const onCopy = () =>
-    navigator.clipboard?.writeText(username).then(
-      () => notify.success(t.copied(copyLabel)),
-      () => notify.error(t.couldntCopy(copyLabel)),
-    )
+  const onCopy = () => void copy(username, { label: copyLabel })
 
   return (
     <div className="w-64 p-3">
@@ -89,10 +86,10 @@ export function UserHoverCard({
           <div className="flex min-w-0 flex-1 items-start gap-3">{header}</div>
         )}
         {username && (
-          <Tooltip content={t.copy(copyLabel)}>
+          <Tooltip content={common.copyThing(copyLabel)}>
             <button
               type="button"
-              aria-label={t.copy(copyLabel)}
+              aria-label={common.copyThing(copyLabel)}
               onClick={onCopy}
               className={cx(
                 'shrink-0 cursor-pointer rounded p-0.5 text-(--theme-muted-text-color) opacity-0 transition hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-3.5 [&>svg]:w-3.5',
@@ -107,15 +104,10 @@ export function UserHoverCard({
         )}
       </div>
       {loading ? (
-        <div
-          role="status"
-          aria-label={strings.loading}
-          className="mt-3 space-y-2 border-t border-(--theme-border) pt-3"
-        >
-          <div aria-hidden="true" className="h-3 w-24 animate-pulse rounded theme-muted-panel" />
-          <div aria-hidden="true" className="h-3 w-36 animate-pulse rounded theme-muted-panel" />
-          <span className="sr-only">{strings.loading}</span>
-        </div>
+        <LoadingRegion className="mt-3 space-y-2 border-t border-(--theme-border) pt-3">
+          <Skeleton width={96} height={12} />
+          <Skeleton width={144} height={12} />
+        </LoadingRegion>
       ) : children ? (
         <div className="mt-3 space-y-2 border-t border-(--theme-border) pt-3 text-[13px]">
           {children}

@@ -1,4 +1,3 @@
-import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import {
   createContext,
@@ -20,16 +19,20 @@ import {
   TransformComponent,
   TransformWrapper,
 } from 'react-zoom-pan-pinch'
+import { Button } from '../components/Button'
+import { DisclosurePanel } from '../components/Disclosure'
 import { IconButton } from '../components/IconButton'
-import { Indicator } from '../components/Indicator'
 import { InfoTip } from '../components/InfoTip'
-import Loader from '../components/Loader'
+import { Loader } from '../components/Loader'
 import { Modal } from '../components/Modal'
 import { useRunFile, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
-import { toAbsHumanDuration } from '../duration'
+import { RunStatusIcon } from '../components/RunStatusIcon'
+import { Elapsed } from '../components/relativeTime'
+import { cx } from '../cx'
 import type { GraphLayout } from '../editing'
 import type { RunStatus, WorkflowEngine } from '../engine'
 import { initializeValues } from '../form/lib'
+import { formatDateTime } from '../format'
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -41,7 +44,6 @@ import {
 } from '../icons'
 import { LogViewer } from '../logviewer'
 import { AnnotationBanner } from './AnnotationBanner'
-import { Collapse } from './Collapse'
 import { ConnectorLayers } from './Connectors'
 import { type Box, type DrawnEdge, routeConnectors, sameBoxes } from './connectorGeometry'
 import type { DependencyGraphEditor } from './editorApi'
@@ -95,6 +97,7 @@ function ViewToggle({
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
 }) {
+  const { dag: t } = useStrings()
   return (
     <div className="flex border border-[var(--theme-border)] rounded overflow-hidden">
       <button
@@ -107,7 +110,7 @@ function ViewToggle({
             : 'text-[var(--theme-muted-text-color)] hover:text-[var(--theme-app)] hover:bg-[var(--theme-hover)]',
         )}
       >
-        DAG
+        {t.graphView}
       </button>
       <button
         type="button"
@@ -119,7 +122,7 @@ function ViewToggle({
             : 'text-[var(--theme-muted-text-color)] hover:text-[var(--theme-app)] hover:bg-[var(--theme-hover)]',
         )}
       >
-        Tree
+        {t.treeView}
       </button>
     </div>
   )
@@ -144,7 +147,7 @@ function GraphViewControls({
   /** The way the view can zoom no further, if it is at a limit. */
   zoomedAll: 'in' | 'out' | null
 }) {
-  const { dag } = useStrings()
+  const { common, dag } = useStrings()
   const chip =
     'flex h-7 cursor-pointer items-center whitespace-nowrap rounded px-2 text-xs theme-hover'
   return (
@@ -152,7 +155,7 @@ function GraphViewControls({
       {history && (
         <>
           <IconButton
-            icon={<ChevronLeftIcon className="h-4 w-4" />}
+            icon={<ChevronLeftIcon />}
             label={dag.previousGraph}
             size="sm"
             variant="ghost"
@@ -160,7 +163,7 @@ function GraphViewControls({
             onClick={history.back}
           />
           <IconButton
-            icon={<ChevronRightIcon className="h-4 w-4" />}
+            icon={<ChevronRightIcon />}
             label={dag.nextGraph}
             size="sm"
             variant="ghost"
@@ -180,16 +183,16 @@ function GraphViewControls({
       </button>
       <div className="mx-0.5 h-5 w-px bg-(--theme-border)" />
       <IconButton
-        icon={<ZoomOutIcon className="h-4 w-4" />}
-        label={dag.zoomOut}
+        icon={<ZoomOutIcon />}
+        label={common.zoomOut}
         size="sm"
         variant="ghost"
         disabled={zoomedAll === 'out'}
         onClick={() => onZoom(-1)}
       />
       <IconButton
-        icon={<ZoomInIcon className="h-4 w-4" />}
-        label={dag.zoomIn}
+        icon={<ZoomInIcon />}
+        label={common.zoomIn}
         size="sm"
         variant="ghost"
         disabled={zoomedAll === 'in'}
@@ -985,7 +988,7 @@ function SidebarJobs({
     setSublogOpen,
     // No graph or connectors here, just the nested job list, indented.
     renderWell: (subJobs, subPrefix, expanded) => (
-      <Collapse expanded={expanded}>
+      <DisclosurePanel open={expanded}>
         <div className="ml-6 mt-0.5 border-l border-(--theme-border) pl-4">
           <SidebarJobs
             jobs={subJobs}
@@ -1001,7 +1004,7 @@ function SidebarJobs({
             setSublogOpen={setSublogOpen}
           />
         </div>
-      </Collapse>
+      </DisclosurePanel>
     ),
   })
 
@@ -1101,27 +1104,6 @@ function walkJobPath(
 
 // The time a run has taken, ticking each second until it finishes. Its own component, so the tick
 // re-renders only this.
-function RunTime({
-  start,
-  end,
-  finished,
-}: {
-  start: DateTime
-  end: DateTime | undefined
-  finished: boolean
-}) {
-  const [now, setNow] = useState(() => DateTime.now())
-  const ticking = !end && !finished
-  useEffect(() => {
-    if (!ticking) {
-      return
-    }
-    const timer = setInterval(() => setNow(DateTime.now()), 1000)
-    return () => clearInterval(timer)
-  }, [ticking])
-  return toAbsHumanDuration(start, end ?? now)
-}
-
 // The outermost nodes' extent in content space, so an expanded nested subgraph doesn't change it.
 function graphBounds(content: HTMLElement): Bounds | null {
   const nodes = outerNodes(content)
@@ -1275,7 +1257,7 @@ export default function DependencyGraph({
     }
   }, [preview, fixedHeight])
 
-  const { dag: dagStrings } = useStrings()
+  const { common, dag: dagStrings } = useStrings()
   const slots = useSlots()
   const [executedJobsPath, setExecutedJobsPath] = useState<(string | number)[][]>([[]])
   const [executedJobsPathIdx, setExecutedJobsPathIdx] = useState<number>(0)
@@ -1803,23 +1785,27 @@ export default function DependencyGraph({
 
   const additionalBottomLeftBarComponents = sublogIsStep ? (
     <>
-      <button type="button" className="btn btn-neutral" onClick={() => nextStep(true)}>
-        <ArrowLeftIcon />
-        <span>Prev</span>
-      </button>
-      <button type="button" className="btn btn-neutral" onClick={() => nextStep(false)}>
-        <ArrowRightIcon />
-        <span>Next</span>
-      </button>
+      <IconButton
+        variant="outline"
+        icon={<ArrowLeftIcon />}
+        label={dagStrings.previousStep}
+        onClick={() => nextStep(true)}
+      />
+      <IconButton
+        variant="outline"
+        icon={<ArrowRightIcon />}
+        label={dagStrings.nextStep}
+        onClick={() => nextStep(false)}
+      />
       <span className="pt-0.5 whitespace-pre-wrap text-xs">{logName}</span>
     </>
   ) : undefined
 
   const additionalBottomRightBarComponents =
     (!preview || sublogIsSubworkflow) && sublogIsStep ? (
-      <button
-        type="button"
-        className="btn btn-neutral"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => {
           if (sublogIsSubworkflow) {
             openInNewGraph(pathAppend, sublogJob, parseInt(sublogStep ?? '', 10))
@@ -1832,10 +1818,8 @@ export default function DependencyGraph({
           }
         }}
       >
-        <span>
-          {sublogIsSubworkflow ? 'Open Subworkflow' : sublogShowsLog ? 'Show Script' : 'Show Logs'}
-        </span>
-      </button>
+        {sublogIsSubworkflow ? 'Open Subworkflow' : sublogShowsLog ? 'Show Script' : 'Show Logs'}
+      </Button>
     ) : undefined
 
   const graph = (
@@ -1853,10 +1837,10 @@ export default function DependencyGraph({
             </div>
           )}
           <div className="font-bold flex items-center gap-x-2">
-            Summary
+            {dagStrings.summary}
             <button
               type="button"
-              aria-label="General log"
+              aria-label={dagStrings.generalLog}
               onClick={() => setSublogOpen(generalLogPath)}
               className="link"
             >
@@ -1886,7 +1870,7 @@ export default function DependencyGraph({
                   className="flex items-center gap-x-1"
                   text={dagStrings.statusReason(run.statusReason) ?? ''}
                 >
-                  <Indicator status={runStatus} />
+                  <RunStatusIcon status={runStatus} />
                   {dagStrings.statusLabel(runStatus)}
                 </InfoTip>
               </div>
@@ -1894,13 +1878,15 @@ export default function DependencyGraph({
             <div className="flex flex-col">
               <div className="text-xs">{dagStrings.runtime}</div>
               <div className="text-sm font-semibold flex items-center gap-x-1">
-                <RunTime
+                <Elapsed
                   start={startDt}
-                  end={run.completedAt ? DateTime.fromISO(run.completedAt) : undefined}
-                  finished={
-                    run.status === 'completed' ||
-                    run.status === 'error' ||
-                    run.status === 'canceled'
+                  end={run.completedAt}
+                  running={
+                    !(
+                      run.status === 'completed' ||
+                      run.status === 'error' ||
+                      run.status === 'canceled'
+                    )
                   }
                 />
               </div>
@@ -1908,7 +1894,7 @@ export default function DependencyGraph({
             <div className="flex flex-col">
               <div className="text-xs">{dagStrings.submitted}</div>
               <div className="text-sm font-semibold flex items-center gap-x-1">
-                {startDt.toLocaleString(DateTime.DATETIME_SHORT)}
+                {formatDateTime(startDt, 'short')}
               </div>
             </div>
             {/* Spacer */}
@@ -2001,7 +1987,7 @@ export default function DependencyGraph({
                       expand={
                         hasExpandable
                           ? {
-                              label: allExpanded ? dagStrings.collapseAll : dagStrings.expandAll,
+                              label: allExpanded ? common.collapseAll : common.expandAll,
                               onClick: toggleExpandAll,
                             }
                           : undefined
@@ -2059,7 +2045,7 @@ export default function DependencyGraph({
       >
         <div className="flex w-full">
           {sublogsLoading && (!sublogs || !runNumber) ? (
-            <Loader text={dagStrings.loadingLogs} size={70} textSize={18} />
+            <Loader label={dagStrings.loadingLogs} size={70} />
           ) : preview ? (
             <div>
               {slots.yamlViewer?.({

@@ -1,8 +1,8 @@
-import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
-import { Indicator } from '../components/Indicator'
 import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
+import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
 import { DocumentIcon, OpenInNewGraphIcon } from '../icons'
 import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
@@ -88,7 +88,7 @@ export function Joblist(
             : 'cursor-pointer',
         )}
       >
-        {!inputs.preview && <Indicator status={jobStatus} />}
+        {!inputs.preview && <RunStatusIcon status={jobStatus} />}
         <div className="font-medium">{label}</div>
       </button>
     )
@@ -119,7 +119,7 @@ export function Joblist(
                   )}
                   data-testid={stepLabel}
                 >
-                  {inputs.preview ? '↳' : <Indicator status={step.status} />}
+                  {inputs.preview ? '↳' : <RunStatusIcon status={step.status} />}
                   <div>{stepLabel}</div>
                 </button>
               )

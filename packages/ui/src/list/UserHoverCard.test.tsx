@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import type { UILinkComponent } from '../components/Provider'
 import { UIProvider } from '../components/Provider'
+import { toast } from '../components/Toast'
 import { HoverCardRow, UserHoverCard } from './UserHoverCard'
 
 const RouterLink: UILinkComponent = ({ href, children, className }) => (
@@ -52,7 +53,7 @@ describe('UserHoverCard', () => {
 
   it('shows a labelled loading region instead of rows while loading', () => {
     render(
-      <UIProvider strings={{ loading: 'Cargando' }}>
+      <UIProvider strings={{ common: { loading: 'Cargando' } }}>
         <UserHoverCard username="a" loading>
           <HoverCardRow icon={<span />}>Online</HoverCardRow>
         </UserHoverCard>
@@ -80,12 +81,8 @@ describe('UserHoverCard copy', () => {
   it('copies an email address, naming it, from beside the linked header', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
-    const success = vi.fn()
-    render(
-      <UIProvider notify={{ success }}>
-        <UserHoverCard username="ada@example.com" href="/users/a" />
-      </UIProvider>,
-    )
+    const success = vi.spyOn(toast, 'success')
+    render(<UserHoverCard username="ada@example.com" href="/users/a" />)
     const button = screen.getByRole('button', { name: 'Copy email' })
     // Beside the linked header, never inside it.
     expect(screen.getByRole('link')).not.toContainElement(button)

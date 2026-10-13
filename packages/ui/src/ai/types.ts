@@ -311,13 +311,6 @@ export interface ChatNavigation {
   toNewChat(): void
 }
 
-// Host-provided notifications (e.g. a toast system).
-export interface ChatNotify {
-  success(message: string): void
-  error(message: string): void
-  info(message: string): void
-}
-
 export type SharePermissionLevel = 'view' | 'collaborate'
 
 export interface SharePermission {

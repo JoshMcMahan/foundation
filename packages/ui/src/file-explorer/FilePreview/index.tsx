@@ -1,8 +1,10 @@
-import { clsx as cx } from 'clsx'
 import { useEffect, useState } from 'react'
-import { useLocalStorage } from 'usehooks-ts'
+import { IconButton } from '../../components/IconButton'
 import { Modal } from '../../components/Modal'
-import { useStrings } from '../../components/Provider'
+import { usePersistedState, useStrings } from '../../components/Provider'
+import { SegmentedControl } from '../../components/SegmentedControl'
+import { cx } from '../../cx'
+import { formatBytes } from '../../format'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -14,7 +16,6 @@ import {
   ZoomOutIcon,
 } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
-import { formatFileSize } from '../lib/utils'
 import { getPreviewKind, type PreviewKind } from './previewType'
 import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
@@ -52,7 +53,11 @@ export function FilePreview({
   onCopyUri,
 }: FilePreviewProps) {
   const t = useStrings().fileExplorer
-  const [style, setStyle] = useLocalStorage<PreviewStyle>('fileExplorer.previewStyle', 'quicklook')
+  const { common } = useStrings()
+  const [style, setStyle] = usePersistedState<PreviewStyle>(
+    'fileExplorer.previewStyle',
+    'quicklook',
+  )
   const [zoom, setZoom] = useState(100)
   const {
     url,
@@ -99,7 +104,10 @@ export function FilePreview({
       className={cx(
         'flex items-center justify-between gap-3 px-4 py-3',
         floatingChrome
-          ? 'absolute inset-x-0 top-0 z-10 bg-linear-to-b from-black/80 to-transparent text-white'
+          ? cx(
+              'absolute inset-x-0 top-0 z-10 bg-linear-to-b from-black/80 to-transparent text-white',
+              overImage,
+            )
           : 'shrink-0 border-b theme-border',
       )}
     >
@@ -109,44 +117,30 @@ export function FilePreview({
         {url && <StreamedBadge />}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <div
-          className={cx(
-            'mr-1 flex items-center rounded-lg p-0.5',
-            floatingChrome ? 'bg-white/10' : 'theme-muted-panel',
-          )}
-        >
-          <SegButton
-            active={!isOverlay}
-            overlayChrome={floatingChrome}
-            onClick={() => setStyle('quicklook')}
-          >
-            {t.preview.quickLook}
-          </SegButton>
-          <SegButton
-            active={isOverlay}
-            overlayChrome={floatingChrome}
-            onClick={() => setStyle('overlay')}
-          >
-            {t.preview.fullWindow}
-          </SegButton>
+        <div className="mr-1">
+          <SegmentedControl
+            label={t.preview.previewLayout}
+            value={style}
+            onValueChange={setStyle}
+            options={[
+              { value: 'quicklook', label: t.preview.quickLook },
+              { value: 'overlay', label: t.preview.fullWindow },
+            ]}
+          />
         </div>
-        <ChromeButton
-          overlay={floatingChrome}
+        <IconButton
+          size="md"
           label={t.preview.copyUri}
+          icon={<LinkIcon />}
           onClick={() => onCopyUri(node)}
-        >
-          <LinkIcon className="h-4 w-4" />
-        </ChromeButton>
-        <ChromeButton
-          overlay={floatingChrome}
-          label={t.preview.download}
+        />
+        <IconButton
+          size="md"
+          label={common.download}
+          icon={<DownloadFileIcon />}
           onClick={() => onDownload(node)}
-        >
-          <DownloadFileIcon className="h-4 w-4" />
-        </ChromeButton>
-        <ChromeButton overlay={floatingChrome} label={t.preview.close} onClick={onClose}>
-          <CloseIcon className="h-4 w-4" />
-        </ChromeButton>
+        />
+        <IconButton size="md" label={common.close} icon={<CloseIcon />} onClick={onClose} />
       </div>
     </div>
   )
@@ -156,12 +150,15 @@ export function FilePreview({
       className={cx(
         'flex items-center justify-between gap-4 px-4 py-2.5',
         floatingChrome
-          ? 'absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-black/80 to-transparent text-white'
+          ? cx(
+              'absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-black/80 to-transparent text-white',
+              overImage,
+            )
           : 'shrink-0 border-t theme-border',
       )}
     >
       <span className={cx('text-xs', !floatingChrome && 'theme-muted-text')}>
-        {typeof node.size === 'number' && formatFileSize(node.size)}
+        {typeof node.size === 'number' && formatBytes(node.size)}
         {node.contentType && ` · ${node.contentType}`}
       </span>
       <div className="flex items-center gap-3">
@@ -172,43 +169,39 @@ export function FilePreview({
               floatingChrome ? 'bg-white/10' : 'theme-muted-panel',
             )}
           >
-            <MiniButton
-              overlay={floatingChrome}
-              label={t.preview.zoomOut}
+            <IconButton
+              size="xs"
+              label={common.zoomOut}
               onClick={() => setZoom((z) => Math.max(25, z - 25))}
-            >
-              <ZoomOutIcon className="h-3.5 w-3.5" />
-            </MiniButton>
+              icon={<ZoomOutIcon />}
+            />
             <span className="min-w-11 text-center text-xs tabular-nums">{zoom}%</span>
-            <MiniButton
-              overlay={floatingChrome}
-              label={t.preview.zoomIn}
+            <IconButton
+              size="xs"
+              label={common.zoomIn}
               onClick={() => setZoom((z) => Math.min(400, z + 25))}
-            >
-              <ZoomInIcon className="h-3.5 w-3.5" />
-            </MiniButton>
+              icon={<ZoomInIcon />}
+            />
           </div>
         )}
         <div className="flex items-center gap-1">
-          <MiniButton
-            overlay={floatingChrome}
+          <IconButton
+            size="xs"
             label={t.preview.previousFile}
             disabled={!hasPrev}
             onClick={goPrev}
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </MiniButton>
+            icon={<ChevronLeftIcon />}
+          />
           <span className="min-w-14 text-center text-xs tabular-nums">
             {index >= 0 ? `${index + 1} / ${siblings.length}` : ''}
           </span>
-          <MiniButton
-            overlay={floatingChrome}
+          <IconButton
+            size="xs"
             label={t.preview.nextFile}
             disabled={!hasNext}
             onClick={goNext}
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </MiniButton>
+            icon={<ChevronRightIcon />}
+          />
         </div>
       </div>
     </div>
@@ -278,95 +271,10 @@ export function FilePreview({
   )
 }
 
-function SegButton({
-  active,
-  overlayChrome,
-  onClick,
-  children,
-}: {
-  active: boolean
-  overlayChrome: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        'cursor-pointer whitespace-nowrap rounded-md px-2.5 py-1 text-[11.5px] font-medium transition-colors',
-        active
-          ? 'bg-(--theme-element) text-(--theme-element-text)'
-          : overlayChrome
-            ? 'text-white/70 hover:text-white'
-            : 'theme-muted-text hover:theme-text',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
-function ChromeButton({
-  overlay,
-  label,
-  onClick,
-  children,
-}: {
-  overlay: boolean
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={cx(
-        'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors',
-        overlay
-          ? 'text-white/90 hover:bg-white/15'
-          : 'theme-muted-text hover:theme-hover hover:theme-text',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
-function MiniButton({
-  overlay,
-  label,
-  onClick,
-  disabled,
-  children,
-}: {
-  overlay: boolean
-  label: string
-  onClick: () => void
-  disabled?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={cx(
-        'flex h-6 w-7 items-center justify-center rounded-md transition-colors',
-        disabled
-          ? 'cursor-not-allowed opacity-40'
-          : cx('cursor-pointer', overlay ? 'hover:bg-white/15' : 'hover:theme-hover'),
-      )}
-    >
-      {children}
-    </button>
-  )
-}
+// Chrome drawn over an image reads light on dark: its buttons keep their one
+// look, with the tokens they read set for the dark backdrop.
+const overImage =
+  '[--theme-app:#fff] [--theme-muted-text-color:rgb(255_255_255/0.8)] [--theme-muted-panel-bg:rgb(255_255_255/0.15)]'
 
 function EdgeButton({
   side,

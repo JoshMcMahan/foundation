@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-function readIsDark(): boolean {
+/** Whether the host's CSS color-scheme reads dark, falling back to the system preference. */
+export function readIsDark(): boolean {
   const scheme = getComputedStyle(document.documentElement).colorScheme
   const dark = scheme.includes('dark')
   const light = scheme.includes('light')

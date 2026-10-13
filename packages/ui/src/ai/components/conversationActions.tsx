@@ -2,6 +2,8 @@ import { DateTime } from 'luxon'
 import { type ReactNode, useState } from 'react'
 import { type OpenMenu, useContextMenu } from '../../components/ContextMenu'
 import type { MenuAction, MenuEntry } from '../../components/MenuEntries'
+import { useStrings } from '../../components/Provider'
+import { toast } from '../../components/Toast'
 import { DownloadIcon, EditIcon, ShareIcon, TrashIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -58,19 +60,20 @@ export function useConversationActions(): {
   overlays: ReactNode
 } {
   const { strings } = useChatConfig()
+  const { common } = useStrings()
   const t = strings.sidebar
-  const { adapter, notify, deleteConversation, updateConversationTitle } = useChat()
+  const { adapter, deleteConversation, updateConversationTitle } = useChat()
   const { openMenu, contextMenu } = useContextMenu()
   const [sharing, setSharing] = useState<string | null>(null)
   const { requestDelete, requestRename, dialogs } = useRowDialogs<ConversationSummary>({
     strings: {
       deleteTitle: t.deleteTitle,
       deleteBody: () => t.deleteBody,
-      deleteAction: t.deleteAction,
+      deleteAction: common.delete,
       renameTitle: t.renameTitle,
       renameLabel: t.renameLabel,
       renamePlaceholder: t.renamePlaceholder,
-      renameAction: t.renameAction,
+      renameAction: common.rename,
     },
     nameOf: (conv) => conv.title || t.untitled,
     onDelete: (conv) => deleteConversation(conv.id),
@@ -82,13 +85,13 @@ export function useConversationActions(): {
       const conversation = await adapter.conversations.get(id)
       downloadText(exportFilename(conversation.title), conversationToMarkdown(conversation))
     } catch {
-      notify.error(strings.chrome.exportError)
+      toast.error(strings.chrome.exportError)
     }
   }
 
   const menuItems = (conv: ConversationSummary): MenuEntry[] => [
     {
-      label: t.rename,
+      label: common.rename,
       icon: <EditIcon />,
       onClick: () => requestRename(conv),
     },
@@ -96,19 +99,19 @@ export function useConversationActions(): {
     ...(adapter.sharing && conv.isOwner !== false
       ? [
           {
-            label: t.share,
+            label: common.share,
             icon: <ShareIcon />,
             onClick: () => setSharing(conv.id),
           } satisfies MenuAction,
         ]
       : []),
     {
-      label: strings.chrome.download,
+      label: common.download,
       icon: <DownloadIcon />,
       onClick: () => void download(conv.id),
     },
     {
-      label: t.delete,
+      label: common.delete,
       icon: <TrashIcon />,
       destructive: true,
       onClick: () => requestDelete(conv),

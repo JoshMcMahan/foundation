@@ -1,22 +1,24 @@
 import { useId, useRef, useState } from 'react'
+import { ActionMenu } from '../components/ActionMenu'
 import { IconButton } from '../components/IconButton'
-import { fieldBoxClasses, Textarea } from '../components/Input'
+import { Textarea } from '../components/Input'
+import type { MenuEntry } from '../components/MenuEntries'
+import { useStrings } from '../components/Provider'
+import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
 import type { WorkflowEditing } from '../editing'
 import { AddIcon } from '../icons'
 import {
   asRecord,
   ExpressionToggle,
-  FieldError,
-  FieldLabel,
   type Flag,
   flagError,
   flagValue,
   GROWING_AREA,
   type Json,
-  LabelledField,
   text,
   useGrowingArea,
+  YamlField,
 } from './editorFields'
 import {
   type GraphEditorStrings,
@@ -133,38 +135,35 @@ export function InputRefSelect({
   label: string
 }) {
   const t = useGraphEditorStrings()
-  const id = useId()
   const matching = refs.filter((ref) => types.includes(ref.type))
   const current = value ? pathKey(value) : ''
   const known = matching.some((ref) => pathKey(ref.path) === current)
+  // An input the field names that isn't offered still shows, marked so choosing it does nothing.
+  const items = [
+    ...(!known && current ? [{ value: `?${current}`, label: `inputs.${current}` }] : []),
+    ...matching.map((ref) => ({
+      value: pathKey(ref.path),
+      label:
+        ref.label === ref.path.at(-1)
+          ? `inputs.${pathKey(ref.path)}`
+          : `${ref.label} (inputs.${pathKey(ref.path)})`,
+    })),
+    ...(onNew ? [{ value: '+', label: newLabel ?? t.newInput }] : []),
+  ]
   return (
-    <select
-      id={id}
+    <Select<string>
       aria-label={label}
-      value={known || !current ? current : `?${current}`}
-      onChange={(e) => {
-        const next = e.target.value
+      placeholder={matching.length > 0 ? t.chooseInput : t.noMatchingInputs}
+      items={items}
+      value={known || !current ? current || null : `?${current}`}
+      onValueChange={(next) => {
         if (next === '+') {
           onNew?.()
         } else if (next && !next.startsWith('?')) {
           onChange(next.split('.'))
         }
       }}
-      className={fieldBoxClasses}
-    >
-      <option value="" disabled>
-        {matching.length > 0 ? t.chooseInput : t.noMatchingInputs}
-      </option>
-      {!known && current && <option value={`?${current}`}>inputs.{current}</option>}
-      {matching.map((ref) => (
-        <option key={pathKey(ref.path)} value={pathKey(ref.path)}>
-          {ref.label === ref.path.at(-1)
-            ? `inputs.${pathKey(ref.path)}`
-            : `${ref.label} (inputs.${pathKey(ref.path)})`}
-        </option>
-      ))}
-      {onNew && <option value="+">{newLabel ?? t.newInput}</option>}
-    </select>
+    />
   )
 }
 
@@ -196,7 +195,7 @@ function NewInputButton({
   const types = inputsEditor.types as Record<string, string>
   return (
     <IconButton
-      icon={<AddIcon className="h-4 w-4" />}
+      icon={<AddIcon />}
       label={t.newInputOf(types[type] ?? type)}
       size="sm"
       variant="ghost"
@@ -218,45 +217,6 @@ function insertAt(
 
 // Inputs whose value is one of their options, so a condition compares it to one.
 const ONE_OF = ['dropdown', 'radio']
-
-/** A text field that takes any value, expressions included, with suggestions to pick from. */
-export function ExpressionInput({
-  id,
-  label,
-  value,
-  onChange,
-  suggestions = [],
-  placeholder,
-  error,
-  describedBy,
-  required,
-}: {
-  id?: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  suggestions?: Suggestion[]
-  placeholder?: string | undefined
-  error?: string | undefined
-  describedBy?: string
-  required?: boolean
-}) {
-  return (
-    <>
-      <SuggestionInput
-        id={id}
-        aria-label={label}
-        aria-describedby={describedBy}
-        required={required}
-        value={value}
-        placeholder={placeholder}
-        suggestions={suggestions}
-        onValueChange={onChange}
-      />
-      <FieldError message={error} />
-    </>
-  )
-}
 
 /** Conditions on the form's switches and choices, for fields that run on one. */
 function conditionSuggestions(
@@ -306,47 +266,53 @@ export function FlagField({
   const setTypedValue = (next: string) => onChange(next.trim() ? next : undefined)
   const lint = useFieldLint(yamlKey, id, typeof value === 'string' ? value : '', setTypedValue)
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <FieldLabel label={label} yamlKey={yamlKey} description={description} />
-        <div className="flex shrink-0 items-center gap-1">
-          {!typed && (
-            <Switch
-              checked={checked}
-              onCheckedChange={(on) => onChange(flagValue(on, fallback, original))}
-              aria-label={label}
-            />
-          )}
-          <ExpressionToggle
-            active={typed}
-            onChange={(on) => {
-              setTyped(on)
-              onChange(undefined)
-            }}
+    <YamlField
+      label={label}
+      yamlKey={yamlKey}
+      description={description}
+      error={typed ? (flagError(value, t) ?? lint.message) : undefined}
+      id={id}
+      actions={
+        <ExpressionToggle
+          active={typed}
+          onChange={(on) => {
+            setTyped(on)
+            onChange(undefined)
+          }}
+        />
+      }
+    >
+      {(control) =>
+        typed ? (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SuggestionInput
+                  {...control}
+                  value={typeof value === 'string' ? value : ''}
+                  suggestions={conditionSuggestions(source, t)}
+                  onValueChange={setTypedValue}
+                />
+              </div>
+              <NewInputButton
+                type="boolean"
+                source={source}
+                onCreated={(path) => onChange(flagExpression(path, false))}
+              />
+            </div>
+            {lint.fixes}
+          </>
+        ) : (
+          <Switch
+            {...control}
+            nativeButton
+            render={<button type="button" />}
+            checked={checked}
+            onCheckedChange={(on) => onChange(flagValue(on, fallback, original))}
           />
-        </div>
-      </div>
-      {typed && (
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <ExpressionInput
-              id={id}
-              label={label}
-              value={typeof value === 'string' ? value : ''}
-              suggestions={conditionSuggestions(source, t)}
-              error={flagError(value, t) ?? lint.message}
-              onChange={setTypedValue}
-            />
-          </div>
-          <NewInputButton
-            type="boolean"
-            source={source}
-            onCreated={(path) => onChange(flagExpression(path, false))}
-          />
-        </div>
-      )}
-      {typed && lint.fixes}
-    </div>
+        )
+      }
+    </YamlField>
   )
 }
 
@@ -388,12 +354,12 @@ export function ConditionField({
     onChange(insertAt(typed, value, reference))
   }
   return (
-    <LabelledField
+    <YamlField
       label={label}
       yamlKey={yamlKey}
       description={description}
-      htmlFor={id}
-      descriptionId={`${id}-help`}
+      error={lint.message}
+      id={id}
       actions={
         <>
           {allRefs(source).length > 0 && (
@@ -407,25 +373,26 @@ export function ConditionField({
         </>
       }
     >
-      <ExpressionInput
-        id={id}
-        label={label}
-        describedBy={`${id}-help`}
-        value={value}
-        error={lint.message}
-        placeholder={texts.default}
-        suggestions={[
-          ...CONDITIONS.map(([condition, key]) => ({
-            value: condition,
-            label: texts[key],
-          })),
-          { value: 'false', label: t.conditionNever },
-          ...conditionSuggestions(source, t),
-        ]}
-        onChange={onChange}
-      />
-      {lint.fixes}
-    </LabelledField>
+      {(control) => (
+        <>
+          <SuggestionInput
+            {...control}
+            value={value}
+            placeholder={texts.default}
+            suggestions={[
+              ...CONDITIONS.map(([condition, key]) => ({
+                value: condition,
+                label: texts[key],
+              })),
+              { value: 'false', label: t.conditionNever },
+              ...conditionSuggestions(source, t),
+            ]}
+            onValueChange={onChange}
+          />
+          {lint.fixes}
+        </>
+      )}
+    </YamlField>
   )
 }
 
@@ -475,34 +442,36 @@ export function ValueOrInputField({
     ...(literal ? suggestions.map((suggestion) => ({ value: suggestion })) : []),
   ]
   return (
-    <LabelledField
-      label={required ? `${label} *` : label}
+    <YamlField
+      label={label}
       yamlKey={yamlKey}
       description={description}
-      descriptionId={`${id}-help`}
+      required={required}
+      error={error ?? lint.message}
+      id={id}
     >
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <ExpressionInput
-            id={id}
-            label={label}
-            describedBy={`${id}-help`}
-            required={required}
-            value={value}
-            placeholder={placeholder ?? (literal ? undefined : t.chooseInput)}
-            suggestions={offered}
-            onChange={onChange}
-          />
-        </div>
-        <NewInputButton
-          type={firstType}
-          source={source}
-          onCreated={(path) => onChange(refExpression(path, suffix))}
-        />
-      </div>
-      <FieldError message={error ?? lint.message} />
-      {lint.fixes}
-    </LabelledField>
+      {(control) => (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <SuggestionInput
+                {...control}
+                value={value}
+                placeholder={placeholder ?? (literal ? undefined : t.chooseInput)}
+                suggestions={offered}
+                onValueChange={onChange}
+              />
+            </div>
+            <NewInputButton
+              type={firstType}
+              source={source}
+              onCreated={(path) => onChange(refExpression(path, suffix))}
+            />
+          </div>
+          {lint.fixes}
+        </>
+      )}
+    </YamlField>
   )
 }
 
@@ -539,32 +508,34 @@ export function ScriptField({
   const insert = (reference: string) =>
     onChange(insertAt((area ?? fixed).current, value, reference))
   return (
-    <LabelledField
+    <YamlField
       label={label}
       yamlKey={yamlKey}
       description={description}
-      htmlFor={id}
-      descriptionId={`${id}-help`}
+      error={shownError}
+      id={id}
       actions={
         allRefs(source).length > 0 && (
           <InsertRefSelect source={source} label={t.insertValue} onInsert={insert} />
         )
       }
     >
-      <Textarea
-        ref={area ?? fixed}
-        id={id}
-        mono
-        aria-describedby={`${id}-help`}
-        rows={rows ?? 1}
-        value={value}
-        className={rows === undefined ? GROWING_AREA : ''}
-        {...(shownError ? { error: shownError } : {})}
-        {...(placeholder ? { placeholder } : {})}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {lint.fixes}
-    </LabelledField>
+      {(control) => (
+        <>
+          <Textarea
+            {...control}
+            ref={area ?? fixed}
+            mono
+            rows={rows ?? 1}
+            value={value}
+            className={rows === undefined ? GROWING_AREA : ''}
+            {...(placeholder ? { placeholder } : {})}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {lint.fixes}
+        </>
+      )}
+    </YamlField>
   )
 }
 
@@ -580,39 +551,29 @@ function InsertRefSelect({
   onInsert: (reference: string) => void
 }) {
   const t = useGraphEditorStrings()
+  const strings = useStrings()
   const all = allRefs(source)
-  // A select dressed as a button: the grouped list and keyboard handling come with it.
+  const groups = GROUP_ORDER.map((group) => ({
+    group,
+    items: all
+      .filter((item) => item.group === group)
+      .map((item) => ({ label: item.label, onClick: () => onInsert(item.expression) })),
+  })).filter((group) => group.items.length > 0)
+  // One kind of reference lists them all; several make a submenu each.
+  const entries: MenuEntry[] =
+    groups.length === 1
+      ? (groups[0]?.items ?? [])
+      : groups.map(({ group, items }) => ({ label: t.refGroups[group], items }))
   return (
-    <span className="relative inline-flex shrink-0 items-center">
-      <AddIcon
-        aria-hidden="true"
-        className="pointer-events-none absolute left-2 h-3 w-3 theme-muted-text"
-      />
-      <select
-        aria-label={label}
-        value=""
-        onChange={(e) => {
-          if (e.target.value) {
-            onInsert(e.target.value)
-          }
-        }}
-        className="cursor-pointer appearance-none rounded-md border border-(--theme-border) bg-(--theme-panel-bg) py-1 pr-2 pl-6 text-xs text-(--theme-app) hover:bg-(--theme-muted-panel-bg)"
-      >
-        <option value="">{label}</option>
-        {GROUP_ORDER.map((group) => {
-          const refs = all.filter((item) => item.group === group)
-          return refs.length > 0 ? (
-            <optgroup key={group} label={t.refGroups[group]}>
-              {refs.map((item) => (
-                <option key={item.label} value={item.expression}>
-                  {item.label}
-                </option>
-              ))}
-            </optgroup>
-          ) : null
-        })}
-      </select>
-    </span>
+    <ActionMenu
+      label={label}
+      items={entries}
+      search={{ placeholder: strings.common.search, empty: strings.dropdown.noOptionsFound }}
+      triggerClassName="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-(--theme-border) bg-(--theme-panel-bg) px-2 py-1 text-xs text-(--theme-app) hover:bg-(--theme-muted-panel-bg)"
+    >
+      <AddIcon aria-hidden="true" className="size-3 theme-muted-text" />
+      {label}
+    </ActionMenu>
   )
 }
 

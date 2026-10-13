@@ -15,7 +15,6 @@ describe('DropdownField', () => {
     },
     label: 'Provisioning Mode',
     labelPosition: 'top',
-    missing: false,
     disabled: false,
   }
 

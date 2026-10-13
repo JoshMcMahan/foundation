@@ -1,31 +1,3 @@
-type SecondaryOption = {
-  value?: unknown
-  secondaryValue?: unknown
-  options?: unknown[]
-}
-
-export function findSecondaryOption(
-  options: unknown[],
-  value: unknown,
-): SecondaryOption | undefined {
-  for (const candidate of options) {
-    if (!candidate || typeof candidate !== 'object') {
-      continue
-    }
-    const option = candidate as SecondaryOption
-    if (option.value === value) {
-      return option
-    }
-    if (Array.isArray(option.options)) {
-      const nestedOption = findSecondaryOption(option.options, value)
-      if (nestedOption) {
-        return nestedOption
-      }
-    }
-  }
-  return undefined
-}
-
 export function applySecondaryField(
   secondaryField: string | string[] | undefined,
   secondaryValue: unknown,

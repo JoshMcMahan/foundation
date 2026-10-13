@@ -761,18 +761,6 @@ const noopNavigation = {
   toNewChat() {},
 }
 
-const consoleNotify = {
-  success(m: string) {
-    console.info('[notify.success]', m)
-  },
-  error(m: string) {
-    console.info('[notify.error]', m)
-  },
-  info(m: string) {
-    console.info('[notify.info]', m)
-  },
-}
-
 // Stories are excluded from the stylesheet's `@source` scan so their classes
 // never ship, which means a utility used only here has no rule. Height comes
 // from an inline style so the story viewport cannot depend on that scan.
@@ -818,7 +806,6 @@ export function StoryChat({
       adapter={resolved}
       currentUser={storyUser}
       navigation={navigation}
-      notify={consoleNotify}
       activeConversationId={conversationId}
       config={resolvedConfig}
       {...sidebarControl}

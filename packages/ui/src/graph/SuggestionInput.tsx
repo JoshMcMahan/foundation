@@ -13,15 +13,12 @@ export function suggestionItems(suggestions: Suggestion[]): ComboboxItem[] {
   )
 }
 
-// Input's box, so a field with suggestions sits level with the text fields beside it.
-export const FIELD_TEXT_BOX = 'py-3 pl-4 rounded-lg text-sm !bg-[var(--theme-muted-panel-bg)]'
-
 /** A field that takes any typed value, offering `suggestions` as it's typed. */
 export function SuggestionInput({
   suggestions,
   ...props
-}: Omit<AutocompleteProps, 'items' | 'className' | 'defaultValue'> & {
+}: Omit<AutocompleteProps, 'items' | 'defaultValue'> & {
   suggestions: Suggestion[]
 }) {
-  return <Autocomplete {...props} className={FIELD_TEXT_BOX} items={suggestionItems(suggestions)} />
+  return <Autocomplete {...props} items={suggestionItems(suggestions)} />
 }

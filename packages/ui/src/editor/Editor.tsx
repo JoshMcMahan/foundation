@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import Loader from '../components/Loader'
+import { Loader } from '../components/Loader'
 import type { IEditorProps } from './Monaco'
 
 const MonacoEditor = lazy(() => import('./Monaco'))
@@ -9,7 +9,7 @@ The point of this wrapper is so you don't have to remember to import MonacoEdito
 */
 export default function Editor(props: IEditorProps) {
   return (
-    <Suspense fallback={<Loader text="Loading editor..." />}>
+    <Suspense fallback={<Loader />}>
       <MonacoEditor {...props} />
     </Suspense>
   )

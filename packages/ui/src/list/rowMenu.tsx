@@ -1,9 +1,10 @@
-import { clsx as cx } from 'clsx'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { useCallback, useState } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
+import { IconButton } from '../components/IconButton'
 import type { MenuAction, MenuEntry, MenuSubmenu } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
+import { cx } from '../cx'
 import {
   ClipboardIcon,
   CopyIcon,
@@ -118,7 +119,7 @@ export type CopySubmenu = (fields: CopyFields) => MenuSubmenu
 
 /** Returns a builder for the Copy submenu, labeled from the provider's strings. */
 export function useCopySubmenu(): CopySubmenu {
-  const { list: t } = useStrings()
+  const { common, list: t } = useStrings()
   return useCallback<CopySubmenu>(
     ({ name, nameLabel, email, username, uid, id, url, extra }) => {
       const fields: {
@@ -143,14 +144,14 @@ export function useCopySubmenu(): CopySubmenu {
         })),
       ]
       return {
-        label: t.copyMenu,
+        label: common.copy,
         icon: <ClipboardIcon />,
         items: fields.flatMap(({ label, value, icon }): MenuAction[] =>
-          value ? [{ label: t.copy(label), icon, copy: { text: value, label } }] : [],
+          value ? [{ label: common.copyThing(label), icon, copy: { text: value, label } }] : [],
         ),
       }
     },
-    [t],
+    [t, common],
   )
 }
 
@@ -176,22 +177,21 @@ export function MoreButton({
 }) {
   const { list: t } = useStrings()
   return (
-    <button
-      type="button"
-      aria-label={label ?? t.moreActions}
+    <IconButton
+      label={label ?? t.moreActions}
+      icon={<MoreIcon />}
       aria-haspopup="menu"
       aria-expanded={open}
+      data-popup-open={open || undefined}
       onClick={(e) => {
         e.stopPropagation()
         onOpen(e.currentTarget)
       }}
       className={cx(
-        'rounded p-1 cursor-pointer text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) focus-visible:opacity-100',
+        'focus-visible:opacity-100',
         visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100',
         className,
       )}
-    >
-      <MoreIcon className="h-4 w-4" />
-    </button>
+    />
   )
 }

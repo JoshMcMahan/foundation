@@ -56,6 +56,7 @@ vi.mock('../editor/Monaco', () => ({
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
 import { optionsOf } from '../test/combobox'
+import { isSectionOpen, openSection, toggleSection } from '../test/section'
 import { hoverTooltip } from '../test/tooltip'
 import { DependencyGraphPreview } from './DependencyGraph'
 import type { DependencyGraphEditor, EditorProblem } from './editorApi'
@@ -180,7 +181,7 @@ function field(label: string): HTMLElement {
   const top = screen.queryAllByRole('dialog').at(-1)
   let element: HTMLElement | null =
     (top ? within(top) : screen).getAllByText(label, { selector: 'span, label' })[0] ?? null
-  // Not a select: the Insert a value menu beside a label is one.
+  // Not the Insert a value menu beside a label: it holds no input.
   while (element && !element.querySelector('input, textarea')) {
     element = element.parentElement
   }
@@ -321,7 +322,7 @@ describe('DependencyGraphPreview editor', () => {
     expect(screen.getByText('A job with this name already exists.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     fireEvent.change(name, { target: { value: 'macos' } })
-    fireEvent.click(screen.getByLabelText('linux'))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'linux' }))
     fireEvent.change(screen.getByLabelText('Time limit'), {
       target: { value: 'soon' },
     })
@@ -559,7 +560,7 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={withInputs} editor={e} />)
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
-    const host = within(field('Host')).getByLabelText('Host')
+    const host = within(field('Host')).getByLabelText('Host', { selector: 'input, textarea' })
     expect(await optionsOf(host)).toContainEqual({
       label: 'Cluster',
       description: '${{ inputs.cluster.ip }}',
@@ -589,7 +590,7 @@ describe('DependencyGraphPreview editor', () => {
     fireEvent.change(within(dialog).getByLabelText('Environment name'), {
       target: { value: 'gpu-large' },
     })
-    const host = within(field('Host')).getByLabelText('Host')
+    const host = within(field('Host')).getByLabelText('Host', { selector: 'input, textarea' })
     fireEvent.change(host, { target: { value: '10.0.0.1' } })
     expect(within(dialog).getByText(GRAPH_EDITOR_STRINGS.runsOnWithSsh)).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled()
@@ -611,6 +612,7 @@ describe('DependencyGraphPreview editor', () => {
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
     const dialog = screen.getByRole('dialog')
+    openSection('Compute environment')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Compute target' }))
     fireEvent.change(within(dialog).getByLabelText('Target'), { target: { value: 'c1' } })
     expect(within(dialog).getByText(GRAPH_EDITOR_STRINGS.runsOnNeedsMode)).toBeInTheDocument()
@@ -644,9 +646,12 @@ describe('DependencyGraphPreview editor', () => {
     fireEvent.click(screen.getByText('Edit job'))
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByLabelText('Environment ID')).toHaveValue('env-1')
-    fireEvent.change(within(field('When to run')).getByLabelText('When to run'), {
-      target: { value: 'always' },
-    })
+    fireEvent.change(
+      within(field('When to run')).getByLabelText('When to run', { selector: 'input, textarea' }),
+      {
+        target: { value: 'always' },
+      },
+    )
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({
       type: 'updateJob',
@@ -661,7 +666,9 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={withInputs} editor={e} />)
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
-    const condition = within(field('When to run')).getByLabelText('When to run')
+    const condition = within(field('When to run')).getByLabelText('When to run', {
+      selector: 'input, textarea',
+    })
     expect(await optionsOf(condition)).toContainEqual({
       label: 'When mode is slow',
       description: "${{ inputs.mode == 'slow' }}",
@@ -683,7 +690,9 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={yml} editor={e} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('compile'))
-    const condition = within(field('When to run')).getByLabelText('When to run')
+    const condition = within(field('When to run')).getByLabelText('When to run', {
+      selector: 'input, textarea',
+    })
     expect(condition).toHaveValue('')
     // A labelled suggestion shows the value it writes beneath its label.
     expect(
@@ -705,9 +714,12 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={yml} editor={e} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('compile'))
-    fireEvent.change(within(field('When to run')).getByLabelText('When to run'), {
-      target: { value: 'false' },
-    })
+    fireEvent.change(
+      within(field('When to run')).getByLabelText('When to run', { selector: 'input, textarea' }),
+      {
+        target: { value: 'false' },
+      },
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({
       type: 'updateStep',
@@ -742,6 +754,7 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={yml} editor={e} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('compile'))
+    openSection('Condition and behavior')
     const lenient = field('Keep going if it fails')
     fireEvent.click(within(lenient).getByRole('button', { name: 'Use an expression instead' }))
     // The switch gives way to a typed field below the label.
@@ -771,9 +784,9 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={steps} editor={e} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('notify'))
-    expect(within(field('When to run')).getByLabelText('When to run')).toHaveValue(
-      'failure() && inputs.notify',
-    )
+    expect(
+      within(field('When to run')).getByLabelText('When to run', { selector: 'input, textarea' }),
+    ).toHaveValue('failure() && inputs.notify')
     fireEvent.change(screen.getByLabelText('Time limit'), {
       target: { value: '10m' },
     })
@@ -783,7 +796,7 @@ describe('DependencyGraphPreview editor', () => {
     )
   })
 
-  it('runs a job when an output of a job it needs is a value', () => {
+  it('runs a job when an output of a job it needs is a value', async () => {
     const e = editor()
     const outputs = {
       jobs: {
@@ -798,15 +811,17 @@ describe('DependencyGraphPreview editor', () => {
     fireEvent.contextMenu(jobRow('deploy'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
     const condition = field('When to run')
-    const insert = within(condition).getByLabelText('Insert a value…')
+    fireEvent.click(within(condition).getByRole('button', { name: 'Insert a value…' }))
     expect(
-      within(insert).getByRole('option', {
-        name: 'needs.build.outputs.version',
-      }),
+      await screen.findByRole('menuitem', { name: 'needs.build.outputs.version' }),
     ).toBeInTheDocument()
-    fireEvent.change(within(condition).getByLabelText('When to run'), {
-      target: { value: "${{ needs.build.outputs.version == '2' }}" },
-    })
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    fireEvent.change(
+      within(condition).getByLabelText('When to run', { selector: 'input, textarea' }),
+      {
+        target: { value: "${{ needs.build.outputs.version == '2' }}" },
+      },
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({
       type: 'updateJob',
@@ -829,7 +844,7 @@ describe('DependencyGraphPreview editor', () => {
     const dialogs = screen.getAllByRole('dialog')
     const created = dialogs[dialogs.length - 1] as HTMLElement
     expect(within(created).getByLabelText('Name')).toHaveValue('enabled')
-    expect(within(created).getByLabelText('Type')).toBeDisabled()
+    expect(within(created).getByRole('combobox', { name: 'Type' })).toBeDisabled()
     fireEvent.click(within(created).getByRole('button', { name: 'Save' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({
@@ -859,7 +874,7 @@ describe('DependencyGraphPreview editor', () => {
     render(<DependencyGraphPreview yml={steps} editor={e} />)
     fireEvent.contextMenu(jobRow('build'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
-    const outputs = screen.getByText('Outputs').closest('details') as HTMLElement
+    const outputs = openSection('Outputs')
     fireEvent.click(within(outputs).getByText('Add'))
     fireEvent.change(within(outputs).getByLabelText('Name'), {
       target: { value: 'version' },
@@ -2153,7 +2168,7 @@ describe('steps, the clipboard and the arrow keys', () => {
     }
     const e = editor({ readSource: () => dumpYaml(matrix) })
     render(<DependencyGraphPreview yml={matrix} editor={e} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Expand All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
     // The first run's steps sit above the second run's.
     const copies = [...document.querySelectorAll<HTMLElement>('[data-dag-step-job="run"]')]
     expect(copies).toHaveLength(4)
@@ -2362,7 +2377,6 @@ describe('steps, the clipboard and the arrow keys', () => {
     for (const props of [{ editor: editor() }, {}]) {
       render(<DependencyGraphPreview yml={graph} {...props} />)
       const reset = screen.getByRole('button', { name: 'Reset View' })
-      expect(reset).not.toHaveClass('btn')
       expect(reset.parentElement).toContainElement(screen.getByRole('button', { name: 'Zoom in' }))
       expect(reset.parentElement).toContainElement(screen.getByRole('button', { name: 'Zoom out' }))
       cleanup()
@@ -2587,20 +2601,6 @@ describe('problems and the YAML beside the graph', () => {
 
 // A section's fold is decided once, as its dialog opens; after that it stays as the user leaves it.
 describe('dialog sections', () => {
-  const section = (title: string) => {
-    const found = [...document.querySelectorAll('details')].find(
-      (details) => details.querySelector('summary')?.textContent === title,
-    )
-    if (!found) {
-      throw new Error(`no ${title} section`)
-    }
-    return found
-  }
-  const toggle = (details: HTMLDetailsElement) => {
-    details.open = !details.open
-    fireEvent(details, new Event('toggle'))
-  }
-
   it('stays open while what opened it is taken away', () => {
     const retrying = {
       jobs: {
@@ -2612,9 +2612,9 @@ describe('dialog sections', () => {
     render(<DependencyGraphPreview yml={retrying} editor={editor({ settingsView: 'form' })} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('compile'))
-    expect(section('Retry').open).toBe(true)
+    expect(isSectionOpen('Retry')).toBe(true)
     fireEvent.click(screen.getByLabelText('Try again if it fails'))
-    expect(section('Retry').open).toBe(true)
+    expect(isSectionOpen('Retry')).toBe(true)
   })
 
   it('keeps how the user left it across the YAML view', async () => {
@@ -2626,13 +2626,13 @@ describe('dialog sections', () => {
     )
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
-    expect(section('Outputs').open).toBe(false)
-    toggle(section('Outputs'))
-    toggle(section('Dependencies and condition'))
+    expect(isSectionOpen('Outputs')).toBe(false)
+    toggleSection('Outputs')
+    toggleSection('Dependencies and condition')
     fireEvent.click(screen.getByRole('button', { name: 'YAML' }))
     await screen.findByLabelText('file:///workflow-job.yaml')
     fireEvent.click(screen.getByRole('button', { name: 'Form' }))
-    expect(section('Outputs').open).toBe(true)
-    expect(section('Dependencies and condition').open).toBe(false)
+    expect(isSectionOpen('Outputs')).toBe(true)
+    expect(isSectionOpen('Dependencies and condition')).toBe(false)
   })
 })

@@ -304,4 +304,4 @@ export {
   VscTerminalPowershell as PowershellIcon,
   VscTerminalPowershell as RunWorkflowIcon,
 } from 'react-icons/vsc'
-export { ErrorCheckmark, LoaderIcon, SuccessCheckmark } from './components/StatusIcons'
+export { ErrorCheckmark, SuccessCheckmark } from './components/StatusIcons'

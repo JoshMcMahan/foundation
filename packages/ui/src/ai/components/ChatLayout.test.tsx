@@ -72,7 +72,7 @@ describe('ChatLayout inline', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
-    expect(storage.get('aiChatSidebar')).toBe('collapsed')
+    expect(storage.get('aiChat.sidebar')).toBe(JSON.stringify('collapsed'))
   })
 
   it('puts the host content above the list and tells it when the list is the rail', async () => {
@@ -85,8 +85,8 @@ describe('ChatLayout inline', () => {
     expect(screen.getByText('top: rail')).toBeInTheDocument()
   })
 
-  it('reads the rail from the earlier storage key', async () => {
-    storage.set('aiChatSidebarCollapsed', '1')
+  it('opens on the rail it remembers', async () => {
+    storage.set('aiChat.sidebar', JSON.stringify('collapsed'))
     renderLayout()
     expect(await screen.findByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
   })
@@ -158,7 +158,7 @@ describe('ChatLayout under host control', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
     expect(onSidebarChange).toHaveBeenCalledWith('expanded')
     expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
-    expect(storage.has('aiChatSidebar')).toBe(false)
+    expect(storage.has('aiChat.sidebar')).toBe(false)
   })
 
   it('opens the drawer the host opens', () => {

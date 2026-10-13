@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon'
+import { formatDateTime } from '../../format'
 import type { Conversation } from '../types'
 
 // Reasoning is intentionally omitted: it is model working memory, not part of
@@ -7,10 +7,10 @@ export function conversationToMarkdown(conversation: Conversation): string {
   const lines: string[] = []
   lines.push(`# ${conversation.title?.trim() || 'Conversation'}`)
   if (conversation.createdAt) {
-    const dt = DateTime.fromISO(conversation.createdAt)
-    if (dt.isValid) {
+    const started = formatDateTime(conversation.createdAt)
+    if (started) {
       lines.push('')
-      lines.push(`> Started ${dt.toLocaleString(DateTime.DATETIME_MED)}`)
+      lines.push(`> Started ${started}`)
     }
   }
 

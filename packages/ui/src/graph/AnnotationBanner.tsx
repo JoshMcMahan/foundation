@@ -1,6 +1,7 @@
-import { clsx as cx } from 'clsx'
 import { useState } from 'react'
 import { keyedByContent } from '../components/keys'
+import { useStrings } from '../components/Provider'
+import { cx } from '../cx'
 import { ChevronDownIcon, ChevronRightIcon, ErrorIcon, InfoIcon, WarningIcon } from '../icons'
 import type { WorkflowJob } from './types'
 
@@ -32,7 +33,6 @@ const typeConfig: Record<
   AnnotationType,
   {
     icon: typeof ErrorIcon
-    label: string
     accentClass: string
     bgClass: string
     countBg: string
@@ -40,21 +40,18 @@ const typeConfig: Record<
 > = {
   error: {
     icon: ErrorIcon,
-    label: 'Error',
     accentClass: 'text-red-500',
     bgClass: 'bg-red-500/5 dark:bg-red-500/10',
     countBg: 'bg-red-500/15 text-red-700 dark:text-red-400',
   },
   warning: {
     icon: WarningIcon,
-    label: 'Warning',
     accentClass: 'text-yellow-500',
     bgClass: 'bg-yellow-500/5 dark:bg-yellow-500/10',
     countBg: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
   },
   notice: {
     icon: InfoIcon,
-    label: 'Notice',
     accentClass: 'text-blue-500',
     bgClass: 'bg-blue-500/5 dark:bg-blue-500/10',
     countBg: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
@@ -110,6 +107,7 @@ function collectAnnotations(
 
 export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
   const [expanded, setExpanded] = useState(false)
+  const { dag: t } = useStrings()
 
   const annotations = collectAnnotations(executedJobs)
   if (annotations.length === 0) {
@@ -142,7 +140,7 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
       >
         <ChevronIcon className="w-3.5 h-3.5 text-[var(--theme-muted-text-color)] shrink-0" />
 
-        <span className="text-sm font-medium text-[var(--theme-panel-color)]">Annotations</span>
+        <span className="text-sm font-medium text-[var(--theme-panel-color)]">{t.annotations}</span>
 
         {/* Count badges */}
         <div className="flex items-center gap-1.5">
@@ -184,12 +182,17 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
                   <Icon className={cx('w-4 h-4 mt-0.5 shrink-0', config.accentClass)} />
                   <div className="flex-1 min-w-0">
                     <span className={cx('font-medium', config.accentClass)}>
-                      {annotation.title || config.label}:
+                      {annotation.title ||
+                        t.annotationType[annotation.type] ||
+                        t.annotationType.notice}
+                      :
                     </span>{' '}
                     <span className="text-[var(--theme-panel-color)]">{annotation.message}</span>
                     <span className="text-[var(--theme-muted-text-color)] ml-2 text-xs">
-                      in {annotation.jobName} &rarr;{' '}
-                      {annotation.stepName || `step ${annotation.stepIndex}`}
+                      {t.annotationSource(
+                        annotation.jobName,
+                        annotation.stepName || t.stepNumber(annotation.stepIndex),
+                      )}
                     </span>
                   </div>
                 </div>

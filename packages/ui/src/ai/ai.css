@@ -311,20 +311,6 @@
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 96px), transparent);
 }
 
-/* Theme-aware input styling (matches the host app's .theme-input; defined
- * here too so the edit textarea is styled in standalone use) */
-.theme-input {
-  background-color: var(--theme-input-bg, #f9fafb);
-  border-color: var(--theme-border, #d1d5db);
-  color: var(--theme-app, #374151);
-}
-
-.theme-input:focus {
-  border-color: var(--theme-element, #3b82f6);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--theme-element, #3b82f6);
-}
-
 @keyframes shimmer {
   0% {
     background-position: 200% 0;

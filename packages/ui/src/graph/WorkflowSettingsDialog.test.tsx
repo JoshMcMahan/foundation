@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { applyGraphEdit, dumpYaml, loadYaml } from '@parallelworks/workflow-parser'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { openSection } from '../test/section'
 import { GRAPH_EDITOR_STRINGS } from './editorStrings'
 import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
 
@@ -111,6 +112,7 @@ describe('WorkflowSettingsDialog', () => {
   it('edits the input form layout in the same step, the inputs starting the first page', () => {
     const onEdit = open()
     fireEvent.click(screen.getByText(GRAPH_EDITOR_STRINGS.labelsBeside))
+    openSection('Input form')
     fireEvent.click(screen.getByRole('switch', { name: 'Split into pages' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onEdit).toHaveBeenCalledWith({
@@ -226,9 +228,10 @@ describe('WorkflowSettingsDialog', () => {
     }
     const onEdit = open(paged)
     const session = screen.getByDisplayValue('app').closest('div.flex.items-start') as HTMLElement
-    const redirect = within(session)
-      .getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.redirect })
-      .closest('.flex-col') as HTMLElement
+    // The field: its label's row, which holds the expression switch, and the control under it.
+    const redirect = within(session).getByText(GRAPH_EDITOR_STRINGS.fields.redirect, {
+      selector: 'label',
+    }).parentElement?.parentElement as HTMLElement
     fireEvent.click(
       within(redirect).getByRole('button', { name: GRAPH_EDITOR_STRINGS.useExpression }),
     )
@@ -254,9 +257,7 @@ describe('WorkflowSettingsDialog', () => {
     })
     const card = (name: string) =>
       screen.getByDisplayValue(name).closest('div.flex.items-start') as HTMLElement
-    fireEvent.click(
-      within(card('one')).getByRole('button', { name: GRAPH_EDITOR_STRINGS.removeRow }),
-    )
+    fireEvent.click(within(card('one')).getByRole('button', { name: 'Remove' }))
     // The first session's redirect was an expression; the second's is still a switch, and on.
     expect(
       within(card('two')).getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.redirect }),

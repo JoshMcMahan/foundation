@@ -1,7 +1,6 @@
-import { clsx as cx } from 'clsx'
 import React from 'react'
-import Loader from './Loader'
-import { useStrings } from './Provider'
+import { cx } from '../cx'
+import { Loader } from './Loader'
 import type { TDirection } from './Sort'
 
 interface IItemProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
@@ -136,7 +135,6 @@ export function Table({
   isLoading = false,
   tableProps,
 }: ITableProps) {
-  const { loading } = useStrings()
   const ChildrenArr = React.Children.toArray(children)
   const Headers = getHeaders(ChildrenArr)
   const hasOverflow = wrapperClassName.split(' ').some((cls) => cls.startsWith('overflow-'))
@@ -151,9 +149,8 @@ export function Table({
       )}
     >
       {isLoading ? (
-        <div role="status" aria-label={loading} className="flex justify-center items-center h-32">
+        <div className="flex justify-center items-center h-32">
           <Loader />
-          <span className="sr-only">{loading}</span>
         </div>
       ) : (
         <div

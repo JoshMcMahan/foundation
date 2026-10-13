@@ -1,7 +1,7 @@
-import { clsx as cx } from 'clsx'
 import * as monaco from 'monaco-editor'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useCssIsDark } from '../components/useCssIsDark'
+import { cx } from '../cx'
 import type { WorkflowEditing } from '../editing'
 import { holdListeners, modelFor } from './editorModel'
 import {

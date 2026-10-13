@@ -1,7 +1,9 @@
-import { clsx as cx } from 'clsx'
 import { useEffect } from 'react'
 import { useFormContext } from 'react-hook-form'
-import { FieldWrapper } from '../FieldWrapper'
+import { Field } from '../../components/Field'
+import { NumberInput } from '../../components/NumberInput'
+import { Slider } from '../../components/Slider'
+import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
 import { useFieldValue } from '../useFieldValue'
@@ -14,20 +16,26 @@ export interface IRangeField extends BaseField {
   step?: number
 }
 
+/** A value held as text, as one read from a workflow's inputs may be, still places the slider. */
+function toNumber(value: unknown): number | null {
+  const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value
+  return typeof number === 'number' && Number.isFinite(number) ? number : null
+}
+
 export default function RangeField(props: FieldComponentProps<IRangeField>) {
-  const { field, label, labelPosition, disabled, onChange, tooltipComponent, spaceCompact } = props
+  const { field, label, disabled, onChange } = props
   // The form names every field before it renders one.
   const name = field.name ?? ''
   const [value, change] = useFieldValue<string | number | undefined | null>(name)
   const { setValue } = useFormContext()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.valueAsNumber
-    if (!Number.isNaN(val)) {
-      val = Math.max(field.min, Math.min(field.max, val))
-      change(val)
-      onChange?.(val)
+  const set = (next: number | null) => {
+    if (next === null) {
+      return
     }
+    const clamped = Math.max(field.min, Math.min(field.max, next))
+    change(clamped)
+    onChange?.(clamped)
   }
 
   // Seed an unset field with its configured default, not the minimum — e.g. flexStartWaitTime defaults
@@ -40,46 +48,35 @@ export default function RangeField(props: FieldComponentProps<IRangeField>) {
     }
   }, [seed, seedValue, name, setValue])
 
-  const currentValue = value ?? seedValue ?? ''
+  const current = toNumber(value) ?? seedValue
+  const step = field.step || 1
 
   return (
-    <FieldWrapper
-      optional={field.optional}
-      label={label}
-      tooltipComponent={tooltipComponent}
-      labelPosition={labelPosition}
-      spaceCompact={spaceCompact}
-    >
-      {({ id, labelId }) => (
-        <div className="flex items-center">
-          <input
-            className={cx(
-              'theme-input h-7 w-1/3 mr-5 text-center rounded border',
-              disabled && 'disabled',
-            )}
-            id={id}
-            type="number"
-            value={currentValue}
-            min={field.min}
-            max={field.max}
-            step={field.step || 1}
-            disabled={disabled}
-            onChange={handleChange}
-          />
-          <input
-            className={cx('rounded w-full', disabled && 'disabled')}
+    <Field {...fieldFrame(props)}>
+      {(control) => (
+        <div className="flex items-center gap-4">
+          <NumberInput
+            {...control}
             name={field.name}
-            value={currentValue}
-            type="range"
-            aria-labelledby={labelId}
+            value={current}
+            onValueChange={set}
             min={field.min}
             max={field.max}
-            step={field.step || 1}
+            step={step}
             disabled={disabled}
-            onChange={handleChange}
+            className="w-28 shrink-0"
+          />
+          <Slider
+            aria-label={label}
+            value={current}
+            onValueChange={set}
+            min={field.min}
+            max={field.max}
+            step={step}
+            disabled={disabled}
           />
         </div>
       )}
-    </FieldWrapper>
+    </Field>
   )
 }
