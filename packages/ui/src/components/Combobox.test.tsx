@@ -303,6 +303,28 @@ describe('Combobox group headings', () => {
     expect(within(list).getAllByRole('option')).toHaveLength(2)
   })
 
+  it('lists items between groups where they sit, without a heading', async () => {
+    render(
+      <Combobox
+        aria-label="Zone"
+        items={[
+          { label: 'None', value: '' },
+          { label: 'Americas', items: [{ label: 'East', value: 'east' }] },
+          'other',
+        ]}
+        value={null}
+        onValueChange={() => {}}
+      />,
+    )
+    const list = await open()
+    expect(headings(list)).toEqual(['Americas'])
+    expect(
+      within(list)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['None', 'East', 'other'])
+  })
+
   it('searches headings, keeping a status group only while it matches', async () => {
     render(<Picker />)
     fireEvent.click(screen.getByRole('combobox', { name: 'Model' }))

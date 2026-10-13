@@ -1,20 +1,12 @@
 import { dequal } from 'dequal'
 import { useEffect, useEffectEvent, useRef } from 'react'
 import { useFormContext } from 'react-hook-form'
-import type { ComboboxGroup, ComboboxItem, ComboboxItems } from '../components/Combobox'
+import type { ComboboxItems } from '../components/Combobox'
 import { useFieldValue } from './useFieldValue'
+import { type ChoiceItem, itemValue, leaves } from './utils/fieldItems'
 import { applySecondaryField } from './utils/secondaryField'
 
-/** An item that also sets other fields when chosen, through `secondaryField`. */
-export type ChoiceItem = ComboboxItem<unknown> & { secondaryValue?: unknown }
-
-function leaves(items: ComboboxItems<unknown>): (ChoiceItem | string)[] {
-  return items.flatMap((item) =>
-    typeof item === 'object' && 'items' in item ? (item as ComboboxGroup<unknown>).items : [item],
-  )
-}
-
-const itemValue = (item: ChoiceItem | string) => (typeof item === 'string' ? item : item.value)
+export type { ChoiceItem }
 
 /**
  * A field that picks one of `items`: its value, and the choice the person makes, which also sets the

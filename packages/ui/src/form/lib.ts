@@ -1,5 +1,6 @@
 import type { DynamicFormSchema } from './types/fieldTypes'
-import { applySecondaryField, findSecondaryOption } from './utils/secondaryField'
+import { findChoice, toFieldItems } from './utils/fieldItems'
+import { applySecondaryField } from './utils/secondaryField'
 import { copyBounds } from './Wizard/utils'
 
 interface SchemaEntry {
@@ -196,7 +197,7 @@ export function initializeValues(
           fieldSchema.secondaryField &&
           Array.isArray(fieldSchema.options)
         ) {
-          const option = findSecondaryOption(fieldSchema.options, data[field])
+          const option = findChoice(toFieldItems(fieldSchema.options), data[field])
           applySecondaryField(
             fieldSchema.secondaryField,
             option?.secondaryValue,

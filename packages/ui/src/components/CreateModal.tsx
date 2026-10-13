@@ -5,7 +5,8 @@ import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'rea
 import { useEffect, useId, useRef, useState } from 'react'
 import { ChevronDownIcon, ChevronRightIcon, FavoriteIcon, FavoriteOutlineIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
-import { Autocomplete, Combobox, type ComboboxItem, type ComboboxItems } from './Combobox'
+import { Autocomplete, Combobox } from './Combobox'
+import { type ComboboxItems, comboboxLeaves } from './comboboxItems'
 import { ghostButtonClasses, primaryButtonClasses } from './ghostButton'
 import { InfoTip } from './InfoTip'
 import type { MenuEntry } from './MenuEntries'
@@ -335,30 +336,50 @@ const fieldInputClasses =
 
 const fieldLabelClasses = 'block mb-1 text-xs font-medium text-(--theme-muted-text-color)'
 
+/** A field's label, with its help beside it rather than inside the label, so
+ *  the label names the field and not the help button. */
+function FieldLabel({
+  id,
+  label,
+  tooltip,
+}: {
+  id: string
+  label: string
+  tooltip?: string | undefined
+}) {
+  return (
+    <div className={cx(fieldLabelClasses, 'flex items-center gap-1')}>
+      <label htmlFor={id}>{label}</label>
+      {tooltip && <InfoTip text={tooltip} />}
+    </div>
+  )
+}
+
 /** Labeled single-line input row for the dialog's extra fields. */
 export function CreateModalField({
   label,
   tooltip,
+  id,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string
   /** Help text surfaced via an info icon next to the label. */
   tooltip?: string | undefined
 }) {
+  const fallbackId = useId()
+  const fieldId = id ?? fallbackId
   return (
-    <label className="block mb-3">
-      <span className={cx(fieldLabelClasses, 'flex items-center gap-1')}>
-        {label}
-        <InfoTip text={tooltip ?? ''} />
-      </span>
+    <div className="mb-3">
+      <FieldLabel id={fieldId} label={label} tooltip={tooltip} />
       <input
         type="text"
         autoComplete="off"
         data-1p-ignore
         {...props}
+        id={fieldId}
         className={fieldInputClasses}
       />
-    </label>
+    </div>
   )
 }
 
@@ -367,26 +388,27 @@ export function CreateModalTextarea({
   label,
   tooltip,
   rows = 4,
+  id,
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string
   /** Help text surfaced via an info icon next to the label. */
   tooltip?: string | undefined
 }) {
+  const fallbackId = useId()
+  const fieldId = id ?? fallbackId
   return (
-    <label className="block mb-3">
-      <span className={cx(fieldLabelClasses, 'flex items-center gap-1')}>
-        {label}
-        <InfoTip text={tooltip ?? ''} />
-      </span>
+    <div className="mb-3">
+      <FieldLabel id={fieldId} label={label} tooltip={tooltip} />
       <textarea
         autoComplete="off"
         data-1p-ignore
         rows={rows}
         {...props}
+        id={fieldId}
         className={cx(fieldInputClasses, 'h-auto py-2 font-mono text-xs leading-relaxed resize-y')}
       />
-    </label>
+    </div>
   )
 }
 
@@ -411,10 +433,7 @@ export function CreateModalAutocompleteField({
   const id = useId()
   return (
     <div className="mb-3">
-      <div className={cx(fieldLabelClasses, 'flex items-center gap-1')}>
-        <label htmlFor={id}>{label}</label>
-        {tooltip && <InfoTip text={tooltip} />}
-      </div>
+      <FieldLabel id={id} label={label} tooltip={tooltip} />
       <Autocomplete
         id={id}
         items={items}
@@ -483,7 +502,9 @@ export function CreateModalSelect({
   tooltip?: string
 }) {
   const t = useStrings().modal
-  const selected = leafItems(items).find((item) => item.value === value)
+  const selected = comboboxLeaves(items)
+    .map((item) => (typeof item === 'string' ? { value: item, label: item } : item))
+    .find((item) => item.value === value)
   // A prefilled value the list does not offer (stale region, a group the chosen
   // cloud account cannot reach) still has to read as set, or the pill looks
   // empty while the form submits it.
@@ -546,16 +567,4 @@ export function CreateModalSelect({
       }
     />
   )
-}
-
-function leafItems(items: ComboboxItems<string>): ComboboxItem<string>[] {
-  return items.flatMap((node) => {
-    if (typeof node === 'string') {
-      return [{ value: node, label: node }]
-    }
-    if ('items' in node) {
-      return leafItems(node.items)
-    }
-    return [node]
-  })
 }

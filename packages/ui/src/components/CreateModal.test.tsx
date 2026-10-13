@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { CreateModal, CreateModalTextarea } from './CreateModal'
+import { CreateModal, CreateModalField, CreateModalTextarea } from './CreateModal'
 
 function renderModal(onSubmit: (name: string) => Promise<boolean>) {
   return render(
@@ -114,5 +114,16 @@ describe('CreateModal panel mousedown', () => {
   it('keeps the caret in the name field for non-interactive areas', () => {
     renderWithRedirectUri()
     expect(fireEvent.mouseDown(screen.getByTestId('hint'))).toBe(false)
+  })
+})
+
+describe('CreateModal fields with help', () => {
+  it.each([
+    ['an input', CreateModalField],
+    ['a textarea', CreateModalTextarea],
+  ])('name %s by its label, not the help button beside it', (_, Field) => {
+    render(<Field label="Account ID" tooltip="The twelve digit ID" />)
+    expect(screen.getByRole('textbox', { name: 'Account ID' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More information' })).toBeInTheDocument()
   })
 })

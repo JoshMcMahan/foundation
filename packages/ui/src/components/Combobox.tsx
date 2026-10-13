@@ -17,6 +17,12 @@ import {
 } from 'react'
 import { CaretDownIcon, CheckIcon, XIcon } from '../icons'
 import {
+  type ComboboxItem,
+  type ComboboxItems,
+  type ComboboxLeaf,
+  isComboboxGroup as isGroup,
+} from './comboboxItems'
+import {
   panelClassName,
   panelItemClassName,
   portalContainer,
@@ -26,28 +32,12 @@ import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
 
-export interface ComboboxItem<Value = string> {
-  value: Value
-  label: string
-  description?: string | undefined
-  icon?: ReactNode
-  disabled?: boolean | undefined
-}
-
-export interface ComboboxGroup<Value = string> {
-  label: string
-  /** Leads the heading, such as a provider's logo. */
-  icon?: ReactNode
-  /** Follows the label, such as who shared the group or a status like "Not responding". */
-  description?: string | undefined
-  /** Empty for a group that only reports a status; a search finds it by its heading. */
-  items: readonly (ComboboxItem<Value> | (Value & string))[]
-}
-
-/** A flat list, or groups under headings. A bare string is an item labelled by its value. */
-export type ComboboxItems<Value = string> =
-  | readonly (ComboboxItem<Value> | (Value & string))[]
-  | readonly ComboboxGroup<Value>[]
+export type {
+  ComboboxGroup,
+  ComboboxItem,
+  ComboboxItems,
+  ComboboxLeaf,
+} from './comboboxItems'
 
 interface FieldProps {
   id?: string | undefined
@@ -110,12 +100,8 @@ interface EntryGroup<Value> {
   items: Entry<Value>[]
   /** The group's place in the items, kept through Base UI's filtering. */
   order: number
-}
-
-function isGroup<Value>(
-  item: ComboboxItem<Value> | ComboboxGroup<Value> | string,
-): item is ComboboxGroup<Value> {
-  return typeof item === 'object' && 'items' in item
+  /** Items that sat between groups, listed without a heading. */
+  headless?: boolean
 }
 
 function toEntry<Value>(
@@ -126,30 +112,38 @@ function toEntry<Value>(
   return group === undefined ? entry : { ...entry, group }
 }
 
-/** Base UI takes either flat items or groups, and filters and navigates by the leaf items. */
+/** Base UI takes either flat items or groups, and filters and navigates by the leaf items, so
+ *  items listed between groups gather into headless groups where they sit. */
 function useEntries<Value>(items: ComboboxItems<Value>) {
   return useMemo(() => {
-    const [first] = items
-    if (first !== undefined && isGroup(first)) {
-      const groups: EntryGroup<Value>[] = (items as readonly ComboboxGroup<Value>[]).map(
-        (g, order) => ({
-          label: g.label,
-          icon: g.icon,
-          description: g.description,
-          items: g.items.map((item) => toEntry(item, g.label)),
-          order,
-        }),
-      )
-      return {
-        items: groups,
-        flat: groups.flatMap((g) => g.items),
-        statusGroups: groups.filter((g) => g.items.length === 0),
+    if (!items.some(isGroup)) {
+      const flat = (items as readonly ComboboxLeaf<Value>[]).map((item) => toEntry(item))
+      return { items: flat, flat, statusGroups: [] as EntryGroup<Value>[] }
+    }
+    const groups: EntryGroup<Value>[] = []
+    for (const item of items) {
+      if (isGroup(item)) {
+        groups.push({
+          label: item.label,
+          icon: item.icon,
+          description: item.description,
+          items: item.items.map((leaf) => toEntry(leaf, item.label)),
+          order: groups.length,
+        })
+        continue
+      }
+      const last = groups.at(-1)
+      if (last?.headless) {
+        last.items.push(toEntry(item))
+      } else {
+        groups.push({ label: '', items: [toEntry(item)], order: groups.length, headless: true })
       }
     }
-    const flat = (items as readonly (ComboboxItem<Value> | (Value & string))[]).map((item) =>
-      toEntry(item),
-    )
-    return { items: flat, flat, statusGroups: [] as EntryGroup<Value>[] }
+    return {
+      items: groups,
+      flat: groups.flatMap((g) => g.items),
+      statusGroups: groups.filter((g) => g.items.length === 0),
+    }
   }, [items])
 }
 
@@ -540,7 +534,7 @@ function toRows<Value>(
   const rowOfItem: number[] = []
   for (const node of nodes) {
     const leaves = 'items' in node ? node.items : [node]
-    if ('items' in node) {
+    if ('items' in node && !node.headless) {
       rows.push({ kind: 'group', group: node })
     }
     for (const entry of leaves) {
