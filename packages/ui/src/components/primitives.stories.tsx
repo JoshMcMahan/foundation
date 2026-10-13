@@ -508,3 +508,46 @@ export const SelectTrigger: StoryObj<{ disabled: boolean }> = {
     await expect(canvas.getByRole('combobox', { name: 'Mode' })).toHaveTextContent('Auto')
   },
 }
+
+const THEMES = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'contrast', label: 'High contrast' },
+]
+
+function SelectPreviewDemo() {
+  const [theme, setTheme] = useState<string | null>('light')
+  const [previewing, setPreviewing] = useState<string | undefined>()
+  const shown = previewing ?? theme
+  return (
+    <div className="flex max-w-xs flex-col gap-3 text-sm">
+      <Select
+        aria-label="Theme"
+        items={THEMES}
+        value={theme}
+        onValueChange={setTheme}
+        onItemHighlighted={setPreviewing}
+      />
+      <span data-testid="applied">
+        {previewing ? 'Previewing' : 'Applied'}: {THEMES.find((t) => t.value === shown)?.label}
+      </span>
+    </div>
+  )
+}
+
+/** Moving through the list previews each theme; closing it goes back to the chosen one. */
+export const SelectPreview: StoryObj = {
+  render: () => <SelectPreviewDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Theme' }))
+    // Opening highlights the chosen theme; the arrow moves on from there.
+    await waitFor(() =>
+      expect(canvas.getByTestId('applied')).toHaveTextContent('Previewing: Light'),
+    )
+    await userEvent.keyboard('{ArrowDown}')
+    await waitFor(() => expect(canvas.getByTestId('applied')).toHaveTextContent('Previewing: Dark'))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(canvas.getByTestId('applied')).toHaveTextContent('Applied: Light'))
+  },
+}

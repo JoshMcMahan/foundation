@@ -35,6 +35,9 @@ export type SelectProps<Value, Multiple extends boolean | undefined = false> = O
   trigger?: ReactElement | undefined
   /** A hint on the trigger button. */
   triggerTooltip?: ReactNode
+  /** The item a person is on as they move through the open list, then undefined once it
+   *  closes, such as to preview a theme before it is chosen. */
+  onItemHighlighted?: ((value: Value | undefined) => void) | undefined
 }
 
 const triggerClassName = cx(
@@ -54,6 +57,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   'aria-invalid': invalid,
   trigger,
   triggerTooltip,
+  onItemHighlighted,
   ...rootProps
 }: SelectProps<Value, Multiple>) {
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
@@ -63,7 +67,16 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
     'aria-invalid': invalid || undefined,
   }
   return (
-    <BaseSelect.Root items={items} {...rootProps}>
+    <BaseSelect.Root
+      items={items}
+      {...rootProps}
+      onOpenChange={(open, details) => {
+        rootProps.onOpenChange?.(open, details)
+        if (!open) {
+          onItemHighlighted?.(undefined)
+        }
+      }}
+    >
       {trigger ? (
         <Tooltip content={triggerTooltip}>
           <BaseSelect.Trigger {...triggerProps} render={trigger} />
@@ -103,6 +116,8 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
                   value={item.value}
                   disabled={item.disabled}
                   className={cx('grid grid-cols-[1rem_1fr]', panelItemClassName)}
+                  // Select highlights an item by focusing it.
+                  onFocus={onItemHighlighted && (() => onItemHighlighted(item.value))}
                 >
                   <BaseSelect.ItemIndicator className="col-start-1">
                     <CheckIcon className="size-3.5" />

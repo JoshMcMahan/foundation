@@ -35,6 +35,26 @@ describe('Select', () => {
     render(<Select aria-label="Mode" items={modes} defaultValue="auto" />)
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent('Auto')
   })
+
+  it('reports the item a person moves to, then nothing once the list closes', async () => {
+    const onItemHighlighted = vi.fn()
+    render(
+      <Select
+        aria-label="Theme"
+        items={modes}
+        defaultValue="ask"
+        onItemHighlighted={onItemHighlighted}
+      />,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Theme' }))
+    const auto = await screen.findByRole('option', { name: /Auto/ })
+    // The list opens on the chosen item; the arrow moves on to the next.
+    await waitFor(() => expect(onItemHighlighted).toHaveBeenLastCalledWith('ask'))
+    fireEvent.keyDown(document.activeElement ?? auto, { key: 'ArrowDown' })
+    await waitFor(() => expect(onItemHighlighted).toHaveBeenLastCalledWith('auto'))
+    fireEvent.keyDown(auto, { key: 'Escape' })
+    await waitFor(() => expect(onItemHighlighted).toHaveBeenLastCalledWith(undefined))
+  })
 })
 
 describe('Select with a button trigger', () => {
