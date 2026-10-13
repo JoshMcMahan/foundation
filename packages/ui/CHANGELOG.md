@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.42.0](https://github.com/parallelworks/foundation/compare/ui-v0.41.0...ui-v0.42.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** rebuild components on Base UI and forms on react-hook-form ([#225](https://github.com/parallelworks/foundation/issues/225))
+
+### Features
+
+* **ui:** rebuild components on Base UI and forms on react-hook-form ([#225](https://github.com/parallelworks/foundation/issues/225)) ([548c4bd](https://github.com/parallelworks/foundation/commit/548c4bd6440123cdb94458b7fd0dd4c8ec273d84))
+
 ## [0.41.0](https://github.com/parallelworks/foundation/compare/ui-v0.40.1...ui-v0.41.0) (2026-10-13)
 
 
