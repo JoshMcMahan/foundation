@@ -1,13 +1,13 @@
-import cx from 'classnames'
-import { memo, useEffect, useRef, useState } from 'react'
+import { clsx as cx } from 'clsx'
+import { useEffect, useRef, useState } from 'react'
+import { useFormContext } from 'react-hook-form'
 import { useStrings } from '../../components/Provider'
 import { FieldWrapper } from '../FieldWrapper'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { useFieldValue } from '../useFieldValue'
 import { formatDuration, parseDuration } from '../utils/duration'
 import { setDurationValidity } from './durationValidity'
-
-const DEBOUNCE_MS = 500
 
 export interface IDurationField extends BaseField {
   type: 'duration'
@@ -32,7 +32,7 @@ const toDisplay = (value: unknown): string => {
   return ''
 }
 
-export default memo(function DurationField({
+export default function DurationField({
   field,
   label,
   labelPosition,
@@ -41,14 +41,12 @@ export default memo(function DurationField({
   onChange,
   tooltipComponent,
   spaceCompact,
-  setFormDirty,
-  currentValue,
-  setFieldValue,
-  setFieldTouched,
-}: FieldComponentProps<IDurationField, number | string | undefined>) {
+}: FieldComponentProps<IDurationField>) {
   const { form: t } = useStrings()
   // The form names every field before it renders one.
   const name = field.name ?? ''
+  const [currentValue, change] = useFieldValue<number | string | undefined>(name)
+  const { setValue } = useFormContext()
   const min = field.min !== undefined ? Number(field.min) : Number.NEGATIVE_INFINITY
   const max = field.max !== undefined ? Number(field.max) : Number.POSITIVE_INFINITY
 
@@ -61,7 +59,6 @@ export default memo(function DurationField({
 
   const [text, setText] = useState(() => toDisplay(currentValue))
   const focusedRef = useRef(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   // Legacy configs store numeric strings like "300"; normalize so the saved JSON
   // is a number. Unset fields seed the default, not the min — flexStartWaitTime
@@ -70,15 +67,15 @@ export default memo(function DurationField({
   useEffect(() => {
     if (isSentinel) {
       if (typeof currentValue !== 'number') {
-        setFieldValue?.(name, disableValue)
+        setValue(name, disableValue)
       }
     } else if (isNumericString(currentValue)) {
-      setFieldValue?.(name, Number(currentValue))
+      setValue(name, Number(currentValue))
     } else if (
       (currentValue === undefined || currentValue === null || currentValue === '') &&
       typeof field.default === 'number'
     ) {
-      setFieldValue?.(name, field.default)
+      setValue(name, field.default)
     }
   }, [])
 
@@ -106,44 +103,33 @@ export default memo(function DurationField({
     setDurationValidity(name, error === null)
   }, [name, error])
 
-  useEffect(
-    () => () => {
-      setDurationValidity(name, true)
-      clearTimeout(debounceRef.current ?? undefined)
-    },
-    [name],
-  )
+  useEffect(() => () => setDurationValidity(name, true), [name])
 
-  const flushToFormik = (val: number | '') => {
-    setFieldValue?.(name, val)
+  const set = (val: number | '') => {
+    change(val)
     onChange?.(val)
-    setFieldTouched?.(name, true)
   }
 
   const handleDisableToggle = (checked: boolean) => {
-    clearTimeout(debounceRef.current ?? undefined)
-    setFormDirty(true)
     if (checked) {
       setText('')
       // The checkbox that calls this only renders when a disable value is set.
       if (disableValue !== undefined) {
-        flushToFormik(disableValue)
+        set(disableValue)
       }
     } else {
-      flushToFormik(typeof field.default === 'number' ? field.default : '')
+      set(typeof field.default === 'number' ? field.default : '')
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value
     setText(raw)
-    setFormDirty(true)
-    clearTimeout(debounceRef.current ?? undefined)
     const rawTrimmed = raw.trim()
     const value = rawTrimmed === '' ? '' : parseDuration(rawTrimmed)
-    // Invalid or out-of-range input never reaches Formik; the registry blocks save.
+    // Invalid or out-of-range input never reaches the form; the registry blocks save.
     if (value === '' || (typeof value === 'number' && value >= min && value <= max)) {
-      debounceRef.current = setTimeout(() => flushToFormik(value), DEBOUNCE_MS)
+      set(value)
     }
   }
 
@@ -153,13 +139,12 @@ export default memo(function DurationField({
 
   const handleBlur = () => {
     focusedRef.current = false
-    clearTimeout(debounceRef.current ?? undefined)
     if (trimmed === '') {
       setText('')
-      flushToFormik('')
+      set('')
     } else if (parsed !== null && parsed >= min && parsed <= max) {
       setText(formatDuration(parsed))
-      flushToFormik(parsed)
+      set(parsed)
     }
   }
 
@@ -222,4 +207,4 @@ export default memo(function DurationField({
       )}
     </FieldWrapper>
   )
-})
+}

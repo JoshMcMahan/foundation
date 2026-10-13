@@ -1,8 +1,8 @@
-import cx from 'classnames'
-import { Field } from 'formik'
+import { clsx as cx } from 'clsx'
 import { FieldWrapper } from '../FieldWrapper'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { useFieldValue } from '../useFieldValue'
 import { getPlaceholder } from '../utils/getPlaceholder'
 
 export interface ITextAreaField extends BaseField {
@@ -23,7 +23,7 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
     spaceCompact,
   } = props
   // The form names every field before it renders one.
-  const fieldName = field.name ?? ''
+  const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
 
   return (
     <FieldWrapper
@@ -35,22 +35,23 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
       spaceCompact={spaceCompact}
     >
       {({ id, describedBy }) => (
-        <Field
+        <textarea
           className={cx(
             'theme-input h-[82px] w-full rounded leading-4 overflow-y-scroll',
             disabled && 'disabled',
             missing && 'border-red-600 focus:border-red-600 focus:ring-red-500',
           )}
-          as="textarea"
           id={id}
           aria-describedby={describedBy}
           aria-required={field.optional ? undefined : true}
-          key={field.name}
-          name={fieldName}
-          type="search"
+          name={field.name}
+          value={value ?? ''}
           placeholder={getPlaceholder(field.placeholder, field.default)}
           disabled={disabled}
-          {...(onChange && { onChange })}
+          onChange={(e) => {
+            onChange?.(e.target.value)
+            change(e.target.value)
+          }}
         />
       )}
     </FieldWrapper>

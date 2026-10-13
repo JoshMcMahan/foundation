@@ -1,5 +1,5 @@
-import { Menu, MenuButton, MenuItem, MenuItems, MenuSeparator } from '@headlessui/react'
-import cx from 'classnames'
+import { Menu } from '@base-ui/react/menu'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import { Resizable } from 're-resizable'
 import {
@@ -14,14 +14,18 @@ import {
 } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { useContextMenu } from '../components/ContextMenu'
 import CopyToClipboard, { CopyCodeBlock } from '../components/CopyToClipboard'
 import { CreateModal } from '../components/CreateModal'
+import { InfoTip } from '../components/InfoTip'
 import { keyedByContent } from '../components/keys'
 import Loader from '../components/Loader'
+import { MenuItem, MenuPopup, MenuSeparator } from '../components/Menu'
+import type { MenuEntry } from '../components/MenuEntries'
 import { useNotify, useSlots, useStrings } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
-import { TOOLTIP_ID, TooltipInfo } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import {
   AccessIcon,
   AlertIcon,
@@ -47,9 +51,7 @@ import {
   listTableFixedProps,
   listTableProps,
   type RowAction,
-  type RowMenuItem,
   useCopySubmenu,
-  useRowMenu,
 } from '../list/index'
 import { safeUrl } from '../safeUrl'
 import { useFileExplorer } from './FileExplorerContext'
@@ -475,7 +477,7 @@ export default function FileExplorer({
   const [detailTab, setDetailTab] = useState<'details' | 'preview'>('details')
 
   useEffect(() => clearPreviewCache, [])
-  const { openMenu, contextMenu } = useRowMenu()
+  const { openMenu, contextMenu } = useContextMenu()
 
   const [sidebarWidth, setSidebarWidth] = useLocalStorage(
     SIDEBAR_WIDTH_STORAGE_KEY,
@@ -1061,13 +1063,13 @@ export default function FileExplorer({
         key: 'create-folder',
         label: t.createFolder.action,
         icon: <FolderIcon />,
-        onSelect: () => openCreateFolder(node),
+        onClick: () => openCreateFolder(node),
       },
     ]
   }
 
   // Order: lead → actions → Copy → delete last.
-  const buildRowMenu = (node: TreeNode): RowMenuItem[] => {
+  const buildRowMenu = (node: TreeNode): MenuEntry[] => {
     const storage = findStorage(node.storageId)
     const nodeCanDelete = storageCanDelete(storage)
     const nodeCanShare = storage?.canShare !== false
@@ -1080,7 +1082,7 @@ export default function FileExplorer({
         key: 'preview',
         label: t.preview.preview,
         icon: <EyeIcon />,
-        onSelect: () => openPreview(node),
+        onClick: () => openPreview(node),
       })
     }
     if (isFile) {
@@ -1088,14 +1090,14 @@ export default function FileExplorer({
         key: 'download',
         label: t.preview.download,
         icon: <DownloadFileIcon />,
-        onSelect: () => downloadNode(node),
+        onClick: () => downloadNode(node),
       })
       if (nodeCanShare) {
         actions.push({
           key: 'share',
           label: t.preview.shareFile,
           icon: <ShareIcon />,
-          onSelect: () => onShareFileButtonClick(node),
+          onClick: () => onShareFileButtonClick(node),
         })
       }
     }
@@ -1109,16 +1111,15 @@ export default function FileExplorer({
         label: t.preview.delete,
         icon: <TrashIcon />,
         destructive: true,
-        onSelect: () => deleteNode(node),
+        onClick: () => deleteNode(node),
       })
     }
 
-    const lead: RowMenuItem[] = [
+    const lead: MenuEntry[] = [
       {
-        kind: 'action',
         label: isFile ? t.preview.viewDetails : t.preview.openFolder,
         icon: isFile ? <FileTextIcon /> : <FolderIcon />,
-        onSelect: () => handleSelectTreeItem(node.path, node),
+        onClick: () => handleSelectTreeItem(node.path, node),
       },
     ]
 
@@ -1148,7 +1149,7 @@ export default function FileExplorer({
     }
     e.preventDefault()
     e.stopPropagation()
-    openMenu(e.clientX, e.clientY, items)
+    openMenu(e, items)
   }
 
   // Folder path from the storage root down to the current node; segments before
@@ -1527,29 +1528,27 @@ export default function FileExplorer({
           <div className="h-full flex flex-col border-r theme-border bg-(--theme-panel-bg)/60">
             <div className="flex items-center justify-end h-10 px-3 shrink-0 border-b theme-border">
               <div className="flex gap-x-0.5">
-                <button
-                  type="button"
-                  aria-label={t.chrome.refresh}
-                  data-tooltip-id={TOOLTIP_ID}
-                  data-tooltip-content="Refresh"
-                  data-tooltip-class-name="z-50"
-                  className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-link)"
-                  onClick={() => handleRefresh()}
-                >
-                  <RefreshIcon className="h-3.5 w-3.5" />
-                </button>
+                <Tooltip content={t.chrome.refresh}>
+                  <button
+                    type="button"
+                    aria-label={t.chrome.refresh}
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-link)"
+                    onClick={() => handleRefresh()}
+                  >
+                    <RefreshIcon className="h-3.5 w-3.5" />
+                  </button>
+                </Tooltip>
 
-                <button
-                  type="button"
-                  aria-label={t.chrome.collapse}
-                  data-tooltip-id={TOOLTIP_ID}
-                  data-tooltip-content="Collapse All"
-                  data-tooltip-class-name="z-50"
-                  className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-link)"
-                  onClick={collapseAll}
-                >
-                  <CollapseIcon className="h-3.5 w-3.5" />
-                </button>
+                <Tooltip content={t.chrome.collapse}>
+                  <button
+                    type="button"
+                    aria-label={t.chrome.collapse}
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-link)"
+                    onClick={collapseAll}
+                  >
+                    <CollapseIcon className="h-3.5 w-3.5" />
+                  </button>
+                </Tooltip>
               </div>
             </div>
 
@@ -1622,10 +1621,9 @@ export default function FileExplorer({
                       storageCount={getNodeChildren(parentToChildrenMap, rootNode.path).length}
                       getItems={() => [
                         {
-                          kind: 'action',
                           label: t.preview.open,
                           icon: <FolderIcon />,
-                          onSelect: () => openUserNode(rootNode),
+                          onClick: () => openUserNode(rootNode),
                         },
                       ]}
                       openMenu={openMenu}
@@ -1700,8 +1698,8 @@ export default function FileExplorer({
                     )}
 
                     {selectedNodeCanWrite && selectedNodeCanUpload && (
-                      <Menu>
-                        <MenuButton
+                      <Menu.Root>
+                        <Menu.Trigger
                           aria-label={t.chrome.upload}
                           className="btn btn-info cursor-pointer flex items-center justify-between pr-0.5!"
                           disabled={selectedNode.type === 'file' || !selectedNode.storageId}
@@ -1711,38 +1709,20 @@ export default function FileExplorer({
                             <span className="hidden md:inline">{t.chrome.upload}</span>
                           </div>
                           <AngleDownIcon className="h-4 w-4 ml-2" />
-                        </MenuButton>
-
-                        <MenuItems
-                          transition
-                          anchor="bottom end"
-                          className="theme-panel w-36 rounded-md border p-1 mt-1 shadow-lg z-50 origin-top-right transition duration-100
-                    ease-out data-closed:scale-95 data-closed:opacity-0 focus:outline-none"
-                        >
-                          <MenuItem>
-                            <button
-                              type="button"
-                              className="text-sm rounded-sm hover:theme-hover cursor-pointer w-full items-center px-2 py-1.5"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              Select Files
-                            </button>
+                        </Menu.Trigger>
+                        <MenuPopup align="end" className="w-36">
+                          <MenuItem onClick={() => fileInputRef.current?.click()}>
+                            Select Files
                           </MenuItem>
-                          <MenuItem>
-                            <button
-                              type="button"
-                              className="text-sm rounded-sm hover:theme-hover cursor-pointer w-full items-center px-2 py-1.5"
-                              onClick={() => folderInputRef.current?.click()}
-                            >
-                              Select Folder
-                            </button>
+                          <MenuItem onClick={() => folderInputRef.current?.click()}>
+                            Select Folder
                           </MenuItem>
-                        </MenuItems>
-                      </Menu>
+                        </MenuPopup>
+                      </Menu.Root>
                     )}
 
-                    <Menu>
-                      <MenuButton
+                    <Menu.Root>
+                      <Menu.Trigger
                         aria-label={t.chrome.download}
                         className="btn btn-info cursor-pointer flex items-center justify-between pr-0.5!"
                         disabled={
@@ -1756,48 +1736,31 @@ export default function FileExplorer({
                           <span className="hidden md:inline">{t.chrome.download}</span>
                         </div>
                         <AngleDownIcon className="h-4 w-4 ml-2" />
-                      </MenuButton>
-
-                      <MenuItems
-                        transition
-                        anchor="bottom end"
-                        className="theme-panel w-72 rounded-md border p-1 mt-1 shadow-lg z-50 origin-top-right transition duration-100 
-                    ease-out data-closed:scale-95 data-closed:opacity-0 focus:outline-none"
-                      >
-                        <MenuItem>
-                          <button
-                            type="button"
-                            className="text-sm rounded-sm hover:theme-hover cursor-pointer w-full items-center px-2 py-1.5"
-                            onClick={handleDownload}
-                          >
-                            {t.chrome.downloadFromBrowser}
-                          </button>
-                        </MenuItem>
+                      </Menu.Trigger>
+                      <MenuPopup align="end" className="w-72">
+                        <MenuItem onClick={handleDownload}>{t.chrome.downloadFromBrowser}</MenuItem>
                         {downloadCommand && downloadCommandText && (
                           <>
-                            <MenuSeparator className="my-0.5 h-px theme-border" />
-                            <MenuItem>
-                              <div>
-                                <p className="text-sm w-full text-center pointer-events-none px-2 py-1.5">
-                                  {downloadCommand.label}
-                                </p>
-                                <CopyCodeBlock textToCopy={downloadCommandText}>
-                                  <div className="overflow-x-auto text-xs">
-                                    {keyedByContent(downloadCommandText.split('\n'), (l) => l).map(
-                                      ({ key, item: line }) => (
-                                        <div key={key} className="whitespace-nowrap">
-                                          {line}
-                                        </div>
-                                      ),
-                                    )}
-                                  </div>
-                                </CopyCodeBlock>
-                              </div>
-                            </MenuItem>
+                            <MenuSeparator />
+                            {/* Copyable text, not an action, so it sits outside the items. */}
+                            <div className="px-2 py-1.5">
+                              <p className="text-sm text-center pb-1.5">{downloadCommand.label}</p>
+                              <CopyCodeBlock textToCopy={downloadCommandText}>
+                                <div className="overflow-x-auto text-xs">
+                                  {keyedByContent(downloadCommandText.split('\n'), (l) => l).map(
+                                    ({ key, item: line }) => (
+                                      <div key={key} className="whitespace-nowrap">
+                                        {line}
+                                      </div>
+                                    ),
+                                  )}
+                                </div>
+                              </CopyCodeBlock>
+                            </div>
                           </>
                         )}
-                      </MenuItems>
-                    </Menu>
+                      </MenuPopup>
+                    </Menu.Root>
 
                     <button
                       type="button"
@@ -1991,9 +1954,9 @@ export default function FileExplorer({
                                   node={selectedNode}
                                   onShare={onShareFileButtonClick}
                                 />
-                                <TooltipInfo
+                                <InfoTip
                                   text="This will generate a pre-signed URL for this file. Anyone with this link can temporarily access and download the file, even if they don't have an account. The link will automatically expire after 12 hours."
-                                  place="right"
+                                  side="right"
                                 />
                               </div>
                             )}

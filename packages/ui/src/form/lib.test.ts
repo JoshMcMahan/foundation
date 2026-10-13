@@ -1,4 +1,4 @@
-import deepEqual from 'fast-deep-equal'
+import { dequal as deepEqual } from 'dequal'
 import {
   enforceOneMustBeTrue,
   flattenGroups,

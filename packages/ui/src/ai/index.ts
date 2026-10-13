@@ -105,7 +105,6 @@ export {
   type ConversationSidebarGroup,
   useResizableSidebarWidth,
 } from './ui/ConversationSidebar'
-export { type DropdownOption, default as Dropdown } from './ui/Dropdown'
 export { NoticeBar, NoticeCard, type NoticeTone, OutputCard } from './ui/Notice'
 export {
   RenameDialog,

@@ -1,69 +1,72 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { Form, Formik, useFormikContext } from 'formik'
-import type { FieldComponentProps } from '../types/fieldComponentTypes'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { renderInForm } from '../../test/form'
 import type { INumberField } from './NumberField'
 import NumberField from './NumberField'
 
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
-
-// Surfaces the formik value so we can assert what NumberField seeded.
-function Probe({ name }: { name: string }) {
-  const { values } = useFormikContext<Record<string, unknown>>()
-  return <span data-testid="val">{JSON.stringify(values[name] ?? null)}</span>
-}
-
-describe('NumberField prefillDefault', () => {
-  const createProps = (
-    fieldOverrides: Partial<INumberField> = {},
-  ): FieldComponentProps<INumberField> =>
-    ({
-      field: {
-        type: 'number',
-        name: 'gpuCount',
-        default: 1,
-        ...fieldOverrides,
-      },
-      label: 'GPU Count',
-      labelPosition: 'top',
-      missing: false,
-      missingFields: [],
-      values: {},
-      setFormDirty: vi.fn(),
-      disabled: false,
-      currentValue: undefined,
-    }) as unknown as FieldComponentProps<INumberField>
-
-  const renderIn = (
-    props: FieldComponentProps<INumberField>,
-    initialValues: Record<string, unknown> = {},
-  ) =>
-    render(
-      <Formik initialValues={initialValues} onSubmit={vi.fn()}>
-        <Form>
-          <NumberField {...props} />
-          <Probe name="gpuCount" />
-        </Form>
-      </Formik>,
+describe('NumberField', () => {
+  const renderField = (field: Partial<INumberField> = {}, values: Record<string, unknown> = {}) =>
+    renderInForm(
+      <NumberField
+        field={{ type: 'number', name: 'gpuCount', default: 1, ...field }}
+        label="GPU Count"
+        labelPosition="top"
+        missing={false}
+        disabled={false}
+      />,
+      values,
     )
 
-  it('seeds the default into the form value when prefillDefault is set and the value is unset', async () => {
-    renderIn(createProps({ prefillDefault: true, default: 1 }))
-    await waitFor(() => expect(screen.getByTestId('val')).toHaveTextContent('1'))
+  describe('prefillDefault', () => {
+    it('seeds the default into the form value when prefillDefault is set and the value is unset', async () => {
+      const { form } = renderField({ prefillDefault: true, default: 1 })
+      await waitFor(() => expect(form.getValues('gpuCount')).toBe(1))
+    })
+
+    it('does not seed when prefillDefault is absent (default is placeholder-only)', () => {
+      const { form } = renderField({ default: 1 })
+      expect(form.getValues('gpuCount')).toBeUndefined()
+    })
+
+    it('does not overwrite an existing value', () => {
+      const { form } = renderField({ prefillDefault: true, default: 1 }, { gpuCount: 4 })
+      expect(form.getValues('gpuCount')).toBe(4)
+    })
   })
 
-  it('does not seed when prefillDefault is absent (default is placeholder-only)', () => {
-    renderIn(createProps({ default: 1 }))
-    expect(screen.getByTestId('val')).toHaveTextContent('null')
+  it('keeps typed numbers within range, and shows the clamped value on blur', () => {
+    const { form } = renderField({ min: 0, max: 8 })
+    const input = screen.getByRole('textbox')
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '12' } })
+    expect(form.getValues('gpuCount')).toBe(8)
+    fireEvent.blur(input)
+    expect(input).toHaveValue('8')
   })
 
-  it('does not overwrite an existing value', () => {
-    renderIn(createProps({ prefillDefault: true, default: 1 }), { gpuCount: 4 })
-    expect(screen.getByTestId('val')).toHaveTextContent('4')
+  it('shows a value the form holds, as a number or as text, and writes typed numbers', () => {
+    const { form } = renderField({}, { gpuCount: '2' })
+    const input = screen.getByRole('textbox')
+    expect(input).toHaveValue('2')
+    fireEvent.change(input, { target: { value: '3.25' } })
+    expect(form.getValues('gpuCount')).toBe(3.25)
+  })
+
+  it('clears to undefined', () => {
+    const { form } = renderField({}, { gpuCount: 2 })
+    fireEvent.change(screen.getByRole('textbox', { name: 'GPU Count' }), { target: { value: '' } })
+    expect(form.getValues('gpuCount')).toBeUndefined()
+  })
+
+  it('groups thousands only when asked', () => {
+    renderField({ thousandsSeparator: true }, { gpuCount: 1234567 })
+    expect(screen.getByRole('textbox')).toHaveValue('1,234,567')
+  })
+
+  it('steps with the buttons', () => {
+    const { form } = renderField({ step: 5 }, { gpuCount: 10 })
+    fireEvent.pointerDown(screen.getByRole('button', { name: /increase/i }), { button: 0 })
+    expect(form.getValues('gpuCount')).toBe(15)
   })
 })

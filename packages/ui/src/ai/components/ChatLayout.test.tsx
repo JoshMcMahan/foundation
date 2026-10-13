@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { makeStaticAdapter, makeSummaries, StoryChat } from '../stories/harness'
 import ChatLayout from './ChatLayout'
@@ -18,18 +18,29 @@ Object.defineProperty(window, 'localStorage', {
 
 // jsdom lays nothing out; the chat's width is whatever a test says it is.
 let chatWidth = 1200
-let resize: (() => void) | undefined
+// Every observer hears a resize: the drawer has its own besides the layout's.
+const observers = new Set<() => void>()
+const resize = () => {
+  for (const cb of observers) {
+    cb()
+  }
+}
 Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
   configurable: true,
   get: () => chatWidth,
 })
 global.ResizeObserver = class {
+  cb: () => void
   constructor(cb: () => void) {
-    resize = cb
+    this.cb = cb
   }
-  observe() {}
+  observe() {
+    observers.add(this.cb)
+  }
   unobserve() {}
-  disconnect() {}
+  disconnect() {
+    observers.delete(this.cb)
+  }
 } as unknown as typeof ResizeObserver
 
 const FIRST = 'Slurm sizing session 1'
@@ -51,7 +62,7 @@ function renderLayout(
 beforeEach(() => {
   storage.clear()
   chatWidth = 1200
-  resize = undefined
+  observers.clear()
 })
 
 describe('ChatLayout inline', () => {
@@ -94,15 +105,16 @@ describe('ChatLayout drawer', () => {
   it('starts closed, opens from its toggle and closes once a conversation is picked', async () => {
     renderLayout({ sidebarMode: 'drawer' })
     const dialog = screen.getByRole('dialog', { hidden: true })
-    expect(dialog).toHaveAttribute('inert')
+    expect(dialog).not.toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    expect(dialog).not.toHaveAttribute('inert')
-    expect(screen.getByRole('main')).toHaveAttribute('inert')
+    expect(dialog).toBeVisible()
+    // The thread leaves the accessibility tree while the drawer covers it.
+    expect(screen.queryByRole('main')).not.toBeInTheDocument()
 
     fireEvent.click(await screen.findByText(FIRST))
-    expect(dialog).toHaveAttribute('inert')
-    expect(screen.getByRole('main')).not.toHaveAttribute('inert')
+    await waitFor(() => expect(dialog).not.toBeVisible())
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
   it('leaves the toggle to the host header when asked', () => {
@@ -118,7 +130,7 @@ describe('ChatLayout auto', () => {
     expect(screen.getByRole('dialog', { hidden: true })).toBeInTheDocument()
 
     chatWidth = 1000
-    act(() => resize?.())
+    act(resize)
     expect(screen.queryByRole('dialog', { hidden: true })).not.toBeInTheDocument()
   })
 
@@ -127,7 +139,7 @@ describe('ChatLayout auto', () => {
     const onDrawerOpenChange = vi.fn()
     renderLayout({ sidebarMode: 'auto' }, { drawerOpen: true, onDrawerOpenChange })
     chatWidth = 1000
-    act(() => resize?.())
+    act(resize)
     expect(onDrawerOpenChange).toHaveBeenCalledWith(false)
   })
 })
@@ -151,6 +163,6 @@ describe('ChatLayout under host control', () => {
 
   it('opens the drawer the host opens', () => {
     renderLayout({ sidebarMode: 'drawer' }, { drawerOpen: true })
-    expect(screen.getByRole('dialog')).not.toHaveAttribute('inert')
+    expect(screen.getByRole('dialog')).toBeVisible()
   })
 })

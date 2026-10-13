@@ -2,10 +2,9 @@
 import '@testing-library/jest-dom/vitest'
 import { createWorkflowEngine } from '@parallelworks/workflow-parser'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { FormikProps, FormikValues } from 'formik'
-import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { testEngine } from '../test/engine'
+import { renderDynamicForm } from '../test/form'
 import { DynamicForm } from './Form'
 import type { FormLayoutNode } from './layout'
 
@@ -51,12 +50,10 @@ const schema = {
 
 describe('explicit form layouts', () => {
   it('binds actual controls to the original input names and appends unplaced fields', async () => {
-    const formikRef = createRef<FormikProps<FormikValues>>()
-    render(
+    const { form } = renderDynamicForm(
       <DynamicForm
         formJSONs={schema}
         initialValues={{ name: 'job', region: 'west', account: 'research', note: '' }}
-        formikRef={formikRef}
       />,
     )
     const name = await screen.findByRole('textbox', { name: /^Name/ })
@@ -71,7 +68,7 @@ describe('explicit form layouts', () => {
     ])
     fireEvent.change(name, { target: { value: 'new job' } })
     await waitFor(() =>
-      expect(formikRef.current?.values).toEqual({
+      expect(form.getValues()).toEqual({
         name: 'new job',
         region: 'west',
         account: 'research',
@@ -82,14 +79,8 @@ describe('explicit form layouts', () => {
 
   it('keeps the section and saved values when a preceding field hides and the layout changes', async () => {
     const initialValues = { name: 'job', region: 'west', account: 'research' }
-    const formikRef = createRef<FormikProps<FormikValues>>()
-    const { rerender } = render(
-      <DynamicForm
-        formJSONs={schema}
-        initialValues={initialValues}
-        formikRef={formikRef}
-        workflowForm
-      />,
+    const { form, rerender } = renderDynamicForm(
+      <DynamicForm formJSONs={schema} initialValues={initialValues} workflowForm />,
     )
     fireEvent.change(await screen.findByRole('textbox', { name: /^Account/ }), {
       target: { value: 'edited' },
@@ -103,7 +94,6 @@ describe('explicit form layouts', () => {
           region: { ...schema.region, hidden: true },
         }}
         initialValues={initialValues}
-        formikRef={formikRef}
         workflowForm
       />,
     )
@@ -112,8 +102,8 @@ describe('explicit form layouts', () => {
       screen.getByRole('textbox', { name: /^Account/ }),
     )
     expect(screen.getByRole('textbox', { name: /^Account/ })).toHaveValue('edited')
-    expect(formikRef.current?.values['region']).toBe('west')
-    act(() => formikRef.current?.resetForm({ values: initialValues }))
+    expect(form.getValues()['region']).toBe('west')
+    act(() => form.reset(initialValues))
     await waitFor(() =>
       expect(screen.getByRole('textbox', { name: /^Account/ })).toHaveValue('research'),
     )
@@ -298,10 +288,8 @@ describe('explicit form layouts', () => {
 
   it('uses local field references inside a converted group and a wizard page', async () => {
     testEngine.convertInputs.mockImplementation(createWorkflowEngine().convertInputs)
-    const formikRef = createRef<FormikProps<FormikValues>>()
-    render(
+    const { form } = renderDynamicForm(
       <DynamicForm
-        formikRef={formikRef}
         initialValues={{ settings: { name: 'nested' } }}
         formJSONs={{
           $meta: { wizard: { mode: 'wizard' } },
@@ -333,8 +321,6 @@ describe('explicit form layouts', () => {
     expect(name).toHaveAttribute('name', 'settings.name')
     expect(name).toHaveValue('nested')
     fireEvent.change(name, { target: { value: 'changed' } })
-    await waitFor(() =>
-      expect(formikRef.current?.values).toEqual({ settings: { name: 'changed' } }),
-    )
+    await waitFor(() => expect(form.getValues()).toEqual({ settings: { name: 'changed' } }))
   })
 })

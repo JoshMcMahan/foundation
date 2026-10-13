@@ -39,8 +39,27 @@ export interface ChatStrings {
     bannerUnreachable: (provider: string) => string
   }
   modelPicker: {
+    /** Names the picker for assistive technology. */
+    choose: string
+    select: string
+    search: string
+    loading: string
+    failed: string
+    retry: string
+    none: string
     /** Beside a provider another user registered and shared with the reader. */
     sharedBy: (owner: string) => string
+    /** Beside a session whose models are still loading. */
+    connecting: string
+    /** Beside a session whose service did not answer. */
+    notResponding: string
+    /** Links the provider's settings from its issue banner, for its owner. */
+    manageProvider: string
+  }
+  allocationPicker: {
+    choose: string
+    placeholder: string
+    usage: (used: string, total: string) => string
   }
   queue: {
     remove: string
@@ -263,7 +282,22 @@ export const defaultChatStrings: ChatStrings = {
     bannerUnreachable: (provider) => `\u201c${provider}\u201d is unreachable`,
   },
   modelPicker: {
+    choose: 'Model',
+    select: 'Select a model',
+    search: 'Search models\u2026',
+    loading: 'Loading models\u2026',
+    failed: 'Failed to load models',
+    retry: 'Retry',
+    none: 'No models available',
     sharedBy: (owner) => `Shared by ${owner}`,
+    connecting: 'Connecting\u2026',
+    notResponding: 'Not responding',
+    manageProvider: 'Manage provider',
+  },
+  allocationPicker: {
+    choose: 'Allocation',
+    placeholder: 'Select allocation',
+    usage: (used, total) => `${used} / ${total}`,
   },
   activity: {
     tokens: (input, output) => `↑${input} ↓${output} tokens`,

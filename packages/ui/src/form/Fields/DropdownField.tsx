@@ -1,65 +1,50 @@
+import { useMemo } from 'react'
+import { Autocomplete, Combobox, type ComboboxItems } from '../../components/Combobox'
 import { FieldWrapper } from '../FieldWrapper'
-import { FormikCustomDropdown } from '../SpecialTypes'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
-import { dependentOptions } from '../utils/dependentOptions'
+import { useChoiceField } from '../useChoiceField'
+import { useDependentOptions } from '../utils/dependentOptions'
+import { type FieldOption, toFieldItems } from '../utils/fieldItems'
 import { getPlaceholder } from '../utils/getPlaceholder'
 
 export interface IDropdownField extends BaseField {
   type: 'dropdown'
   dropdownType?: string
-  options:
-    | Array<{
-        label: string
-        value: string
-        secondaryLabel?: string
-        description?: string
-      }>
-    | Record<
-        string,
-        Array<{
-          label: string
-          value: string
-          secondaryLabel?: string
-          description?: string
-        }>
-      >
+  options: FieldOption[] | Record<string, FieldOption[]>
   parentValue?: string
   autoselect?: boolean
   allowCustomValue?: boolean
-  customValueLabel?: string
   placeholder?: string
 }
 
-// The form always passes both setters; a host that renders the field without
-// them fails when a value is chosen, not on render.
-const missingSetter = () => {
-  throw new Error('DropdownField needs setFieldValue and setFieldTouched')
-}
-
-export default function DropdownField(props: FieldComponentProps<IDropdownField, string>) {
-  const {
-    field,
-    label,
-    labelPosition,
-    missing,
-    disabled,
+export default function DropdownField({
+  field,
+  label,
+  labelPosition,
+  missing,
+  disabled,
+  onChange,
+  tooltipComponent,
+  spaceCompact,
+}: FieldComponentProps<IDropdownField>) {
+  const { options } = useDependentOptions(field.options, field.depends_on)
+  const items = useMemo(() => toFieldItems(options), [options])
+  const [value, choose] = useChoiceField({
+    // The form names every field before it renders one.
+    name: field.name ?? '',
+    items,
+    autoselect: field.autoselect,
+    // A dropdown sets one other field; a list of them names the first.
+    secondaryField: Array.isArray(field.secondaryField)
+      ? field.secondaryField[0]
+      : field.secondaryField,
     onChange,
-    tooltipComponent,
-    spaceCompact,
-    setFieldValue,
-    setFieldTouched,
-    currentValue,
-    values,
-  } = props
-  // The form names every field before it renders one.
-  const fieldName = field.name ?? ''
-  const { options } = dependentOptions(field.options, field.depends_on, values)
-
-  // Handle secondaryField - if it's an array, join with comma or pass first one
-  const secondaryField = Array.isArray(field.secondaryField)
-    ? field.secondaryField[0]
-    : field.secondaryField
+  })
+  const placeholder = getPlaceholder(
+    field.placeholder,
+    typeof field.default === 'string' ? field.default : undefined,
+  )
 
   return (
     <FieldWrapper
@@ -70,30 +55,39 @@ export default function DropdownField(props: FieldComponentProps<IDropdownField,
       labelPosition={labelPosition}
       spaceCompact={spaceCompact}
     >
-      <div className="grow min-w-0">
-        <FormikCustomDropdown
-          invalid={missing}
-          className="w-full"
-          key={field.name}
-          name={fieldName}
-          ariaLabel={label}
-          options={options}
-          setFormDirty={props.setFormDirty}
-          onChange={onChange}
-          secondaryField={secondaryField}
-          disabled={disabled}
-          autoselect={field.autoselect}
-          allowCustomValue={field.allowCustomValue}
-          customValueLabel={field.customValueLabel}
-          placeholder={getPlaceholder(
-            field.placeholder,
-            typeof field.default === 'string' ? field.default : undefined,
+      {({ id, describedBy }) => (
+        <div className="grow min-w-0">
+          {field.allowCustomValue ? (
+            <Autocomplete
+              id={id}
+              aria-describedby={describedBy}
+              aria-label={label}
+              aria-invalid={missing}
+              required={!field.optional}
+              disabled={disabled}
+              className="w-full"
+              placeholder={placeholder}
+              items={items as ComboboxItems<string>}
+              value={value == null ? '' : String(value)}
+              onValueChange={choose}
+            />
+          ) : (
+            <Combobox<unknown>
+              id={id}
+              aria-describedby={describedBy}
+              aria-label={label}
+              aria-invalid={missing}
+              required={!field.optional}
+              disabled={disabled}
+              className="w-full"
+              placeholder={placeholder}
+              items={items}
+              value={value ?? null}
+              onValueChange={choose}
+            />
           )}
-          currentValue={currentValue}
-          setFieldValue={setFieldValue ?? missingSetter}
-          setFieldTouched={setFieldTouched ?? missingSetter}
-        />
-      </div>
+        </div>
+      )}
     </FieldWrapper>
   )
 }

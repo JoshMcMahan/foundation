@@ -1,7 +1,8 @@
 import { DateTime } from 'luxon'
 import { type ReactNode, useState } from 'react'
+import { type OpenMenu, useContextMenu } from '../../components/ContextMenu'
+import type { MenuAction, MenuEntry } from '../../components/MenuEntries'
 import { DownloadIcon, EditIcon, ShareIcon, TrashIcon } from '../../icons'
-import { type OpenMenu, type RowMenuItem, useRowMenu } from '../../list/index'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { conversationToMarkdown, downloadText, exportFilename } from '../core/exportConversation'
@@ -51,20 +52,15 @@ export function groupConversationsByDate<T extends { createdAt: string }>(
 /** What a conversation row offers behind its menu (rename, share, download,
  *  delete) and the menu and dialogs that carry them out, for any list of
  *  conversations. Render `overlays` once beside the list. */
-export function useConversationActions({
-  menuZClassName,
-}: {
-  /** The menu's stacking class, for a list inside a layer above the page. */
-  menuZClassName?: string
-} = {}): {
-  menuItems: (conv: ConversationSummary) => RowMenuItem[]
+export function useConversationActions(): {
+  menuItems: (conv: ConversationSummary) => MenuEntry[]
   openMenu: OpenMenu
   overlays: ReactNode
 } {
   const { strings } = useChatConfig()
   const t = strings.sidebar
   const { adapter, notify, deleteConversation, updateConversationTitle } = useChat()
-  const { openMenu, contextMenu } = useRowMenu(menuZClassName)
+  const { openMenu, contextMenu } = useContextMenu()
   const [sharing, setSharing] = useState<string | null>(null)
   const { requestDelete, requestRename, dialogs } = useRowDialogs<ConversationSummary>({
     strings: {
@@ -90,36 +86,32 @@ export function useConversationActions({
     }
   }
 
-  const menuItems = (conv: ConversationSummary): RowMenuItem[] => [
+  const menuItems = (conv: ConversationSummary): MenuEntry[] => [
     {
-      kind: 'action',
       label: t.rename,
       icon: <EditIcon />,
-      onSelect: () => requestRename(conv),
+      onClick: () => requestRename(conv),
     },
     // Only the owner can change who a conversation is shared with.
     ...(adapter.sharing && conv.isOwner !== false
       ? [
           {
-            kind: 'action',
             label: t.share,
             icon: <ShareIcon />,
-            onSelect: () => setSharing(conv.id),
-          } satisfies RowMenuItem,
+            onClick: () => setSharing(conv.id),
+          } satisfies MenuAction,
         ]
       : []),
     {
-      kind: 'action',
       label: strings.chrome.download,
       icon: <DownloadIcon />,
-      onSelect: () => void download(conv.id),
+      onClick: () => void download(conv.id),
     },
     {
-      kind: 'action',
       label: t.delete,
       icon: <TrashIcon />,
       destructive: true,
-      onSelect: () => requestDelete(conv),
+      onClick: () => requestDelete(conv),
     },
   ]
 

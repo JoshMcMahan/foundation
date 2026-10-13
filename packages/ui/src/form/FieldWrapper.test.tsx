@@ -1,34 +1,19 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
-import { Form, Formik } from 'formik'
+import { screen } from '@testing-library/react'
 import type React from 'react'
+import { renderInForm } from '../test/form'
 import RadioField from './Fields/RadioField'
 import StringField from './Fields/StringField'
 import TextAreaField from './Fields/TextAreaField'
 
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
-
 const baseProps = {
   labelPosition: 'top' as const,
   missing: false,
-  missingFields: [],
-  values: {},
-  setFormDirty: vi.fn(),
   disabled: false,
-  currentValue: '',
 }
 
-const renderField = (node: React.ReactNode) =>
-  render(
-    <Formik initialValues={{ testField: '' }} onSubmit={vi.fn()}>
-      <Form>{node}</Form>
-    </Formik>,
-  )
+const renderField = (node: React.ReactElement) => renderInForm(node, { testField: '' })
 
 describe('FieldWrapper labelling', () => {
   it('links the label to the input it wraps', () => {

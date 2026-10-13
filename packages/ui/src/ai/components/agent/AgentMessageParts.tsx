@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useCssIsDark } from '../../../components/useCssIsDark'
 import { CheckIcon, ChevronRightIcon, LoaderIcon } from '../../../icons'

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState, useTransition } from 'react'
+import { Combobox } from '../../components/Combobox'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import Loader from '../../components/Loader'
+import { Select } from '../../components/Select'
+import { Tooltip } from '../../components/Tooltip'
 import { ShareIcon, TrashIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
-import type { ShareGroup, SharePermission } from '../types'
-import Dropdown from '../ui/Dropdown'
+import type { ShareGroup, SharePermission, SharePermissionLevel } from '../types'
 
 type TeamPermission = SharePermission & { team: string }
 
@@ -174,7 +176,7 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
   }, [])
 
   const handleTeamPermissionChange = useCallback(
-    (teamId: string, permission: 'view' | 'collaborate') => {
+    (teamId: string, permission: SharePermissionLevel) => {
       setPermissions((prev) => prev.map((p) => (p.team === teamId ? { ...p, permission } : p)))
     },
     [],
@@ -185,6 +187,10 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
   }
 
   const teamPermissions = permissions.filter(isTeamPermission)
+  const permissionItems = [
+    { label: t.viewOnly, value: 'view' as const },
+    { label: t.canCollaborate, value: 'collaborate' as const },
+  ]
   const availableTeams = teams.filter((team) => !permissions.some((p) => p.team === team.id))
 
   return (
@@ -250,29 +256,28 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
                     >
                       <span className="text-sm theme-text">{perm.teamName || perm.team}</span>
                       <div className="flex items-center gap-2">
-                        <Dropdown
-                          options={[
-                            { label: t.viewOnly, value: 'view' },
-                            {
-                              label: t.canCollaborate,
-                              value: 'collaborate',
-                            },
-                          ]}
-                          value={perm.permission}
-                          onChange={(val) =>
-                            handleTeamPermissionChange(perm.team, val as 'view' | 'collaborate')
-                          }
-                          wrapperClassName="w-40"
-                          textBoxClassName="text-xs border theme-border rounded px-2 py-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTeam(perm.team)}
-                          className="p-1 rounded hover:bg-red-500/10"
-                          title={t.remove}
-                        >
-                          <TrashIcon className="w-3 h-3 text-red-500" />
-                        </button>
+                        <div className="w-40">
+                          <Select<SharePermissionLevel>
+                            items={permissionItems}
+                            value={perm.permission}
+                            onValueChange={(level) => {
+                              if (level !== null) {
+                                handleTeamPermissionChange(perm.team, level)
+                              }
+                            }}
+                            aria-label={perm.teamName || perm.team}
+                          />
+                        </div>
+                        <Tooltip content={t.remove}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeam(perm.team)}
+                            className="p-1 rounded hover:bg-red-500/10"
+                            aria-label={`${t.remove} ${perm.teamName || perm.team}`}
+                          >
+                            <TrashIcon className="w-3 h-3 text-red-500" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </li>
                   ))}
@@ -283,19 +288,18 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
 
               {/* Add group dropdown */}
               {availableTeams.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Dropdown
-                    options={availableTeams.map((team) => ({
-                      label: team.name,
-                      value: team.id,
-                    }))}
-                    value=""
-                    onChange={(val) => handleAddTeam(val)}
-                    placeholder={t.addGroups}
-                    wrapperClassName="flex-1"
-                    textBoxClassName="text-sm border theme-border rounded px-2 py-1.5 w-full"
-                  />
-                </div>
+                // Picking a group adds it to the list above, so the field itself stays empty.
+                <Combobox
+                  items={availableTeams.map((team) => ({ label: team.name, value: team.id }))}
+                  value={null}
+                  onValueChange={(teamId) => {
+                    if (teamId !== null) {
+                      handleAddTeam(teamId)
+                    }
+                  }}
+                  placeholder={t.addGroups}
+                  aria-label={t.addGroups}
+                />
               )}
             </div>
 

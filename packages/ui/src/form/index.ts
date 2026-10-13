@@ -1,3 +1,4 @@
+export { FieldGroup } from './FieldGroup'
 export {
   getInvalidDurationPaths,
   setDurationValidity,
@@ -14,11 +15,10 @@ export {
   DynamicForm,
   type DynamicFormProps,
   FieldsFromOptions,
+  type FormValues,
   findSelfReferencingFieldNames,
-  GroupHeader,
-  MultiSelectionDropdown,
+  type ParentInfo,
   resolveMetaOverrides,
-  type TSetFormDirty,
   useDynamicDefaultsSync,
 } from './Form'
 export {
@@ -53,16 +53,12 @@ export {
   initializeValues,
   resolvedFlag,
 } from './lib'
-export { default as DropdownWrapper } from './SpecialTypes/DropdownWrapper'
-export { default as FormikMultiSelectDropdown } from './SpecialTypes/FormikMultiSelectDropdown'
-export {
-  FormikCustomDropdown,
-  FormikCustomInput,
-  FormikNumericInput,
-} from './SpecialTypes/index'
 export * from './types/fieldComponentTypes'
 export * from './types/fieldTypes'
+export { type ChoiceItem, useChoiceField } from './useChoiceField'
+export { useFieldValue } from './useFieldValue'
 export { useParsedOpts } from './useParsedOpts'
+export { useDependentOptions, useFieldAt } from './utils/dependentOptions'
 export {
   collectPartitionDurationIssues,
   FLEX_MAX_DURATION_RANGE,

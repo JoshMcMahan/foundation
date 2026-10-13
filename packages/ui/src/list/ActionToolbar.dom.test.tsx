@@ -4,34 +4,29 @@ import { render, screen } from '@testing-library/react'
 import { ActionToolbar } from './ActionToolbar'
 
 // jsdom measures nothing, so two or more items on the right all move into the `…` menu.
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
 
-const Icon = () => null
+const icon = <svg />
 
 describe('ActionToolbar toggles', () => {
-  it('say whether they are on, disabled ones and ones moved into the menu too', () => {
+  it('say whether they are pressed, disabled ones and ones moved into the menu too', () => {
     render(
       <ActionToolbar
         groups={[
           [
-            { key: 'refresh', label: 'Auto refresh', icon: Icon, onClick: () => {}, active: true },
+            { key: 'refresh', label: 'Auto refresh', icon, onClick: () => {}, checked: true },
             {
               key: 'follow',
               label: 'Follow',
-              icon: Icon,
+              icon,
               onClick: () => {},
-              active: false,
+              checked: false,
               disabled: true,
             },
           ],
         ]}
         right={[
-          { key: 'graph', label: 'Graph', icon: Icon, onClick: () => {}, active: true },
-          { key: 'editor', label: 'Editor', icon: Icon, onClick: () => {}, active: false },
+          { key: 'graph', label: 'Graph', icon, onClick: () => {}, checked: true },
+          { key: 'editor', label: 'Editor', icon, onClick: () => {}, checked: false },
         ]}
       />,
     )
@@ -41,7 +36,13 @@ describe('ActionToolbar toggles', () => {
     )
     expect(screen.getByRole('button', { name: 'Follow' })).toHaveAttribute('aria-pressed', 'false')
     // The menu keeps its rows mounted while closed.
-    expect(screen.getByRole('menuitem', { name: 'Graph, on', hidden: true })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: 'Editor, off', hidden: true })).toBeInTheDocument()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Graph', hidden: true })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Editor', hidden: true })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
   })
 })

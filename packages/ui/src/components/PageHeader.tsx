@@ -1,14 +1,14 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ComponentType, ReactNode } from 'react'
 import { Fragment, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { AddIcon, ChevronRightIcon, EditIcon, MoreIcon } from '../icons'
-import { type RowMenuItem, useRowMenu } from '../list/RowContextMenu'
-import { AddMenu, type HeaderAddMenuItem } from './AddMenu'
+import { ActionMenu } from './ActionMenu'
 import { useBreadcrumb } from './Breadcrumbs'
 import { keyedByContent } from './keys'
+import type { MenuEntry } from './MenuEntries'
 import { useLink, useSlots, useStrings } from './Provider'
-import { TOOLTIP_ID } from './Tooltip'
+import { Tooltip } from './Tooltip'
 
 export interface PageHeaderBreadcrumb {
   label: string
@@ -30,7 +30,7 @@ const headerAddButtonClasses =
  * single action. `word` is the visible verb; `label` stays the full action for
  * the tooltip and screen readers. */
 export function HeaderAddButton({
-  to,
+  href,
   onClick,
   label,
   word = 'add',
@@ -38,11 +38,11 @@ export function HeaderAddButton({
   disabled = false,
   disabledHint,
 }: {
-  to?: string
+  href?: string
   onClick?: () => void
   label: string
   word?: 'add' | 'create'
-  menu?: HeaderAddMenuItem[]
+  menu?: MenuEntry[]
   /** Button mode only. */
   disabled?: boolean
   disabledHint?: string
@@ -57,132 +57,92 @@ export function HeaderAddButton({
   )
   if (menu) {
     return (
-      <AddMenu items={menu} label={label} buttonClassName={headerAddButtonClasses}>
+      <ActionMenu items={menu} label={label} triggerClassName={headerAddButtonClasses}>
         {content}
-      </AddMenu>
+      </ActionMenu>
     )
   }
-  if (to) {
+  if (href) {
     return (
-      <Link to={to} aria-label={label} title={label} className={headerAddButtonClasses}>
-        {content}
-      </Link>
+      <Tooltip content={label}>
+        <Link href={href} aria-label={label} className={headerAddButtonClasses}>
+          {content}
+        </Link>
+      </Tooltip>
     )
   }
   const hint = disabled ? disabledHint : undefined
   return (
-    <button
-      type="button"
-      onClick={disabled ? undefined : onClick}
-      aria-label={hint ? `${label}. ${hint}` : label}
-      aria-disabled={disabled || undefined}
-      {...(hint
-        ? { 'data-tooltip-id': TOOLTIP_ID, 'data-tooltip-content': hint }
-        : { title: label })}
-      className={cx(
-        headerAddButtonClasses,
-        'aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent aria-disabled:hover:text-(--theme-muted-text-color)',
-      )}
-    >
-      {content}
-    </button>
+    <Tooltip content={hint ?? label}>
+      <button
+        type="button"
+        onClick={disabled ? undefined : onClick}
+        aria-label={hint ? `${label}. ${hint}` : label}
+        aria-disabled={disabled || undefined}
+        className={cx(
+          headerAddButtonClasses,
+          'aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-transparent aria-disabled:hover:text-(--theme-muted-text-color)',
+        )}
+      >
+        {content}
+      </button>
+    </Tooltip>
   )
 }
 
+/** The header's "…" menu of actions on the page's subject. */
 export function HeaderActionMenu({
   items,
   label = 'Actions',
 }: {
-  items: HeaderAddMenuItem[]
+  items: MenuEntry[]
   label?: string
 }) {
   if (items.length === 0) {
     return null
   }
   return (
-    <AddMenu items={items} label={label} buttonClassName={headerActionButtonClasses}>
+    <ActionMenu items={items} label={label} triggerClassName={headerActionButtonClasses}>
       <MoreIcon className="w-3.5 h-3.5" />
-    </AddMenu>
-  )
-}
-
-/** The header "…" trigger for a RowMenuItem menu — same rendering (submenus,
- * destructive styling) as the list pages' right-click context menus. */
-export function HeaderRowMenu({
-  items,
-  label = 'Actions',
-}: {
-  items: RowMenuItem[]
-  label?: string
-}) {
-  const { openMenu, contextMenu } = useRowMenu()
-  if (items.length === 0) {
-    return null
-  }
-  return (
-    <>
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        className={headerActionButtonClasses}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          openMenu(r.left, r.bottom + 4, items)
-        }}
-      >
-        <MoreIcon className="w-3.5 h-3.5" />
-      </button>
-      {contextMenu}
-    </>
+    </ActionMenu>
   )
 }
 
 export function HeaderEditButton({
-  to,
+  href,
   onClick,
   label = 'Edit',
   disabled,
   tooltip,
 }: {
-  to?: string
+  href?: string
   onClick?: () => void
   label?: string
   disabled?: boolean
   tooltip?: string | undefined
 }) {
   const Link = useLink()
-  const tooltipProps = tooltip
-    ? { 'data-tooltip-id': TOOLTIP_ID, 'data-tooltip-content': tooltip }
-    : {}
-  if (to && !disabled) {
-    return (
-      <Link
-        to={to}
-        aria-label={label}
-        {...(tooltip ? {} : { title: label })}
-        className={headerActionButtonClasses}
-        {...tooltipProps}
-      >
-        <EditIcon className="w-3 h-3" />
-      </Link>
-    )
-  }
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={tooltip ? undefined : label}
-      className={cx(
-        headerActionButtonClasses,
-        disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
+    <Tooltip content={tooltip ?? label}>
+      {href && !disabled ? (
+        <Link href={href} aria-label={label} className={headerActionButtonClasses}>
+          <EditIcon className="w-3 h-3" />
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          className={cx(
+            headerActionButtonClasses,
+            disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
+          )}
+        >
+          <EditIcon className="w-3 h-3" />
+        </button>
       )}
-      {...tooltipProps}
-    >
-      <EditIcon className="w-3 h-3" />
-    </button>
+    </Tooltip>
   )
 }
 
@@ -210,7 +170,7 @@ export function BreadcrumbsActionButton({
   icon: Icon,
   label,
   ariaLabel,
-  to,
+  href,
   onClick,
   disabled,
   tooltip,
@@ -218,42 +178,36 @@ export function BreadcrumbsActionButton({
   icon: ComponentType<{ className?: string }>
   label: string
   ariaLabel?: string
-  to?: string
+  href?: string
   onClick?: (() => void) | undefined
   disabled?: boolean
   tooltip?: string | undefined
 }) {
   const Link = useLink()
-  const tip = tooltip ? { 'data-tooltip-id': TOOLTIP_ID, 'data-tooltip-content': tooltip } : {}
   const content = (
     <>
       <Icon className="w-3 h-3" />
       {label}
     </>
   )
-  if (to && !disabled) {
-    return (
-      <Link
-        to={to}
-        className={breadcrumbsActionClasses}
-        {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
-        {...tip}
-      >
-        {content}
-      </Link>
-    )
-  }
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={breadcrumbsActionClasses}
-      {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
-      {...tip}
-    >
-      {content}
-    </button>
+    <Tooltip content={tooltip}>
+      {href && !disabled ? (
+        <Link href={href} className={breadcrumbsActionClasses} aria-label={ariaLabel}>
+          {content}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          className={breadcrumbsActionClasses}
+          aria-label={ariaLabel}
+        >
+          {content}
+        </button>
+      )}
+    </Tooltip>
   )
 }
 
@@ -317,7 +271,7 @@ export function PageHeader({
             <Fragment key={key}>
               {crumb.href ? (
                 <Link
-                  to={crumb.href}
+                  href={crumb.href}
                   className="text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors cursor-pointer whitespace-nowrap"
                 >
                   {crumb.label}

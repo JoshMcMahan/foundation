@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { expect, screen, userEvent, within } from 'storybook/test'
 import { BreadcrumbProvider } from '../components/Breadcrumbs'
+import { useContextMenu } from '../components/ContextMenu'
 import { keyedByContent } from '../components/keys'
+import type { MenuEntry } from '../components/MenuEntries'
 import { HeaderAddButton, HeaderEditButton, PageHeader } from '../components/PageHeader'
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
@@ -20,12 +22,12 @@ import {
   TrashIcon,
 } from '../icons'
 import { ActionToolbar, type ToolbarItem } from './ActionToolbar'
-import { ListColumns, ListPage, ListRow, type PinnedRowAction, useListNavigate } from './ListPage'
+import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
 import { ListError, ListSkeleton, listTableProps, NameCell } from './ListTable'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 import { useListView } from './listView'
-import { type RowMenuItem, useCopySubmenu, useRowMenu } from './RowContextMenu'
+import { type RowAction, useCopySubmenu } from './rowMenu'
 
 type RowStatus = 'running' | 'stopped' | 'error'
 
@@ -71,21 +73,18 @@ const STATUS_VARIANT: Record<RowStatus, 'success' | 'muted' | 'error'> = {
   error: 'error',
 }
 
-const MockLink: UILinkComponent = ({ to, onClick, className, children, ...rest }) => {
+const MockLink: UILinkComponent = ({ href, onClick, ...rest }) => {
   const { goTo } = useNavigation()
   return (
     <a
-      href={to}
-      className={className}
+      {...rest}
+      href={href}
       onClick={(e) => {
         e.preventDefault()
-        onClick?.()
-        goTo(to)
+        onClick?.(e)
+        goTo(href)
       }}
-      {...rest}
-    >
-      {children}
-    </a>
+    />
   )
 }
 
@@ -186,7 +185,7 @@ interface ShellArgs {
 function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
   const copySubmenu = useCopySubmenu()
   const goTo = useListNavigate()
-  const { openMenu, contextMenu } = useRowMenu()
+  const { openMenu, contextMenu } = useContextMenu()
   const search = useListSearch()
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
 
@@ -244,43 +243,39 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
     return view.applyOrder(view.applyFilters(matched))
   }, [all, query, view])
 
-  const menuItems = (row: ShellRow): RowMenuItem[] => [
+  const menuItems = (row: ShellRow): MenuEntry[] => [
     {
-      kind: 'link',
       label: 'Open',
-      to: `/clusters/${row.name}`,
+      href: `/clusters/${row.name}`,
       icon: <ClusterIcon />,
     },
     {
-      kind: 'action',
       label: row.status === 'running' ? 'Stop' : 'Start',
       icon: row.status === 'running' ? <StopIcon /> : <PowerIcon />,
-      onSelect: () => {},
+      onClick: () => {},
     },
     {
-      kind: 'action',
       label: 'Snapshot',
       icon: <SnapshotIcon />,
-      onSelect: () => {},
+      onClick: () => {},
     },
     copySubmenu({ name: row.name, id: row.id }),
     {
-      kind: 'action',
       label: 'Delete',
       icon: <TrashIcon />,
       destructive: true,
-      onSelect: () => {},
+      onClick: () => {},
     },
   ]
 
-  const pinnedActions = (row: ShellRow): PinnedRowAction[] =>
+  const pinnedActions = (row: ShellRow): RowAction[] =>
     view.isPinned('power')
       ? [
           {
             key: 'power',
             label: row.status === 'running' ? 'Stop' : 'Start',
             icon: row.status === 'running' ? <StopIcon /> : <PowerIcon />,
-            onSelect: () => setFavorites((prev) => ({ ...prev, [row.id]: !prev[row.id] })),
+            onClick: () => setFavorites((prev) => ({ ...prev, [row.id]: !prev[row.id] })),
           },
         ]
       : []
@@ -289,8 +284,8 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
     <ListPage
       breadcrumbs={[{ label: 'Compute', href: '/compute' }]}
       title="Clusters"
-      titleAction={<HeaderEditButton to="/clusters/settings" />}
-      actions={<HeaderAddButton label="New cluster" word="create" to="/clusters/new" />}
+      titleAction={<HeaderEditButton href="/clusters/settings" />}
+      actions={<HeaderAddButton label="New cluster" word="create" href="/clusters/new" />}
       view={view}
       toolbar={
         <div className="flex items-center justify-between gap-3 py-1.5">
@@ -314,7 +309,7 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
       ) : state === 'error' ? (
         <ListError error={new Error('upstream timed out')} noun="clusters" />
       ) : all.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
           <ClusterIcon className="h-8 w-8 text-(--theme-muted-text-color)" />
           <p className="mt-3 max-w-sm text-sm text-(--theme-muted-text-color)">
             No clusters yet. Create one to get started.
@@ -425,16 +420,16 @@ const DETAIL_GROUPS: ToolbarItem[][] = [
     {
       key: 'terminal',
       label: 'Terminal',
-      icon: TerminalIcon,
+      icon: <TerminalIcon />,
       href: '/clusters/gpu-trainer-01/terminal',
     },
-    { key: 'stop', label: 'Stop', icon: StopIcon, onClick: () => {} },
+    { key: 'stop', label: 'Stop', icon: <StopIcon />, onClick: () => {} },
   ],
   [
     {
       key: 'snapshot',
       label: 'Snapshot',
-      icon: SnapshotIcon,
+      icon: <SnapshotIcon />,
       onClick: () => {},
     },
   ],
@@ -442,24 +437,24 @@ const DETAIL_GROUPS: ToolbarItem[][] = [
     {
       key: 'auto-refresh',
       label: 'Auto refresh',
-      icon: RefreshIcon,
+      icon: <RefreshIcon />,
       onClick: () => {},
-      active: true,
+      checked: true,
     },
-    { key: 'follow', label: 'Follow', icon: TerminalIcon, onClick: () => {}, active: false },
+    { key: 'follow', label: 'Follow', icon: <TerminalIcon />, onClick: () => {}, checked: false },
   ],
 ]
 
 const DETAIL_RIGHT: ToolbarItem[] = [
-  { key: 'refresh', label: 'Refresh', icon: RefreshIcon, onClick: () => {} },
-  { key: 'add-node', label: 'Add node', icon: AddIcon, onClick: () => {} },
+  { key: 'refresh', label: 'Refresh', icon: <RefreshIcon />, onClick: () => {} },
+  { key: 'add-node', label: 'Add node', icon: <AddIcon />, onClick: () => {} },
   {
     key: 'delete',
     label: 'Delete',
-    icon: TrashIcon,
+    icon: <TrashIcon />,
     onClick: () => {},
     disabled: true,
-    disabledTooltip: 'Stop the cluster before deleting it',
+    disabledReason: 'Stop the cluster before deleting it',
   },
 ]
 
@@ -478,11 +473,11 @@ export const DetailPageShell: StoryObj = {
                   { label: 'Clusters', href: '/clusters' },
                 ]}
                 title="gpu-trainer-01"
-                titleAction={<HeaderEditButton to="/clusters/gpu-trainer-01/edit" />}
+                titleAction={<HeaderEditButton href="/clusters/gpu-trainer-01/edit" />}
               />
               <div className="px-4">
                 <ActionToolbar groups={DETAIL_GROUPS} right={DETAIL_RIGHT} sticky />
-                <div className="py-6 text-sm text-(--theme-muted-text-color)">
+                <div className="py-5 text-sm text-(--theme-muted-text-color)">
                   Narrow the Storybook canvas to watch the right-hand actions collapse into the ⋯
                   menu.
                 </div>

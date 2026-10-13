@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { positionKeys, withPositionKeys } from '../../components/keys'
 import Loader from '../../components/Loader'

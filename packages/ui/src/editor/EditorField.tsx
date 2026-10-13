@@ -1,9 +1,10 @@
-import cx from 'classnames'
-import { useField, useFormikContext } from 'formik'
+import { clsx as cx } from 'clsx'
 import { useMemo, useRef } from 'react'
+import { useFormContext, useWatch } from 'react-hook-form'
 import { FieldWrapper } from '../form/FieldWrapper'
 import type { FieldComponentProps } from '../form/types/fieldComponentTypes'
 import type { BaseField } from '../form/types/fieldTypes'
+import { useFieldValue } from '../form/useFieldValue'
 import Editor from './Editor'
 
 export interface IEditorField extends BaseField {
@@ -14,59 +15,26 @@ export interface IEditorField extends BaseField {
   }
 }
 
-interface IResetKeys {
-  editorKeyPostfix: string
-}
-
-function hasResetKeys(obj: unknown): obj is IResetKeys {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'editorKeyPostfix' in obj &&
-    typeof obj.editorKeyPostfix === 'string'
-  )
-}
-
 export default function EditorField(props: FieldComponentProps<IEditorField>) {
-  const {
-    field,
-    label,
-    labelPosition,
-    disabled,
-    onChange,
-    tooltipComponent,
-    spaceCompact,
-    setFormDirty,
-  } = props
+  const { field, label, labelPosition, disabled, onChange, tooltipComponent, spaceCompact } = props
   // The form names every field before it renders one.
   const fieldName = field.name ?? ''
 
-  const [fieldState] = useField<string>(fieldName)
-  const { setFieldValue, setFieldTouched, values } = useFormikContext()
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-  // Track whether user has edited — once true, stop passing value to Monaco
-  // so Formik re-renders don't call model.setValue() and reset the cursor.
+  const [value, change] = useFieldValue<string | undefined>(fieldName)
+  // Once the person edits, Monaco owns the text: handing it back each render would set the model's
+  // value and move the cursor.
   const touchedRef = useRef(false)
 
   const handleChange = (val: string) => {
     touchedRef.current = true
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-    debounceRef.current = setTimeout(() => {
-      onChange?.(val)
-      setFieldTouched(fieldName, true)
-      setFieldValue(fieldName, val)
-      setFormDirty(true)
-    }, 500)
+    onChange?.(val)
+    change(val)
   }
 
-  // We're using `values.editorKeyPostfix` to force re-render the editor when the key changes
-  let editorKeyPostfix = ''
-  if (hasResetKeys(values)) {
-    editorKeyPostfix = values.editorKeyPostfix
-  }
+  // A host remounts the editor with fresh text by setting `editorKeyPostfix` among the form's values.
+  const { control } = useFormContext()
+  const resetKey = useWatch({ control, name: 'editorKeyPostfix' })
+  const editorKeyPostfix = typeof resetKey === 'string' ? resetKey : ''
 
   const postfixKey = useMemo(() => {
     const randomKey = Math.random().toString(36).substring(7)
@@ -86,7 +54,7 @@ export default function EditorField(props: FieldComponentProps<IEditorField>) {
         ariaLabel={label}
         height="200px"
         path={fieldName}
-        {...(touchedRef.current ? {} : { value: fieldState.value })}
+        {...(touchedRef.current || value === undefined ? {} : { value })}
         className={cx(
           'bg-(--theme-input-bg) w-11 border focus:border rounded text-[10px] leading-4 pl-[6px]',
           disabled && 'opacity-75',

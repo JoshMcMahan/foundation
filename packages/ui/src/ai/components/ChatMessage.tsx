@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime, Duration } from 'luxon'
 import { type KeyboardEvent, memo, useEffect, useRef, useState } from 'react'
 import { durationToAbsHumanDuration } from '../../duration'

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { useContextMenu } from '../../components/ContextMenu'
 import { StatusDot } from '../../components/StatusBadge'
-import { useRowMenu } from '../../list/index'
 import { StoryViewport } from '../stories/harness'
 import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
 import {
@@ -66,7 +66,7 @@ function TaskSidebar({
 }) {
   const [collapsed, setCollapsed] = useState(startCollapsed)
   const [openId, setOpenId] = useState<string | undefined>('t2')
-  const { openMenu, contextMenu } = useRowMenu()
+  const { openMenu, contextMenu } = useContextMenu()
   const open = tasks.find((t) => t.id === openId)
   return (
     <StoryViewport>
@@ -89,7 +89,7 @@ function TaskSidebar({
           <SidebarRow
             selected={t.id === openId}
             openMenu={openMenu}
-            menuItems={[{ kind: 'action', label: 'Rename', onSelect: () => {} }]}
+            menuItems={[{ label: 'Rename', onClick: () => {} }]}
           >
             <button
               type="button"
@@ -140,8 +140,8 @@ export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean }> = {
 }
 
 // A host composing its own list puts it in a SidebarDrawer on a narrow
-// screen: the drawer covers its positioned container, a tap outside or
-// Escape closes it, and the list fills it.
+// screen: the drawer covers its positioned container, a tap outside, Escape
+// or a swipe to the left closes it, and the list fills it.
 export const InDrawer: StoryObj<{ open: boolean }> = {
   args: { open: true },
   render: (args) => {
@@ -160,12 +160,7 @@ export const InDrawer: StoryObj<{ open: boolean }> = {
               closeLabel="Close sidebar"
             />
           </div>
-          <SidebarDrawer
-            open={open}
-            onClose={() => setOpen(false)}
-            label="Tasks"
-            closeLabel="Close sidebar"
-          >
+          <SidebarDrawer open={open} onClose={() => setOpen(false)} label="Tasks">
             <TaskSidebar
               tasks={TASKS}
               startCollapsed={false}

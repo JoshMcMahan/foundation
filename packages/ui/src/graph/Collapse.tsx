@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { Collapsible } from '@base-ui/react/collapsible'
 import type { ReactNode } from 'react'
 
 // Height + opacity reveal for list rows that expand in place: the summary
@@ -12,24 +12,18 @@ export function Collapse({
   children,
 }: {
   expanded: boolean
+  /** The external toggle's aria-controls target. */
   id?: string
   children: ReactNode
 }) {
   return (
-    <AnimatePresence initial={false}>
-      {expanded && (
-        <motion.div
-          key="collapse"
-          id={id}
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          className="overflow-hidden"
-        >
-          {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Collapsible.Root open={expanded}>
+      <Collapsible.Panel
+        id={id}
+        className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] data-starting-style:h-0 data-starting-style:opacity-0 data-ending-style:h-0 data-ending-style:opacity-0"
+      >
+        {children}
+      </Collapsible.Panel>
+    </Collapsible.Root>
   )
 }

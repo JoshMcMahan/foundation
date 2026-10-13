@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useState } from 'react'
 import { keyedByContent } from '../components/keys'
 import { ChevronDownIcon, ChevronRightIcon, ErrorIcon, InfoIcon, WarningIcon } from '../icons'

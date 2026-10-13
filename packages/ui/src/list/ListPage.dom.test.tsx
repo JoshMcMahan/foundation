@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Table } from '../components/Table'
+import { openTooltip } from '../test/tooltip'
 import { ListRow, ListRowActionsProvider } from './ListPage'
 import { NameCell } from './ListTable'
 import type { ListViewChrome } from './listView'
@@ -20,7 +21,7 @@ function renderRow(disabled: boolean, onSelect: () => void) {
               key: 'stop',
               label: 'Stop',
               icon: <span data-testid="stop-icon" />,
-              onSelect,
+              onClick: onSelect,
               disabled,
             },
           ]}
@@ -33,7 +34,7 @@ function renderRow(disabled: boolean, onSelect: () => void) {
 }
 
 describe('ListRow pinned actions', () => {
-  it('keeps a disabled action focusable and readable but inert', () => {
+  it('keeps a disabled action focusable and readable but inert', async () => {
     const onSelect = vi.fn()
     renderRow(true, onSelect)
 
@@ -41,10 +42,10 @@ describe('ListRow pinned actions', () => {
 
     expect(action).toHaveAttribute('aria-disabled', 'true')
     expect(action).not.toBeDisabled()
-    expect(action).toHaveAttribute('data-tooltip-content', 'Stop')
 
-    action.focus()
+    act(() => action.focus())
     expect(action).toHaveFocus()
+    await waitFor(() => expect(openTooltip()).toHaveTextContent('Stop'))
 
     fireEvent.click(action)
     expect(onSelect).not.toHaveBeenCalled()

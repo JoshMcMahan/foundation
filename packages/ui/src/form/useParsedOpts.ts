@@ -1,7 +1,7 @@
-import deepEqual from 'fast-deep-equal'
 import { useRef } from 'react'
 import { useWorkflowEngine } from '../components/Provider'
 import type { WorkflowVariables } from '../engine'
+import { shareEqual } from './utils/shareEqual'
 
 interface Cache {
   rawOptions: object | null
@@ -12,8 +12,12 @@ interface Cache {
   converted: Record<string, unknown>
   inputDeps: Set<string>
   hasExpressions: boolean
-  relevantSnapshot: Record<string, unknown>
+  /** The inputs the schema reads, as text: a form store can change a value in place, so a kept
+   * reference would always look unchanged. */
+  relevant: string
   result: unknown
+  /** The last parse, whose unchanged parts the next one reuses. */
+  shared: unknown
 }
 
 // Stable empty defaults so an omitted userVars/secretKeys keeps the same
@@ -22,7 +26,9 @@ const EMPTY_VARS: Record<string, string> = {}
 const EMPTY_KEYS: string[] = []
 
 /**
- * useMemo won't work here — Formik values changes on every keystroke, so this hook extracts which inputs.* keys the schema references and re-parses only when those change. Defaults `userVars`/`secretKeys` to empty — callers in React scope should pass them from `useUserVars()` so the parser leaves `${{ var.SECRET }}` literal during template eval (otherwise the recursive substitution turns `"https://${{ var.PAT }}@host/"` into `"https://@host/"`).
+ * Parses a schema against the form's values, again only when an input it reads changes: a keystroke
+ * elsewhere in the form gets the last parse back. A parse keeps each part of the last one it equals, so
+ * a field whose schema the change left alone keeps its identity. Defaults `userVars`/`secretKeys` to empty — callers in React scope should pass them from `useUserVars()` so the parser leaves `${{ var.SECRET }}` literal during template eval (otherwise the recursive substitution turns `"https://${{ var.PAT }}@host/"` into `"https://@host/"`).
  */
 export function useParsedOpts<T extends object = Record<string, unknown>>(
   rawOptions: T,
@@ -42,8 +48,9 @@ export function useParsedOpts<T extends object = Record<string, unknown>>(
     converted: {},
     inputDeps: new Set(),
     hasExpressions: false,
-    relevantSnapshot: {},
+    relevant: '',
     result: null,
+    shared: null,
   })
 
   const c = cache.current
@@ -72,20 +79,9 @@ export function useParsedOpts<T extends object = Record<string, unknown>>(
     c.result = null
   }
 
-  if (c.result !== null) {
-    if (c.inputDeps.size === 0) {
-      return c.result as T
-    }
-    let inputsChanged = false
-    for (const key of c.inputDeps) {
-      if (!deepEqual(values[key], c.relevantSnapshot[key])) {
-        inputsChanged = true
-        break
-      }
-    }
-    if (!inputsChanged) {
-      return c.result as T
-    }
+  const relevant = JSON.stringify([...c.inputDeps].map((key) => values[key]))
+  if (c.result !== null && relevant === c.relevant) {
+    return c.result as T
   }
 
   const parsed = engine.evaluate({
@@ -96,12 +92,7 @@ export function useParsedOpts<T extends object = Record<string, unknown>>(
     secretKeys,
     remoteVars,
   }) as T
-  c.result = parsed
-
-  c.relevantSnapshot = {}
-  for (const key of c.inputDeps) {
-    c.relevantSnapshot[key] = values[key]
-  }
-
-  return parsed
+  c.result = c.shared = shareEqual(c.shared, parsed)
+  c.relevant = relevant
+  return c.result as T
 }

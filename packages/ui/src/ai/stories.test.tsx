@@ -22,12 +22,6 @@ import * as conversationSidebar from './ui/ConversationSidebar.stories'
 import * as notices from './ui/Notice.stories'
 
 // jsdom lacks these; the thread relies on them for scroll plumbing.
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
-Element.prototype.scrollIntoView = () => {}
 
 const SUITES = {
   agentParts,

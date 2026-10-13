@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
 import type { ChatMessage as Message } from '../types'
 import {
+  escapeClosesLayer,
   lastAssistantContent as getLastAssistantMessage,
   lastUserMessage as getLastUserMessage,
 } from './useKeyboardShortcuts'
@@ -128,5 +130,22 @@ describe('Keyboard Shortcut Behaviors', () => {
       const content = getLastAssistantMessage(messages)
       expect(content).toBeNull()
     })
+  })
+})
+
+describe('escapeClosesLayer', () => {
+  it.each([
+    ['inside a drawer', '<div role="dialog"><button>x</button></div>', true],
+    ['inside a menu', '<div role="menu"><div role="menuitem" tabindex="-1">x</div></div>', true],
+    ['on a combobox with its list open', '<input role="combobox" aria-expanded="true" />', true],
+    ['in the composer', '<form><textarea></textarea></form>', false],
+  ])('%s', (_, html, expected) => {
+    document.body.innerHTML = html
+    const target = document.body.querySelector('button, [role="menuitem"], input, textarea')
+    expect(escapeClosesLayer(target)).toBe(expected)
+  })
+
+  it('is false for the document itself', () => {
+    expect(escapeClosesLayer(document)).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
 import { forwardRef, useId, useState } from 'react'
 import { AlertIcon, EyeIcon, EyeOffIcon } from '../icons'

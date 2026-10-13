@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import {
   Fragment,
@@ -10,8 +10,8 @@ import {
   useRef,
   useState,
 } from 'react'
+import { InfoTip } from '../components/InfoTip'
 import { useNotify, useOptionalWorkflowEngine, useStrings } from '../components/Provider'
-import { TooltipInfo } from '../components/Tooltip'
 import type { LogCommand, LogSegment, ProcessedLogLine } from '../engine'
 import {
   ArrowDownIcon,
@@ -1040,7 +1040,7 @@ export function LogViewer({
                       <span className="text-xs font-semibold text-[var(--theme-app)]">
                         {t.filterByTimeRange}
                       </span>
-                      <TooltipInfo text={t.timeRangeHelp} />
+                      <InfoTip text={t.timeRangeHelp} />
                     </div>
                     <label className="flex flex-col gap-y-1">
                       <span className="text-[11px] uppercase tracking-wide text-[var(--theme-muted-text-color)]">

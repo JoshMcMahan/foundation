@@ -44,27 +44,38 @@ export const SuggestedPrompts: StoryObj = {
 
 // The only available connection has a rejected API key: the toolbar picker
 // dims its models and the banner explains before the first message fails.
-export const BrokenProvider: StoryObj = {
-  render: () => (
-    <StoryChat
-      adapter={makeStaticAdapter({
-        providerIssues: [
-          {
-            provider: 'Story Provider',
-            provider_name: 'story',
-            provider_owner: 'mock',
-            status: 'unauthorized',
-            message: 'API key locked - visit the unlock URL to re-enable',
-          },
-        ],
-      })}
-      conversationId={null}
-    >
-      <StoryViewport>
-        <ChatEmptyState />
-      </StoryViewport>
-    </StoryChat>
-  ),
+// Its owner also gets a link to the provider's settings.
+export const BrokenProvider: StoryObj<{ owner: boolean }> = {
+  args: { owner: true },
+  argTypes: { owner: { control: 'boolean', description: 'The reader registered the provider' } },
+  render: (args) => {
+    const owner = args.owner ? 'alice' : 'bob'
+    return (
+      <StoryChat
+        key={owner}
+        adapter={makeStaticAdapter({
+          providers: [
+            { id: 'p-1', name: 'gateway', user: owner, cspKind: 'openai', status: 'active' },
+          ],
+          providerIssues: [
+            {
+              provider: 'gateway',
+              provider_name: 'gateway',
+              provider_owner: owner,
+              status: 'unauthorized',
+              message: 'API key locked - visit the unlock URL to re-enable',
+            },
+          ],
+        })}
+        config={{ extraLinks: { providerSettings: (user, name) => `#/providers/${user}/${name}` } }}
+        conversationId={null}
+      >
+        <StoryViewport>
+          <ChatEmptyState />
+        </StoryViewport>
+      </StoryChat>
+    )
+  },
 }
 
 // The new chat was asked to open on a session the reader can no longer reach:

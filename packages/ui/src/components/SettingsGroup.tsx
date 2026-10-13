@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type React from 'react'
 
 interface SettingsGroupProps {

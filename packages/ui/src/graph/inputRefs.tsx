@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { IconButton } from '../components/IconButton'
 import { fieldBoxClasses, Textarea } from '../components/Input'
-import { Toggle } from '../components/Toggle'
+import { Switch } from '../components/Switch'
 import type { WorkflowEditing } from '../editing'
 import { AddIcon } from '../icons'
 import {
@@ -245,13 +245,13 @@ export function ExpressionInput({
     <>
       <SuggestionInput
         id={id}
-        ariaLabel={label}
+        aria-label={label}
         aria-describedby={describedBy}
         required={required}
         value={value}
         placeholder={placeholder}
         suggestions={suggestions}
-        onChange={onChange}
+        onValueChange={onChange}
       />
       <FieldError message={error} />
     </>
@@ -311,10 +311,10 @@ export function FlagField({
         <FieldLabel label={label} yamlKey={yamlKey} description={description} />
         <div className="flex shrink-0 items-center gap-1">
           {!typed && (
-            <Toggle
+            <Switch
               checked={checked}
-              onChange={(on) => onChange(flagValue(on, fallback, original))}
-              label={label}
+              onCheckedChange={(on) => onChange(flagValue(on, fallback, original))}
+              aria-label={label}
             />
           )}
           <ExpressionToggle

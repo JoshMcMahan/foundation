@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useStrings } from '../components/Provider'
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { listControlButtonClasses } from './ListViewControls'

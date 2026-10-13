@@ -1,6 +1,6 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
-import type { OpenMenu } from '../list/RowContextMenu'
+import type { OpenMenu } from '../components/ContextMenu'
 
 export interface Point {
   x: number
@@ -76,17 +76,14 @@ export function useFocusAfterDialog<T extends { dialog: unknown }>(
 
 /** `openMenu` whose menus reclaim focus for the editor when they close. */
 export function returningFocus(openMenu: OpenMenu, container: () => HTMLElement | null): OpenMenu {
-  return (x, y, items, onClose, search) =>
-    openMenu(
-      x,
-      y,
-      items,
-      () => {
-        onClose?.()
+  return (at, items, options) =>
+    openMenu(at, items, {
+      ...options,
+      onClose: () => {
+        options?.onClose?.()
         reclaimFocus(container())
       },
-      search,
-    )
+    })
 }
 
 // A press becomes a drag once the pointer has moved this far, so a click stays a click.

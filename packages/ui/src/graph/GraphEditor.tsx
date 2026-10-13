@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import {
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
@@ -8,7 +8,9 @@ import {
   useRef,
   useState,
 } from 'react'
+import { type MenuAnchor, useContextMenu } from '../components/ContextMenu'
 import { IconButton } from '../components/IconButton'
+import { type MenuEntry, menuDivider } from '../components/MenuEntries'
 import { useWorkflowEditing } from '../components/Provider'
 import type {
   GraphEdit,
@@ -30,7 +32,6 @@ import {
   RefreshIcon,
   TrashIcon,
 } from '../icons'
-import { type RowMenuItem, useRowMenu } from '../list/RowContextMenu'
 import { type DependencyGraphEditor, overlaps, typing } from './editorApi'
 import { AddChip, BarDivider, DragLabel, EditorBar } from './editorChrome'
 import { asRecord, openOnAddOf } from './editorFields'
@@ -561,7 +562,7 @@ function useGraphEditorState({
   const latest = useRef({ editor, source, layout, container })
   // Set during render, so the api reads this render's jobs rather than the last one's.
   latest.current = { editor, source, layout, container }
-  const rowMenu = useRowMenu()
+  const rowMenu = useContextMenu()
   const openMenu = useMemo(
     () => returningFocus(rowMenu.openMenu, () => latest.current.container),
     [rowMenu.openMenu],
@@ -1051,7 +1052,7 @@ function useGraphEditorState({
 
     // The jobs `job` could come to need ('in') or be needed by ('out'), for connecting without a drag.
     const connectMenu = (job: string, side: PortSide, label: string) => {
-      const items = Object.keys(latest.current.source).flatMap((other): RowMenuItem[] => {
+      const items = Object.keys(latest.current.source).flatMap((other): MenuEntry[] => {
         const edits =
           other === job
             ? null
@@ -1060,50 +1061,42 @@ function useGraphEditorState({
         return edits
           ? [
               {
-                kind: 'action',
                 label: jobLabel(other),
-                onSelect: () => connectWith(edits, { from: [job], side }),
+                onClick: () => connectWith(edits, { from: [job], side }),
               },
             ]
           : []
       })
-      return items.length > 0
-        ? [{ kind: 'submenu' as const, label, icon: <LinkIcon />, items }]
-        : []
+      return items.length > 0 ? [{ label, icon: <LinkIcon />, items }] : []
     }
-    const openJobMenu = (x: number, y: number, job: string) => {
+    const openJobMenu = (at: MenuAnchor, job: string) => {
       const matrix = isMatrix(latest.current.source[job])
-      const items: RowMenuItem[] = [
+      const items: MenuEntry[] = [
         {
-          kind: 'action',
           label: matrix ? t.editMatrix : t.editJob,
           icon: matrix ? <GridIcon /> : <EditIcon />,
-          onSelect: () => editJob(job),
+          onClick: () => editJob(job),
         },
         {
-          kind: 'action',
           label: t.duplicate,
           icon: <DuplicateIcon />,
-          onSelect: () => edit({ type: 'duplicateJob', job, layout: materialize() }),
+          onClick: () => edit({ type: 'duplicateJob', job, layout: materialize() }),
         },
         {
-          kind: 'action',
           label: t.addStep,
           icon: <AddIcon />,
-          onSelect: () => addStep(job),
+          onClick: () => addStep(job),
         },
         matrix
           ? {
-              kind: 'action',
               label: t.removeMatrix,
               icon: <CloseIcon />,
-              onSelect: () => edit({ type: 'setMatrix', job, variables: null }),
+              onClick: () => edit({ type: 'setMatrix', job, variables: null }),
             }
           : {
-              kind: 'action',
               label: t.makeMatrix,
               icon: <GridIcon />,
-              onSelect: () =>
+              onClick: () =>
                 edit({
                   type: 'setMatrix',
                   job,
@@ -1112,32 +1105,29 @@ function useGraphEditorState({
             },
         ...connectMenu(job, 'in', t.menuDependsOn),
         ...connectMenu(job, 'out', t.menuNeededBy),
-        { kind: 'divider' },
+        menuDivider,
         {
-          kind: 'action',
           label: t.deleteJob,
           icon: <TrashIcon />,
           destructive: true,
-          onSelect: () => edit({ type: 'deleteJob', jobs: [job] }),
+          onClick: () => edit({ type: 'deleteJob', jobs: [job] }),
         },
       ]
-      openMenu(x, y, items)
+      openMenu(at, items)
     }
 
-    const openStepMenu = (x: number, y: number, job: string, index: number) => {
-      openMenu(x, y, [
+    const openStepMenu = (at: MenuAnchor, job: string, index: number) => {
+      openMenu(at, [
         {
-          kind: 'action',
           label: t.editStep,
           icon: <EditIcon />,
-          onSelect: () => editStep(job, index),
+          onClick: () => editStep(job, index),
         },
         {
-          kind: 'action',
           label: t.deleteStep,
           icon: <TrashIcon />,
           destructive: true,
-          onSelect: () => edit({ type: 'deleteStep', job, index }),
+          onClick: () => edit({ type: 'deleteStep', job, index }),
         },
       ])
     }
@@ -1233,31 +1223,29 @@ function useGraphEditorState({
       return true
     }
 
-    const openEdgeMenu = (x: number, y: number, edge: EdgeSelection) => {
+    const openEdgeMenu = (at: MenuAnchor, edge: EdgeSelection) => {
       const cols = gridRef.current?.cols ?? []
       const deps = boxOf(cols, edge.from)
       const targets = boxOf(cols, edge.to)
       const refs = edgeRefs(edge)
       const inUse = refsInUse(refs)
-      const items: RowMenuItem[] = [
+      const items: MenuEntry[] = [
         {
-          kind: 'action',
           label: t.removeDependency,
           icon: <TrashIcon />,
           destructive: true,
           disabled: inUse,
-          tooltip: inUse ? t.dependencyInUse : undefined,
-          onSelect: () => edit({ type: 'disconnect', needs: refs }),
+          disabledReason: inUse ? t.dependencyInUse : undefined,
+          onClick: () => edit({ type: 'disconnect', needs: refs }),
         },
       ]
       if (deps.length === 1 && isMatrix(latest.current.source[edge.from])) {
         const any = refs.length > 0 && refs.every((r) => r.need.endsWith(':any'))
         items.unshift({
-          kind: 'action',
           label: t.waitForAny,
           icon: <GridIcon />,
-          selected: any,
-          onSelect: () =>
+          checked: any,
+          onClick: () =>
             edit({
               type: 'setNeedAny',
               jobs: targets,
@@ -1269,7 +1257,7 @@ function useGraphEditorState({
       if (!store.get().edges.some((other) => sameEdge(other, edge))) {
         selectEdge(edge, false)
       }
-      openMenu(x, y, items)
+      openMenu(at, items)
     }
 
     const copySelection = (): string | null => {

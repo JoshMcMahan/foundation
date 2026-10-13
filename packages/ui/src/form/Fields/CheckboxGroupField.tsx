@@ -1,9 +1,9 @@
-import cx from 'classnames'
-import { useField, useFormikContext } from 'formik'
+import { clsx as cx } from 'clsx'
 import { useState } from 'react'
 import { FieldWrapper } from '../FieldWrapper'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { useFieldValue } from '../useFieldValue'
 import { fieldOption } from './fieldOption'
 
 export interface ICheckboxGroupField extends BaseField {
@@ -43,12 +43,9 @@ export default function CheckboxGroupField({
   onChange,
   tooltipComponent,
   spaceCompact,
-  setFormDirty,
 }: FieldComponentProps<ICheckboxGroupField>) {
   // The form names every field before it renders one.
-  const fieldName = field.name ?? ''
-  const [fieldState] = useField<Array<string | number>>(fieldName)
-  const { setFieldValue, setFieldTouched } = useFormikContext()
+  const [value, change] = useFieldValue<Array<string | number> | undefined>(field.name ?? '')
   const implies = field.implies
   const rawOf = new Map(
     (field.options ?? []).map((choice) => {
@@ -61,7 +58,7 @@ export default function CheckboxGroupField({
   // This lets us drop an implied value when its trigger is unchecked, while
   // keeping it if the user had also picked it directly.
   const [manual, setManual] = useState<string[]>(() => {
-    const saved = (fieldState.value || []).map(String)
+    const saved = (value || []).map(String)
     const impliedBySaved = impliedFrom(saved, implies)
     return saved.filter((v) => !impliedBySaved.has(v))
   })
@@ -78,10 +75,8 @@ export default function CheckboxGroupField({
     // Picks match as text; the value keeps each option's own type, so a numeric option stays a number.
     const next = union(nextManual, impliedFrom(nextManual, implies)).map((v) => rawOf.get(v) ?? v)
     setManual(nextManual)
-    setFieldTouched(fieldName, true)
-    setFieldValue(fieldName, next)
+    change(next)
     onChange?.(next)
-    setFormDirty(true)
   }
 
   return (

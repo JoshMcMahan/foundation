@@ -238,6 +238,9 @@ describe('ChatInput slash commands', () => {
     fireEvent.change(textarea(), { target: { value: '/st' } })
     fireEvent.keyDown(textarea(), { key: 'ArrowDown' })
     expect(options()[1]).toHaveAttribute('aria-selected', 'true')
+    // Focus stays in the textarea, which names the active option and its list.
+    expect(textarea()).toHaveAttribute('aria-activedescendant', options()[1]?.id)
+    expect(textarea()).toHaveAttribute('aria-controls', screen.getByRole('listbox').id)
     fireEvent.keyDown(textarea(), { key: 'Enter' })
     expect(onSend).not.toHaveBeenCalled()
     expect(textarea().value).toBe('/stats ')

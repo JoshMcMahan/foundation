@@ -1,4 +1,4 @@
-// Invalid duration text never reaches Formik (the value stays last-valid), so
+// Invalid duration text never reaches the form (the value stays last-valid), so
 // save-time validation needs this registry to know a field holds invalid text.
 const invalidPaths = new Set<string>()
 

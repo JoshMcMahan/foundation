@@ -1,5 +1,6 @@
-import cx from 'classnames'
-import { type KeyboardEvent, useEffect, useState } from 'react'
+import { clsx as cx } from 'clsx'
+import { type KeyboardEvent, useEffect, useId, useState } from 'react'
+import { panelClassName, panelItemClassName } from '../../components/floating'
 
 export interface SlashCommandOption {
   name: string
@@ -27,12 +28,16 @@ export function slashMatches(input: string, commands: SlashCommandOption[]): Sla
   return commands.filter((c) => c.name.toLowerCase().startsWith(query)).slice(0, MAX_SHOWN)
 }
 
-/** The palette's open state and keys; the caller owns the input. */
+/** The palette's open state and keys; the caller owns the input.
+ *  Base UI's Autocomplete drives a single-line input, and its arrow keys would take the caret
+ *  from a multi-line composer, so the textarea stays a textbox that points at the list:
+ *  spread `inputProps` on it. */
 export function useSlashMenu(
   input: string,
   config: SlashMenuConfig | undefined,
   setInput: (value: string) => void,
 ) {
+  const listId = useId()
   const [active, setActive] = useState(0)
   const [dismissed, setDismissed] = useState(false)
   const matches = config ? slashMatches(input, config.commands) : []
@@ -57,6 +62,8 @@ export function useSlashMenu(
   }
 
   const choose = (name: string) => setInput(`/${name} `)
+  // A shorter list can leave the index past its end until the next key.
+  const shown = Math.min(active, matches.length - 1)
 
   /** True when the key belonged to the menu. */
   const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -75,7 +82,7 @@ export function useSlashMenu(
         if (e.shiftKey) {
           return false
         }
-        const pick = matches[Math.min(active, matches.length - 1)]
+        const pick = matches[shown]
         if (!pick) {
           return false
         }
@@ -92,46 +99,63 @@ export function useSlashMenu(
     return true
   }
 
-  return { open, matches, active, choose, handleKey }
+  const inputProps = {
+    'aria-autocomplete': 'list' as const,
+    'aria-controls': open ? listId : undefined,
+    'aria-activedescendant': open ? optionId(listId, shown) : undefined,
+  }
+
+  return { open, matches, active: shown, choose, handleKey, listId, inputProps }
 }
+
+const optionId = (listId: string, index: number) => `${listId}-${index}`
 
 export function SlashMenu({
   label,
+  listId,
   matches,
   active,
   onChoose,
 }: {
   label: string
+  listId: string
   matches: SlashCommandOption[]
   active: number
   onChoose: (name: string) => void
 }) {
   return (
     <div
+      id={listId}
       role="listbox"
       aria-label={label}
       data-testid="slash-menu"
-      className="absolute bottom-full left-0 right-0 mb-2 z-20 overflow-hidden rounded-xl border theme-border bg-(--theme-panel-bg) shadow-lg"
+      className={cx(
+        'absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden py-1',
+        panelClassName,
+      )}
     >
       {matches.map((c, i) => (
-        <button
+        // The textarea keeps focus and names the active option, so options are not tab stops.
+        // biome-ignore lint/a11y/useKeyWithClickEvents: the textarea's arrow keys and Enter choose
+        <div
           key={c.name}
-          type="button"
+          id={optionId(listId, i)}
           role="option"
+          tabIndex={-1}
           aria-selected={i === active}
+          data-highlighted={i === active || undefined}
           // Keeps focus in the textarea so typing carries on after a click.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onChoose(c.name)}
-          className={cx(
-            'flex w-full items-baseline gap-3 px-3 py-1.5 text-left text-sm',
-            i === active ? 'theme-hover' : 'hover:theme-hover',
-          )}
+          className={cx('items-baseline gap-3', panelItemClassName)}
         >
-          <span className="font-mono theme-text">/{c.name}</span>
+          <span className="font-mono">/{c.name}</span>
           {c.description && (
-            <span className="truncate text-xs theme-muted-text">{c.description}</span>
+            <span className="truncate text-xs text-(--theme-muted-text-color)">
+              {c.description}
+            </span>
           )}
-        </button>
+        </div>
       ))}
     </div>
   )

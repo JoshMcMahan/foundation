@@ -1,26 +1,18 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render } from '@testing-library/react'
-import { Formik } from 'formik'
-import type { FieldComponentProps } from '../types/fieldComponentTypes'
-import DropdownField, { type IDropdownField } from './DropdownField'
-import MultiDropdownField, { type IMultiDropdownField } from './MultiDropdownField'
+import { act } from '@testing-library/react'
+import { renderInForm } from '../../test/form'
+import DropdownField from './DropdownField'
+import MultiDropdownField from './MultiDropdownField'
 
-// The real lists are virtualized and render no rows without layout, so these
-// stand-ins record what each field hands them.
-const received = vi.hoisted(() => ({ options: [] as unknown[], parentValue: undefined as unknown }))
-vi.mock('../SpecialTypes', () => ({
-  FormikCustomDropdown: (props: { options: unknown[] }) => {
-    received.options = props.options
+// A stand-in picker records the items each field hands it.
+const received = vi.hoisted(() => ({ items: [] as unknown[] }))
+vi.mock('../../components/Combobox', () => ({
+  Combobox: (props: { items: unknown[] }) => {
+    received.items = props.items
     return null
   },
-}))
-vi.mock('../Form', () => ({
-  MultiSelectionDropdown: (props: { options: unknown[]; parentValue?: unknown }) => {
-    received.options = props.options
-    received.parentValue = props.parentValue
-    return null
-  },
+  Autocomplete: () => null,
 }))
 
 const byRegion = {
@@ -32,43 +24,42 @@ const base = {
   label: 'Zone',
   labelPosition: 'top' as const,
   missing: false,
-  missingFields: [],
   disabled: false,
-  setFormDirty: vi.fn(),
 }
 
 describe('fields with depends_on', () => {
   it('DropdownField lists the options keyed by the current value it depends on', () => {
-    const props: FieldComponentProps<IDropdownField, string> = {
-      ...base,
-      field: { type: 'dropdown', name: 'zone', depends_on: 'region', options: byRegion },
-      values: { region: 'eu' },
-      currentValue: '',
-      setFieldValue: vi.fn(),
-      setFieldTouched: vi.fn(),
-    }
-    render(<DropdownField {...props} />)
-    expect(received.options).toEqual(byRegion.eu)
+    renderInForm(
+      <DropdownField
+        {...base}
+        field={{ type: 'dropdown', name: 'zone', depends_on: 'region', options: byRegion }}
+      />,
+      { region: 'eu' },
+    )
+    expect(received.items).toEqual(byRegion.eu)
   })
 
-  it('MultiDropdownField lists the keyed options and resets on the value, not the path', () => {
-    const props: FieldComponentProps<IMultiDropdownField> = {
-      ...base,
-      field: {
-        type: 'multi-dropdown',
-        name: 'zones',
-        depends_on: 'cluster.region',
-        options: byRegion,
-      },
-      values: { cluster: { region: 'us' } },
-      currentValue: [],
-    }
-    render(
-      <Formik initialValues={{}} onSubmit={vi.fn()}>
-        <MultiDropdownField {...props} />
-      </Formik>,
+  it('MultiDropdownField lists the keyed options and resets on the value, not the path', async () => {
+    const { form } = renderInForm(
+      <MultiDropdownField
+        {...base}
+        field={{
+          type: 'multi-dropdown',
+          name: 'zones',
+          depends_on: 'cluster.region',
+          options: byRegion,
+        }}
+      />,
+      { cluster: { region: 'us' }, zones: ['us-east'] },
     )
-    expect(received.options).toEqual(byRegion.us)
-    expect(received.parentValue).toBe('us')
+    expect(received.items).toEqual(byRegion.us)
+
+    // A new object at the same path and value keeps the selection.
+    act(() => form.setValue('cluster', { region: 'us' }))
+    expect(form.getValues('zones')).toEqual(['us-east'])
+
+    act(() => form.setValue('cluster', { region: 'eu' }))
+    expect(received.items).toEqual(byRegion.eu)
+    await vi.waitFor(() => expect(form.getValues('zones')).toEqual([]))
   })
 })

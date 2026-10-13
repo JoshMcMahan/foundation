@@ -1,19 +1,12 @@
-import cx from 'classnames'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  CloudIcon,
-  CogIcon,
-  RetryIcon,
-  RobotIcon,
-  WarningTriangleIcon,
-} from '../../icons'
+import { clsx as cx } from 'clsx'
+import { useMemo } from 'react'
+import { Combobox, type ComboboxGroup } from '../../components/Combobox'
+import { ChevronDownIcon, CloudIcon, RetryIcon, WarningTriangleIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
-import { providerIssueFor } from '../core/providerIssues'
-import type { ChatModel, CspKind, ProviderInfo, ProviderIssue } from '../types'
+import { issueDetail, issueLabel, providerIssueFor } from '../core/providerIssues'
+import type { ChatModel, CspKind, ProviderInfo } from '../types'
+import { chipClassName } from '../ui/chip'
 
 // ProviderInfo.user for a provider the organization manages rather than a user.
 const ORG_OWNER = 'org'
@@ -27,10 +20,6 @@ function providerOwner(info: ProviderInfo | undefined, model: ChatModel | undefi
   }
   return model?.provider_owner ?? ''
 }
-
-/** The search field plus the list's max-h-80, so the flip decision matches
- *  what renders. */
-const MAX_PANEL_HEIGHT_PX = 380
 
 // Brand logos are trademarks, so the host supplies them; default is generic.
 function CspIcon({ cspKind, className }: { cspKind: CspKind; className?: string }) {
@@ -88,15 +77,15 @@ function groupModelsByProvider(models: ChatModel[]): Map<string, ChatModel[]> {
   return groups
 }
 
+/** Picks the model a conversation runs on, grouped by provider. Sessions that
+ *  are still connecting or not responding show as headings with their status,
+ *  so the reader sees why their models are missing. */
 export default function ModelSelector({
   targetSession,
-  variant = 'default',
 }: {
+  /** A session, as "owner:name", whose models the reader is waiting for. */
   targetSession?: string | null | undefined
-  /** 'bare' drops the border and the icon, for a toolbar that reads as text. */
-  variant?: 'default' | 'bare'
 }) {
-  const bare = variant === 'bare'
   const {
     providers,
     models,
@@ -110,519 +99,137 @@ export default function ModelSelector({
     refreshModels,
     currentUser,
   } = useChat()
-  const { extraLinks, LinkComponent, strings } = useChatConfig()
+  const { strings } = useChatConfig()
+  const t = strings.modelPicker
 
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 0,
-    flipped: false,
-  })
-  const containerRef = useRef<HTMLDivElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const updateDropdownPosition = useCallback(() => {
-    if (!buttonRef.current) {
-      return
-    }
-    const rect = buttonRef.current.getBoundingClientRect()
-    // Anchoring the panel's bottom above a low trigger lets it grow upward on
-    // its own, with no height to measure first.
-    const below = window.innerHeight - rect.bottom
-    setDropdownPosition({
-      top: rect.bottom + 4,
-      bottom: window.innerHeight - rect.top + 4,
-      left: rect.left,
-      width: Math.max(rect.width, 320),
-      flipped: below < MAX_PANEL_HEIGHT_PX && rect.top > below,
-    })
-  }, [])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node
-      const clickedInsideButton = containerRef.current?.contains(target)
-      const clickedInsideDropdown = dropdownRef.current?.contains(target)
-
-      if (!clickedInsideButton && !clickedInsideDropdown) {
-        setIsOpen(false)
-      }
-    }
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
-    }, 0)
-
-    return () => {
-      clearTimeout(timeoutId)
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-    updateDropdownPosition()
-    window.addEventListener('scroll', updateDropdownPosition, true)
-    window.addEventListener('resize', updateDropdownPosition)
-    return () => {
-      window.removeEventListener('scroll', updateDropdownPosition, true)
-      window.removeEventListener('resize', updateDropdownPosition)
-    }
-  }, [isOpen, updateDropdownPosition])
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
-  // Filter models based on search
-  const filteredModels = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return models
-    }
-    const query = searchQuery.toLowerCase()
-    return models.filter(
-      (model) =>
-        getModelNameFromId(model.id).toLowerCase().includes(query) ||
-        (model.provider || '').toLowerCase().includes(query) ||
-        (model.name || '').toLowerCase().includes(query),
-    )
-  }, [models, searchQuery])
-
-  // Group filtered models by provider
-  const groupedModels = useMemo(() => groupModelsByProvider(filteredModels), [filteredModels])
-
-  // Get selected model info for the trigger button
-  const selectedModelInfo = models.find((m) => m.id === selectedProvider)
-  const selectedModelName = selectedModelInfo ? getModelLabel(selectedModelInfo) : null
-  const selectedProviderName = selectedModelInfo?.provider || null
-
-  const issueLabel = (issue: ProviderIssue) =>
-    issue.status === 'unauthorized'
-      ? strings.providerIssue.keyRejected
-      : strings.providerIssue.unreachable
-
-  const issueDetail = (issue: ProviderIssue) =>
-    issue.message ||
-    (issue.status === 'unauthorized'
-      ? strings.providerIssue.keyRejectedHint
-      : strings.providerIssue.unreachableHint)
-
-  const issueSummary = (issue: ProviderIssue) => `${issueLabel(issue)} \u2014 ${issueDetail(issue)}`
-
-  const selectedModelIssue = providerIssueFor(providerIssues, selectedModelInfo)
-
-  const handleSelect = (modelId: string) => {
-    setSelectedProvider(modelId)
-    setIsOpen(false)
-    setSearchQuery('')
-  }
-
-  // Determine target session display state: "connecting" while loading, "offline" if not found
-  const targetSessionDisplayName = targetSession?.split(':').pop()
   const targetSessionFound =
-    targetSession && models.length > 0
-      ? models.some((m) => m.id.startsWith(`session:${targetSession}/`))
-      : false
-  const targetSessionStatus: 'connecting' | 'offline' | null = targetSession
-    ? isLoadingModels
+    !!targetSession && models.some((m) => m.id.startsWith(`session:${targetSession}/`))
+  const targetSessionStatus: 'connecting' | 'offline' | null = !targetSession
+    ? null
+    : isLoadingModels
       ? 'connecting'
       : hasLoadedModels && !targetSessionFound
         ? 'offline'
         : null
-    : null
 
-  // The placeholders share the trigger's box so swapping them in and out
-  // never moves the toolbar.
-  const boxClass = bare
-    ? 'flex items-center gap-1.5 rounded-full h-8 px-2.5 min-w-0 max-w-[280px]'
-    : 'flex items-center gap-2 px-3 h-8 rounded-lg min-w-[180px] max-w-[280px]'
-  const textClass = bare ? 'text-[13px]' : 'text-sm'
+  const groups = useMemo(() => {
+    const status = (label: string, description: string): ComboboxGroup => ({
+      label,
+      icon: <CloudIcon className="h-3 w-3 text-amber-500" />,
+      description,
+      items: [],
+    })
+    const sessions: ComboboxGroup[] = unreachableSessions
+      .filter((s) => `${s.owner}:${s.name}` !== targetSession)
+      .map((s) => status(s.name, t.notResponding))
+    if (targetSession && targetSessionStatus) {
+      sessions.unshift(
+        status(
+          targetSession.split(':').pop() ?? targetSession,
+          targetSessionStatus === 'connecting' ? t.connecting : t.notResponding,
+        ),
+      )
+    }
+    const byProvider = [...groupModelsByProvider(models)].map(
+      ([providerKey, providerModels]): ComboboxGroup => {
+        // Provider keys are "owner:name"; session keys start with "session:" and match none.
+        const info = providers.find((p) => `${p.user}:${p.name}` === providerKey)
+        const first = providerModels[0]
+        const name = first?.provider || info?.name || providerKey
+        const platform = info?.platformLabel
+        // A provider shared with the reader can carry the same name as one of
+        // their own; the owner tells the two apart.
+        const owner = providerOwner(info, first)
+        const issue = providerIssueFor(providerIssues, first)
+        const description = [
+          platform && platform.toLowerCase() !== name.toLowerCase() ? platform : null,
+          owner && owner !== currentUser.username ? t.sharedBy(owner) : null,
+          issue ? issueLabel(strings.providerIssue, issue) : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        return {
+          label: name,
+          icon: <CspIcon cspKind={info?.cspKind ?? 'other'} className="h-3 w-3" />,
+          description: description || undefined,
+          items: providerModels.map((model) => ({
+            label: getModelLabel(model),
+            value: model.id,
+            disabled: !!issue,
+          })),
+        }
+      },
+    )
+    return [...sessions, ...byProvider]
+  }, [
+    models,
+    providers,
+    providerIssues,
+    unreachableSessions,
+    targetSession,
+    targetSessionStatus,
+    currentUser.username,
+    strings.providerIssue,
+    t,
+  ])
 
   if (isLoadingModels && models.length === 0 && !targetSession) {
-    return (
-      <div ref={containerRef} className="relative min-w-0">
-        <div className={boxClass}>
-          {!bare && <RobotIcon className="h-4 w-4 text-purple-500 flex-shrink-0 animate-pulse" />}
-          <span className={cx(textClass, 'theme-muted-text')}>Loading models...</span>
-        </div>
-      </div>
-    )
+    return <span className={cx(chipClassName, 'cursor-default animate-pulse')}>{t.loading}</span>
   }
-
   if (modelsError && models.length === 0) {
     return (
-      <div ref={containerRef} className="relative min-w-0">
-        <div className={boxClass}>
-          {!bare && <RobotIcon className="h-4 w-4 text-red-500 flex-shrink-0" />}
-          <span className={cx(textClass, 'text-red-600')}>Failed to load models</span>
-          <button
-            type="button"
-            onClick={() => refreshModels()}
-            className="flex items-center gap-1 text-xs text-blue-600 hover:underline ml-1"
-          >
-            <RetryIcon className="h-2.5 w-2.5" />
-            Retry
-          </button>
-        </div>
-      </div>
+      <span className={cx(chipClassName, 'cursor-default text-(--theme-error)')}>
+        {t.failed}
+        <button
+          type="button"
+          onClick={() => refreshModels()}
+          className="flex items-center gap-1 text-xs text-(--theme-element) hover:underline"
+        >
+          <RetryIcon className="h-2.5 w-2.5" />
+          {t.retry}
+        </button>
+      </span>
     )
   }
-
-  if (
-    hasLoadedModels &&
-    models.length === 0 &&
-    !targetSessionStatus &&
-    unreachableSessions.length === 0
-  ) {
-    return (
-      <div ref={containerRef} className="relative min-w-0">
-        <div className={boxClass}>
-          {!bare && <RobotIcon className="h-4 w-4 theme-muted-text flex-shrink-0" />}
-          <span className={cx(textClass, 'theme-muted-text')}>No models available</span>
-        </div>
-      </div>
-    )
+  if (groups.length === 0 && hasLoadedModels) {
+    return <span className={cx(chipClassName, 'cursor-default')}>{t.none}</span>
   }
 
-  // Determine trigger button text
-  const triggerText = selectedModelName
-    ? null // will render the model name block instead
-    : targetSessionStatus === 'connecting'
-      ? 'Connecting...'
-      : models.length === 0 && isLoadingModels
-        ? 'Loading models...'
-        : 'Select a model'
-
+  const selected = models.find((m) => m.id === selectedProvider)
+  const issue = providerIssueFor(providerIssues, selected)
   return (
-    <div ref={containerRef} className="relative min-w-0">
-      {/* Trigger Button */}
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        disabled={models.length === 0 && !targetSessionStatus && unreachableSessions.length === 0}
-        className={cx(
-          boxClass,
-          'transition-all cursor-pointer bg-transparent',
-          'focus:outline-none',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          bare ? 'hover:chat-tint' : 'border theme-border hover:theme-hover',
-        )}
-      >
-        {!bare && (
-          <RobotIcon
-            className={cx(
-              'h-4 w-4 flex-shrink-0',
-              targetSessionStatus === 'connecting'
-                ? 'text-amber-500 animate-pulse'
-                : 'text-purple-500',
-            )}
-          />
-        )}
-        <div className="flex-1 min-w-0 text-left">
-          {selectedModelName ? (
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <span
-                title={selectedModelName}
-                className={cx(
-                  'truncate',
-                  bare
-                    ? 'text-[13px] font-medium theme-text'
-                    : 'text-sm font-medium text-(--theme-panel)',
-                )}
-              >
-                {selectedModelName}
-              </span>
-              {selectedProviderName && (
-                <span
-                  title={selectedProviderName}
-                  className="theme-muted-text truncate flex-shrink-0 max-w-[45%] text-xs"
-                >
-                  {selectedProviderName}
-                </span>
+    <Combobox<string>
+      aria-label={t.choose}
+      placeholder={t.search}
+      items={groups}
+      value={selectedProvider}
+      onValueChange={(id) => id && setSelectedProvider(id)}
+      disabled={groups.length === 0}
+      triggerTooltip={
+        issue
+          ? `${issueLabel(strings.providerIssue, issue)} \u2014 ${issueDetail(strings.providerIssue, issue)}`
+          : undefined
+      }
+      trigger={
+        <button type="button" className={chipClassName}>
+          {selected ? (
+            <>
+              <span className="truncate font-medium theme-text">{getModelLabel(selected)}</span>
+              {selected.provider && (
+                <span className="max-w-[45%] shrink-0 truncate text-xs">{selected.provider}</span>
               )}
-              {selectedModelIssue && (
-                <WarningTriangleIcon
-                  title={issueSummary(selectedModelIssue)}
-                  className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 self-center"
-                />
-              )}
-            </div>
+              {issue && <WarningTriangleIcon className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+            </>
           ) : (
             <span
-              className={cx(
-                textClass,
-                targetSessionStatus === 'connecting' ? 'text-amber-600' : 'theme-muted-text',
-              )}
+              className={cx('truncate', targetSessionStatus === 'connecting' && 'animate-pulse')}
             >
-              {triggerText}
+              {targetSessionStatus === 'connecting' ? t.connecting : t.select}
             </span>
           )}
-        </div>
-        <ChevronDownIcon
-          className={cx(
-            'h-3 w-3 theme-muted-text transition-transform flex-shrink-0',
-            !bare && 'ml-auto',
-            isOpen && 'rotate-180',
-          )}
-        />
-      </button>
-
-      {/* Dropdown - rendered via portal to avoid layout shift */}
-      {isOpen &&
-        mounted &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            role="none"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                setIsOpen(false)
-                buttonRef.current?.focus()
-              }
-            }}
-            style={{
-              position: 'fixed',
-              ...(dropdownPosition.flipped
-                ? { bottom: dropdownPosition.bottom }
-                : { top: dropdownPosition.top }),
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-              zIndex: 9999,
-            }}
-            className={cx(
-              'theme-panel rounded-lg shadow-lg',
-              'border theme-border',
-              'overflow-hidden',
-            )}
-          >
-            {/* Search Input */}
-            <div className="p-2 border-b theme-border">
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search models..."
-                className={cx(
-                  'w-full px-3 py-2 text-sm rounded-md',
-                  'theme-muted-panel',
-                  'border theme-border',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500',
-                  'placeholder:theme-muted-text',
-                )}
-              />
-            </div>
-
-            {/* Models List */}
-            <div className="max-h-80 overflow-y-auto">
-              {/* Target session entry (connecting or offline) */}
-              {targetSessionStatus && (
-                <div>
-                  <div className="px-3 py-1.5 bg-amber-500/5 sticky top-0">
-                    <div className="flex items-center gap-2">
-                      <CloudIcon className="h-3 w-3 text-amber-500" />
-                      <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex-1">
-                        {targetSessionDisplayName}
-                      </span>
-                      <span
-                        className={cx(
-                          'text-[10px] px-1.5 py-0.5 rounded-full',
-                          targetSessionStatus === 'connecting'
-                            ? 'text-amber-600 bg-amber-500/10 animate-pulse'
-                            : 'text-amber-500 bg-amber-500/10',
-                        )}
-                      >
-                        {targetSessionStatus === 'connecting' ? 'Connecting...' : 'Not responding'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="px-4 py-2 flex items-center gap-2">
-                    <span className="text-sm theme-muted-text italic">
-                      {targetSessionStatus === 'connecting'
-                        ? 'Loading session models...'
-                        : 'Service not responding — ensure it is running on the remote host'}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {/* Other unreachable sessions from the API (not the target) */}
-              {unreachableSessions
-                .filter((s) => !targetSession || `${s.owner}:${s.name}` !== targetSession)
-                .map((s) => (
-                  <div key={`${s.owner}:${s.name}`}>
-                    <div className="px-3 py-1.5 bg-amber-500/5 sticky top-0">
-                      <div className="flex items-center gap-2">
-                        <CloudIcon className="h-3 w-3 text-amber-500" />
-                        <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex-1">
-                          {s.name}
-                        </span>
-                        <span className="text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                          Not responding
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-2 flex items-center gap-2">
-                      <span className="text-sm theme-muted-text italic">
-                        Service not responding — ensure it is running on the remote host
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              {groupedModels.size === 0 &&
-              !targetSessionStatus &&
-              unreachableSessions.length === 0 ? (
-                <div className="p-4 text-center theme-muted-text text-sm">No models found</div>
-              ) : (
-                Array.from(groupedModels.entries()).map(([providerKey, providerModels]) => {
-                  // Match provider info. Provider keys are always "owner:name"
-                  // (session keys start with "session:" and won't match).
-                  const providerInfo = providers.find((p) => `${p.user}:${p.name}` === providerKey)
-                  const providerName =
-                    providerModels[0]?.provider || providerInfo?.name || 'Unknown Provider'
-                  const platform = providerInfo?.platformLabel
-                  const platformSuffix =
-                    providerInfo &&
-                    platform &&
-                    platform.toLowerCase() !== providerName.toLowerCase()
-                      ? platform
-                      : null
-                  const isOwner = providerInfo?.user === currentUser.username
-                  // A provider shared with the reader can carry the same name as
-                  // one of their own; the owner tells the two apart.
-                  const owner = providerOwner(providerInfo, providerModels[0])
-                  const sharedBy =
-                    owner && owner !== currentUser.username
-                      ? strings.modelPicker.sharedBy(owner)
-                      : null
-                  const headerSuffix = [platformSuffix, sharedBy].filter(Boolean).join(' · ')
-                  const settingsHref =
-                    providerInfo && extraLinks.providerSettings
-                      ? extraLinks.providerSettings(providerInfo.user, providerInfo.name)
-                      : null
-                  const issue = providerIssueFor(providerIssues, providerModels[0])
-
-                  return (
-                    <div key={providerKey}>
-                      {/* Provider Header */}
-                      <div className="px-3 py-1.5 theme-muted-panel sticky top-0">
-                        <div className="flex items-center gap-2">
-                          <CspIcon cspKind={providerInfo?.cspKind ?? 'other'} className="h-3 w-3" />
-                          <span className="text-xs font-semibold theme-muted-text uppercase tracking-wide">
-                            {providerName}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-xs theme-muted-text">
-                            {headerSuffix ? `· ${headerSuffix}` : ''}
-                          </span>
-                          <span className="text-xs theme-muted-text">
-                            ({providerModels.length})
-                          </span>
-                          {issue && (
-                            <span className="text-[10px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                              {issueLabel(issue)}
-                            </span>
-                          )}
-                          {isOwner && settingsHref && (
-                            <LinkComponent
-                              target={{
-                                kind: 'external',
-                                href: settingsHref,
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-0.5 rounded hover:theme-hover theme-muted-text hover:text-blue-600 transition-colors"
-                              title="Manage provider"
-                            >
-                              <CogIcon className="h-3 w-3" />
-                            </LinkComponent>
-                          )}
-                        </div>
-                      </div>
-                      {issue && (
-                        <div className="flex items-start gap-2 px-4 py-1.5 bg-amber-500/5">
-                          <WarningTriangleIcon className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-xs text-amber-600 line-clamp-2">
-                            {issueDetail(issue)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Models */}
-                      {providerModels.map((model) => {
-                        const modelName = getModelLabel(model)
-                        const isSelected = model.id === selectedProvider
-
-                        return (
-                          <button
-                            key={model.id}
-                            type="button"
-                            aria-disabled={!!issue}
-                            title={issue ? issueSummary(issue) : undefined}
-                            onClick={() => {
-                              if (!issue) {
-                                handleSelect(model.id)
-                              }
-                            }}
-                            className={cx(
-                              'w-full flex items-center gap-3 px-4 py-2 text-left',
-                              issue
-                                ? 'opacity-40 cursor-not-allowed'
-                                : 'cursor-pointer hover:bg-blue-500/5 transition-colors',
-                              isSelected && 'bg-blue-500/10',
-                            )}
-                          >
-                            <span
-                              title={modelName}
-                              className={cx(
-                                'flex-1 min-w-0 text-sm truncate',
-                                isSelected ? 'text-blue-600 font-medium' : '',
-                              )}
-                              style={
-                                !isSelected
-                                  ? {
-                                      color: 'var(--theme-panel, #1f2937)',
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {modelName}
-                            </span>
-                            {isSelected && (
-                              <CheckIcon className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </div>
+          <ChevronDownIcon className="h-3 w-3 shrink-0" />
+        </button>
+      }
+    />
   )
 }

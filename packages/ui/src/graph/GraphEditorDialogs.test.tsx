@@ -26,7 +26,6 @@ vi.mock('../editor/Monaco', () => ({
     path?: string
   }) => <textarea aria-label={path} value={value} onChange={(e) => onChange?.(e.target.value)} />,
 }))
-vi.mock('../components/Dropdown', () => import('../test/DropdownStandIn'))
 
 afterEach(cleanup)
 
@@ -261,7 +260,7 @@ describe('job dialog', () => {
     }
     const { onEdit } = openJob(workflow, 'build')
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    fireEvent.click(screen.getByRole('checkbox', { name: t.fields.matrix }))
+    fireEvent.click(screen.getByRole('switch', { name: t.fields.matrix }))
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
     save()
     expect(onEdit).toHaveBeenCalledWith(

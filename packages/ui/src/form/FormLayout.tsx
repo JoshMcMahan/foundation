@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { CSSProperties, ReactNode } from 'react'
 import { createContext, useContext, useId, useMemo } from 'react'
 import {

@@ -34,9 +34,8 @@ vi.mock('../editor/Monaco', () => ({
     path?: string
   }) => <textarea aria-label={path} value={value} onChange={(e) => onChange?.(e.target.value)} />,
 }))
-vi.mock('../components/Dropdown', () => import('../test/DropdownStandIn'))
 
-import { suggestionsOf } from '../test/DropdownStandIn'
+import { chooseOption, optionsOf } from '../test/combobox'
 import { INPUTS_EDITOR_STRINGS } from './editorStrings'
 import { InputDialog, inputTypes, offeredInputKeys } from './InputDialog'
 
@@ -68,7 +67,7 @@ describe('InputDialog', () => {
   }
 
   // Like the job and step dialogs: a section starts open only when it holds something.
-  it('opens only the sections that hold something', () => {
+  it('opens only the sections that hold something', async () => {
     const openSections = () =>
       [...document.querySelectorAll('details')]
         .filter((section) => section.open)
@@ -86,9 +85,7 @@ describe('InputDialog', () => {
     open({ type: 'string' }, { isNew: true })
     expect(openSections()).toEqual(['Field'])
     // Nothing folds or unfolds on its own later, except to show a problem that blocks Save.
-    fireEvent.change(screen.getByLabelText('Type'), {
-      target: { value: 'zone' },
-    })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['zone'])
     expect(openSections()).toEqual(['Field', 'Settings'])
   })
 
@@ -203,11 +200,9 @@ describe('InputDialog', () => {
     )
   })
 
-  it('drops settings the new type does not take', () => {
+  it('drops settings the new type does not take', async () => {
     const onSave = open({ type: 'string', placeholder: 'Name', label: 'X' })
-    fireEvent.change(screen.getByLabelText('Type'), {
-      target: { value: 'number' },
-    })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.typeChangeNote)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
@@ -343,7 +338,7 @@ describe('InputDialog', () => {
       type: 'compute-clusters',
       default: 'clusters/one',
     })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Multiple choices' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Multiple choices' }))
     const add = screen.getByRole('button', { name: 'Add value' })
     fireEvent.click(add)
     const rows = screen.getAllByRole('combobox', { name: /, item \d+$/ })
@@ -374,12 +369,12 @@ describe('InputDialog', () => {
       { type: 'group', items: { size: { type: 'number' } } },
       { siblings: ['size'] },
     )
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Leave out the group name' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Leave out the group name' }))
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.flattenClash('size'))).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     cleanup()
     const clean = open({ type: 'group', items: { size: { type: 'number' } } })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Leave out the group name' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Leave out the group name' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(clean).toHaveBeenCalledWith(
       'field',
@@ -402,7 +397,7 @@ describe('InputDialog', () => {
       target: { value: '00:01:30' },
     })
     expect(screen.queryByLabelText('Checkbox text')).toBeNull()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Checkbox to turn it off' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Checkbox to turn it off' }))
     fireEvent.change(screen.getByLabelText('Checkbox text'), {
       target: { value: 'Unlimited' },
     })
@@ -432,9 +427,11 @@ describe('InputDialog', () => {
     const onSave = open({ type: 'string', label: 'Before', width: '50%', 'anchor-below': true })
     expect(screen.queryByLabelText('Width')).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('checkbox', { name: 'Below the input before it' }),
+      screen.queryByRole('switch', { name: 'Below the input before it' }),
     ).not.toBeInTheDocument()
-    fireEvent.change(screen.getByDisplayValue('Before'), { target: { value: 'After' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Label' }), {
+      target: { value: 'After' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -450,7 +447,7 @@ describe('InputDialog', () => {
 
   it('makes a wizard step a repeatable page from its dialog', () => {
     const onSave = open({ type: 'step', title: 'Host', options: {} })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Repeatable page' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Repeatable page' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -478,7 +475,7 @@ describe('InputDialog', () => {
 
   it('shows a page’s description, and saves the one typed', () => {
     const onSave = open({ type: 'step', title: 'Host', description: 'Pick a site', options: {} })
-    const description = screen.getByDisplayValue('Pick a site')
+    const description = screen.getByRole('combobox', { name: 'Description' })
     fireEvent.change(description, { target: { value: 'Pick a region' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
@@ -489,14 +486,14 @@ describe('InputDialog', () => {
     )
   })
 
-  it('offers radio options as default values and picks the layout by name', () => {
+  it('offers radio options as default values and picks the layout by name', async () => {
     const onSave = open({
       type: 'radio',
       options: ['fp16', 'fp32'],
       optionLabelPosition: 'side',
     })
     const input = screen.getByLabelText('Default')
-    expect(suggestionsOf(input).map((option) => option.value)).toEqual(['fp16', 'fp32'])
+    expect((await optionsOf(input)).map((option) => option.label)).toEqual(['fp16', 'fp32'])
     // A layout the schema doesn't know picks neither.
     for (const name of ['Side by side', 'One per line']) {
       expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
@@ -551,7 +548,7 @@ describe('InputDialog', () => {
 
   it('needs min, max and step once the slider is on', () => {
     open({ type: 'number' })
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Slider' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Slider' }))
     const save = screen.getByRole('button', { name: 'Save' })
     expect(save).toBeDisabled()
     for (const [label, value] of [
@@ -571,7 +568,7 @@ describe('InputDialog', () => {
     expect(tooltip).toHaveValue('first\nsecond')
   })
 
-  it('edits a list’s template fields in a nested dialog', () => {
+  it('edits a list’s template fields in a nested dialog', async () => {
     const onSave = open({
       type: 'list',
       template: { host: { type: 'string' } },
@@ -582,9 +579,7 @@ describe('InputDialog', () => {
     fireEvent.change(within(nested).getByLabelText('Name'), {
       target: { value: 'port' },
     })
-    fireEvent.change(within(nested).getByLabelText('Type'), {
-      target: { value: 'number' },
-    })
+    await chooseOption(within(nested).getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
     fireEvent.click(within(nested).getByRole('button', { name: 'Save' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
@@ -645,9 +640,9 @@ describe('InputDialog in two views', () => {
     expect(onSave).toHaveBeenCalledWith('renamed', { type: 'string' }, expect.anything(), [])
   })
 
-  it('drops the old type’s settings after a trip to the YAML and back', () => {
+  it('drops the old type’s settings after a trip to the YAML and back', async () => {
     const { onSave } = openViews({ type: 'string', placeholder: 'Name' })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'number' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['number'])
     toYaml()
     toForm()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -807,16 +802,16 @@ describe('InputDialog keeps what it does not show', () => {
     expect(screen.getByLabelText('Characters to strip')).toHaveValue('[^a-z]')
   })
 
-  it('checks a kept setting the new type can’t hold, as options keyed by another input', () => {
+  it('checks a kept setting the new type can’t hold, as options keyed by another input', async () => {
     open({ type: 'dropdown', options: { aws: ['a'] }, 'option-key': '${{ inputs.csp }}' })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'multi-dropdown' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['multi-dropdown'])
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.optionsByKeyDropdownOnly)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
-  it('carries a group’s fields into a list’s template', () => {
+  it('carries a group’s fields into a list’s template', async () => {
     const onSave = open({ type: 'group', items: { host: { type: 'string' } } })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'list' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['list'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -989,12 +984,12 @@ describe('InputDialog keeps what it does not show', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
-  it('writes options the way a radio takes them once a checkbox group becomes one', () => {
+  it('writes options the way a radio takes them once a checkbox group becomes one', async () => {
     const onSave = open({
       type: 'checkbox-group',
       options: [{ value: 'cuda', label: 'CUDA', description: 'Needs the GPU drivers' }],
     })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'radio' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1004,13 +999,13 @@ describe('InputDialog keeps what it does not show', () => {
     )
   })
 
-  it('turns kept options and a default into the text a radio or checkbox group takes', () => {
+  it('turns kept options and a default into the text a radio or checkbox group takes', async () => {
     const onSave = open({
       type: 'dropdown',
       options: [{ value: 2, label: 'Two', description: 'Second' }],
       default: 2,
     })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'radio' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1020,7 +1015,7 @@ describe('InputDialog keeps what it does not show', () => {
     )
     cleanup()
     const boxes = open({ type: 'dropdown', options: [{ value: 'a', description: 123 }] })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'checkbox-group' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['checkbox-group'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(boxes).toHaveBeenCalledWith(
       'field',
@@ -1030,16 +1025,16 @@ describe('InputDialog keeps what it does not show', () => {
     )
   })
 
-  it('asks for text options when JSON ones a radio can’t hold carry over', () => {
+  it('asks for text options when JSON ones a radio can’t hold carry over', async () => {
     open({ type: 'multi-dropdown', options: [{ value: { id: 1 }, label: 'One' }] })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'radio' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['radio'])
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.radioOptionShape)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
-  it('keeps a setting both types read alike exactly across a type change', () => {
+  it('keeps a setting both types read alike exactly across a type change', async () => {
     const onSave = open({ type: 'password', label: ' Secret ', default: '  passphrase  ' })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'string' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['string'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1075,9 +1070,9 @@ describe('InputDialog keeps what it does not show', () => {
     )
   })
 
-  it('writes a kept default as the new type reads it, and asks to change one it can’t hold', () => {
+  it('writes a kept default as the new type reads it, and asks to change one it can’t hold', async () => {
     const onSave = open({ type: 'number', default: 5 })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'string' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['string'])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith(
       'field',
@@ -1094,7 +1089,7 @@ describe('InputDialog keeps what it does not show', () => {
       ],
       default: ['a', 'b'],
     })
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'dropdown' } })
+    await chooseOption(screen.getByLabelText('Type'), INPUTS_EDITOR_STRINGS.types['dropdown'])
     expect(screen.getByText(INPUTS_EDITOR_STRINGS.keptValueDoesNotFit)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     fireEvent.change(screen.getByLabelText('Default'), { target: { value: 'a' } })

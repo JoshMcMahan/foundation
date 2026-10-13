@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type ReactNode, useId, useMemo, useRef, useState } from 'react'
 import { IconButton } from '../components/IconButton'
 import { fieldBoxClasses, Input } from '../components/Input'

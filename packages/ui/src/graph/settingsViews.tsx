@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import Loader from '../components/Loader'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import type { WorkflowEditing } from '../editing'
 import type { EditorMarker } from '../editor/Monaco'
 import type { NestedWorkflowText } from '../editor/nestedText'
@@ -37,16 +37,18 @@ export function ViewSwitch({
 }) {
   const t = useGraphEditorStrings()
   return (
-    <div data-tooltip-id={TOOLTIP_ID} data-tooltip-content={t.help.view}>
-      <ChoiceButtons
-        options={[
-          { value: 'yaml', label: t.viewYaml },
-          { value: 'form', label: t.viewForm },
-        ]}
-        value={yaml ? 'yaml' : 'form'}
-        onChange={(view) => (view === 'yaml' ? onYaml() : onForm())}
-      />
-    </div>
+    <Tooltip content={t.help.view}>
+      <div>
+        <ChoiceButtons
+          options={[
+            { value: 'yaml', label: t.viewYaml },
+            { value: 'form', label: t.viewForm },
+          ]}
+          value={yaml ? 'yaml' : 'form'}
+          onChange={(view) => (view === 'yaml' ? onYaml() : onForm())}
+        />
+      </div>
+    </Tooltip>
   )
 }
 

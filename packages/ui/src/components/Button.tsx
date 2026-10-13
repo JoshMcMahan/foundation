@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { forwardRef } from 'react'
 import { AngleRightIcon, LoaderIcon } from '../icons'
@@ -142,7 +142,7 @@ export function MethodButton({
       )
     }
     return (
-      <Link to={href} className={cx('group', baseClasses, className)}>
+      <Link href={href} className={cx('group', baseClasses, className)}>
         {content}
       </Link>
     )

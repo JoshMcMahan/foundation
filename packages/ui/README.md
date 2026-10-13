@@ -176,6 +176,31 @@ animations) and streamdown's classes next to the theme contract:
 
 The prebuilt `@parallelworks/ui/styles.css` already includes both.
 
+## Form state
+
+`DynamicForm` keeps its values in react-hook-form, a peer dependency, so the
+host and the library share one instance. A host that reads or drives the form
+creates it and passes it in:
+
+```tsx
+const form = useForm()
+const { isDirty } = useFormState({ control: form.control })
+
+<DynamicForm form={form} formJSONs={inputs} initialValues={saved} />
+```
+
+`form.getValues()`, `form.reset()` and `formState.isDirty` then work as
+react-hook-form documents them. Without `form`, the form keeps its own;
+`onValuesChange` reports each change either way. `missingFields` marks fields
+as `required` errors.
+
+Each field subscribes only to what it reads, so typing renders the edited
+field and whatever reads it, not the whole form. A host field component,
+passed through `fields` or `slots.formFields`, binds the same way: its own
+value with `useFieldValue(field.name)` (or `useController`), another input's
+with `useFieldAt(path)` or `useWatch`, and a pick from a list with
+`useChoiceField`, which applies `autoselect` and `secondaryField`.
+
 ## Form layouts
 
 `DynamicForm` accepts an optional `$meta.layout` in `formJSONs`. A layout arranges

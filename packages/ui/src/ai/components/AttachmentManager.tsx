@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import { useCallback, useMemo, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'

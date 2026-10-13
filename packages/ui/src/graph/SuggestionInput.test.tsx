@@ -3,13 +3,8 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { type Suggestion, SuggestionInput, suggestionOptions } from './SuggestionInput'
-
-global.ResizeObserver = class implements ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+import { optionsOf } from '../test/combobox'
+import { type Suggestion, SuggestionInput, suggestionItems } from './SuggestionInput'
 
 afterEach(cleanup)
 
@@ -22,11 +17,11 @@ function Field({ onChange }: { onChange: (value: string) => void }) {
   const [value, setValue] = useState('')
   return (
     <SuggestionInput
-      ariaLabel="When to run"
+      aria-label="When to run"
       placeholder="Runs when the steps before it succeed"
       value={value}
       suggestions={SUGGESTIONS}
-      onChange={(next) => {
+      onValueChange={(next) => {
         setValue(next)
         onChange(next)
       }}
@@ -35,25 +30,27 @@ function Field({ onChange }: { onChange: (value: string) => void }) {
 }
 
 describe('SuggestionInput', () => {
-  it('offers each suggestion as an option, with the value under its meaning', () => {
-    expect(suggestionOptions(SUGGESTIONS)).toEqual([
-      {
-        label: 'Always, even after a failure',
-        value: 'always',
-        description: 'always',
-      },
-      'never',
+  it('shows a labelled suggestion by its meaning, with the value it writes beneath', () => {
+    expect(suggestionItems(SUGGESTIONS)).toEqual([
+      { value: 'always', label: 'Always, even after a failure', description: 'always' },
+      { value: 'never', label: 'never' },
     ])
   })
 
-  it('is the codebase dropdown, taking any typed value and its own props', () => {
+  it('takes any typed value', () => {
     const onChange = vi.fn()
     render(<Field onChange={onChange} />)
     const field = screen.getByRole('combobox', { name: 'When to run' })
     expect(field).toHaveAttribute('placeholder', 'Runs when the steps before it succeed')
-    expect(screen.getByTestId('combobox')).toBeInTheDocument()
     fireEvent.change(field, { target: { value: 'failure()' } })
-    fireEvent.blur(field)
     expect(onChange).toHaveBeenLastCalledWith('failure()')
+  })
+
+  it('offers its suggestions as it is typed', async () => {
+    render(<Field onChange={vi.fn()} />)
+    expect(await optionsOf(screen.getByRole('combobox', { name: 'When to run' }))).toEqual([
+      { label: 'Always, even after a failure', description: 'always' },
+      { label: 'never' },
+    ])
   })
 })

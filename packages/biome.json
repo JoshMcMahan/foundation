@@ -28,6 +28,12 @@
       "preset": "recommended",
       "complexity": {
         "useLiteralKeys": "off"
+      },
+      "a11y": {
+        "noLabelWithoutControl": {
+          "level": "error",
+          "options": { "inputComponents": ["Radio", "Switch"] }
+        }
       }
     }
   },

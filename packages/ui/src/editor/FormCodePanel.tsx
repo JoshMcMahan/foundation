@@ -1,7 +1,8 @@
-import cx from 'classnames'
-import { useId, useRef, useState } from 'react'
+import { clsx as cx } from 'clsx'
+import { useRef, useState } from 'react'
 import { useNotify, useStrings, useWorkflowEngine } from '../components/Provider'
-import SwitchToggleSmall from '../components/SwitchToggleSmall'
+import { Switch } from '../components/Switch'
+import { Tooltip } from '../components/Tooltip'
 import type { WorkflowEngine } from '../engine'
 import { flattenGroups, impureSetValueFromPath } from '../form/lib'
 import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from '../icons'
@@ -127,7 +128,6 @@ function FormCodePanel({
   const engine = useWorkflowEngine()
   const notify = useNotify()
   const { common: t } = useStrings()
-  const uid = useId()
   const [jsonHasErrors, setJsonHasErrors] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -173,22 +173,15 @@ function FormCodePanel({
       >
         <div className="bg-(--theme-muted-panel-bg) text-(--theme-muted-panel-color) flex shrink-0 items-center gap-3 border-b border-(--theme-border) px-3 py-2">
           {hasHiddenFields && (
-            <label
-              htmlFor={`${uid}-show-hidden`}
-              title={t.showHiddenFieldsHint}
-              className="flex cursor-pointer select-none items-center gap-2 text-sm text-(--theme-app)"
-            >
-              <SwitchToggleSmall
-                id={`${uid}-show-hidden`}
-                value={showHidden}
-                aria-label={t.showHiddenFields}
-                onClick={() => setShowHidden((prev) => !prev)}
-              />
-              <span className="flex items-center gap-1.5">
-                {showHidden ? <EyeIcon /> : <EyeOffIcon />}
-                {t.showHiddenFields}
-              </span>
-            </label>
+            <Tooltip content={t.showHiddenFieldsHint}>
+              <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-(--theme-app)">
+                <Switch size="sm" checked={showHidden} onCheckedChange={setShowHidden} />
+                <span className="flex items-center gap-1.5">
+                  {showHidden ? <EyeIcon /> : <EyeOffIcon />}
+                  {t.showHiddenFields}
+                </span>
+              </label>
+            </Tooltip>
           )}
           <button
             type="button"

@@ -1,13 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { openTooltip } from '../test/tooltip'
 import { BreadcrumbsActionButton, HeaderAddButton } from './PageHeader'
-
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
 
 const Icon = ({ className }: { className?: string }) => <svg className={className} />
 
@@ -25,7 +20,7 @@ describe('BreadcrumbsActionButton', () => {
         icon={Icon}
         label="Save"
         ariaLabel="Save workspace defaults"
-        to="/somewhere"
+        href="/somewhere"
       />,
     )
     expect(screen.getByRole('link', { name: 'Save workspace defaults' })).toBeInTheDocument()
@@ -46,12 +41,12 @@ describe('HeaderAddButton', () => {
         label="Create key"
         word="create"
         menu={[
-          { label: 'API key', onSelect: vi.fn() },
+          { label: 'API key', onClick: vi.fn() },
           {
             label: 'AI Gateway API key',
-            onSelect,
+            onClick: onSelect,
             disabled: true,
-            hint: 'No allocations available',
+            disabledReason: 'No allocations available',
           },
         ]}
       />,
@@ -61,12 +56,11 @@ describe('HeaderAddButton', () => {
       name: 'AI Gateway API key. No allocations available',
     })
     expect(item).toHaveAttribute('aria-disabled', 'true')
-    expect(item).toHaveAttribute('data-tooltip-content', 'No allocations available')
     fireEvent.click(item)
     expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it('swallows clicks and names the reason when disabled', () => {
+  it('swallows clicks and names the reason when disabled', async () => {
     const onClick = vi.fn()
     render(
       <HeaderAddButton
@@ -80,9 +74,9 @@ describe('HeaderAddButton', () => {
       name: 'Attach storage. Wait until the cluster has finished starting',
     })
     expect(button).toHaveAttribute('aria-disabled', 'true')
-    expect(button).toHaveAttribute(
-      'data-tooltip-content',
-      'Wait until the cluster has finished starting',
+    act(() => button.focus())
+    await waitFor(() =>
+      expect(openTooltip()).toHaveTextContent('Wait until the cluster has finished starting'),
     )
     fireEvent.click(button)
     expect(onClick).not.toHaveBeenCalled()

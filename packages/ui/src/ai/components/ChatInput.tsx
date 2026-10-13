@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import {
   type ClipboardEvent,
   forwardRef,
@@ -433,6 +433,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
             {slash && slashMenu.open && (
               <SlashMenu
                 label={slash.label}
+                listId={slashMenu.listId}
                 matches={slashMenu.matches}
                 active={slashMenu.active}
                 onChoose={(name) => {
@@ -468,6 +469,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
                     onChange={(e) => setInputAndPersist(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
+                    {...slashMenu.inputProps}
                     placeholder={effectivePlaceholder}
                     aria-label={inputLabel ?? effectivePlaceholder}
                     disabled={disabled}

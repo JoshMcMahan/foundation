@@ -74,7 +74,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
       // Escape - Stop generation
       if (e.key === 'Escape') {
-        handleStopGeneration()
+        if (!escapeClosesLayer(e.target)) {
+          handleStopGeneration()
+        }
         return
       }
 
@@ -112,4 +114,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     handleCopyLastResponse,
     handleStopGeneration,
   }
+}
+
+/** Escape pressed in a dialog, a drawer, a menu or an open list closes that
+ *  layer and nothing else. Those layers dismiss from a listener on the
+ *  document too, so stopping propagation can't keep the event from here. */
+export function escapeClosesLayer(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    (target.matches('[aria-expanded="true"]') ||
+      !!target.closest('[role="dialog"], [role="alertdialog"], [role="menu"]'))
+  )
 }

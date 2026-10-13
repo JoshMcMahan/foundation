@@ -1,8 +1,9 @@
-import { type FormikValues, useFormikContext } from 'formik'
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useFormContext, useWatch } from 'react-hook-form'
 import { useStrings, useWorkflowEngine } from '../../components/Provider'
 import { useFormEditing } from '../formEditing'
 import { initializeValues } from '../lib'
+import { fieldPath } from '../utils/fieldPath'
 import { getValueUsingPath } from '../utils/getValueUsingPath'
 import type { StepFieldConfig, WizardContainerProps } from './types'
 import { useWizardState } from './useWizardState'
@@ -26,23 +27,15 @@ interface Page {
 
 export function WizardContainer({
   wizardConfig,
-  values,
-  onChange,
   onSubmit,
   className = '',
   labelPosition = 'left',
-  missingFields = [],
   spaceCompact = false,
-  workflowForm = false,
   nested = false,
   fieldNamePrefix = '',
-  setFieldValue,
-  setFieldTouched,
-}: WizardContainerProps & {
-  setFieldValue: (field: string, value: unknown, shouldValidate?: boolean) => void
-  setFieldTouched: (field: string, touched?: boolean, shouldValidate?: boolean) => void
-}) {
-  const { validateForm, setTouched, touched, initialValues } = useFormikContext<FormikValues>()
+}: WizardContainerProps) {
+  const form = useFormContext<Record<string, unknown>>()
+  const { control, getValues, getFieldState, subscribe } = form
   const editing = useFormEditing()
   const pages = useContext(WizardPagesContext)
   const [ownPage, setOwnPage] = useState(0)
@@ -50,6 +43,30 @@ export function WizardContainer({
   const engine = useWorkflowEngine()
 
   const { config, steps, stepOrder } = wizardConfig
+  // The pages follow the copies each repeated step has and the inputs its titles read, so the wizard
+  // renders again when one of those changes, not on every keystroke in its fields.
+  const titleReads = useMemo(() => {
+    const texts = Object.values(steps).flatMap((step) =>
+      [step.title, step.description].flat().filter((text) => text?.includes('${{')),
+    )
+    return [...new Set(texts.flatMap((text) => [...engine.inputDependencies(text).inputDeps]))]
+  }, [steps, engine])
+  useWatch({
+    control,
+    compute: (values: Record<string, unknown>) =>
+      JSON.stringify([
+        stepOrder.map((step) => {
+          const rows = getValueUsingPath(values, `${fieldNamePrefix}${step}`)
+          return Array.isArray(rows) ? rows.length : -1
+        }),
+        titleReads.map((dep) => getValueUsingPath(values, dep)),
+      ]),
+  })
+  const values = getValues()
+  const setFieldValue = useCallback(
+    (name: string, value: unknown) => form.setValue(fieldPath(name), value, { shouldDirty: true }),
+    [form],
+  )
 
   // A repeated page's title or description: one per copy when written as a list, read for each copy
   // when it uses `[index]`, and otherwise the page's own, a title numbered by copy. An expression is read
@@ -153,10 +170,18 @@ export function WizardContainer({
   // rows from the defaults, and past its `max` the rest are set aside, to come back if the bounds allow them.
   const setAside = useRef<Record<string, unknown[]>>({})
   // Saved inputs or a reset replace the values whole, and rows set aside belong to the values they left.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new initial values are the trigger, not an input.
   useEffect(() => {
-    setAside.current = {}
-  }, [initialValues])
+    let loaded: unknown
+    return subscribe({
+      formState: { values: true },
+      callback: ({ defaultValues }) => {
+        if (loaded !== undefined && defaultValues !== loaded) {
+          setAside.current = {}
+        }
+        loaded = defaultValues
+      },
+    })
+  }, [subscribe])
   useEffect(() => {
     for (const step of stepOrder) {
       const stepConfig = steps[step]
@@ -207,25 +232,10 @@ export function WizardContainer({
             : `${fieldNamePrefix}${page.step}.`
       const stepFieldPaths = Object.keys(page.config.options).map((name) => `${stepPrefix}${name}`)
 
-      // Validate all fields and collect errors
-      const errors = await validateForm()
-      const hasStepErrors = stepFieldPaths.some((path) => getValueUsingPath(errors, path))
-
-      // Mark fields as touched to show errors
-      if (hasStepErrors) {
-        if (stepPrefix) {
-          for (const path of stepFieldPaths) {
-            setFieldTouched(path, true, false)
-          }
-        } else {
-          const touchedFields = Object.fromEntries(stepFieldPaths.map((path) => [path, true]))
-          setTouched({ ...touched, ...touchedFields }, false)
-        }
-      }
-
-      return !hasStepErrors
+      // A field the form marks missing holds the page.
+      return !stepFieldPaths.some((path) => getFieldState(fieldPath(path)).invalid)
     },
-    [shown, config, fieldNamePrefix, validateForm, setTouched, setFieldTouched, touched],
+    [shown, config, fieldNamePrefix, getFieldState],
   )
 
   const {
@@ -246,30 +256,19 @@ export function WizardContainer({
 
   const navigation = config.navigation ?? {}
 
-  const handleGoToNext = useCallback(async () => {
-    const success = await goToNext()
-    if (success) {
-      onChange?.(values)
-    }
-    return success
-  }, [goToNext, values, onChange])
-
   const handleSubmit = useCallback(async () => {
     if (!isLastStep) {
       return
     }
-
-    // Validate entire form on final submission
-    const errors = await validateForm()
-    if (Object.keys(errors).length > 0) {
-      // Mark all fields as touched to show errors
-      const touchedFields = Object.fromEntries(Object.keys(values).map((name) => [name, true]))
-      setTouched({ ...touched, ...touchedFields }, false)
+    let submitted = false
+    await form.handleSubmit(async (values) => {
+      submitted = true
+      await onSubmit?.(values)
+    })()
+    if (!submitted) {
       throw new Error('Please fix errors before submitting')
     }
-
-    await onSubmit?.(values)
-  }, [isLastStep, validateForm, values, setTouched, touched, onSubmit])
+  }, [isLastStep, form, onSubmit])
 
   // A form being built pages as it will when run, moving freely: no step blocks the next, every
   // step can be jumped to, and the editor can turn the pages too.
@@ -377,16 +376,10 @@ export function WizardContainer({
         currentStep={page.step}
         stepConfig={page.config}
         flatten={config.flatten}
-        values={values}
         labelPosition={labelPosition}
-        missingFields={missingFields}
         spaceCompact={spaceCompact}
-        setFormDirty={() => onChange?.(values)}
-        workflowForm={workflowForm}
         fieldNamePrefix={fieldNamePrefix}
         copy={page.copy}
-        setFieldValue={setFieldValue}
-        setFieldTouched={setFieldTouched}
       />
       {copies}
     </div>
@@ -456,7 +449,7 @@ export function WizardContainer({
         nextLabel={page?.config.nextLabel}
         prevLabel={page?.config.prevLabel}
         submitLabel={config.submitLabel || 'Execute'}
-        onNext={handleGoToNext}
+        onNext={goToNext}
         onPrevious={goToPrevious}
         onSubmit={nested ? undefined : handleSubmit}
       />

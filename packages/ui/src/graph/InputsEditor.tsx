@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import {
   createContext,
   type ReactNode,
@@ -9,9 +9,11 @@ import {
   useRef,
   useState,
 } from 'react'
+import { type MenuAnchor, useContextMenu } from '../components/ContextMenu'
 import { IconButton } from '../components/IconButton'
+import { type MenuEntry, type MenuSearch, menuDivider } from '../components/MenuEntries'
 import { useWorkflowEditing } from '../components/Provider'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import type { GraphEdit, InputPath, WorkflowEditing } from '../editing'
 import { type FormEditing, FormEditingContext } from '../form/formEditing'
 import { type WizardPages, WizardPagesContext } from '../form/Wizard/wizardPages'
@@ -30,7 +32,6 @@ import {
   PlusOutlineIcon,
   TrashIcon,
 } from '../icons'
-import { type MenuSearch, type RowMenuItem, useRowMenu } from '../list/RowContextMenu'
 import { type DependencyGraphEditor, type EditorProblem, overlaps, typing } from './editorApi'
 import { AddChip, BarDivider, DragLabel, EditorBar } from './editorChrome'
 import { asRecord, type Json, openOnAddOf, text } from './editorFields'
@@ -188,14 +189,8 @@ interface InputsEditorApi {
   definition: (path: InputPath) => Json
   edit: (path: InputPath) => void
   remove: (path: InputPath) => void
-  openMenu: (x: number, y: number, path: InputPath) => void
-  openTypeMenu: (
-    x: number,
-    y: number,
-    parent: InputPath,
-    index: number,
-    placement?: Placement,
-  ) => void
+  openMenu: (at: MenuAnchor, path: InputPath) => void
+  openTypeMenu: (at: MenuAnchor, parent: InputPath, index: number, placement?: Placement) => void
   startDrag: (e: Press, path: InputPath | null, label: string, how?: DragHow) => void
   startResize: (e: Press, edge: Edge) => void
   /** Moves an edge by `delta` percent, as the arrow keys do. */
@@ -319,19 +314,19 @@ function ChromeButton({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={label}
-      className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app)"
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick(e)
-      }}
-    >
-      {children}
-    </button>
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app)"
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick(e)
+        }}
+      >
+        {children}
+      </button>
+    </Tooltip>
   )
 }
 
@@ -388,15 +383,16 @@ function InputRow({
         className="flex h-5 w-5 cursor-grab items-center justify-center rounded hover:bg-(--theme-muted-panel-bg)"
         onPointerDown={(e) => api.startDrag(e, path, name)}
         onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          api.openMenu(r.left, r.bottom, path)
+          api.openMenu(e.currentTarget, path)
         }}
       >
         <DragHandleIcon className="h-3.5 w-3.5" />
       </button>
-      <span data-tooltip-id={TOOLTIP_ID} data-tooltip-content={name}>
-        <TypeBadge type={text(definition['type'])} />
-      </span>
+      <Tooltip content={name}>
+        <span>
+          <TypeBadge type={text(definition['type'])} />
+        </span>
+      </Tooltip>
       {(definition['type'] === 'group' || definition['type'] === 'list') && (
         <PageActions
           api={api}
@@ -410,8 +406,7 @@ function InputRow({
       <ChromeButton
         label={t.addInputBelow}
         onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          api.openTypeMenu(r.right, r.bottom, parent, index + 1)
+          api.openTypeMenu(e.currentTarget, parent, index + 1)
         }}
       >
         <AddIcon className="h-3 w-3" />
@@ -422,8 +417,7 @@ function InputRow({
       <ChromeButton
         label={t.inputActions}
         onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          api.openMenu(r.right, r.bottom, path)
+          api.openMenu(e.currentTarget, path)
         }}
       >
         <MoreIcon className="h-3 w-3" />
@@ -453,7 +447,7 @@ function InputRow({
       onContextMenu={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        api.openMenu(e.clientX, e.clientY, path)
+        api.openMenu(e, path)
       }}
     >
       {hidden ? (
@@ -482,19 +476,19 @@ function InputRow({
         </div>
       )}
       {found.length > 0 && (
-        <button
-          type="button"
-          data-input-chrome
-          aria-label={g.problemCount(found.length)}
-          data-tooltip-id={TOOLTIP_ID}
-          data-tooltip-content={found
-            .map((problem) => problem.slice(problem.indexOf('\n') + 1))
-            .join('\n')}
-          className="absolute -left-2 -top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-(--theme-panel-bg) text-(--theme-error) shadow-sm"
-          onClick={() => api.reveal(Number.parseInt(found[0] ?? '0', 10))}
+        <Tooltip
+          content={found.map((problem) => problem.slice(problem.indexOf('\n') + 1)).join('\n')}
         >
-          <AlertIcon className="h-3.5 w-3.5" />
-        </button>
+          <button
+            type="button"
+            data-input-chrome
+            aria-label={g.problemCount(found.length)}
+            className="absolute -left-2 -top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-(--theme-panel-bg) text-(--theme-error) shadow-sm"
+            onClick={() => api.reveal(Number.parseInt(found[0] ?? '0', 10))}
+          >
+            <AlertIcon className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
       )}
       {children}
       {outline && (
@@ -630,8 +624,7 @@ function AddInput({ parent }: { parent: InputPath }) {
         ADD_INDENT[Math.min(parent.length, ADD_INDENT.length - 1)],
       )}
       onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect()
-        api.openTypeMenu(r.left, r.bottom, parent, Number.MAX_SAFE_INTEGER)
+        api.openTypeMenu(e.currentTarget, parent, Number.MAX_SAFE_INTEGER)
       }}
     >
       <AddIcon className="h-3 w-3" />
@@ -646,18 +639,16 @@ function typeSearch(labels: InputsEditorStrings): MenuSearch {
   return { placeholder: labels.searchTypes, empty: labels.noMatchingTypes }
 }
 
-function typeMenu(labels: InputsEditorStrings, pick: (type: string) => void): RowMenuItem[] {
+function typeMenu(labels: InputsEditorStrings, pick: (type: string) => void): MenuEntry[] {
   const types = labels.types as Record<string, string>
-  const item = (type: string): RowMenuItem => ({
-    kind: 'action',
+  const item = (type: string): MenuEntry => ({
     label: types[type] ?? type,
     keywords: type,
-    onSelect: () => pick(type),
+    onClick: () => pick(type),
   })
   return [
     ...INPUT_TYPE_GROUPS.map(
-      ([group, list]): RowMenuItem => ({
-        kind: 'submenu',
+      ([group, list]): MenuEntry => ({
         label: labels.typeGroups[group],
         items: list.map(item),
       }),
@@ -1183,7 +1174,7 @@ export function InputsFormEditor({
   const latest = useRef({ editor, inputs })
   // Rows read the inputs while they render, so they must see this render's, not the last one's.
   latest.current = { editor, inputs }
-  const rowMenu = useRowMenu()
+  const rowMenu = useContextMenu()
   const openMenu = useMemo(
     () => returningFocus(rowMenu.openMenu, () => containerRef.current),
     [rowMenu.openMenu],
@@ -1303,18 +1294,17 @@ export function InputsFormEditor({
     const unsplitPages = (parent: InputPath) =>
       sendAll(unsplitPagesEdits(listAt(parent), parent, childKeyAt(parent)))
     const openTypeMenu = (
-      x: number,
-      y: number,
+      at: MenuAnchor,
       parent: InputPath,
       index: number,
       placement?: Placement,
     ) =>
       openMenu(
-        x,
-        y,
+        at,
         typeMenu(t, (type) => create(parent, index, type, placement)),
-        undefined,
-        typeSearch(t),
+        {
+          search: typeSearch(t),
+        },
       )
     const edit = (path: InputPath) => store.set({ dialog: { kind: 'edit', path } })
     const remove = (path: InputPath) => send({ type: 'deleteInput', path })
@@ -1425,7 +1415,12 @@ export function InputsFormEditor({
           return
         }
         if (!paths) {
-          openTypeMenu(client.x, client.y, gap.parent, gap.index, placementOf(gap))
+          openTypeMenu(
+            { clientX: client.x, clientY: client.y },
+            gap.parent,
+            gap.index,
+            placementOf(gap),
+          )
           return
         }
         // The pressed grip can end up on another row once the rows redraw, holding its toolbar open.
@@ -1468,36 +1463,32 @@ export function InputsFormEditor({
       )
     }
 
-    const menuFor = (path: InputPath): RowMenuItem[] => {
+    const menuFor = (path: InputPath): MenuEntry[] => {
       const parent = path.slice(0, -1)
       const index = indexOf(path)
       const count = namesIn(containerAt(editing, latest.current.inputs, parent)).length
       return [
         {
-          kind: 'action',
           label: t.editInput,
           icon: <EditIcon />,
-          onSelect: () => edit(path),
+          onClick: () => edit(path),
         },
         {
-          kind: 'submenu',
           label: t.addInputBelow,
           icon: <AddIcon />,
           items: typeMenu(t, (type) => create(parent, index + 1, type)),
           search: typeSearch(t),
         },
         {
-          kind: 'action',
           label: t.duplicate,
           icon: <DuplicateIcon />,
-          onSelect: () => send({ type: 'duplicateInput', path }),
+          onClick: () => send({ type: 'duplicateInput', path }),
         },
         {
-          kind: 'action',
           label: t.moveUp,
           icon: <ArrowUpIcon />,
           disabled: index <= 0,
-          onSelect: () =>
+          onClick: () =>
             send({
               type: 'moveInputs',
               paths: [path],
@@ -1506,11 +1497,10 @@ export function InputsFormEditor({
             }),
         },
         {
-          kind: 'action',
           label: t.moveDown,
           icon: <ArrowDownIcon />,
           disabled: index >= count - 1,
-          onSelect: () =>
+          onClick: () =>
             send({
               type: 'moveInputs',
               paths: [path],
@@ -1518,13 +1508,12 @@ export function InputsFormEditor({
               index: index + 2,
             }),
         },
-        { kind: 'divider' },
+        menuDivider,
         {
-          kind: 'action',
           label: t.deleteInput,
           icon: <TrashIcon />,
           destructive: true,
-          onSelect: () => remove(path),
+          onClick: () => remove(path),
         },
       ]
     }
@@ -1602,7 +1591,7 @@ export function InputsFormEditor({
       definition,
       edit,
       remove,
-      openMenu: (x, y, path) => openMenu(x, y, menuFor(path)),
+      openMenu: (at, path) => openMenu(at, menuFor(path)),
       openTypeMenu,
       startDrag,
       startResize,
@@ -1908,14 +1897,13 @@ export function InputsFormEditor({
                   hint={t.addInputHint}
                   onPointerDown={(e) => api.startDrag(e, null, t.addInput)}
                   onClick={(e) => {
-                    const r = e.currentTarget.getBoundingClientRect()
                     // A wizard draws only its pages, so its new inputs go in the last one, shown.
                     const form = isWizard(inputs) ? pagesIn(inputs) : []
                     const last = form.at(-1)
                     if (last) {
                       wizardPages.setPage('[]', (wizardPages.count('[]') ?? form.length) - 1)
                     }
-                    api.openTypeMenu(r.left, r.bottom, last ? [last] : [], Number.MAX_SAFE_INTEGER)
+                    api.openTypeMenu(e.currentTarget, last ? [last] : [], Number.MAX_SAFE_INTEGER)
                   }}
                 />
                 <PageActions api={api} parent={[]} list={inputs} bar />

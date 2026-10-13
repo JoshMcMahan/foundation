@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import * as monaco from 'monaco-editor'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useCssIsDark } from '../components/useCssIsDark'

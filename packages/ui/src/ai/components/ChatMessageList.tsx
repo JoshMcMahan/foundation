@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { Duration } from 'luxon'
 import {
   type ReactNode,

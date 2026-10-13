@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { LoaderIcon } from '../icons'
 
 const RIPPLE_STAGGER_S = 0.22

@@ -42,12 +42,12 @@ export const WithActions: Story = {
       title="training-data"
       actions={
         <>
-          <HeaderEditButton to="/storage/buckets/training-data/edit" />
-          <HeaderAddButton label="Add object" word="add" to="/upload" />
+          <HeaderEditButton href="/storage/buckets/training-data/edit" />
+          <HeaderAddButton label="Add object" word="add" href="/upload" />
           <HeaderActionMenu
             items={[
-              { label: 'Duplicate', onSelect: () => {} },
-              { label: 'Delete', onSelect: () => {} },
+              { label: 'Duplicate', onClick: () => {} },
+              { label: 'Delete', onClick: () => {} },
             ]}
           />
         </>
@@ -62,7 +62,7 @@ export const WithToolbar: Story = {
     title: 'All runs',
     toolbar: (
       <div className="flex items-center gap-2 py-1.5">
-        <BreadcrumbsActionButton icon={AddIcon} label="New run" to="/runs/new" />
+        <BreadcrumbsActionButton icon={AddIcon} label="New run" href="/runs/new" />
       </div>
     ),
   },

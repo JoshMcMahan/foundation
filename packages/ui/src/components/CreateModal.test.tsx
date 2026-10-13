@@ -56,12 +56,7 @@ describe('CreateModal submit state', () => {
 })
 
 describe('CreateModal initial focus', () => {
-  function renderWithTextarea() {
-    const frames: FrameRequestCallback[] = []
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      frames.push(cb)
-      return frames.length
-    })
+  function renderModal(props: { hideName?: boolean } = {}) {
     render(
       <CreateModal
         open
@@ -72,33 +67,21 @@ describe('CreateModal initial focus', () => {
         submitLabel="Create"
         submittingLabel="Creating"
         onSubmit={vi.fn().mockResolvedValue(true)}
+        {...props}
       >
         <CreateModalTextarea label="Public key" value="" onChange={vi.fn()} placeholder="" />
       </CreateModal>,
     )
-    return () => {
-      for (const frame of frames.splice(0)) {
-        frame(0)
-      }
-    }
   }
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('focuses the name input when it opens', async () => {
+    renderModal()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Key name' })).toHaveFocus())
   })
 
-  it('focuses the name input once the content has mounted', () => {
-    const runFrames = renderWithTextarea()
-    runFrames()
-    expect(screen.getByRole('textbox', { name: 'Key name' })).toHaveFocus()
-  })
-
-  it('leaves focus on a field the user already moved into', () => {
-    const runFrames = renderWithTextarea()
-    const textarea = screen.getByRole('textbox', { name: 'Public key' })
-    textarea.focus()
-    runFrames()
-    expect(textarea).toHaveFocus()
+  it('starts at its first field when it asks for no name', async () => {
+    renderModal({ hideName: true })
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Public key' })).toHaveFocus())
   })
 })
 

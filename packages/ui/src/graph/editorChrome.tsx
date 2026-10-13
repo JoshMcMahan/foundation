@@ -1,7 +1,7 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ReactNode, PointerEvent as ReactPointerEvent } from 'react'
 import { IconButton } from '../components/IconButton'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import { RedoIcon, SettingsIcon, UndoIcon } from '../icons'
 import type { DependencyGraphEditor } from './editorApi'
 import type { Point } from './editorPrimitives'
@@ -53,21 +53,21 @@ export function AddChip({
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
 }) {
   return (
-    <button
-      type="button"
-      className={cx(
-        'flex h-7 items-center gap-1 whitespace-nowrap rounded px-2 text-xs theme-hover',
-        onPointerDown ? 'cursor-grab' : 'cursor-pointer',
-        className,
-      )}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={hint}
-      onPointerDown={onPointerDown}
-      onClick={onClick}
-    >
-      {icon}
-      {label}
-    </button>
+    <Tooltip content={hint}>
+      <button
+        type="button"
+        className={cx(
+          'flex h-7 items-center gap-1 whitespace-nowrap rounded px-2 text-xs theme-hover',
+          onPointerDown ? 'cursor-grab' : 'cursor-pointer',
+          className,
+        )}
+        onPointerDown={onPointerDown}
+        onClick={onClick}
+      >
+        {icon}
+        {label}
+      </button>
+    </Tooltip>
   )
 }
 

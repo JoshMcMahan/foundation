@@ -1,8 +1,9 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import type { OpenMenu } from '../../components/ContextMenu'
+import type { MenuEntry } from '../../components/MenuEntries'
 import { useRelativeTime } from '../../components/relativeTime'
 import { ImageIcon, NewChatIcon, SearchIcon, SharingIcon } from '../../icons'
-import type { OpenMenu, RowMenuItem } from '../../list/index'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
@@ -24,7 +25,7 @@ function ConversationRow({
   isCurrent: boolean
   /** When it last changed, already abbreviated. */
   updated: string
-  menuItems: RowMenuItem[]
+  menuItems: MenuEntry[]
   openMenu: OpenMenu
   onOpen: () => void
 }) {
@@ -147,7 +148,6 @@ export default function ChatSidebar({
               open: drawerOpen,
               onClose: closeDrawer,
               label: tSidebar.drawerLabel,
-              closeLabel: tSidebar.closeSidebar,
             }
           : undefined
       }

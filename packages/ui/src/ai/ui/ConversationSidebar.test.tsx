@@ -100,7 +100,7 @@ describe('ConversationSidebar', () => {
         collapsed
         rail={<li>dot</li>}
         resize={{ storageKey: 'itemsWidth', label: 'Resize', hint: 'Drag' }}
-        drawer={{ open: true, onClose, label: 'Items drawer', closeLabel: 'Close items' }}
+        drawer={{ open: true, onClose, label: 'Items drawer' }}
       />,
     )
     expect(screen.getByRole('dialog', { name: 'Items drawer' })).toBeInTheDocument()

@@ -1,17 +1,13 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import type { ReactNode } from 'react'
+import type { OpenMenu } from '../components/ContextMenu'
+import type { MenuEntry } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
 import { Table } from '../components/Table'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import { EyeIcon } from '../icons'
-import {
-  MoreButton,
-  type OpenMenu,
-  type RowMenuItem,
-  RowSelectCheckbox,
-  useRowMenuActive,
-} from '../list/index'
+import { MoreButton, RowSelectCheckbox, rowContextMenuProps, useRowMenuActive } from '../list/index'
 import type { TreeNode } from './lib/types'
 import { formatFileSize } from './lib/utils'
 
@@ -35,21 +31,6 @@ function isInteractiveTarget(e: React.MouseEvent) {
   return !!(e.target as HTMLElement).closest('a,button,input,label')
 }
 
-// Build the row menu only when it is opened, not on every render — a large
-// directory would otherwise rebuild hundreds of menu structures per re-render.
-function lazyContextMenuProps(openMenu: OpenMenu, getItems: () => RowMenuItem[]) {
-  return {
-    onContextMenu: (e: React.MouseEvent) => {
-      const items = getItems()
-      e.preventDefault()
-      if (items.length > 0) {
-        e.stopPropagation()
-      }
-      openMenu(e.clientX, e.clientY, items)
-    },
-  }
-}
-
 interface FileRowProps {
   node: TreeNode
   icon: ReactNode
@@ -61,7 +42,7 @@ interface FileRowProps {
   active: boolean
   checked: boolean
   canPreview: boolean
-  getItems: () => RowMenuItem[]
+  getItems: () => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void
@@ -79,7 +60,7 @@ export function UserRow({
   node: TreeNode
   icon: ReactNode
   storageCount: number
-  getItems: () => RowMenuItem[]
+  getItems: () => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
 }) {
@@ -95,7 +76,7 @@ export function UserRow({
     <tr
       className={cx('group cursor-pointer', menuActive ? 'theme-hover' : 'hover:theme-hover')}
       onClick={handleRowClick}
-      {...lazyContextMenuProps(openRowMenu, getItems)}
+      {...rowContextMenuProps(openRowMenu, getItems)}
     >
       <Table.Item className="py-2.5">
         <div className="flex min-w-0 items-center gap-3">
@@ -115,7 +96,7 @@ export function UserRow({
       </Table.Item>
       <Table.Item className="relative py-2.5">
         <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-          <MoreButton active={menuActive} onOpen={(x, y) => openRowMenu(x, y, getItems())} />
+          <MoreButton open={menuActive} onOpen={(button) => openRowMenu(button, getItems())} />
         </div>
       </Table.Item>
     </tr>
@@ -168,7 +149,7 @@ export function FileRow({
       )}
       onClick={handleRowClick}
       style={{ height: fileRowHeight(node) }}
-      {...lazyContextMenuProps(openRowMenu, getItems)}
+      {...rowContextMenuProps(openRowMenu, getItems)}
     >
       <Table.Item className="py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -197,38 +178,37 @@ export function FileRow({
         {typeLabel}
       </Table.Item>
       <Table.Item className="truncate py-2.5 text-sm text-(--theme-muted-text-color)">
-        <span
-          data-tooltip-id={TOOLTIP_ID}
-          data-tooltip-content={node.modified ?? ''}
-          data-tooltip-place="top"
-        >
-          {!isDir && modifiedDt?.isValid ? modifiedDt.toRelative() : '—'}
-        </span>
+        {!isDir && modifiedDt?.isValid ? (
+          <Tooltip content={modifiedDt.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)}>
+            <time dateTime={modifiedDt.toISO() ?? undefined}>{modifiedDt.toRelative()}</time>
+          </Tooltip>
+        ) : (
+          '—'
+        )}
       </Table.Item>
       <Table.Item className="relative py-2.5">
         <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 pr-4">
           {!isDir && canPreview && (
-            <button
-              type="button"
-              aria-label={t.preview.preview}
-              data-tooltip-id={TOOLTIP_ID}
-              data-tooltip-content={t.preview.preview}
-              data-tooltip-place="bottom"
-              onClick={(e) => {
-                e.stopPropagation()
-                onPreview(node)
-              }}
-              className={cx(
-                'rounded p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-4 [&>svg]:w-4',
-                menuActive
-                  ? 'opacity-100'
-                  : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-              )}
-            >
-              <EyeIcon />
-            </button>
+            <Tooltip content={t.preview.preview} side="bottom">
+              <button
+                type="button"
+                aria-label={t.preview.preview}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPreview(node)
+                }}
+                className={cx(
+                  'rounded p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-4 [&>svg]:w-4',
+                  menuActive
+                    ? 'opacity-100'
+                    : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                )}
+              >
+                <EyeIcon />
+              </button>
+            </Tooltip>
           )}
-          <MoreButton active={menuActive} onOpen={(x, y) => openRowMenu(x, y, getItems())} />
+          <MoreButton open={menuActive} onOpen={(button) => openRowMenu(button, getItems())} />
         </div>
       </Table.Item>
     </tr>

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { DynamicForm } from './Form'
+import { useForm, useFormState } from 'react-hook-form'
+import { DynamicForm, type FormValues } from './Form'
 
 const meta: Meta<typeof DynamicForm> = {
   title: 'UI/Form/DynamicForm',
@@ -10,6 +11,11 @@ const meta: Meta<typeof DynamicForm> = {
       description: 'Host opt-in for validated CSS declarations on layout nodes.',
     },
     formJSONs: { control: 'object', description: 'Input definitions and optional $meta.layout.' },
+    missingFields: {
+      control: 'object',
+      description: 'Field names the host marks as missing a value, set as `required` errors.',
+    },
+    onValuesChange: { action: 'values changed' },
   },
   parameters: {
     docs: {
@@ -36,6 +42,14 @@ const FORM_JSONS = {
         tooltip: 'A unique cluster name',
       },
       nodes: { type: 'number', label: 'Nodes', default: 2, min: 1, max: 16 },
+      memory: {
+        type: 'number',
+        label: 'Memory (MB)',
+        default: 16384,
+        step: 1024,
+        min: 0,
+        thousandsSeparator: true,
+      },
       monitoring: {
         type: 'boolean',
         label: 'Enable monitoring',
@@ -64,6 +78,37 @@ export const ClusterSettings: StoryObj<typeof DynamicForm> = {
     initialValues: {},
     skipValueParse: true,
   },
+}
+
+/** The host marks fields it found missing a value: the form sets them as errors, and only those
+ * fields draw again. */
+export const MissingFields: StoryObj<typeof DynamicForm> = {
+  args: {
+    ...ClusterSettings.args,
+    missingFields: ['name', 'size'],
+  },
+}
+
+function HostFormStory() {
+  const form = useForm<FormValues>()
+  const { isDirty } = useFormState({ control: form.control })
+  return (
+    <div className="flex flex-col gap-3">
+      <DynamicForm form={form} formJSONs={FORM_JSONS} initialValues={{}} skipValueParse />
+      <div className="flex items-center gap-3 text-[13px]">
+        <span>{isDirty ? 'Unsaved changes' : 'No changes'}</span>
+        <button type="button" className="btn" onClick={() => form.reset()}>
+          Reset
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** A host that owns the form reads its state and drives it: here, whether it has changes, and a
+ * reset back to the values it loaded. */
+export const HostOwnedForm: StoryObj<typeof DynamicForm> = {
+  render: () => <HostFormStory />,
 }
 
 /** Inputs with a `width` (pixels, or a share of the row) sit side by side, label on top unless the

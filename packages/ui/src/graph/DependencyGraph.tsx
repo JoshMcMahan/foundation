@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import {
   createContext,
@@ -20,12 +20,12 @@ import {
   TransformComponent,
   TransformWrapper,
 } from 'react-zoom-pan-pinch'
-import { BareModal, modalPanelClasses } from '../components/BareModal'
 import { IconButton } from '../components/IconButton'
 import { Indicator } from '../components/Indicator'
+import { InfoTip } from '../components/InfoTip'
 import Loader from '../components/Loader'
+import { Modal } from '../components/Modal'
 import { useRunFile, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
-import { TooltipInfo } from '../components/Tooltip'
 import { toAbsHumanDuration } from '../duration'
 import type { GraphLayout } from '../editing'
 import type { RunStatus, WorkflowEngine } from '../engine'
@@ -1882,13 +1882,13 @@ export default function DependencyGraph({
             <div className="flex flex-col">
               <div className="text-xs">{dagStrings.status}</div>
               <div className="text-sm font-semibold flex items-center gap-x-1">
-                <TooltipInfo
+                <InfoTip
                   className="flex items-center gap-x-1"
                   text={dagStrings.statusReason(run.statusReason) ?? ''}
                 >
                   <Indicator status={runStatus} />
                   {dagStrings.statusLabel(runStatus)}
-                </TooltipInfo>
+                </InfoTip>
               </div>
             </div>
             <div className="flex flex-col">
@@ -2050,11 +2050,12 @@ export default function DependencyGraph({
           </div>
         )}
       </div>
-      <BareModal
+      <Modal
         open={sublogOpen !== ''}
         onClose={() => setSublogOpen('')}
+        aria-label={logName.replace(/\s+/g, ' ') || sublogOpen.slice(sublogFileStart)}
         align="center"
-        className={cx(modalPanelClasses, 'max-h-full overflow-y-auto p-4 sm:p-6')}
+        className="max-h-full overflow-y-auto p-4 sm:p-6"
       >
         <div className="flex w-full">
           {sublogsLoading && (!sublogs || !runNumber) ? (
@@ -2096,7 +2097,7 @@ export default function DependencyGraph({
             />
           )}
         </div>
-      </BareModal>
+      </Modal>
     </div>
   )
   return <GraphEditorProvider value={editorApi}>{graph}</GraphEditorProvider>

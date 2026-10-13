@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type React from 'react'
 import { useId, useMemo } from 'react'
 import { RequiredMark } from '../components/RequiredMark'

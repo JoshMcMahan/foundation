@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import React from 'react'
 import Loader from './Loader'
 import { useStrings } from './Provider'

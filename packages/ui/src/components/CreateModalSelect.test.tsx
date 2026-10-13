@@ -1,86 +1,86 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { CreateModalSelect, type CreateModalSelectOption } from './CreateModal'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import type { ComboboxItems } from './Combobox'
+import { CreateModalSelect } from './CreateModal'
 
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
+// jsdom has no layout, so the virtual list would measure its scroller as empty and draw no rows.
+beforeAll(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(240)
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(240)
+})
 
-const clusterOptions = (name: string, envs: number): CreateModalSelectOption[] => [
-  { label: 'Login node', value: `login:${name}`, group: name },
-  ...Array.from({ length: envs }, (_, i) => ({
-    label: `${name}-env-${i}`,
-    value: `env:${name}:${i}`,
-    group: name,
-    collapsible: true,
-  })),
+const items: ComboboxItems<string> = [
+  { label: 'Workspace', items: [{ label: 'User Workspace', value: 'user-workspace' }] },
+  {
+    label: 'alpha',
+    items: [
+      { label: 'Login node', value: 'login:alpha' },
+      { label: 'alpha-env-0', value: 'env:alpha:0' },
+    ],
+  },
+  {
+    label: 'beta',
+    items: [
+      { label: 'Login node', value: 'login:beta' },
+      { label: 'beta-env-0', value: 'env:beta:0' },
+    ],
+  },
 ]
 
-const options: CreateModalSelectOption[] = [
-  { label: 'User Workspace', value: 'user-workspace' },
-  ...clusterOptions('alpha', 4),
-  ...clusterOptions('beta', 4),
-]
-
-const setup = (value = 'user-workspace') => {
-  const onChange = vi.fn()
+const setup = (props: Partial<Parameters<typeof CreateModalSelect>[0]> = {}) => {
+  const onValueChange = vi.fn()
   render(
     <CreateModalSelect
       label="Target"
-      value={value}
-      options={options}
-      onChange={onChange}
-      collapsedLabel={(count) => `${count} environments`}
+      value="user-workspace"
+      items={items}
+      onValueChange={onValueChange}
+      {...props}
     />,
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Target' }))
-  return onChange
+  return onValueChange
 }
 
-describe('CreateModalSelect collapsible groups', () => {
-  it('hides collapsible options behind a per-group toggle row', () => {
+const open = () => {
+  fireEvent.click(screen.getByRole('combobox', { name: 'Target' }))
+  return screen.findByRole('listbox')
+}
+
+describe('CreateModalSelect', () => {
+  it('shows the selection on the pill', () => {
     setup()
-    expect(screen.getAllByText('Login node')).toHaveLength(2)
-    expect(screen.getAllByText('4 environments')).toHaveLength(2)
-    expect(screen.queryByText('alpha-env-0')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Target' })).toHaveTextContent('User Workspace')
   })
 
-  it('expands and re-collapses a group via its toggle row', () => {
-    setup()
-    const toggle = screen.getAllByText('4 environments')[0] as HTMLElement
-    fireEvent.click(toggle)
-    expect(screen.getByText('alpha-env-0')).toBeInTheDocument()
-    expect(screen.queryByText('beta-env-0')).not.toBeInTheDocument()
-    fireEvent.click(toggle)
-    expect(screen.queryByText('alpha-env-0')).not.toBeInTheDocument()
+  it('keeps a value the list no longer offers on the pill', () => {
+    setup({ value: 'stale-region' })
+    expect(screen.getByRole('combobox', { name: 'Target' })).toHaveTextContent('stale-region')
   })
 
-  it("starts with the selected value's group expanded", () => {
-    setup('env:beta:1')
-    // Once in the pill, once as a menu row.
-    expect(screen.getAllByText('beta-env-1')).toHaveLength(2)
-    expect(screen.queryByText('alpha-env-0')).not.toBeInTheDocument()
+  it('lists every group and picks the clicked item', async () => {
+    const onValueChange = setup()
+    const list = await open()
+    expect(within(list).getAllByRole('option', { name: 'Login node' })).toHaveLength(2)
+    fireEvent.click(within(list).getByRole('option', { name: 'beta-env-0' }))
+    expect(onValueChange).toHaveBeenCalledWith('env:beta:0')
   })
 
-  it('matches the group name in the filter and bypasses collapsing', () => {
+  it('filters by the group an item sits under', async () => {
     setup()
-    fireEvent.change(screen.getByLabelText('Target', { selector: 'input' }), {
+    const list = await open()
+    fireEvent.change(screen.getByPlaceholderText('Filter'), {
       target: { value: 'beta' },
     })
-    expect(screen.getByText('Login node')).toBeInTheDocument()
-    expect(screen.getByText('beta-env-0')).toBeInTheDocument()
-    expect(screen.queryByText('alpha-env-0')).not.toBeInTheDocument()
-    // Only the pill's copy remains; the menu row is filtered out.
-    expect(screen.getAllByText('User Workspace')).toHaveLength(1)
+    expect(within(list).getByRole('option', { name: 'beta-env-0' })).toBeInTheDocument()
+    expect(within(list).queryByRole('option', { name: 'alpha-env-0' })).not.toBeInTheDocument()
   })
 
-  it('selects an option revealed by expanding a group', () => {
-    const onChange = setup()
-    fireEvent.click(screen.getAllByText('4 environments')[0] as HTMLElement)
-    fireEvent.click(screen.getByText('alpha-env-2'))
-    expect(onChange).toHaveBeenCalledWith('env:alpha:2')
+  it('stays closed and explains why while disabled', () => {
+    setup({ disabled: true, disabledReason: 'Pick a cluster first' })
+    const pill = screen.getByRole('button', { name: 'Target' })
+    expect(pill).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(pill)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 })

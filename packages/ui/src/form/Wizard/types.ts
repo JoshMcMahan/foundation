@@ -63,22 +63,14 @@ export interface ParsedWizardConfig {
 export interface WizardContainerProps {
   /** Parsed wizard configuration and steps */
   wizardConfig: ParsedWizardConfig
-  /** Current form values */
-  values: Record<string, unknown>
-  /** Callback when values change */
-  onChange?: (values: Record<string, unknown>) => void
   /** Callback when wizard is submitted */
   onSubmit?: ((values: Record<string, unknown>) => void) | undefined
   /** Additional CSS classes */
   className?: string
   /** Label position for fields */
   labelPosition?: 'left' | 'top' | undefined
-  /** Missing fields list */
-  missingFields?: string[]
   /** Space compact mode */
   spaceCompact?: boolean
-  /** Workflow form mode */
-  workflowForm?: boolean
   /** A wizard inside a group submits with the form around it, so its last step has no submit. */
   nested?: boolean
   /** Where the fields' values sit when the wizard is inside a group that keeps its own values. */
@@ -139,16 +131,10 @@ export interface WizardStepContentProps {
   currentStep: string
   /** Current step configuration */
   stepConfig: StepFieldConfig
-  /** Form values */
-  values: Record<string, unknown>
   /** Label position for fields */
   labelPosition?: LabelPosition | undefined
-  /** Missing fields list */
-  missingFields?: string[]
   /** Space compact mode */
   spaceCompact?: boolean
-  /** Workflow form mode */
-  workflowForm?: boolean
   /** Where the fields' values sit when the wizard is inside a group that keeps its own values. */
   fieldNamePrefix?: string | undefined
   /** Which copy of a repeated page this is; its fields' values sit in that row of the page's list. */

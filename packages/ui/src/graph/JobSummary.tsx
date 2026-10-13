@@ -1,8 +1,8 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { Indicator } from '../components/Indicator'
 import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import { DocumentIcon, OpenInNewGraphIcon } from '../icons'
 import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
@@ -24,20 +24,20 @@ function UsesIcon({
   }
   const open = () => navigation.openStepSource(uses, subworkflow.sourceUrl)
   return (
-    <button
-      type="button"
-      aria-label={jobActions.openOriginalWorkflow}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={jobActions.openOriginalWorkflow}
-      onClick={open}
-      className="cursor-pointer"
-    >
-      {slots.workflowIcon({
-        image: subworkflow.image,
-        type: subworkflow.type,
-        className: 'ml-1.5 h-[1.2em] w-[1.2em]',
-      })}
-    </button>
+    <Tooltip content={jobActions.openOriginalWorkflow}>
+      <button
+        type="button"
+        aria-label={jobActions.openOriginalWorkflow}
+        onClick={open}
+        className="cursor-pointer"
+      >
+        {slots.workflowIcon({
+          image: subworkflow.image,
+          type: subworkflow.type,
+          className: 'ml-1.5 h-[1.2em] w-[1.2em]',
+        })}
+      </button>
+    </Tooltip>
   )
 }
 
@@ -146,33 +146,33 @@ export function Joblist(
                     )}
                     {step.subworkflow && (
                       <>
-                        <button
-                          type="button"
-                          aria-label={jobActions.openSubworkflowLogs}
-                          data-tooltip-id={TOOLTIP_ID}
-                          data-tooltip-content={jobActions.openSubworkflowLogs}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            inputs.onStepLogClick(jobName, i)
-                          }}
-                          className="link ml-1"
-                        >
-                          <DocumentIcon className="w-[1.2em] h-[1.2em]" />
-                        </button>
+                        <Tooltip content={jobActions.openSubworkflowLogs}>
+                          <button
+                            type="button"
+                            aria-label={jobActions.openSubworkflowLogs}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              inputs.onStepLogClick(jobName, i)
+                            }}
+                            className="link ml-1"
+                          >
+                            <DocumentIcon className="w-[1.2em] h-[1.2em]" />
+                          </button>
+                        </Tooltip>
                         <UsesIcon uses={step.uses} subworkflow={step.subworkflow} />
-                        <button
-                          type="button"
-                          aria-label={jobActions.openInNewGraph}
-                          data-tooltip-id={TOOLTIP_ID}
-                          data-tooltip-content={jobActions.openInNewGraph}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            inputs.onSubworkflowIcon(jobName, i)
-                          }}
-                          className="link ml-1"
-                        >
-                          <OpenInNewGraphIcon className="w-[1.2em] h-[1.2em]" />
-                        </button>
+                        <Tooltip content={jobActions.openInNewGraph}>
+                          <button
+                            type="button"
+                            aria-label={jobActions.openInNewGraph}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              inputs.onSubworkflowIcon(jobName, i)
+                            }}
+                            className="link ml-1"
+                          >
+                            <OpenInNewGraphIcon className="w-[1.2em] h-[1.2em]" />
+                          </button>
+                        </Tooltip>
                       </>
                     )}
                   </div>

@@ -1,6 +1,6 @@
 import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type BundledTheme, type PluginConfig, Streamdown } from 'streamdown'
 import type { MarkdownProps } from './Markdown'
 

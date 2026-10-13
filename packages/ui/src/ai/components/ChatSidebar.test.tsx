@@ -308,7 +308,8 @@ describe('ChatSidebar hidden and in a drawer', () => {
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     expect(chatState.setDrawerOpen).toHaveBeenCalledWith(false)
     chatState.setDrawerOpen.mockClear()
-    fireEvent.click(screen.getAllByRole('button', { name: 'Close sidebar' })[0] as HTMLElement)
+    fireEvent.pointerDown(document.body)
+    fireEvent.click(document.body)
     expect(chatState.setDrawerOpen).toHaveBeenCalledWith(false)
   })
 

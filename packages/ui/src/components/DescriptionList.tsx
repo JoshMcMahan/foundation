@@ -1,6 +1,6 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import React from 'react'
-import { TooltipInfo } from './Tooltip'
+import { InfoTip } from './InfoTip'
 
 interface IDescriptionListItemProps {
   label: string
@@ -20,7 +20,7 @@ export function DescriptionListItem({
     <>
       <dt className={cx('text-[13px] leading-6 col-span-1 font-normal flex gap-1', className)}>
         <span className="min-w-0 truncate">{label}</span>
-        {tooltip && <TooltipInfo className="pr-2" text={tooltip} />}
+        {tooltip && <InfoTip className="pr-2" text={tooltip} />}
       </dt>
       <dd
         {...props}

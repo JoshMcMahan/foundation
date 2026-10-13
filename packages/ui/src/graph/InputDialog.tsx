@@ -1,6 +1,6 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react'
-import Dropdown from '../components/Dropdown'
+import { Combobox } from '../components/Combobox'
 import { FilterPill } from '../components/FilterPill'
 import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
@@ -838,7 +838,6 @@ function TypeSelect({
   const id = useId()
   const types = t.types as Record<string, string>
   const help = t.typeHelp as Record<string, string>
-  const known = inputTypes().includes(value)
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-baseline gap-x-1.5">
@@ -847,22 +846,21 @@ function TypeSelect({
         </label>
         <KeyHint label={t.inputType} yamlKey="type" />
       </div>
-      <Dropdown
+      <Combobox
         id={id}
         value={value}
         disabled={disabled}
-        textBoxClassName={FIELD_TEXT_BOX}
-        options={[
-          ...(known ? [] : [{ label: value, value }]),
-          ...INPUT_TYPE_GROUPS.map(([group, list]) => ({
-            category: t.typeGroups[group],
-            options: list
-              .filter((type) => allowStep || type !== 'step' || value === 'step')
-              .map((type) => ({ label: types[type] ?? type, value: type })),
-          })),
-        ]}
-        onChange={(next) => {
-          if (typeof next === 'string' && next) {
+        className={FIELD_TEXT_BOX}
+        items={INPUT_TYPE_GROUPS.map(([group, list]) => ({
+          label: t.typeGroups[group],
+          items: list
+            .filter((type) => allowStep || type !== 'step' || value === 'step')
+            .map((type) => ({ label: types[type] ?? type, value: type })),
+        }))}
+        // A type this editor doesn't know shows as written.
+        itemToStringLabel={(type) => types[type] ?? type}
+        onValueChange={(next) => {
+          if (next) {
             onChange(next)
           }
         }}
@@ -1427,7 +1425,7 @@ function RowsField({
           initialValues={{ rows: draft.rows }}
           labelPosition="top"
           workflowForm
-          setValues={(values) => {
+          onValuesChange={(values) => {
             if (touched.current) {
               const rows = values['rows']
               onChange({
@@ -1591,7 +1589,7 @@ function PropField({
                 aria-label={name}
                 value={perCopy.text}
                 suggestions={[]}
-                onChange={(next) => onChange({ ...perCopy, text: next })}
+                onValueChange={(next) => onChange({ ...perCopy, text: next })}
               />
               <FieldError message={error} />
             </>

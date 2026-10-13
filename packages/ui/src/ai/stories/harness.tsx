@@ -10,6 +10,7 @@ import { ChatProvider, type ChatProviderProps } from '../core/ChatProvider'
 import type { ChatLinkProps, ChatUIConfig } from '../core/config'
 import { countLines, utf8Bytes } from '../core/pastes'
 import type {
+  Allocation,
   ApprovalPart,
   ApprovalSubject,
   ChatMessage,
@@ -227,6 +228,10 @@ export function makeStaticAdapter(options?: {
    *  each model's provider_owner. */
   listProviders?: boolean
   attachments?: boolean
+  /** Sessions whose service did not answer, as the picker lists them. */
+  unreachableSessions?: { name: string; owner: string }[]
+  /** Offered for an organization model ("org:" providers). */
+  allocations?: Allocation[]
 }): ChatAdapter {
   const conversations = options?.conversations ?? [makeConversation()]
   const summaries =
@@ -297,7 +302,7 @@ export function makeStaticAdapter(options?: {
                   tool_calling_mode: 'none' as const,
                 },
               ],
-          unreachableSessions: [],
+          unreachableSessions: options?.unreachableSessions ?? [],
           providerIssues: options?.providerIssues ?? [],
         }
       },
@@ -393,6 +398,10 @@ export function makeStaticAdapter(options?: {
         return providers
       },
     }
+  }
+  const allocations = options?.allocations
+  if (allocations) {
+    adapter.allocations = { list: async () => allocations }
   }
   return adapter
 }

@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from 'react'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -84,10 +84,7 @@ export function ConversationLayout({
   return (
     <div ref={ref} className={cx('flex h-full', drawer && 'relative overflow-hidden')}>
       {sidebar}
-      <main
-        inert={drawer && drawerOpen}
-        className={cx('flex min-w-0 flex-1 flex-col', CHAT_COLUMN_SCOPE)}
-      >
+      <main className={cx('flex min-w-0 flex-1 flex-col', CHAT_COLUMN_SCOPE)}>
         {drawer && (drawerToggle || drawerBar) && (
           <div className="flex shrink-0 items-center gap-2 bg-(--theme-panel-bg) px-2 pt-2">
             {drawerToggle && (

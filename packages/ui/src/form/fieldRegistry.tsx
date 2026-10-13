@@ -18,7 +18,7 @@ import TextAreaField from './Fields/TextAreaField'
 import type { FieldComponentProps } from './types/fieldComponentTypes'
 
 // biome-ignore lint/suspicious/noExplicitAny: Field type discrimination happens at runtime
-export type FieldComponent = React.ComponentType<FieldComponentProps<any, any>>
+export type FieldComponent = React.ComponentType<FieldComponentProps<any>>
 
 // Fields with no data-fetching or host coupling; everything else is supplied
 // by the host through the DynamicForm `fields` prop.

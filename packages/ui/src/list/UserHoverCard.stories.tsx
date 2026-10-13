@@ -1,14 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, userEvent, within } from 'storybook/test'
+import type { ReactNode } from 'react'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { AvatarSize } from '../components/Avatar'
 import { Avatar } from '../components/Avatar'
+import { HoverCard } from '../components/HoverCard'
 import { AccessIcon, CalendarIcon, ClockIcon, LicenseIcon, MailIcon } from '../icons'
-import {
-  type HoverCardPlacement,
-  HoverCardRow,
-  HoverCardTrigger,
-  UserHoverCard,
-} from './UserHoverCard'
+import { HoverCardRow, UserHoverCard } from './UserHoverCard'
 
 const meta: Meta = {
   title: 'UI/List/User hover card',
@@ -65,58 +62,73 @@ function Rows() {
   )
 }
 
-const PLACEMENT: HoverCardPlacement = {
-  x: 24,
-  y: 24,
-  onKeepOpen: () => {},
-  onLeave: () => {},
+/** A card already open below its anchor, as a hover leaves it. */
+function Opened({ anchor, card }: { anchor: string; card: ReactNode }) {
+  return (
+    <HoverCard defaultOpen card={card}>
+      <a href={`/users/${anchor}`} className="text-sm">
+        {anchor}
+      </a>
+    </HoverCard>
+  )
 }
 
 export const Open: StoryObj = {
   render: () => (
-    <UserHoverCard
-      {...PLACEMENT}
-      username="alovelace"
-      name="Ada Lovelace"
-      avatarSrc={PHOTO}
-      badge="Admin"
-      href="/users/alovelace"
-    >
-      <Rows />
-    </UserHoverCard>
+    <Opened
+      anchor="alovelace"
+      card={
+        <UserHoverCard
+          username="alovelace"
+          name="Ada Lovelace"
+          avatarSrc={PHOTO}
+          badge="Admin"
+          href="/users/alovelace"
+        >
+          <Rows />
+        </UserHoverCard>
+      }
+    />
   ),
   play: async () => {
-    await expect(await screen.findByText('Ada Lovelace')).toBeVisible()
-    await expect(screen.getByRole('link')).toHaveAttribute('href', '/users/alovelace')
+    await waitFor(() => expect(screen.getByText('Ada Lovelace')).toBeVisible())
+    await expect(screen.getByRole('link', { name: /Ada Lovelace/ })).toHaveAttribute(
+      'href',
+      '/users/alovelace',
+    )
   },
 }
 
 export const Loading: StoryObj = {
   render: () => (
-    <UserHoverCard {...PLACEMENT} username="alovelace" href="/users/alovelace" loading />
+    <Opened
+      anchor="alovelace"
+      card={<UserHoverCard username="alovelace" href="/users/alovelace" loading />}
+    />
   ),
 }
 
 export const OnHover: StoryObj = {
   render: () => (
-    <HoverCardTrigger
-      className="inline-flex"
-      card={(placement) => (
-        <UserHoverCard {...placement} username="ghopper" name="Grace Hopper" href="/users/ghopper">
+    <HoverCard
+      card={
+        <UserHoverCard username="ghopper" name="Grace Hopper" href="/users/ghopper">
           <Rows />
         </UserHoverCard>
-      )}
+      }
     >
-      <span className="inline-flex items-center gap-2 text-sm">
+      <a href="/users/ghopper" className="inline-flex items-center gap-2 text-sm">
         <Avatar name="Grace Hopper" size="sm" />
         ghopper
-      </span>
-    </HoverCardTrigger>
+      </a>
+    </HoverCard>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.hover(canvas.getByText('ghopper'))
-    await expect(await screen.findByText('Grace Hopper')).toBeVisible()
+    await waitFor(() => expect(screen.getByText('Grace Hopper')).toBeVisible())
+    await userEvent.unhover(canvas.getByText('ghopper'))
+    await waitFor(() => expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument())
   },
 }
 
@@ -127,33 +139,40 @@ const UNBROKEN_NAME = 'Bartholomewaloysiuswetheringtonfairweather'
  * truncated line. */
 export const LongNames: StoryObj = {
   render: () => (
-    <>
-      <UserHoverCard
-        {...PLACEMENT}
-        username="kjohnson"
-        name="Katherine Johnson"
-        badge="Member"
-        href="/users/kjohnson"
-      >
-        <Rows />
-      </UserHoverCard>
-      <UserHoverCard
-        {...PLACEMENT}
-        x={304}
-        username="bartholomew.aloysius.wetherington.fairweather"
-        name={UNBROKEN_NAME}
-        avatarSrc={PHOTO}
-        badge="Admin"
-        href="/users/bwetherington"
-      >
-        <Rows />
-      </UserHoverCard>
-    </>
+    <div className="flex" style={{ gap: 288 }}>
+      <Opened
+        anchor="kjohnson"
+        card={
+          <UserHoverCard
+            username="kjohnson"
+            name="Katherine Johnson"
+            badge="Member"
+            href="/users/kjohnson"
+          >
+            <Rows />
+          </UserHoverCard>
+        }
+      />
+      <Opened
+        anchor="bwetherington"
+        card={
+          <UserHoverCard
+            username="bartholomew.aloysius.wetherington.fairweather"
+            name={UNBROKEN_NAME}
+            avatarSrc={PHOTO}
+            badge="Admin"
+            href="/users/bwetherington"
+          >
+            <Rows />
+          </UserHoverCard>
+        }
+      />
+    </div>
   ),
   play: async () => {
     for (const name of ['Katherine Johnson', UNBROKEN_NAME]) {
       const el = await screen.findByText(name)
-      await expect(el).toBeVisible()
+      await waitFor(() => expect(el).toBeVisible())
       await expect(el.scrollWidth).toBeLessThanOrEqual(el.clientWidth)
     }
   },
@@ -163,16 +182,20 @@ export const LongNames: StoryObj = {
  * button appears while the username is hovered, without moving anything. */
 export const CopyEmail: StoryObj = {
   render: () => (
-    <UserHoverCard
-      {...PLACEMENT}
-      username="ada.lovelace@example.com"
-      name="Ada Lovelace"
-      avatarSrc={PHOTO}
-      badge="Admin"
-      href="/users/alovelace"
-    >
-      <HoverCardRow icon={<ClockIcon />}>9:41 AM local time</HoverCardRow>
-    </UserHoverCard>
+    <Opened
+      anchor="alovelace"
+      card={
+        <UserHoverCard
+          username="ada.lovelace@example.com"
+          name="Ada Lovelace"
+          avatarSrc={PHOTO}
+          badge="Admin"
+          href="/users/alovelace"
+        >
+          <HoverCardRow icon={<ClockIcon />}>9:41 AM local time</HoverCardRow>
+        </UserHoverCard>
+      }
+    />
   ),
   play: async () => {
     const button = await screen.findByRole('button', { name: 'Copy email' })

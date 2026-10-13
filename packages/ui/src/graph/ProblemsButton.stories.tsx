@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, userEvent, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ProblemsButton } from './ProblemsButton'
 
 const meta: Meta<typeof ProblemsButton> = {
@@ -35,7 +35,8 @@ export const SomeProblemsOpen: StoryObj<typeof ProblemsButton> = {
   args: { problems: PROBLEMS },
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button'))
-    await expect(await screen.findByRole('dialog')).toBeVisible()
+    const list = await screen.findByRole('dialog', { name: '2 problems' })
+    await waitFor(() => expect(list).toBeVisible())
   },
 }
 

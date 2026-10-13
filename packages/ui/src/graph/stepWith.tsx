@@ -428,8 +428,8 @@ function RepositoryForm({
       initialValues={initial}
       labelPosition="top"
       workflowForm
-      setValues={(values) => {
-        // The form reports its values as it opens; only a change the user makes is written.
+      onValuesChange={(values) => {
+        // The form reports what it fills in itself too, such as a default; only a change the user makes is written.
         const keys = ['repo', 'branch', 'yaml', 'thumbnail'] as const
         if (keys.every((key) => String(values[key] ?? '') === initial[key])) {
           return
@@ -496,11 +496,11 @@ export function UsesPicker({
   ) => (
     <SuggestionInput
       id={id}
-      ariaLabel={t.fields.uses}
+      aria-label={t.fields.uses}
       value={uses}
       placeholder={placeholder}
       suggestions={values.map((value) => ({ value, label: labels?.(value) }))}
-      onChange={onUses}
+      onValueChange={onUses}
     />
   )
   return (

@@ -1,6 +1,5 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type JSX, useEffect, useState, useTransition } from 'react'
-import Skeleton from 'react-loading-skeleton'
 import { useLocalStorage } from 'usehooks-ts'
 import Callout from '../components/Callout'
 import { positionKeys } from '../components/keys'
@@ -536,7 +535,7 @@ function SkeletonPreview() {
           </div>
           <div className="overflow-auto flex-1 px-2 py-2 space-y-1.5">
             {positionKeys(6, 'skeleton').map((key) => (
-              <Skeleton key={key} height={14} />
+              <div key={key} className="h-3.5 animate-pulse rounded bg-(--theme-muted-panel-bg)" />
             ))}
           </div>
         </div>

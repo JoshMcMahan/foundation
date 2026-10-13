@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { Fragment } from 'react'
 import { FileIcon, RunningIcon, XIcon } from '../../icons'
 import { useChatConfig } from '../core/config'

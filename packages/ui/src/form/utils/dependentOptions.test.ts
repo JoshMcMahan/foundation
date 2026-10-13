@@ -6,31 +6,24 @@ const byRegion = {
 }
 
 describe('dependentOptions', () => {
-  it('keys the options by the value at the depends_on path, not by the path', () => {
-    const result = dependentOptions(byRegion, 'cluster.region', { cluster: { region: 'eu' } })
-    expect(result).toEqual({ options: byRegion.eu, parentValue: 'eu' })
-  })
-
-  it('follows array paths the form resolves for a row', () => {
-    const values = { rows: [{ region: 'us' }, { region: 'eu' }] }
-    expect(dependentOptions(byRegion, 'rows[1].region', values).options).toEqual(byRegion.eu)
+  it('keys the options by the value they depend on', () => {
+    expect(dependentOptions(byRegion, 'eu')).toEqual(byRegion.eu)
   })
 
   it('matches non-string parent values by their string form', () => {
     const options = { true: ['a'], 2: ['b'] }
-    expect(dependentOptions(options, 'flag', { flag: true }).options).toEqual(['a'])
-    expect(dependentOptions(options, 'n', { n: 2 }).options).toEqual(['b'])
+    expect(dependentOptions(options, true)).toEqual(['a'])
+    expect(dependentOptions(options, 2)).toEqual(['b'])
   })
 
   it('offers nothing until the parent has a value, or for a value with no list', () => {
-    expect(dependentOptions(byRegion, 'region', {}).options).toEqual([])
-    expect(dependentOptions(byRegion, 'region', { region: null }).options).toEqual([])
-    expect(dependentOptions(byRegion, 'region', { region: 'ap' }).options).toEqual([])
+    expect(dependentOptions(byRegion, undefined)).toEqual([])
+    expect(dependentOptions(byRegion, null)).toEqual([])
+    expect(dependentOptions(byRegion, 'ap')).toEqual([])
   })
 
-  it('passes a plain list through and offers nothing for a keyed list without depends_on', () => {
+  it('passes a plain list through', () => {
     const list = [{ label: 'One', value: '1' }]
-    expect(dependentOptions(list, 'region', { region: 'us' }).options).toBe(list)
-    expect(dependentOptions(byRegion, undefined, { region: 'us' }).options).toEqual([])
+    expect(dependentOptions(list, 'us')).toBe(list)
   })
 })

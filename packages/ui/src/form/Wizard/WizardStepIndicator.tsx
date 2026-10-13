@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { useStrings } from '../../components/Provider'
 import type { WizardStepIndicatorProps } from './types'

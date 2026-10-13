@@ -1,6 +1,6 @@
 import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useEffect, useState } from 'react'
 import { type BundledTheme, defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
 import { useChatConfig } from '../core/config'

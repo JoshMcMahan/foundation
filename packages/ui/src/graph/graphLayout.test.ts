@@ -202,26 +202,32 @@ describe('computeGraphLayout', () => {
     expect(long.dependencyCols).toHaveLength(20000)
   })
 
-  // Times measured against each other in one run, so a slow machine slows both: four times the jobs
-  // take about four times as long when the work grows with them, and sixteen when it grows with their
-  // square. The fastest of a few runs leaves out what a collection or a busy runner adds.
+  // Eight times the jobs take twelve to fourteen times as long (more than eight, as the larger graphs
+  // outgrow the caches), and would take sixty-four if the work grew with their square; the bound sits
+  // between. Measured in the CPU time this process spends, which other work on a busy machine doesn't
+  // add to as it does to the time on the clock, and the fastest of a few runs leaves out a collection.
   it.each([
     ['a wide graph', (n: number) => layeredJobs(n, { columns: 40 })],
     ['a square graph', (n: number) => layeredJobs(n, { columns: Math.round(Math.sqrt(n)) })],
     ['a chain', (n: number) => chainJobs(n)],
   ])('takes time in step with the jobs it lays out: %s', (_, make) => {
-    const fastest = (n: number) => {
-      const jobs = asJobs(make(n))
+    const small = asJobs(make(2000))
+    const large = asJobs(make(16000))
+    const time = (jobs: Record<string, WorkflowJob>) => {
+      const start = process.cpuUsage()
       layOut(jobs)
-      let best = Number.POSITIVE_INFINITY
-      for (let run = 0; run < 5; run++) {
-        const start = performance.now()
-        layOut(jobs)
-        best = Math.min(best, performance.now() - start)
-      }
-      return best
+      const { user, system } = process.cpuUsage(start)
+      return user + system
     }
-    expect(fastest(16000) / fastest(4000)).toBeLessThan(10)
+    time(small)
+    time(large)
+    let fastestSmall = Number.POSITIVE_INFINITY
+    let fastestLarge = Number.POSITIVE_INFINITY
+    for (let run = 0; run < 7; run++) {
+      fastestSmall = Math.min(fastestSmall, time(small))
+      fastestLarge = Math.min(fastestLarge, time(large))
+    }
+    expect(fastestLarge / fastestSmall).toBeLessThan(30)
   })
 })
 

@@ -6,6 +6,7 @@ import type { WorkflowEngine } from '../engine'
 import type { GraphEditorStrings, InputsEditorStrings } from '../graph/editorStrings'
 import type { RunLink } from '../graph/types'
 import { safeUrl } from '../safeUrl'
+import { TooltipProvider } from './Tooltip'
 
 export type UIToastId = string | number
 
@@ -53,7 +54,6 @@ export interface UIStrings {
     favoriteHintOn: string
     favoriteHintOff: string
     filter: string
-    noOptions: string
   }
   common: {
     copy: string
@@ -67,6 +67,7 @@ export interface UIStrings {
     remove: string
     sort: string
     userAvatar: string
+    moreInfo: string
   }
   dropdown: {
     select: (type: string) => string
@@ -362,7 +363,6 @@ export interface UIStrings {
     couldntCopy: (label: string) => string
     moreActions: string
     /** A toolbar toggle's name in the overflow menu, where a row can't be pressed. */
-    toggleState: (label: string, on: boolean) => string
     labelName: string
     labelEmail: string
     labelUsername: string
@@ -461,22 +461,13 @@ import type { PageHeaderCrumb } from './PageHeader'
 
 /** Renders internal navigation; hosts bind their router's Link. Accessibility
  * and tooltip data attributes pass through so header links keep their labels. */
-export type UILinkComponent = React.ComponentType<{
-  to: string
-  onClick?: () => void
-  className?: string
-  children: ReactNode
-  title?: string | undefined
-  'aria-label'?: string | undefined
-  'aria-current'?: 'page' | undefined
-  [dataAttr: `data-${string}`]: string | undefined
-}>
+/** An internal navigation link. It passes every other prop, ref included, to
+ *  its anchor, so menus and tooltips can attach to it. */
+export type UILinkComponent = React.ComponentType<
+  React.ComponentPropsWithRef<'a'> & { href: string }
+>
 
-const DefaultLink: UILinkComponent = ({ to, onClick, className, children, ...rest }) => (
-  <a href={safeUrl(to)} onClick={onClick} className={className} {...rest}>
-    {children}
-  </a>
-)
+const DefaultLink: UILinkComponent = ({ href, ...rest }) => <a href={safeUrl(href)} {...rest} />
 
 /** The provider's link slot, with a plain anchor fallback. */
 export function useLink(): UILinkComponent {
@@ -584,7 +575,6 @@ const DEFAULTS: UIProviderValue = {
       favoriteHintOn: "Your item will be favorited when it's created",
       favoriteHintOff: "Favorite your item when it's created",
       filter: 'Filter',
-      noOptions: 'No options available',
     },
     common: {
       copy: 'Copy',
@@ -599,6 +589,7 @@ const DEFAULTS: UIProviderValue = {
       remove: 'Remove',
       sort: 'Sort',
       userAvatar: 'User avatar',
+      moreInfo: 'More information',
     },
     dropdown: {
       select: (type) => `Select ${type}`,
@@ -912,7 +903,6 @@ const DEFAULTS: UIProviderValue = {
       copied: (label) => `Copied ${label}`,
       couldntCopy: (label) => `Couldn't copy ${label}`,
       moreActions: 'More actions',
-      toggleState: (label, on) => `${label}, ${on ? 'on' : 'off'}`,
       labelName: 'name',
       labelEmail: 'email',
       labelUsername: 'username',
@@ -1195,5 +1185,9 @@ export function UIProvider({
     }),
     [notify, strings, navigation, data, slots, engine],
   )
-  return <UIContext.Provider value={value}>{children}</UIContext.Provider>
+  return (
+    <UIContext.Provider value={value}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </UIContext.Provider>
+  )
 }

@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import { useEffect, useRef, useState } from 'react'
 import { LoaderIcon, StopSolidIcon } from '../../../icons'

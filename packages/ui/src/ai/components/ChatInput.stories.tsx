@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo } from 'react'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
   DEFAULT_PERMISSION_MODE,
@@ -161,15 +162,22 @@ export const AgentComposer: StoryObj<{
 
 // Alice's own provider and one Bob shared with her carry the same name; the
 // picker names Bob as the owner of his. The organization's provider has no
-// owner to name. An adapter that lists models only gets the same labels from
-// each model's owner. The play opens the picker.
-export const SharedProviders: StoryObj<{ pickerOpen: boolean; listProviders: boolean }> = {
-  args: { pickerOpen: true, listProviders: true },
+// owner to name, and picking its model shows the allocation it bills. An
+// adapter that lists models only gets the same labels from each model's
+// owner. Sessions that did not answer head the list with their status. The
+// play opens the picker.
+export const SharedProviders: StoryObj<{
+  pickerOpen: boolean
+  listProviders: boolean
+  unreachable: boolean
+}> = {
+  args: { pickerOpen: true, listProviders: true, unreachable: true },
   argTypes: {
     listProviders: {
       control: 'boolean',
       description: 'Adapter lists providers; off reads owners from the models',
     },
+    unreachable: { control: 'boolean', description: 'Two sessions are not responding' },
   },
   render: (args) => {
     const Composer = () => {
@@ -182,6 +190,16 @@ export const SharedProviders: StoryObj<{ pickerOpen: boolean; listProviders: boo
               { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
             ],
             listProviders: args.listProviders,
+            unreachableSessions: args.unreachable
+              ? [
+                  { name: 'gpu-box', owner: 'alice' },
+                  { name: 'build-01', owner: 'alice' },
+                ]
+              : [],
+            allocations: [
+              { name: 'research', total: 500, used: 123.4 },
+              { name: 'teaching', total: 100 },
+            ],
           }),
         [],
       )
@@ -191,29 +209,22 @@ export const SharedProviders: StoryObj<{ pickerOpen: boolean; listProviders: boo
             <ChatInput
               onSend={send}
               conversationId="conv-shared-providers"
-              settingsRight={<ComposerControls />}
+              settingsRight={<ComposerControls targetSession="alice:gpu-box" />}
             />
           </div>
         </StoryChat>
       )
     }
-    return <Composer key={String(args.listProviders)} />
+    return <Composer key={`${args.listProviders}${args.unreachable}`} />
   },
   play: async ({ canvasElement, args }) => {
     if (!args.pickerOpen) {
       return
     }
     // The models load after mount; the trigger stays disabled until they do.
-    for (let i = 0; i < 50; i++) {
-      const trigger = canvasElement.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="dialog"]:not([disabled])',
-      )
-      if (trigger) {
-        trigger.click()
-        return
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
+    const trigger = await within(canvasElement).findByRole('combobox', { name: 'Model' })
+    await waitFor(() => expect(trigger).toBeEnabled())
+    await userEvent.click(trigger)
   },
 }
 

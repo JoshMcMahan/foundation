@@ -3,22 +3,10 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import type { UILinkComponent } from '../components/Provider'
 import { UIProvider } from '../components/Provider'
-import {
-  type HoverCardPlacement,
-  HoverCardRow,
-  HoverCardTrigger,
-  UserHoverCard,
-} from './UserHoverCard'
+import { HoverCardRow, UserHoverCard } from './UserHoverCard'
 
-const placement: HoverCardPlacement = {
-  x: 0,
-  y: 0,
-  onKeepOpen: () => {},
-  onLeave: () => {},
-}
-
-const RouterLink: UILinkComponent = ({ to, children, className }) => (
-  <a href={`#router${to}`} className={className}>
+const RouterLink: UILinkComponent = ({ href, children, className }) => (
+  <a href={`#router${href}`} className={className}>
     {children}
   </a>
 )
@@ -26,13 +14,7 @@ const RouterLink: UILinkComponent = ({ to, children, className }) => (
 describe('UserHoverCard', () => {
   it('shows the name, username, role and detail rows', () => {
     render(
-      <UserHoverCard
-        {...placement}
-        username="alovelace"
-        name="Ada Lovelace"
-        badge="Admin"
-        href="/users/alovelace"
-      >
+      <UserHoverCard username="alovelace" name="Ada Lovelace" badge="Admin" href="/users/alovelace">
         <HoverCardRow icon={<span />}>Online</HoverCardRow>
       </UserHoverCard>,
     )
@@ -44,7 +26,7 @@ describe('UserHoverCard', () => {
   })
 
   it('falls back to the username without a name, and is unlinked without href', () => {
-    render(<UserHoverCard {...placement} username="alovelace" />)
+    render(<UserHoverCard username="alovelace" />)
     expect(screen.getAllByText('alovelace')).toHaveLength(2)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
@@ -52,17 +34,17 @@ describe('UserHoverCard', () => {
   it('links through the provider slot, or a linkComponent override', () => {
     const { rerender } = render(
       <UIProvider slots={{ link: RouterLink }}>
-        <UserHoverCard {...placement} username="a" href="/users/a" />
+        <UserHoverCard username="a" href="/users/a" />
       </UIProvider>,
     )
     expect(screen.getByRole('link')).toHaveAttribute('href', '#router/users/a')
 
-    const Override: UILinkComponent = ({ to, children }) => (
-      <a href={`#override${to}`}>{children}</a>
+    const Override: UILinkComponent = ({ href, children }) => (
+      <a href={`#override${href}`}>{children}</a>
     )
     rerender(
       <UIProvider slots={{ link: RouterLink }}>
-        <UserHoverCard {...placement} username="a" href="/users/a" linkComponent={Override} />
+        <UserHoverCard username="a" href="/users/a" linkComponent={Override} />
       </UIProvider>,
     )
     expect(screen.getByRole('link')).toHaveAttribute('href', '#override/users/a')
@@ -71,7 +53,7 @@ describe('UserHoverCard', () => {
   it('shows a labelled loading region instead of rows while loading', () => {
     render(
       <UIProvider strings={{ loading: 'Cargando' }}>
-        <UserHoverCard {...placement} username="a" loading>
+        <UserHoverCard username="a" loading>
           <HoverCardRow icon={<span />}>Online</HoverCardRow>
         </UserHoverCard>
       </UIProvider>,
@@ -94,27 +76,6 @@ describe('HoverCardRow', () => {
   })
 })
 
-describe('HoverCardTrigger', () => {
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
-
-  it('opens the card after hovering and closes it after leaving', () => {
-    render(
-      <HoverCardTrigger card={() => <div>card body</div>}>
-        <span>trigger</span>
-      </HoverCardTrigger>,
-    )
-    fireEvent.mouseEnter(screen.getByText('trigger'))
-    expect(screen.queryByText('card body')).not.toBeInTheDocument()
-    act(() => vi.advanceTimersByTime(400))
-    expect(screen.getByText('card body')).toBeInTheDocument()
-
-    fireEvent.mouseLeave(screen.getByText('trigger'))
-    act(() => vi.advanceTimersByTime(200))
-    expect(screen.queryByText('card body')).not.toBeInTheDocument()
-  })
-})
-
 describe('UserHoverCard copy', () => {
   it('copies an email address, naming it, from beside the linked header', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
@@ -122,7 +83,7 @@ describe('UserHoverCard copy', () => {
     const success = vi.fn()
     render(
       <UIProvider notify={{ success }}>
-        <UserHoverCard {...placement} username="ada@example.com" href="/users/a" />
+        <UserHoverCard username="ada@example.com" href="/users/a" />
       </UIProvider>,
     )
     const button = screen.getByRole('button', { name: 'Copy email' })
@@ -134,7 +95,7 @@ describe('UserHoverCard copy', () => {
   })
 
   it('names a handle a username, and stays reachable from the keyboard', () => {
-    render(<UserHoverCard {...placement} username="alovelace" />)
+    render(<UserHoverCard username="alovelace" />)
     const button = screen.getByRole('button', { name: 'Copy username' })
     // Hidden until hover by opacity alone, so it keeps its place and its focus.
     expect(button).toHaveClass('opacity-0', 'focus-visible:opacity-100')
@@ -143,7 +104,7 @@ describe('UserHoverCard copy', () => {
   })
 
   it('has no copy button without a username', () => {
-    render(<UserHoverCard {...placement} username="" name="Ada" />)
+    render(<UserHoverCard username="" name="Ada" />)
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

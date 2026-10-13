@@ -1,8 +1,9 @@
-import { useField, useFormikContext } from 'formik'
-import Switch from '../../components/SwitchToggle'
+import { Switch } from '../../components/Switch'
+import { Tooltip } from '../../components/Tooltip'
 import { FieldWrapper } from '../FieldWrapper'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
+import { useFieldValue } from '../useFieldValue'
 export interface IBooleanField extends BaseField {
   type: 'boolean'
   default?: boolean
@@ -23,73 +24,47 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
     onChange,
     tooltipComponent,
     spaceCompact,
-    setFormDirty,
   } = props
   // The form names every field before it renders one.
-  const fieldName = field.name ?? ''
-
-  const [fieldState] = useField<boolean | string>(fieldName)
-  const { setFieldValue, setFieldTouched } = useFormikContext()
+  const [value, change] = useFieldValue<boolean | string>(field.name ?? '')
 
   const handleChange = (val: string | boolean) => {
     if (disabled) {
       return
     }
     onChange?.(val)
-    setFieldTouched(fieldName, true)
-    setFieldValue(fieldName, val)
-    setFormDirty(true)
+    change(val)
   }
 
-  const value = fieldState.value
-
-  // Convert options to expected format
-  const options = field.options
-    ? {
-        onOption: String(field.options.onOption ?? true),
-        offOption: String(field.options.offOption ?? false),
-      }
-    : undefined
-
-  // Option strings like "YES" are stored values (e.g. a config file's Default=YES) and
-  // can't be reworded; only their display is title-cased to match other toggles.
-  const displayLabel = (option: string) =>
-    option.charAt(0).toUpperCase() + option.slice(1).toLowerCase()
+  // Custom options store strings such as "YES"; the switch maps them to on and off.
+  const onOption = field.options ? String(field.options.onOption ?? true) : true
+  const offOption = field.options ? String(field.options.offOption ?? false) : false
+  const checked = value === true || value === 'true' || value === onOption
 
   return (
     <FieldWrapper
-      // We always mark this as optional, since a boolean field is either true or false
+      // A boolean is always set, so the field is never missing a value.
       optional
       label={label}
-      tooltipComponent={<div>{tooltipComponent}</div>}
+      tooltipComponent={tooltipComponent}
       description={field.description}
       labelPosition={labelPosition}
       spaceCompact={spaceCompact}
     >
-      {({ id, describedBy }) =>
-        options ? (
+      {({ id, describedBy }) => (
+        <Tooltip content={field.disabled_message} disabled={!disabled}>
           <Switch
             id={id}
-            aria-describedby={describedBy}
-            onChange={(on) => handleChange(on ? options.onOption : options.offOption)}
-            value={value === true || value === options.onOption}
-            yesLabel={displayLabel(options.onOption)}
-            noLabel={displayLabel(options.offOption)}
+            nativeButton
+            render={<button type="button" />}
+            checked={checked}
+            onCheckedChange={(on) => handleChange(on ? onOption : offOption)}
             disabled={disabled}
-            invalid={missing}
-          />
-        ) : (
-          <Switch
-            id={id}
             aria-describedby={describedBy}
-            datatip={field.disabled_message}
-            onChange={handleChange}
-            value={value === true || value === 'true'}
-            disabled={disabled}
-            invalid={missing}
+            aria-invalid={missing || undefined}
           />
-        )
-      }
+        </Tooltip>
+      )}
     </FieldWrapper>
   )
 }

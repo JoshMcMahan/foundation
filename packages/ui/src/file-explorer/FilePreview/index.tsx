@@ -1,7 +1,7 @@
-import cx from 'classnames'
-import { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { clsx as cx } from 'clsx'
+import { useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
+import { Modal } from '../../components/Modal'
 import { useStrings } from '../../components/Provider'
 import {
   ChevronLeftIcon,
@@ -68,42 +68,25 @@ export function FilePreview({
   const hasPrev = index > 0
   const hasNext = index > -1 && index < siblings.length - 1
 
-  const goPrev = useCallback(() => {
+  const goPrev = () => {
     const prev = index > 0 ? siblings[index - 1] : undefined
     if (prev) {
       onNavigate(prev)
     }
-  }, [index, siblings, onNavigate])
-  const goNext = useCallback(() => {
+  }
+  const goNext = () => {
     const next = index > -1 ? siblings[index + 1] : undefined
     if (next) {
       onNavigate(next)
     }
-  }, [index, siblings, onNavigate])
+  }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on file change
   useEffect(() => {
     setZoom(100)
   }, [node])
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      } else if (e.key === 'ArrowRight') {
-        goNext()
-      } else if (e.key === 'ArrowLeft') {
-        goPrev()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open, onClose, goNext, goPrev])
-
-  if (!open || !node) {
+  if (!node) {
     return null
   }
 
@@ -247,18 +230,28 @@ export function FilePreview({
     </div>
   )
 
-  return createPortal(
-    <div
-      role="none"
-      className="fixed inset-0 z-9995 flex items-center justify-center"
-      style={{
-        backgroundColor: isOverlay ? 'rgba(1,4,9,.94)' : 'rgba(1,4,9,.62)',
-        backdropFilter: isOverlay ? undefined : 'blur(3px)',
-        WebkitBackdropFilter: isOverlay ? undefined : 'blur(3px)',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose()
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      align="center"
+      panel={false}
+      aria-label={node.name}
+      backdropClassName={
+        isOverlay ? 'bg-[rgba(1,4,9,.94)]' : 'bg-[rgba(1,4,9,.62)] backdrop-blur-[3px]'
+      }
+      className={cx(
+        'flex flex-col',
+        isOverlay
+          ? 'fixed inset-0'
+          : 'relative h-[min(780px,90vh)] w-[min(1120px,94vw)] overflow-hidden rounded-2xl border theme-border shadow-2xl',
+        floatingChrome ? 'bg-transparent' : 'bg-(--theme-panel-bg)',
+      )}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowRight') {
+          goNext()
+        } else if (e.key === 'ArrowLeft') {
+          goPrev()
         }
       }}
     >
@@ -278,26 +271,10 @@ export function FilePreview({
           />
         </>
       )}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={node.name}
-        className={cx(
-          'relative flex flex-col',
-          isOverlay
-            ? 'h-screen w-screen'
-            : 'overflow-hidden rounded-2xl border theme-border shadow-2xl',
-          floatingChrome ? 'bg-transparent' : 'bg-(--theme-panel-bg)',
-        )}
-        style={isOverlay ? undefined : { width: 'min(1120px, 94vw)', height: 'min(780px, 90vh)' }}
-      >
-        {topBar}
-        {stage}
-        {footer}
-      </div>
-    </div>,
-    // Portal at the body: the theme tokens live on the document root.
-    document.body,
+      {topBar}
+      {stage}
+      {footer}
+    </Modal>
   )
 }
 
@@ -407,10 +384,7 @@ function EdgeButton({
       type="button"
       aria-label={label}
       disabled={disabled}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
-      }}
+      onClick={onClick}
       className={cx(
         'absolute top-1/2 z-20 flex h-13 w-13 -translate-y-1/2 items-center justify-center rounded-full text-white backdrop-blur',
         side === 'left' ? 'left-5' : 'right-5',

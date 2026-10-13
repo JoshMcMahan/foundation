@@ -1,20 +1,17 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { Form, Formik, useFormikContext } from 'formik'
 import { act } from 'react'
-import type { FieldComponentProps } from '../types/fieldComponentTypes'
+import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import type { IDurationField } from './DurationField'
 import DurationField from './DurationField'
 import { getInvalidDurationPaths } from './durationValidity'
 
 function Probe({ name }: { name: string }) {
-  const { values } = useFormikContext<Record<string, unknown>>()
-  return <span data-testid="val">{JSON.stringify(values[name] ?? null)}</span>
+  const value = useWatch({ name })
+  return <span data-testid="val">{JSON.stringify(value ?? null)}</span>
 }
 
-// Bridges the FieldComponentProps contract: fields receive currentValue and
-// setFieldValue as props instead of reading Formik context themselves.
 function Harness({
   field,
   initialValues,
@@ -22,32 +19,19 @@ function Harness({
   field: IDurationField
   initialValues: Record<string, unknown>
 }) {
+  const form = useForm({ defaultValues: initialValues })
   return (
-    <Formik initialValues={initialValues} onSubmit={vi.fn()}>
-      <Form>
-        <FieldUnderTest field={field} />
-        <Probe name={field.name!} />
-      </Form>
-    </Formik>
+    <FormProvider {...form}>
+      <DurationField
+        field={field}
+        label={field.label ?? 'Duration'}
+        labelPosition="top"
+        missing={false}
+        disabled={false}
+      />
+      <Probe name={field.name ?? ''} />
+    </FormProvider>
   )
-}
-
-function FieldUnderTest({ field }: { field: IDurationField }) {
-  const { values, setFieldValue, setFieldTouched } = useFormikContext<Record<string, unknown>>()
-  const props: FieldComponentProps<IDurationField, number | string | undefined> = {
-    field,
-    label: field.label ?? 'Duration',
-    labelPosition: 'top',
-    missing: false,
-    missingFields: [],
-    values,
-    setFormDirty: vi.fn(),
-    disabled: false,
-    currentValue: values[field.name!] as number | string | undefined,
-    setFieldValue,
-    setFieldTouched,
-  }
-  return <DurationField {...props} />
 }
 
 const makeField = (overrides: Partial<IDurationField> = {}): IDurationField => ({
@@ -89,7 +73,7 @@ describe('DurationField', () => {
     expect(screen.getByRole('textbox')).toHaveValue('00:05:00')
   })
 
-  it('writes parsed seconds to the form after the debounce', () => {
+  it('writes parsed seconds to the form', () => {
     renderField()
     typeText('2:00:00')
     expect(screen.getByTestId('val')).toHaveTextContent('7200')
@@ -206,7 +190,7 @@ describe('DurationField disable checkbox', () => {
     expect(screen.getByTestId('val')).toHaveTextContent(/^-1$/)
   })
 
-  it('checking writes the sentinel, cancels pending writes, and clears errors', () => {
+  it('checking writes the sentinel and clears errors', () => {
     renderCheckboxField({ suspendTime: 300 })
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'garbage' },

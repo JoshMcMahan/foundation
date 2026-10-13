@@ -1,3 +1,4 @@
+import { Select } from '../../../components/Select'
 import {
   DEFAULT_PERMISSION_MODE,
   isNamedPermissionMode,
@@ -7,7 +8,7 @@ import {
 } from '../../agent/permissions'
 import { useChatConfig } from '../../core/config'
 import type { ChatStrings } from '../../strings'
-import Dropdown from '../../ui/Dropdown'
+import { smallChipClassName } from '../../ui/chip'
 
 const LABEL_KEY = {
   'read-only': 'readOnly',
@@ -38,25 +39,24 @@ export default function PermissionPicker({
   const t = useChatConfig().strings.permissions
   const current = mode ?? DEFAULT_PERMISSION_MODE
   const named = isNamedPermissionMode(current) ? current : undefined
-  const options = permissionModesUpTo(ceiling, accepted).map((m) => ({
+  const items = permissionModesUpTo(ceiling, accepted).map((m) => ({
     value: m,
     label: t[LABEL_KEY[m]],
     description: t[`${LABEL_KEY[m]}Hint`],
   }))
   return (
-    <Dropdown
-      options={options}
+    <Select<string>
+      aria-label={t.choose}
+      items={items}
       value={current}
-      onChange={(value) => onPick(value as PermissionMode)}
+      onValueChange={(value) => value && onPick(value as PermissionMode)}
       disabled={disabled}
-      variant="bare"
-      ariaLabel={t.choose}
-      {...(named ? { hint: t[`${LABEL_KEY[named]}Hint`] } : {})}
-      {...(options.some((o) => o.value === current)
-        ? {}
-        : { valueLabel: named ? t[LABEL_KEY[named]] : current })}
-      textBoxClassName="rounded-md px-1.5 py-0.5 text-[11px] theme-muted-text transition-colors hover:theme-muted-panel hover:theme-text"
-      listClassName="w-64"
+      triggerTooltip={named ? t[`${LABEL_KEY[named]}Hint`] : undefined}
+      trigger={
+        <button type="button" className={smallChipClassName}>
+          {named ? t[LABEL_KEY[named]] : current}
+        </button>
+      }
     />
   )
 }

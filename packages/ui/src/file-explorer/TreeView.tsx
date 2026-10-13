@@ -1,7 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Skeleton from 'react-loading-skeleton'
 import { positionKeys } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { AngleRightIcon, FolderIcon, FolderOpenIcon } from '../icons'
@@ -386,9 +385,8 @@ function TreeMoreRow({
   )
 }
 
-/** Sized by the slot, not by its contents: react-loading-skeleton wraps each bar
- *  in an inline span, so a bar occupies a line box taller than its `height` and
- *  the overflow would sit on top of the absolutely positioned row below. */
+/** Sized by the slot, not by its contents, so the bars never spill onto the
+ *  absolutely positioned row below. */
 function TreeSkeletonRow({ depth }: { depth: number }) {
   return (
     <div className="relative h-full overflow-hidden">
@@ -398,7 +396,7 @@ function TreeSkeletonRow({ depth }: { depth: number }) {
         style={{ paddingLeft: depth * INDENT_PER_LEVEL + ROW_PAD_FILE }}
       >
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} height={12} containerClassName="block leading-none" />
+          <div key={i} className="h-3 shrink-0 animate-pulse rounded bg-(--theme-muted-panel-bg)" />
         ))}
       </div>
     </div>

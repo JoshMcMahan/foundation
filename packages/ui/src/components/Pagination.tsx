@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useStrings } from './Provider'
 
 interface IPaginationProps {

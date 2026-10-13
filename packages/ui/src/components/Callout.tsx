@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { AlertIcon, InfoIcon } from '../icons'
 
 type CalloutType = 'warning' | 'info' | 'error'

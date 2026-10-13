@@ -1,41 +1,68 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
-import { createRef } from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { Tooltip } from '../components/Tooltip'
 import { ToolbarPopover } from './ToolbarPopover'
 
-// jsdom's window is 1024px wide, and the panel 384px before it is laid out.
-function panelBeside(left: number, right: number) {
-  vi.spyOn(HTMLButtonElement.prototype, 'getBoundingClientRect').mockReturnValue({
-    left,
-    right,
-    top: 500,
-    bottom: 530,
-  } as DOMRect)
-  const anchor = createRef<HTMLButtonElement>()
-  render(
-    <>
-      <button type="button" ref={anchor}>
-        Problems
-      </button>
-      <ToolbarPopover anchor={anchor} label="Problems" onClose={() => {}}>
-        listed
+function Toolbar({ onPaneKey = () => {} }: { onPaneKey?: (key: string) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    // A graph pane listens on its own element, as the editors do.
+    <div
+      ref={(pane) => {
+        const listener = (e: KeyboardEvent) => onPaneKey(e.key)
+        pane?.addEventListener('keydown', listener)
+        return () => pane?.removeEventListener('keydown', listener)
+      }}
+    >
+      <ToolbarPopover
+        label="Problems"
+        open={open}
+        onOpenChange={setOpen}
+        trigger={
+          <Tooltip content="2 problems" disabled={open}>
+            <button type="button">Problems</button>
+          </Tooltip>
+        }
+      >
+        <button type="button">first problem</button>
       </ToolbarPopover>
-    </>,
+    </div>
   )
-  return screen.getByRole('dialog', { name: 'Problems' })
+}
+
+function openPanel() {
+  const button = screen.getByRole('button', { name: 'Problems' })
+  fireEvent.click(button)
+  return { button, panel: screen.getByRole('dialog', { name: 'Problems' }) }
 }
 
 describe('ToolbarPopover', () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('opens from its button, through a tooltip, and focuses the panel rather than its first item', async () => {
+    render(<Toolbar />)
+    const { button, panel } = openPanel()
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    await waitFor(() => expect(panel).toHaveFocus())
   })
 
-  it('lines up with its button’s right edge', () => {
-    expect(panelBeside(900, 1000)).toHaveStyle({ right: '24px' })
+  it('closes on Escape without the pane seeing the key, and gives focus back to its button', async () => {
+    const onPaneKey = vi.fn()
+    render(<Toolbar onPaneKey={onPaneKey} />)
+    const { button, panel } = openPanel()
+    await waitFor(() => expect(panel).toHaveFocus())
+    fireEvent.keyDown(panel, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(button).toHaveFocus()
+    expect(onPaneKey).not.toHaveBeenCalled()
   })
 
-  it('keeps its left edge in the window when its button sits at the left', () => {
-    expect(panelBeside(8, 40)).toHaveStyle({ right: `${1024 - 8 - 384}px` })
+  it('closes on a press outside it', async () => {
+    render(<Toolbar />)
+    openPanel()
+    fireEvent.pointerDown(document.body)
+    fireEvent.mouseDown(document.body)
+    fireEvent.click(document.body)
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 })

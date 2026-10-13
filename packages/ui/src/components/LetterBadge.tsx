@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 
 /** A compact letter badge ("AI", "PUB", "SSH") used as a type mark in place of
  * an icon. Size the box and text via className (e.g. "h-5 w-5 text-[8px]"). */

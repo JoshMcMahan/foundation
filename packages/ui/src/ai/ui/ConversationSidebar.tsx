@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import { positionKeys } from '../../components/keys'
 import {
@@ -154,7 +154,7 @@ export function ConversationSidebar<T>({
   fill?: boolean
   /** Shows the list in a drawer over the page instead of beside it; it fills
    *  the drawer. */
-  drawer?: { open: boolean; onClose: () => void; label: string; closeLabel: string } | undefined
+  drawer?: { open: boolean; onClose: () => void; label: string } | undefined
   groups: ConversationSidebarGroup<T>[]
   getKey: (item: T) => string
   /** One `SidebarRow`. */
@@ -280,12 +280,7 @@ export function ConversationSidebar<T>({
     </SidebarPanel>
   )
   return drawer ? (
-    <SidebarDrawer
-      open={drawer.open}
-      onClose={drawer.onClose}
-      label={drawer.label}
-      closeLabel={drawer.closeLabel}
-    >
+    <SidebarDrawer open={drawer.open} onClose={drawer.onClose} label={drawer.label}>
       {panel}
     </SidebarDrawer>
   ) : (

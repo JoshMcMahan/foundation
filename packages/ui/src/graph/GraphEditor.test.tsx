@@ -21,14 +21,6 @@ vi.mock('../components/Provider', async (importOriginal) =>
   (await import('../test/engine')).mockEngineHooks(importOriginal),
 )
 
-// jsdom lacks these; the graph relies on them for connector recompute + fit.
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
-global.requestAnimationFrame = (() => 0) as typeof requestAnimationFrame
-global.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame
 // jsdom has no PointerEvent; without it pointer events lose button and coordinates.
 if (!('PointerEvent' in window)) {
   Object.defineProperty(window, 'PointerEvent', { value: MouseEvent })
@@ -39,18 +31,6 @@ vi.mock('react-zoom-pan-pinch', () => ({
     typeof children === 'function' ? (children as () => unknown)() : children,
   TransformComponent: ({ children }: { children: ReactNode }) => (
     <div className="react-transform-wrapper">{children}</div>
-  ),
-}))
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children: unknown }) => children,
-  motion: new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children }: { children: unknown }) =>
-          children,
-    },
   ),
 }))
 vi.mock('../logviewer', () => ({ LogViewer: () => null }))
@@ -73,10 +53,10 @@ vi.mock('../editor/Monaco', () => ({
     return <textarea aria-label={path} value={value} onChange={(e) => onChange?.(e.target.value)} />
   },
 }))
-vi.mock('../components/Dropdown', () => import('../test/DropdownStandIn'))
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
-import { suggestionsOf } from '../test/DropdownStandIn'
+import { optionsOf } from '../test/combobox'
+import { hoverTooltip } from '../test/tooltip'
 import { DependencyGraphPreview } from './DependencyGraph'
 import type { DependencyGraphEditor, EditorProblem } from './editorApi'
 import { GRAPH_EDITOR_STRINGS } from './editorStrings'
@@ -196,8 +176,10 @@ function jobRow(name: string): HTMLElement {
 
 /** A dialog field, found by its label: the nearest element around it that holds its input. */
 function field(label: string): HTMLElement {
+  // In the dialog on top: a menu that opened it may still be fading out, naming its rows alike.
+  const top = screen.queryAllByRole('dialog').at(-1)
   let element: HTMLElement | null =
-    screen.getAllByText(label, { selector: 'span, label' })[0] ?? null
+    (top ? within(top) : screen).getAllByText(label, { selector: 'span, label' })[0] ?? null
   // Not a select: the Insert a value menu beside a label is one.
   while (element && !element.querySelector('input, textarea')) {
     element = element.parentElement
@@ -205,13 +187,12 @@ function field(label: string): HTMLElement {
   return element as HTMLElement
 }
 
-/** What a typed field offers from its list. */
-// The suggestions a field offers, as the dropdown stand-in lists them.
-// The editor loads lazily; once it has, every later graph draws it at once.
+// The editor loads lazily; once it has, every later graph draws it at once. A first load on a busy
+// machine can outlast findBy's usual second.
 beforeAll(async () => {
   await import('./GraphEditor')
   render(<DependencyGraphPreview yml={yml} editor={editor()} />)
-  await screen.findByRole('button', { name: GRAPH_EDITOR_STRINGS.resetLayout })
+  await screen.findByRole('button', { name: GRAPH_EDITOR_STRINGS.resetLayout }, { timeout: 10_000 })
   cleanup()
 })
 
@@ -573,15 +554,15 @@ describe('DependencyGraphPreview editor', () => {
     })
   })
 
-  it('reads a job’s remote host from a cluster input, or takes any host typed in', () => {
+  it('reads a job’s remote host from a cluster input, or takes any host typed in', async () => {
     const e = editor()
     render(<DependencyGraphPreview yml={withInputs} editor={e} />)
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
     const host = within(field('Host')).getByLabelText('Host')
-    expect(suggestionsOf(host)).toContainEqual({
-      value: '${{ inputs.cluster.ip }}',
+    expect(await optionsOf(host)).toContainEqual({
       label: 'Cluster',
+      description: '${{ inputs.cluster.ip }}',
     })
     fireEvent.change(host, { target: { value: '${{ inputs.cluster.ip }}' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -675,15 +656,15 @@ describe('DependencyGraphPreview editor', () => {
     })
   })
 
-  it('runs a job on any condition typed in, offering the form’s choices', () => {
+  it('runs a job on any condition typed in, offering the form’s choices', async () => {
     const e = editor()
     render(<DependencyGraphPreview yml={withInputs} editor={e} />)
     fireEvent.contextMenu(jobRow('mac'), { clientX: 5, clientY: 5 })
     fireEvent.click(screen.getByText('Edit job'))
     const condition = within(field('When to run')).getByLabelText('When to run')
-    expect(suggestionsOf(condition)).toContainEqual({
-      value: "${{ inputs.mode == 'slow' }}",
+    expect(await optionsOf(condition)).toContainEqual({
       label: 'When mode is slow',
+      description: "${{ inputs.mode == 'slow' }}",
     })
     fireEvent.change(condition, {
       target: { value: "${{ inputs.mode != 'slow' }}" },
@@ -697,16 +678,17 @@ describe('DependencyGraphPreview editor', () => {
     })
   })
 
-  it('offers the executor’s status checks for when a step runs', () => {
+  it('offers the executor’s status checks for when a step runs', async () => {
     const e = editor()
     render(<DependencyGraphPreview yml={yml} editor={e} />)
     fireEvent.click(within(jobRow('build')).getByRole('button', { name: 'Build' }))
     fireEvent.click(screen.getByTestId('compile'))
     const condition = within(field('When to run')).getByLabelText('When to run')
     expect(condition).toHaveValue('')
-    expect(suggestionsOf(condition).map((option) => option.value)).toEqual(
-      expect.arrayContaining(['always', 'failure()', 'cancelled()', 'success()', 'false']),
-    )
+    // A labelled suggestion shows the value it writes beneath its label.
+    expect(
+      (await optionsOf(condition)).map((option) => option.description ?? option.label),
+    ).toEqual(expect.arrayContaining(['always', 'failure()', 'cancelled()', 'success()', 'false']))
     fireEvent.change(condition, { target: { value: 'failure()' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({
@@ -763,7 +745,7 @@ describe('DependencyGraphPreview editor', () => {
     const lenient = field('Keep going if it fails')
     fireEvent.click(within(lenient).getByRole('button', { name: 'Use an expression instead' }))
     // The switch gives way to a typed field below the label.
-    expect(screen.queryByRole('checkbox', { name: 'Keep going if it fails' })).toBeNull()
+    expect(screen.queryByRole('switch', { name: 'Keep going if it fails' })).toBeNull()
     fireEvent.change(screen.getByLabelText('Keep going if it fails'), {
       target: { value: '${{ inputs.lenient }}' },
     })
@@ -1716,16 +1698,14 @@ describe('moves and removals an expression depends on', () => {
     renderGraph(reading, e)
     const [fromA, fromB] = connectors()
     fireEvent.contextMenu(fromB as Element)
-    const inUse = within(screen.getByRole('menu')).getByText('Remove dependency').closest('button')
+    const inUse = screen.getByRole('menuitem', { name: /^Remove dependency/ })
     expect(inUse).toHaveAttribute('aria-disabled', 'true')
-    fireEvent.click(inUse as Element)
+    fireEvent.click(inUse)
     expect(e.onEdit).not.toHaveBeenCalled()
-    fireEvent.keyDown(window, { key: 'Escape' })
     fireEvent.contextMenu(fromA as Element)
-    const free = within(screen.getAllByRole('menu').at(-1) as HTMLElement)
-      .getByText('Remove dependency')
-      .closest('button')
-    expect(free).not.toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('menuitem', { name: 'Remove dependency' })).not.toHaveAttribute(
+      'aria-disabled',
+    )
   })
 
   it('selects a connector with a click, adds connectors with shift, and deletes them with Delete', () => {
@@ -1766,41 +1746,35 @@ describe('moves and removals an expression depends on', () => {
     const e = editor()
     renderGraph(plain, e)
     fireEvent.contextMenu(jobRow('a'), { clientX: 5, clientY: 5 })
-    const menu = screen.getByRole('menu')
     // b and d already wait on a, so a can need neither; b needs a already, d only through b.
-    expect(within(menu).queryByText('Depends on')).toBeNull()
-    fireEvent.click(within(menu).getByText('Needed by'))
+    expect(screen.queryByRole('menuitem', { name: 'Depends on' })).toBeNull()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Needed by' }))
     // Named as the graph names them.
-    expect(within(menu).queryByRole('button', { name: 'B' })).toBeNull()
-    fireEvent.click(within(menu).getByRole('button', { name: 'D' }))
+    expect(screen.queryByRole('menuitem', { name: 'B' })).toBeNull()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'D' }))
     expect(e.onEdit).toHaveBeenCalledWith(connectedFrom([['a', 'd']]))
   })
 
-  it('takes a job menu opened from the keyboard, arrows through it and gives focus back', () => {
+  it('takes a job menu opened from the keyboard, arrows through it and gives focus back', async () => {
     renderGraph(plain, editor())
     const more = within(jobRow('a')).getByRole('button', {
       name: 'Job actions',
     })
-    // jsdom's :focus-visible follows the event in flight, so the opener is stated to show keyboard focus.
-    const matches = Element.prototype.matches
-    const spy = vi.spyOn(Element.prototype, 'matches').mockImplementation(function (
-      this: Element,
-      selector: string,
-    ) {
-      return selector === ':focus-visible' ? this === more : matches.call(this, selector)
-    })
-    onTestFinished(() => spy.mockRestore())
-    more.focus()
+    act(() => more.focus())
     fireEvent.click(more)
-    const items = within(screen.getByRole('menu')).getAllByRole('button')
-    expect(items[0]).toHaveFocus()
-    fireEvent.keyDown(items[0] as HTMLElement, { key: 'ArrowDown' })
-    expect(items[1]).toHaveFocus()
-    fireEvent.keyDown(items[1] as HTMLElement, { key: 'ArrowUp' })
-    fireEvent.keyDown(items[0] as HTMLElement, { key: 'ArrowUp' })
-    expect(items.at(-1)).toHaveFocus()
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(more).toHaveFocus()
+    const menu = screen.getByRole('menu')
+    await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement))
+    const items = within(menu).getAllByRole('menuitem')
+    const press = async (key: string, to: HTMLElement | undefined) => {
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key })
+      await waitFor(() => expect(to).toHaveFocus())
+    }
+    await press('ArrowDown', items[0])
+    await press('ArrowDown', items[1])
+    await press('ArrowUp', items[0])
+    await press('ArrowUp', items.at(-1))
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' })
+    await waitFor(() => expect(more).toHaveFocus())
   })
 
   it('moves the start of a selected connector onto another job', () => {
@@ -2372,15 +2346,15 @@ describe('steps, the clipboard and the arrow keys', () => {
     )
   })
 
-  it('lists the gestures and keys from the toolbar and closes on Escape', () => {
+  it('lists the gestures and keys from the toolbar and closes on Escape', async () => {
     render(<DependencyGraphPreview yml={graph} editor={editor()} />)
     const button = screen.getByRole('button', { name: 'Shortcuts' })
     fireEvent.click(button)
     const list = screen.getByRole('dialog', { name: 'Shortcuts' })
     expect(within(list).getByText(GRAPH_EDITOR_STRINGS.shortcutDoes.connect)).toBeInTheDocument()
-    expect(list).toHaveFocus()
+    await waitFor(() => expect(list).toHaveFocus())
     fireEvent.keyDown(list, { key: 'Escape' })
-    expect(screen.queryByRole('dialog', { name: 'Shortcuts' })).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Shortcuts' })).toBeNull())
     expect(button).toHaveFocus()
   })
 
@@ -2420,7 +2394,7 @@ describe('problems and the YAML beside the graph', () => {
   }
   const badge = (el: HTMLElement) => el.querySelector('[data-problem-badge]') as HTMLElement | null
 
-  it('counts its problems in the toolbar and picks one from the list', () => {
+  it('counts its problems in the toolbar and picks one from the list', async () => {
     const pick = vi.fn()
     renderGraph(
       editor({
@@ -2437,7 +2411,7 @@ describe('problems and the YAML beside the graph', () => {
     expect(within(list).queryByRole('button', { name: /unit reads matrix\.os/ })).toBeNull()
     fireEvent.click(within(list).getByRole('button', { name: /test reads needs\.lint/ }))
     expect(pick).toHaveBeenCalledOnce()
-    expect(screen.queryByRole('dialog', { name: '2 problems' })).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '2 problems' })).toBeNull())
   })
 
   it('brings a picked problem’s job, or step, into view selected and opens it', () => {
@@ -2467,18 +2441,18 @@ describe('problems and the YAML beside the graph', () => {
     expect(show?.({ message: '', line: 1, input: ['name'] })).toBe(false)
   })
 
-  it('marks a job and its step with their problems, and not their node', () => {
+  it('marks a job and its step with their problems, and not their node', async () => {
     const onReveal = vi.fn()
     renderGraph(editor({ problems, onReveal }))
     fireEvent.click(within(jobRow('test')).getByRole('button', { name: 'Test' }))
     // The job's badge lists its steps' problems too.
-    expect(badge(jobRow('test'))?.dataset['tooltipContent']).toBe(
+    expect((await hoverTooltip(badge(jobRow('test')))).textContent).toBe(
       'test reads needs.lint\nunit reads matrix.os',
     )
     const step = document.querySelector(
       '[data-dag-step-job="test"][data-dag-step="0"]',
     ) as HTMLElement
-    expect(badge(step)?.dataset['tooltipContent']).toBe('unit reads matrix.os')
+    expect((await hoverTooltip(badge(step))).textContent).toBe('unit reads matrix.os')
     expect(badge(jobRow('build'))).toBeNull()
     expect(jobRow('test')).toHaveClass('ring-(--theme-error)')
     expect(step).toHaveClass('ring-(--theme-error)')

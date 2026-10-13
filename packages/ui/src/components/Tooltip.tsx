@@ -1,75 +1,19 @@
-import { Fragment } from 'react'
-import { Tooltip as BaseTooltip, type PlacesType } from 'react-tooltip'
-import { TooltipIcon } from '../icons'
+import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip'
+import { createContext, Fragment, type ReactElement, type ReactNode, use, useState } from 'react'
+import { portalContainer, positionerClassName, tipArrowClassName, tipClassName } from './floating'
 import { keyedByContent } from './keys'
 
-export const TOOLTIP_ID = 'global-tooltip'
+export type TooltipSide = 'top' | 'bottom' | 'left' | 'right'
 
-/** Anchor props that reveal `content` only while the text is ellipsized; `measure` picks the clipped descendant when it isn't the anchor. */
-export function truncationTooltipProps(
-  content: string,
-  measure?: (anchor: HTMLElement) => HTMLElement | null,
-) {
-  return {
-    role: 'none' as const,
-    'data-tooltip-id': TOOLTIP_ID,
-    onMouseEnter: (event: React.MouseEvent<HTMLElement>) => {
-      const anchor = event.currentTarget
-      const measured = measure ? measure(anchor) : anchor
-      if (measured && measured.scrollWidth > measured.clientWidth) {
-        anchor.setAttribute('data-tooltip-content', content)
-      } else {
-        anchor.removeAttribute('data-tooltip-content')
-      }
-    },
-  }
+interface TooltipPayload {
+  content: ReactNode
+  shortcut?: string | undefined
+  side: TooltipSide
 }
 
-const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g
+type TooltipHandle = BaseTooltip.Handle<TooltipPayload>
 
-function formatLine(line: string) {
-  const nodes: React.ReactNode[] = []
-  let last = 0
-  for (const match of line.matchAll(linkRegex)) {
-    if (match.index > last) {
-      nodes.push(line.slice(last, match.index))
-    }
-    nodes.push(
-      <a
-        key={match.index}
-        href={match[2]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline"
-      >
-        {match[1]}
-      </a>,
-    )
-    last = match.index + match[0].length
-  }
-  if (last < line.length) {
-    nodes.push(line.slice(last))
-  }
-  return nodes
-}
-
-/** Tooltip text can come from untrusted sources (workflow YAML), so all markup is literal text — only `[text](url)` links and newlines are parsed. */
-export function formatTooltipContent(content: React.ReactNode) {
-  if (typeof content !== 'string') {
-    return content || null
-  }
-  if (!content) {
-    return null
-  }
-  return keyedByContent(content.split(/<br\s*\/?>|\n/i), (l) => l).map(
-    ({ key, item: line }, idx) => (
-      <Fragment key={key}>
-        {idx > 0 && <br />}
-        {formatLine(line)}
-      </Fragment>
-    ),
-  )
-}
+const TooltipHandleContext = createContext<TooltipHandle | null>(null)
 
 function KbdShortcut({ keys }: { keys: string }) {
   const parts = keys
@@ -81,7 +25,7 @@ function KbdShortcut({ keys }: { keys: string }) {
       {keyedByContent(parts, (p) => p).map(({ key, item: part }, idx) => (
         <Fragment key={key}>
           {idx > 0 && <span className="opacity-60 text-[11px]">+</span>}
-          <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded border border-white/30 bg-white/10 font-sans text-[11px] font-semibold leading-none">
+          <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded border border-current/30 bg-current/10 font-sans text-[11px] font-semibold leading-none">
             {part}
           </kbd>
         </Fragment>
@@ -90,64 +34,103 @@ function KbdShortcut({ keys }: { keys: string }) {
   )
 }
 
-const globalCloseEvents = { escape: true }
-
-/** Singleton rendered at layout root; anchors opt in via data-tooltip-id={TOOLTIP_ID}, data-tooltip-content, and data-tooltip-shortcut. */
-export function GlobalTooltip() {
+function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
   return (
-    <BaseTooltip
-      id={TOOLTIP_ID}
-      className="max-w-lg break-words config-tips normal-case text-left z-[10000]"
-      place="top"
-      globalCloseEvents={globalCloseEvents}
-      render={({ content, activeAnchor }) => {
-        const body = formatTooltipContent(content)
-        const shortcut = activeAnchor?.getAttribute('data-tooltip-shortcut')
-        if (!shortcut) {
-          return body
-        }
-        return (
-          <span className="inline-flex items-center gap-2">
-            {body}
-            <KbdShortcut keys={shortcut} />
-          </span>
-        )
-      }}
-    />
+    <BaseTooltip.Portal container={portalContainer()}>
+      <BaseTooltip.Positioner side={side} sideOffset={8} className={positionerClassName}>
+        <BaseTooltip.Popup className={`max-w-xs ${tipClassName}`}>
+          <BaseTooltip.Arrow className={tipArrowClassName} />
+          {shortcut ? (
+            <span className="inline-flex items-center gap-2">
+              {content}
+              <KbdShortcut keys={shortcut} />
+            </span>
+          ) : (
+            content
+          )}
+        </BaseTooltip.Popup>
+      </BaseTooltip.Positioner>
+    </BaseTooltip.Portal>
   )
 }
 
-interface ITooltipInfo {
-  text: string
-  className?: string | undefined
-  place?: PlacesType
-  children?: React.ReactNode
-  tabIndex?: number
+/** One popup serves every Tooltip below it, so each anchor costs only a trigger.
+ *  UIProvider mounts it; nothing else needs to. */
+export function TooltipProvider({ children }: { children: ReactNode }) {
+  const [handle] = useState(() => BaseTooltip.createHandle<TooltipPayload>())
+  return (
+    <BaseTooltip.Provider>
+      <TooltipHandleContext value={handle}>{children}</TooltipHandleContext>
+      <BaseTooltip.Root handle={handle} onOpenChange={skipUnclipped}>
+        {({ payload }) => payload && <TooltipPopup {...payload} />}
+      </BaseTooltip.Root>
+    </BaseTooltip.Provider>
+  )
 }
 
-export function TooltipInfo({
-  text,
-  className = '',
+/** An overflowOnly anchor opens only while its text is cut off. */
+function skipUnclipped(open: boolean, details: BaseTooltip.Root.ChangeEventDetails) {
+  const anchor = details.trigger
+  if (
+    open &&
+    anchor instanceof HTMLElement &&
+    anchor.hasAttribute('data-overflow-only') &&
+    anchor.scrollWidth <= anchor.clientWidth
+  ) {
+    details.cancel()
+  }
+}
+
+/** Props beyond the tooltip's own go to the anchor, so a Tooltip can be another
+ *  trigger's render target, such as a popover button with a hint. */
+export interface TooltipProps
+  extends Omit<
+    BaseTooltip.Trigger.Props,
+    'content' | 'children' | 'render' | 'handle' | 'payload'
+  > {
+  /** Nothing to show disables the tooltip. Newlines in a string break lines. */
+  content: ReactNode
+  /** The anchor. It receives the trigger's props and ref, so it must pass them to its element. */
+  children: ReactElement
+  side?: TooltipSide
+  /** Keys shown beside the content, joined with +, such as ⌘+F. */
+  shortcut?: string | undefined
+  disabled?: boolean | undefined
+  /** Opens only while the anchor's text is clipped, such as a truncated label. */
+  overflowOnly?: boolean
+}
+
+/** A visual hint for sighted pointer and keyboard users. The anchor still needs
+ *  its own accessible name; use InfoTip for content everyone must reach. */
+export function Tooltip({
+  content,
   children,
-  place = 'top',
-  tabIndex,
-}: ITooltipInfo) {
-  const anchorProps = {
-    'data-tooltip-id': TOOLTIP_ID,
-    'data-tooltip-content': text,
-    'data-tooltip-place': place,
-    className,
+  side = 'top',
+  shortcut,
+  disabled = false,
+  overflowOnly = false,
+  ...anchorProps
+}: TooltipProps) {
+  const handle = use(TooltipHandleContext)
+  const payload = { content, shortcut, side }
+  const trigger = (
+    <BaseTooltip.Trigger
+      {...anchorProps}
+      handle={handle ?? undefined}
+      payload={payload}
+      disabled={disabled || !content}
+      data-overflow-only={overflowOnly || undefined}
+      render={children}
+    />
+  )
+  if (handle) {
+    return trigger
   }
-  if (children || !text) {
-    return (
-      <div {...anchorProps} tabIndex={tabIndex}>
-        {children || <TooltipIcon className="tooltip" />}
-      </div>
-    )
-  }
+  // Outside UIProvider each tooltip brings its own root.
   return (
-    <div {...anchorProps} role="img" aria-label={text} tabIndex={tabIndex ?? 0}>
-      <TooltipIcon className="tooltip" />
-    </div>
+    <BaseTooltip.Root onOpenChange={skipUnclipped}>
+      {trigger}
+      <TooltipPopup {...payload} />
+    </BaseTooltip.Root>
   )
 }

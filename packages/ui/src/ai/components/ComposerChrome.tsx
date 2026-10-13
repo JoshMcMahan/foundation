@@ -32,13 +32,13 @@ export function ComposerUsage({ children }: { children: ReactNode }) {
   return <div className="hidden min-w-0 shrink-[10] truncate @md:block">{children}</div>
 }
 
-/** The two selectors every surface carries, bare so they read as text beside
- *  whatever the surface puts next to them. */
+/** The two selectors every surface carries, reading as text beside whatever
+ *  the surface puts next to them. */
 export function ComposerControls({ targetSession }: { targetSession?: string | null | undefined }) {
   return (
     <>
-      <ModelSelector variant="bare" targetSession={targetSession} />
-      <AllocationSelector variant="bare" />
+      <ModelSelector targetSession={targetSession} />
+      <AllocationSelector />
     </>
   )
 }

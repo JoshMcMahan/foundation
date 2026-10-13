@@ -1,6 +1,7 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { type ReactNode, useEffect, useRef } from 'react'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import type { MenuAnchor } from '../components/ContextMenu'
+import { Tooltip } from '../components/Tooltip'
 import { AddIcon, AlertIcon, DragHandleIcon, MoreIcon } from '../icons'
 import type { EditorProblem } from './editorApi'
 import { MarqueeBox, type Point, place } from './editorPrimitives'
@@ -137,27 +138,27 @@ function SelectionBox({ api }: { api: GraphEditorApi }) {
         hint={t.selectionOutHint}
       />
       {/* After the circles, whose squares would otherwise cover the bottom of its ring. */}
-      <button
-        type="button"
-        aria-label={t.moveSelectionHint}
-        data-tooltip-id={TOOLTIP_ID}
-        data-tooltip-content={t.moveSelectionHint}
-        className={cx(
-          EDITOR_HANDLE_CLASS,
-          'pointer-events-auto absolute flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)',
-        )}
-        style={{ left: bounds.left - 16, top: bounds.top - 16 }}
-        onPointerDown={(e) =>
-          api.startDrag(e, {
-            kind: 'jobs',
-            jobs,
-            label: labelsOf(jobs),
-            ...(anchor ? { anchor } : {}),
-          })
-        }
-      >
-        <DragHandleIcon className="h-5 w-5" />
-      </button>
+      <Tooltip content={t.moveSelectionHint}>
+        <button
+          type="button"
+          aria-label={t.moveSelectionHint}
+          className={cx(
+            EDITOR_HANDLE_CLASS,
+            'pointer-events-auto absolute flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)',
+          )}
+          style={{ left: bounds.left - 16, top: bounds.top - 16 }}
+          onPointerDown={(e) =>
+            api.startDrag(e, {
+              kind: 'jobs',
+              jobs,
+              label: labelsOf(jobs),
+              ...(anchor ? { anchor } : {}),
+            })
+          }
+        >
+          <DragHandleIcon className="h-5 w-5" />
+        </button>
+      </Tooltip>
     </>
   )
 }
@@ -170,20 +171,20 @@ export function BoxGrip({ jobs }: { jobs: string[] }) {
   }
   const t = api.t
   return (
-    <button
-      type="button"
-      aria-label={t.moveBoxHint}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={t.moveBoxHint}
-      className={cx(
-        EDITOR_HANDLE_CLASS,
-        // Centered on the border line, straight above the node's left circle.
-        'absolute -left-[18px] -top-[18px] flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 theme-border bg-(--theme-panel-bg)',
-      )}
-      onPointerDown={(e) => api.startDrag(e, { kind: 'jobs', jobs, label: labelsOf(jobs) })}
-    >
-      <DragHandleIcon className="h-5 w-5" />
-    </button>
+    <Tooltip content={t.moveBoxHint}>
+      <button
+        type="button"
+        aria-label={t.moveBoxHint}
+        className={cx(
+          EDITOR_HANDLE_CLASS,
+          // Centered on the border line, straight above the node's left circle.
+          'absolute -left-[18px] -top-[18px] flex h-8 w-8 cursor-grab items-center justify-center rounded-full border-4 theme-border bg-(--theme-panel-bg)',
+        )}
+        onPointerDown={(e) => api.startDrag(e, { kind: 'jobs', jobs, label: labelsOf(jobs) })}
+      >
+        <DragHandleIcon className="h-5 w-5" />
+      </button>
+    </Tooltip>
   )
 }
 
@@ -211,21 +212,21 @@ function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; st
     return null
   }
   return (
-    <button
-      type="button"
-      data-problem-badge=""
-      aria-label={t.problemCount(messages.split('\n').length)}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={messages}
-      className="cursor-pointer rounded p-0.5 text-(--theme-error) hover:bg-(--theme-muted-panel-bg)"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation()
-        api.reveal({ line })
-      }}
-    >
-      <AlertIcon className="h-[0.9em] w-[0.9em]" />
-    </button>
+    <Tooltip content={messages}>
+      <button
+        type="button"
+        data-problem-badge=""
+        aria-label={t.problemCount(messages.split('\n').length)}
+        className="cursor-pointer rounded p-0.5 text-(--theme-error) hover:bg-(--theme-muted-panel-bg)"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          api.reveal({ line })
+        }}
+      >
+        <AlertIcon className="h-[0.9em] w-[0.9em]" />
+      </button>
+    </Tooltip>
   )
 }
 
@@ -255,7 +256,7 @@ function EditableRow({
   /** Toggles the row in the selection, and says whether it is selected after. */
   toggle: () => boolean
   reveal: () => void
-  openMenu: (x: number, y: number) => void
+  openMenu: (at: MenuAnchor) => void
   menuLabel: string
   menuClassName: string
   iconClassName: string
@@ -298,7 +299,7 @@ function EditableRow({
       onContextMenu={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        openMenu(e.clientX, e.clientY)
+        openMenu(e)
       }}
     >
       {children}
@@ -313,8 +314,7 @@ function EditableRow({
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
-          const r = e.currentTarget.getBoundingClientRect()
-          openMenu(r.right, r.bottom)
+          openMenu(e.currentTarget)
         }}
       >
         <MoreIcon className={iconClassName} />
@@ -365,7 +365,7 @@ export function EditableJobRow({
         return api.store.get().selection.includes(job)
       }}
       reveal={() => api.reveal({ job })}
-      openMenu={(x, y) => api.openJobMenu(x, y, job)}
+      openMenu={(at) => api.openJobMenu(at, job)}
       menuLabel={t.jobActions}
       menuClassName="p-1 group-hover/row:opacity-100"
       iconClassName="h-[1em] w-[1em]"
@@ -412,40 +412,40 @@ function PortCircle({
   const dragging =
     drag?.payload.kind === 'connect' && drag.payload.port === port && drag.payload.side === side
   return (
-    <span
-      role="none"
-      data-dag-port={side}
-      {...(port === 'selection' ? { 'data-dag-selection': '' } : { 'data-dag-node': jobs[0] })}
-      // A hint popping up over the drop target mid-drag would hide the graph.
-      {...(drag ? {} : { 'data-tooltip-id': TOOLTIP_ID })}
-      data-tooltip-content={hint}
-      className={cx(
-        EDITOR_HANDLE_CLASS,
-        'group/port pointer-events-auto absolute flex h-8 w-8 cursor-crosshair items-center justify-center',
-      )}
-      style={{
-        left: at.x - 16,
-        top: at.y - 16,
-        ...(zIndex === undefined ? {} : { zIndex }),
-      }}
-      onPointerDown={(e) =>
-        api.startDrag(e, {
-          kind: 'connect',
-          from: jobs,
-          side,
-          label: labelsOf(jobs),
-          port,
-        })
-      }
-    >
-      {draw && <span className="absolute inset-0 bg-(--theme-panel-bg)" />}
+    // A hint popping up over the drop target mid-drag would hide the graph.
+    <Tooltip content={hint} disabled={Boolean(drag)}>
       <span
+        role="none"
+        data-dag-port={side}
+        {...(port === 'selection' ? { 'data-dag-selection': '' } : { 'data-dag-node': jobs[0] })}
         className={cx(
-          'relative h-4 w-4 rounded-full group-hover/port:bg-(--theme-element)',
-          dragging ? 'bg-(--theme-element)' : draw && 'bg-(--theme-border)',
+          EDITOR_HANDLE_CLASS,
+          'group/port pointer-events-auto absolute flex h-8 w-8 cursor-crosshair items-center justify-center',
         )}
-      />
-    </span>
+        style={{
+          left: at.x - 16,
+          top: at.y - 16,
+          ...(zIndex === undefined ? {} : { zIndex }),
+        }}
+        onPointerDown={(e) =>
+          api.startDrag(e, {
+            kind: 'connect',
+            from: jobs,
+            side,
+            label: labelsOf(jobs),
+            port,
+          })
+        }
+      >
+        {draw && <span className="absolute inset-0 bg-(--theme-panel-bg)" />}
+        <span
+          className={cx(
+            'relative h-4 w-4 rounded-full group-hover/port:bg-(--theme-element)',
+            dragging ? 'bg-(--theme-element)' : draw && 'bg-(--theme-border)',
+          )}
+        />
+      </span>
+    </Tooltip>
   )
 }
 
@@ -539,7 +539,7 @@ export function EditableStepRow({
         return api.store.get().steps.some((ref) => sameStep(ref, { job, index }))
       }}
       reveal={() => api.reveal({ job, step: index })}
-      openMenu={(x, y) => api.openStepMenu(x, y, job, index)}
+      openMenu={(at) => api.openStepMenu(at, job, index)}
       menuLabel={t.stepActions}
       menuClassName="p-0.5 group-hover/step:opacity-100"
       iconClassName="h-[0.9em] w-[0.9em]"
@@ -607,7 +607,7 @@ export function EdgeHitPath({ d, edge }: { d: string; edge: EdgeSelection }) {
       }}
       onContextMenu={(e) => {
         e.preventDefault()
-        api.openEdgeMenu(e.clientX, e.clientY, edge)
+        api.openEdgeMenu(e, edge)
       }}
     />
   )
@@ -633,26 +633,29 @@ export function EdgeEnds({
   const t = api.t
   const inUse = api.edgeInUse(edge)
   const handle = (side: 'from' | 'to', at: Point, fixed: Point) => (
-    <span
+    <Tooltip
       key={side}
-      role="none"
-      data-dag-edge-end={side}
-      {...(drag ? {} : { 'data-tooltip-id': TOOLTIP_ID })}
-      data-tooltip-content={inUse ? t.dependencyInUse : t.moveDependencyEnd}
-      className={cx(
-        EDITOR_HANDLE_CLASS,
-        'pointer-events-auto absolute flex h-8 w-8 items-center justify-center',
-        inUse ? 'cursor-not-allowed' : 'cursor-grab',
-      )}
-      style={{ left: at.x - 16, top: at.y - 16, zIndex }}
-      onPointerDown={(e) => {
-        if (!inUse) {
-          api.startEdgeEnd(e, edge, side, fixed)
-        }
-      }}
+      content={inUse ? t.dependencyInUse : t.moveDependencyEnd}
+      disabled={Boolean(drag)}
     >
-      <span className="h-5 w-5 rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)" />
-    </span>
+      <span
+        role="none"
+        data-dag-edge-end={side}
+        className={cx(
+          EDITOR_HANDLE_CLASS,
+          'pointer-events-auto absolute flex h-8 w-8 items-center justify-center',
+          inUse ? 'cursor-not-allowed' : 'cursor-grab',
+        )}
+        style={{ left: at.x - 16, top: at.y - 16, zIndex }}
+        onPointerDown={(e) => {
+          if (!inUse) {
+            api.startEdgeEnd(e, edge, side, fixed)
+          }
+        }}
+      >
+        <span className="h-5 w-5 rounded-full border-4 border-(--theme-element) bg-(--theme-panel-bg)" />
+      </span>
+    </Tooltip>
   )
   return (
     <>

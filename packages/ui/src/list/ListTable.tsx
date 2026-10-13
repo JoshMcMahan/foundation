@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { positionKeys } from '../components/keys'
 import { useLink, useStrings } from '../components/Provider'
@@ -66,7 +66,10 @@ export function NameCell({
   return (
     <Table.Item className="py-2.5">
       {href ? (
-        <Link to={href} className="group/namecell flex items-center gap-2.5 min-w-0 cursor-pointer">
+        <Link
+          href={href}
+          className="group/namecell flex items-center gap-2.5 min-w-0 cursor-pointer"
+        >
           {inner}
         </Link>
       ) : (

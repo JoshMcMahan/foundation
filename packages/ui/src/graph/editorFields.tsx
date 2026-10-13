@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import {
   type ComponentProps,
   createContext,
@@ -10,15 +10,15 @@ import {
   useRef,
   useState,
 } from 'react'
-import { BareModal, modalPanelClasses } from '../components/BareModal'
 import { Button } from '../components/Button'
 import { FilterPill } from '../components/FilterPill'
 import { ghostButtonClasses, primaryButtonClasses } from '../components/ghostButton'
 import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
 import { withPositionKeys } from '../components/keys'
-import { Toggle } from '../components/Toggle'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Modal, ModalTitle } from '../components/Modal'
+import { Switch } from '../components/Switch'
+import { Tooltip } from '../components/Tooltip'
 import type { FieldPatch } from '../editing'
 import { AddIcon, ChevronRightIcon, CloseIcon, ExpressionIcon } from '../icons'
 import { type GraphEditorStrings, useGraphEditorStrings } from './editorStrings'
@@ -416,10 +416,10 @@ export function ToggleField({
   return (
     <div className="flex items-center justify-between gap-3">
       <FieldLabel label={label} yamlKey={yamlKey} description={description} />
-      <Toggle
+      <Switch
         checked={checked}
-        onChange={onChange}
-        label={label}
+        onCheckedChange={onChange}
+        aria-label={label}
         {...(disabled ? { disabled } : {})}
       />
     </div>
@@ -553,11 +553,11 @@ function KeyValueRow({
         <div className="flex-1" title={row.nested ? t.jsonValue : undefined}>
           <SuggestionInput
             id={id}
-            ariaLabel={t.value}
+            aria-label={t.value}
             placeholder={valuePlaceholder}
             value={row.value}
             suggestions={valueSuggestions.map((value) => ({ value }))}
-            onChange={(value) => onChange({ ...row, value })}
+            onValueChange={(value) => onChange({ ...row, value })}
           />
         </div>
         <IconButton
@@ -609,11 +609,11 @@ export function StringListEditor({
         <div key={key} className="flex items-center gap-2">
           <div className="flex-1">
             <SuggestionInput
-              ariaLabel={t.listItem(label, i + 1)}
+              aria-label={t.listItem(label, i + 1)}
               value={value}
               placeholder={placeholder}
               suggestions={suggestions.map((option) => ({ value: option }))}
-              onChange={(next) => onChange(updateAt(values, i, next))}
+              onValueChange={(next) => onChange(updateAt(values, i, next))}
             />
           </div>
           <IconButton
@@ -666,7 +666,7 @@ export function SuggestedInput({
         value={value}
         placeholder={placeholder}
         suggestions={suggestions.map((option) => ({ value: option }))}
-        onChange={onChange}
+        onValueChange={onChange}
       />
       <FieldError message={error ?? lint.message} />
       {lint.fixes}
@@ -731,19 +731,17 @@ export interface DialogShellProps {
 function OpenOnAddSwitch({ open, onChange }: OpenOnAdd) {
   const t = useGraphEditorStrings()
   return (
-    <label
-      className="flex cursor-pointer items-center gap-2 text-xs theme-muted-text"
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={t.openOnAddHelp}
-    >
-      <input
-        type="checkbox"
-        className="h-4 w-4 cursor-pointer accent-(--theme-element)"
-        checked={open}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      {t.openOnAdd}
-    </label>
+    <Tooltip content={t.openOnAddHelp}>
+      <label className="flex cursor-pointer items-center gap-2 text-xs theme-muted-text">
+        <input
+          type="checkbox"
+          className="h-4 w-4 cursor-pointer accent-(--theme-element)"
+          checked={open}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        {t.openOnAdd}
+      </label>
+    </Tooltip>
   )
 }
 
@@ -767,17 +765,16 @@ export function DialogShell({
   }
   // Not a <form>: the dialogs host input forms of their own, and forms can't nest.
   return (
-    <BareModal
+    <Modal
       open
       onClose={onClose}
-      ariaLabel={title}
       align="center"
-      preventClose={dirty || locked}
-      className={cx(modalPanelClasses, 'flex max-h-[85vh] w-full max-w-2xl flex-col')}
+      dismissible={!dirty && !locked}
+      className="flex max-h-[85vh] w-full max-w-2xl flex-col"
     >
       <div className="flex min-h-0 flex-col">
         <div className="flex items-center gap-3 border-b theme-border px-5 py-4">
-          <div className="flex-1 text-[1rem] font-semibold">{title}</div>
+          <ModalTitle className="flex-1 text-[1rem] font-semibold">{title}</ModalTitle>
           {headerEnd}
         </div>
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto px-5 py-4">{children}</div>
@@ -798,6 +795,6 @@ export function DialogShell({
           </button>
         </div>
       </div>
-    </BareModal>
+    </Modal>
   )
 }

@@ -1,5 +1,4 @@
-import cx from 'classnames'
-import { AnimatePresence, motion } from 'framer-motion'
+import { clsx as cx } from 'clsx'
 import { DateTime } from 'luxon'
 import { useCallback, useId, useMemo, useState } from 'react'
 import { Indicator } from '../components/Indicator'
@@ -28,13 +27,15 @@ function elapsed({ startedAt, completedAt }: Job | Step): string {
 
 function Chevron({ open, hidden = false }: { open: boolean; hidden?: boolean }) {
   return (
-    <motion.div
-      animate={{ rotate: open ? 90 : 0 }}
-      transition={{ duration: 0.15 }}
-      className={cx('flex-shrink-0', hidden ? 'invisible' : 'text-[var(--theme-muted-text-color)]')}
+    <div
+      className={cx(
+        'flex-shrink-0 transition-transform duration-150',
+        open && 'rotate-90',
+        hidden ? 'invisible' : 'text-[var(--theme-muted-text-color)]',
+      )}
     >
       <ChevronRightIcon className={cx('w-4 h-4', open && 'text-[var(--theme-element)]')} />
-    </motion.div>
+    </div>
   )
 }
 
@@ -401,33 +402,24 @@ export default function TreeView({ jobs, slug, expandedJobs, setExpandedJobs }: 
                       {dag.matrixOf(matrixOrigin)} ({dag.jobCount(group.members.length)})
                     </span>
                   </button>
-                  <AnimatePresence>
-                    {isGroupExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="overflow-hidden pl-4"
-                        id={`matrix-panel-${matrixOrigin}`}
-                      >
-                        {group.members.map((memberName) => {
-                          const member = jobs[memberName]
-                          return member ? (
-                            <JobRow
-                              key={memberName}
-                              jobName={memberName}
-                              job={member}
-                              isExpanded={expandedJobs.has(memberName)}
-                              onToggle={() => toggleJob(memberName)}
-                              prefix=""
-                              state={rowState}
-                            />
-                          ) : null
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <Collapse expanded={isGroupExpanded} id={`matrix-panel-${matrixOrigin}`}>
+                    <div className="pl-4">
+                      {group.members.map((memberName) => {
+                        const member = jobs[memberName]
+                        return member ? (
+                          <JobRow
+                            key={memberName}
+                            jobName={memberName}
+                            job={member}
+                            isExpanded={expandedJobs.has(memberName)}
+                            onToggle={() => toggleJob(memberName)}
+                            prefix=""
+                            state={rowState}
+                          />
+                        ) : null
+                      })}
+                    </div>
+                  </Collapse>
                 </div>,
               )
             } else {

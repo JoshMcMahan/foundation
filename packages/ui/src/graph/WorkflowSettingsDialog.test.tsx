@@ -22,19 +22,7 @@ vi.mock('../editor/Monaco', () => ({
   }) => <textarea aria-label={path} value={value} onChange={(e) => onChange?.(e.target.value)} />,
 }))
 
-global.ResizeObserver = class implements ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
 afterEach(cleanup)
-
-// Typed values reach the dropdown's owner on blur, which clicking Save causes in a browser.
-function type(field: HTMLElement, value: string) {
-  fireEvent.change(field, { target: { value } })
-  fireEvent.blur(field)
-}
 
 const WORKFLOW = {
   permissions: ['*'],
@@ -94,7 +82,7 @@ describe('WorkflowSettingsDialog', () => {
 
   it('saves only the sections that changed', () => {
     const onEdit = open()
-    type(screen.getByDisplayValue('1'), '2')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Value' }), { target: { value: '2' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onEdit).toHaveBeenCalledWith({
       type: 'updateWorkflow',
@@ -123,7 +111,7 @@ describe('WorkflowSettingsDialog', () => {
   it('edits the input form layout in the same step, the inputs starting the first page', () => {
     const onEdit = open()
     fireEvent.click(screen.getByText(GRAPH_EDITOR_STRINGS.labelsBeside))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Split into pages' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Split into pages' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onEdit).toHaveBeenCalledWith({
       type: 'batch',
@@ -162,7 +150,7 @@ describe('WorkflowSettingsDialog', () => {
       jobs: { main: { steps: [{ run: 'echo ${{ inputs.step_1.x }}' }] } },
     }
     const onEdit = open(paged)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Split into pages' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Split into pages' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     // The inputs move while the wizard still names its pages, so what reads them follows.
     expect(onEdit).toHaveBeenCalledWith({
@@ -207,7 +195,7 @@ describe('WorkflowSettingsDialog', () => {
     })
     const named = paged()
     let onEdit = open(named)
-    fireEvent.click(screen.getByRole('checkbox', { name: GRAPH_EDITOR_STRINGS.fields.flatten }))
+    fireEvent.click(screen.getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.flatten }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     let after = saved(named, onEdit)
     expect(after.jobs.main.steps[0]?.run).toBe('echo ${{ inputs.step_1.x }} ${{ inputs.step_1.y }}')
@@ -216,7 +204,7 @@ describe('WorkflowSettingsDialog', () => {
     cleanup()
     const unnamed = paged(false)
     onEdit = open(unnamed)
-    fireEvent.click(screen.getByRole('checkbox', { name: GRAPH_EDITOR_STRINGS.fields.flatten }))
+    fireEvent.click(screen.getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.flatten }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     after = saved(unnamed, onEdit)
     expect(after.jobs.main.steps[0]?.run).toBe('echo ${{ inputs.x }} ${{ inputs.y }}')
@@ -239,7 +227,7 @@ describe('WorkflowSettingsDialog', () => {
     const onEdit = open(paged)
     const session = screen.getByDisplayValue('app').closest('div.flex.items-start') as HTMLElement
     const redirect = within(session)
-      .getByRole('checkbox', { name: GRAPH_EDITOR_STRINGS.fields.redirect })
+      .getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.redirect })
       .closest('.flex-col') as HTMLElement
     fireEvent.click(
       within(redirect).getByRole('button', { name: GRAPH_EDITOR_STRINGS.useExpression }),
@@ -248,7 +236,7 @@ describe('WorkflowSettingsDialog', () => {
     fireEvent.click(
       within(screen.getByRole('dialog', { name: /input/i })).getByRole('button', { name: 'Save' }),
     )
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Split into pages' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Split into pages' }))
     fireEvent.click(screen.getAllByRole('button', { name: 'Save' }).at(-1) as HTMLElement)
     const after = saved(paged, onEdit)
     const inputs = after.on.execute.inputs
@@ -271,16 +259,18 @@ describe('WorkflowSettingsDialog', () => {
     )
     // The first session's redirect was an expression; the second's is still a switch, and on.
     expect(
-      within(card('two')).getByRole('checkbox', { name: GRAPH_EDITOR_STRINGS.fields.redirect }),
+      within(card('two')).getByRole('switch', { name: GRAPH_EDITOR_STRINGS.fields.redirect }),
     ).toBeChecked()
   })
 
   it('adds permissions and required variables', () => {
     const onEdit = open({ jobs: {} })
     fireEvent.click(screen.getByText('Add permission'))
-    type(screen.getByLabelText('Permissions, item 1'), '*')
+    fireEvent.change(screen.getByLabelText('Permissions, item 1'), { target: { value: '*' } })
     fireEvent.click(screen.getByText('Add organization variable'))
-    type(screen.getByLabelText('Organization variables, item 1'), 'API_KEY')
+    fireEvent.change(screen.getByLabelText('Organization variables, item 1'), {
+      target: { value: 'API_KEY' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onEdit).toHaveBeenCalledWith({
       type: 'updateWorkflow',

@@ -687,7 +687,7 @@ describe('FileExplorer host extensions', () => {
                     key: 'host',
                     label: 'Host action',
                     icon: null,
-                    onSelect: () => onSelect(node.name),
+                    onClick: () => onSelect(node.name),
                   },
                 ]
               : []
@@ -701,7 +701,7 @@ describe('FileExplorer host extensions', () => {
     expect(await screen.findByText('header for a')).toBeInTheDocument()
 
     fireEvent.contextMenu(await findTreeItem('b'))
-    fireEvent.click(await screen.findByRole('button', { name: 'Host action' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Host action' }))
     expect(onSelect).toHaveBeenCalledWith('b')
   })
 })
@@ -717,9 +717,7 @@ describe('FileExplorer write without delete', () => {
     expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument()
 
     fireEvent.contextMenu(await findTreeItem('b'))
-    await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'New folder' })).toHaveLength(2),
-    )
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('menuitem', { name: 'New folder' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument()
   })
 })

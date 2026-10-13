@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import { SearchIcon, XIcon } from '../icons'
 import { listControlButtonClasses } from './ListViewControls'
 import { isTextEntryContext } from './textEntry'
@@ -162,17 +162,16 @@ export function ListSearchControl({
     )
   }
   return (
-    <button
-      type="button"
-      onClick={search.openSearch}
-      aria-label={label}
-      data-tooltip-id={TOOLTIP_ID}
-      data-tooltip-content={label}
-      data-tooltip-shortcut="⌘+F"
-      className={listControlButtonClasses}
-    >
-      <SearchIcon className="w-3.5 h-3.5" />
-    </button>
+    <Tooltip content={label} shortcut="⌘+F">
+      <button
+        type="button"
+        onClick={search.openSearch}
+        aria-label={label}
+        className={listControlButtonClasses}
+      >
+        <SearchIcon className="w-3.5 h-3.5" />
+      </button>
+    </Tooltip>
   )
 }
 

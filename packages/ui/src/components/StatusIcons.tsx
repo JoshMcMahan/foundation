@@ -1,4 +1,4 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { IconBaseProps } from 'react-icons'
 import { FaCircleNotch } from 'react-icons/fa'
 import { ErrorIcon, SuccessIcon } from '../icons'

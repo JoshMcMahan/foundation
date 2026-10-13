@@ -1,8 +1,8 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BareModal, modalPanelClasses } from './BareModal'
 import { dangerButtonClasses, ghostButtonClasses, primaryButtonClasses } from './ghostButton'
+import { Modal, ModalDescription, ModalTitle } from './Modal'
 import { useStrings } from './Provider'
 
 export function ConfirmModal({
@@ -69,18 +69,21 @@ export function ConfirmModal({
   }, [onConfirm, closeOnConfirm])
 
   return (
-    <BareModal
+    // A destructive confirmation demands an answer; the others are ordinary forms.
+    <Modal
+      alert={destructive}
       open={open}
       onClose={onClose}
-      ariaLabel={title}
       align={align}
-      preventClose={pending}
-      className={cx(modalPanelClasses, 'w-[480px] max-w-full')}
+      dismissible={!pending}
+      className="w-[480px] max-w-full"
     >
       <div className="px-5 pt-5">
-        <h2 className="text-lg font-semibold text-(--theme-app)">{title}</h2>
+        <ModalTitle className="text-lg font-semibold text-(--theme-app)">{title}</ModalTitle>
         {description !== null && description !== undefined && (
-          <p className="mt-1.5 text-sm text-(--theme-muted-text-color)">{description}</p>
+          <ModalDescription className="mt-1.5 text-sm text-(--theme-muted-text-color)">
+            {description}
+          </ModalDescription>
         )}
         {children !== null && children !== undefined && <div className="mt-4">{children}</div>}
       </div>
@@ -106,6 +109,6 @@ export function ConfirmModal({
           {confirmLabel}
         </button>
       </div>
-    </BareModal>
+    </Modal>
   )
 }

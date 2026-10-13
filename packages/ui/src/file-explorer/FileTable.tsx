@@ -1,8 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { OpenMenu } from '../components/ContextMenu'
+import type { MenuEntry } from '../components/MenuEntries'
 import { Table } from '../components/Table'
-import { listTableFixedProps, type OpenMenu, type RowMenuItem } from '../list/index'
+import { listTableFixedProps } from '../list/index'
 import { fileRowHeight, ROW_HEIGHT_SHORT } from './FileRow'
 import { FileRowsWindow, spacerHeights } from './FileRowsWindow'
 import { FileTableHeaders } from './FileTableHeaders'
@@ -15,7 +17,7 @@ interface FileTableProps {
   allSelected: boolean
   someSelected: boolean
   onSelectAll: () => void
-  getItems: (node: TreeNode) => RowMenuItem[]
+  getItems: (node: TreeNode) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void

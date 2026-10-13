@@ -1,15 +1,12 @@
-import cx from 'classnames'
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react'
+import { Drawer } from '@base-ui/react/drawer'
+import { clsx as cx } from 'clsx'
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import type { OpenMenu } from '../../components/ContextMenu'
 import { focusOnMount } from '../../components/focus'
+import type { MenuEntry } from '../../components/MenuEntries'
 import { SidebarIcon } from '../../icons'
-import {
-  MoreButton,
-  type OpenMenu,
-  type RowMenuItem,
-  rowContextMenuProps,
-  useRowMenuActive,
-} from '../../list/index'
+import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../../list/index'
 
 const SIDEBAR_RAIL_WIDTH_PX = 48
 export const SIDEBAR_DEFAULT_WIDTH_PX = 256
@@ -60,64 +57,43 @@ export function SidebarPanel({
 /** The list over the content of a layout too narrow to keep it beside the
  *  content. Place it in a positioned container: the drawer covers that
  *  container, not the window, so an embedded chat keeps to its own panel.
- *  Tapping outside or Escape closes it, and focus returns where it was. */
+ *  A tap outside, Escape or a swipe to the left closes it, and focus returns
+ *  where it was. */
 export function SidebarDrawer({
   open,
   onClose,
   label,
-  closeLabel,
   children,
 }: {
   open: boolean
   onClose: () => void
   label: string
-  closeLabel: string
   children: ReactNode
 }) {
-  const panelRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    panelRef.current?.focus()
-    return () => returnTo?.focus()
-  }, [open])
-
+  // The portal lands here, in the container, rather than in the body.
+  const container = useRef<HTMLDivElement>(null)
   return (
-    <>
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-label={closeLabel}
-        onClick={onClose}
-        className={cx(
-          'absolute inset-0 z-20 bg-black/40 transition-opacity duration-300',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        tabIndex={-1}
-        inert={!open}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            // The chat's own Escape stops a reply; here it only closes.
-            e.stopPropagation()
-            onClose()
-          }
-        }}
-        className={cx(
-          'absolute inset-y-0 left-0 z-30 flex w-[min(20rem,85%)] shadow-xl transition-transform duration-300 ease-in-out focus:outline-none',
-          open ? 'translate-x-0' : '-translate-x-full',
-        )}
-      >
-        {children}
-      </div>
-    </>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      swipeDirection="left"
+      // Traps focus without locking the page around an embedded chat.
+      modal="trap-focus"
+    >
+      <div ref={container} className="contents" />
+      {/* Kept mounted so the list keeps its scroll and search between openings. */}
+      <Drawer.Portal container={container} keepMounted className="contents">
+        <Drawer.Backdrop className="absolute inset-0 z-20 bg-black/40 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0" />
+        <Drawer.Viewport className="absolute inset-y-0 left-0 z-30 flex w-[min(20rem,85%)]">
+          <Drawer.Popup
+            aria-label={label}
+            className="flex w-full shadow-xl outline-none [transform:translateX(var(--drawer-swipe-movement-x))] transition-transform duration-300 ease-in-out data-ending-style:[transform:translateX(-100%)] data-starting-style:[transform:translateX(-100%)] data-swiping:select-none data-swiping:duration-0"
+          >
+            {children}
+          </Drawer.Popup>
+        </Drawer.Viewport>
+      </Drawer.Portal>
+    </Drawer.Root>
   )
 }
 
@@ -220,7 +196,7 @@ export function SidebarRow({
   children,
 }: {
   selected: boolean
-  menuItems: RowMenuItem[]
+  menuItems: MenuEntry[]
   openMenu: OpenMenu
   className?: string
   children: ReactNode
@@ -236,7 +212,7 @@ export function SidebarRow({
       {...rowContextMenuProps(openRowMenu, menuItems)}
     >
       {children}
-      <MoreButton active={active} onOpen={(x, y) => openRowMenu(x, y, menuItems)} />
+      <MoreButton open={active} onOpen={(button) => openRowMenu(button, menuItems)} />
     </li>
   )
 }

@@ -1,19 +1,15 @@
-import cx from 'classnames'
+import { clsx as cx } from 'clsx'
 import type { ReactElement, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { Children, cloneElement, createContext, isValidElement, useContext, useMemo } from 'react'
+import type { OpenMenu } from '../components/ContextMenu'
+import { isMenuDivider, isMenuSubmenu, type MenuEntry } from '../components/MenuEntries'
 import { PageHeader, type PageHeaderBreadcrumb } from '../components/PageHeader'
-import { useNavigation } from '../components/Provider'
+import { useLink, useNavigation } from '../components/Provider'
 import { Table } from '../components/Table'
-import { TOOLTIP_ID } from '../components/Tooltip'
+import { Tooltip } from '../components/Tooltip'
 import { ListActionsHeader, NAME_MIN_WIDTH_PX } from './ListTable'
 import type { ListView, ListViewChrome } from './listView'
-import {
-  MoreButton,
-  type OpenMenu,
-  type RowMenuItem,
-  rowContextMenuProps,
-  useRowMenuActive,
-} from './RowContextMenu'
+import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
 /** Negative offsets (admin/org) cancel the shell's pt-4 so rows don't peek through the gap above the pinned header. */
 const SECTION_STICKY_TOP = {
@@ -121,16 +117,6 @@ export function ListPage({
   )
 }
 
-export interface PinnedRowAction {
-  key: string
-  label: string
-  icon: ReactNode
-  onSelect: () => void
-  disabled?: boolean | undefined
-  /** Replaces the label on hover when the action is disabled, explaining why. */
-  tooltip?: string | undefined
-}
-
 export function ListRow({
   href,
   onActivate,
@@ -148,10 +134,11 @@ export function ListRow({
   href: string | null
   /** Plain-click handler for rows that open something in place instead of navigating. */
   onActivate?: (() => void) | undefined
-  items: RowMenuItem[]
+  items: MenuEntry[]
   goTo: (to: string) => void
   openMenu: OpenMenu
-  pinnedActions?: PinnedRowAction[] | undefined
+  /** Actions shown as buttons on the row, beside the menu. */
+  pinnedActions?: RowAction[] | undefined
   className?: string
   /** Tints the whole row to mark it as part of a multi-selection. */
   selected?: boolean
@@ -234,7 +221,7 @@ export function ListRow({
   // A submenu (e.g. Copy) can never be pinned, so it always keeps "..." visible.
   const pinnedLabels = new Set((pinnedActions ?? []).map((a) => a.label))
   const hasOverflowItems = items.some(
-    (item) => item.kind !== 'divider' && (item.kind === 'submenu' || !pinnedLabels.has(item.label)),
+    (item) => !isMenuDivider(item) && (isMenuSubmenu(item) || !pinnedLabels.has(item.label)),
   )
 
   return (
@@ -261,46 +248,61 @@ export function ListRow({
             {pinnedActions && pinnedActions.length > 0 && (
               <span className="hidden items-center gap-0.5 @[44rem]:flex">
                 {pinnedActions.map((action) => (
-                  <button
+                  <PinnedActionButton
                     key={action.key}
-                    type="button"
-                    aria-label={action.label}
-                    data-tooltip-id={TOOLTIP_ID}
-                    data-tooltip-content={
-                      action.disabled && action.tooltip ? action.tooltip : action.label
-                    }
-                    data-tooltip-place="bottom"
-                    aria-disabled={action.disabled}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (action.disabled) {
-                        return
-                      }
-                      action.onSelect()
-                    }}
-                    className={cx(
-                      'rounded p-1 cursor-pointer text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) aria-disabled:cursor-not-allowed aria-disabled:opacity-20 aria-disabled:hover:bg-transparent aria-disabled:hover:text-(--theme-muted-text-color) [&>svg]:h-4 [&>svg]:w-4',
-                      alwaysShowActions || menuActive
-                        ? 'opacity-100'
-                        : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-                    )}
-                  >
-                    {action.icon}
-                  </button>
+                    action={action}
+                    visible={alwaysShowActions || menuActive}
+                  />
                 ))}
               </span>
             )}
             {/* `⋯` opens the full menu; when redundant (all items pinned) hide
              * it at ≥44rem, where the buttons show. */}
             <MoreButton
-              active={menuActive || alwaysShowActions}
-              onOpen={(x, y) => openRowMenu(x, y, items)}
+              open={menuActive}
+              visible={menuActive || alwaysShowActions}
+              onOpen={(button) => openRowMenu(button, items)}
               className={hasOverflowItems ? undefined : '@[44rem]:hidden'}
             />
           </div>
         </Table.Item>
       )}
     </tr>
+  )
+}
+
+function PinnedActionButton({ action, visible }: { action: RowAction; visible: boolean }) {
+  const Link = useLink()
+  const reason = action.disabled ? action.disabledReason : undefined
+  const props = {
+    'aria-label': reason ? `${action.label}. ${reason}` : action.label,
+    className: cx(
+      'rounded p-1 cursor-pointer text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) aria-disabled:cursor-not-allowed aria-disabled:opacity-20 aria-disabled:hover:bg-transparent aria-disabled:hover:text-(--theme-muted-text-color) [&>svg]:h-4 [&>svg]:w-4',
+      visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+    ),
+  }
+  return (
+    <Tooltip content={reason ?? action.label} side="bottom">
+      {action.href && !action.disabled ? (
+        <Link href={action.href} {...props}>
+          {action.icon}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          aria-disabled={action.disabled}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (!action.disabled) {
+              action.onClick?.()
+            }
+          }}
+          {...props}
+        >
+          {action.icon}
+        </button>
+      )}
+    </Tooltip>
   )
 }
 

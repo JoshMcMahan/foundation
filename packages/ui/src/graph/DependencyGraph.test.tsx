@@ -15,16 +15,10 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { testEngine } from '../test/engine'
 
 // jsdom lacks these; the graph relies on them for connector recompute + fit.
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver
 // No-op: the graph schedules connector recompute via rAF; running it
 // synchronously here would re-enter render. Geometry isn't asserted in jsdom.
 global.requestAnimationFrame = (() => 0) as typeof requestAnimationFrame
 global.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame
-Element.prototype.getAnimations = () => []
 
 // Pan/zoom + animation wrappers reduced to plain passthroughs (no layout in jsdom).
 vi.mock('../components/Provider', async (importOriginal) =>
@@ -70,18 +64,6 @@ vi.mock('react-zoom-pan-pinch', async () => {
     TransformComponent: ({ children }: { children: unknown }) => children,
   }
 })
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children: unknown }) => children,
-  motion: new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children }: { children: unknown }) =>
-          children,
-    },
-  ),
-}))
 
 // Heavy leaf that only appears inside the log modal; render the log it was
 // handed so the modal's message states are assertable.

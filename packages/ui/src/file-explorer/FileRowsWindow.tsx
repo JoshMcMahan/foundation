@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
+import type { OpenMenu } from '../components/ContextMenu'
+import type { MenuEntry } from '../components/MenuEntries'
 import { useSlots, useStrings } from '../components/Provider'
 import { FileIcon, FolderIcon } from '../icons'
-import type { OpenMenu, RowMenuItem } from '../list/index'
 import { canPreview } from './FilePreview/previewType'
 import { FileRow, isTwoLineRow, ROW_HEIGHT_SHORT, ROW_HEIGHT_TALL } from './FileRow'
 import { getNodeIcon } from './helpers'
@@ -42,7 +43,7 @@ interface FileRowsWindowProps {
   rowIdPrefix: string
   scrollEl: HTMLElement | null
   loadMore?: LoadMoreState | undefined
-  getItems: (node: TreeNode) => RowMenuItem[]
+  getItems: (node: TreeNode) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void

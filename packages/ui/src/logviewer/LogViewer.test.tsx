@@ -7,11 +7,6 @@ vi.mock('../components/Provider', async (importOriginal) =>
   (await import('../test/engine')).mockEngineHooks(importOriginal),
 )
 beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
   URL.createObjectURL = vi.fn(() => 'blob:log')
   URL.revokeObjectURL = vi.fn()
   Element.prototype.scroll = vi.fn()

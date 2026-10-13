@@ -1,16 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
-import { Form, Formik } from 'formik'
+import { screen } from '@testing-library/react'
+import { renderInForm } from '../../test/form'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { IRangeField } from './RangeField'
 import RangeField from './RangeField'
-
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
 
 describe('RangeField default seeding', () => {
   const createProps = (
@@ -26,27 +20,18 @@ describe('RangeField default seeding', () => {
     label: 'Wait',
     labelPosition: 'top',
     missing: false,
-    missingFields: [],
-    values: {},
-    setFormDirty: vi.fn(),
     disabled: false,
-    currentValue: '',
   })
 
   // Render with the field absent from the form values, so RangeField must seed it.
   const renderUnset = (props: FieldComponentProps<IRangeField>) =>
-    render(
-      <Formik initialValues={{}} onSubmit={vi.fn()}>
-        <Form>
-          <RangeField {...props} />
-        </Form>
-      </Formik>,
-    )
+    renderInForm(<RangeField {...props} />)
 
   it('seeds field.default when the form value is unset (not min)', () => {
-    renderUnset(createProps({ default: 300 }))
+    const { form } = renderUnset(createProps({ default: 300 }))
     // The bug seeded field.min (30); the fix honors the configured default.
     expect(screen.getByRole('spinbutton')).toHaveValue(300)
+    expect(form.getValues('flexStartWaitTime')).toBe(300)
   })
 
   it('falls back to min when no default is configured', () => {
