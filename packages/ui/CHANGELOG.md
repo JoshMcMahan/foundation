@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.45.0](https://github.com/parallelworks/foundation/compare/ui-v0.44.0...ui-v0.45.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** themes from a few picked colors, with contrast solved, display-p3, a code theme and an editor ([#237](https://github.com/parallelworks/foundation/issues/237))
+* **ui:** one icon set, on Lucide ([#236](https://github.com/parallelworks/foundation/issues/236))
+* **ui:** one component per job across overlays, buttons, fields, structure and live times ([#231](https://github.com/parallelworks/foundation/issues/231))
+
+### Features
+
+* **ui:** one component per job across overlays, buttons, fields, structure and live times ([#231](https://github.com/parallelworks/foundation/issues/231)) ([956cd5e](https://github.com/parallelworks/foundation/commit/956cd5e1f8e8a025220149c8fab387d4f0e4f0c9))
+* **ui:** one icon set, on Lucide ([#236](https://github.com/parallelworks/foundation/issues/236)) ([e150389](https://github.com/parallelworks/foundation/commit/e150389b9d1f5ab023f8e8fb0b54b3986541416f))
+* **ui:** themes from a few picked colors, with contrast solved, display-p3, a code theme and an editor ([#237](https://github.com/parallelworks/foundation/issues/237)) ([c46e370](https://github.com/parallelworks/foundation/commit/c46e370b8c6328901d0bae99ac1e0aa917663048))
+
 ## [0.44.0](https://github.com/parallelworks/foundation/compare/ui-v0.43.0...ui-v0.44.0) (2026-10-13)
 
 
