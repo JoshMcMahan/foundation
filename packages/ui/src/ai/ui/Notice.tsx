@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cx } from '../../cx'
-import { AlertCircleIcon, CloseIcon, InfoCircleIcon } from '../../icons'
+import { CloseIcon, ErrorIcon, InfoIcon } from '../../icons'
 
 export type NoticeTone = 'neutral' | 'info' | 'warning' | 'danger'
 
@@ -49,7 +49,7 @@ export function NoticeBar({
   onAction?: () => void
   testId?: string
 }) {
-  const Icon = tone === 'danger' || tone === 'warning' ? AlertCircleIcon : InfoCircleIcon
+  const Icon = tone === 'danger' || tone === 'warning' ? ErrorIcon : InfoIcon
   return (
     <div
       data-testid={testId}

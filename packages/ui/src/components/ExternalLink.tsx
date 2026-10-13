@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef } from 'react'
 import { cx } from '../cx'
-import { ExternalLink as ExternalLinkIcon } from '../icons'
+import { ExternalLinkIcon } from '../icons'
 import { useStrings } from './Provider'
 
 export type ExternalLinkProps = Omit<ComponentPropsWithRef<'a'>, 'target' | 'rel'> & {

@@ -6,20 +6,6 @@ import ChatInput from './ChatInput'
 import { DRAFT_TTL_MS, sweepDrafts } from './chatDraft'
 import type { PasteUploadResult } from './usePasteCards'
 
-vi.mock('../../icons', () => ({
-  ArrowUpIcon: () => <span />,
-  PlusOutlineIcon: () => <span />,
-  FileIcon: () => <span />,
-  RunningIcon: () => <span />,
-  StopSolidIcon: () => <span />,
-  XIcon: () => <span />,
-  CloseIcon: () => null,
-  ErrorIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
-
 const addFilesMock = vi.fn()
 vi.mock('./AttachmentUpload', () => ({
   __esModule: true,

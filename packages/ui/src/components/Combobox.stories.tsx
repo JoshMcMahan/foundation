@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, screen, userEvent, within } from 'storybook/test'
-import { CloudIcon, ServerIcon } from '../icons'
+import { CloudIcon, ClusterIcon, NodeIcon } from '../icons'
 import { Autocomplete, Combobox, type ComboboxGroup, type ComboboxItem } from './Combobox'
 
 interface FieldArgs {
@@ -51,7 +51,7 @@ export const Single: StoryObj<FieldArgs> = {
 const clusters: ComboboxGroup<{ id: string }>[] = ['alpha', 'beta'].map((name) => ({
   label: name,
   items: [
-    { label: 'Login node', value: { id: `login:${name}` }, icon: <ServerIcon /> },
+    { label: 'Login node', value: { id: `login:${name}` }, icon: <NodeIcon /> },
     ...[0, 1, 2].map((i) => ({
       label: `${name}-environment-with-a-long-descriptive-name-${i}`,
       value: { id: `env:${name}:${i}` },
@@ -124,14 +124,14 @@ export const ButtonTrigger: StoryObj<FieldArgs> = {
 const sessions: ComboboxGroup[] = [
   {
     label: 'alpha',
-    icon: <ServerIcon />,
+    icon: <ClusterIcon />,
     description: 'Shared by bob',
     items: [
       { label: 'Large', value: 'alpha/large' },
       { label: 'Small', value: 'alpha/small' },
     ],
   },
-  { label: 'beta', icon: <ServerIcon />, description: 'Connecting…', items: [] },
+  { label: 'beta', icon: <ClusterIcon />, description: 'Connecting…', items: [] },
   { label: 'gamma', icon: <CloudIcon />, description: 'Not responding', items: [] },
   { label: 'delta', icon: <CloudIcon />, items: [{ label: 'Medium', value: 'delta/medium' }] },
 ]

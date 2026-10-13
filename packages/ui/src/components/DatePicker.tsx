@@ -2,7 +2,7 @@ import { Popover } from '@base-ui/react/popover'
 import { type ClassNames, DayPicker, type Matcher } from '@daypicker/react'
 import { useState } from 'react'
 import { cx } from '../cx'
-import { AngleLeftIcon, AngleRightIcon, CalendarIcon } from '../icons'
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { buttonClasses } from './buttonClasses'
 import { fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
@@ -205,9 +205,9 @@ export function DatePicker({
                 components={{
                   Chevron: ({ orientation }) =>
                     orientation === 'left' ? (
-                      <AngleLeftIcon aria-hidden="true" />
+                      <ChevronLeftIcon aria-hidden="true" />
                     ) : (
-                      <AngleRightIcon aria-hidden="true" />
+                      <ChevronRightIcon aria-hidden="true" />
                     ),
                 }}
               />

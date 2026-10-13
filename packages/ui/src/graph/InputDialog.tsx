@@ -12,7 +12,7 @@ import { INPUT_YAML_PATH } from '../editor/settingsYaml'
 import { DynamicForm } from '../form/Form'
 import { FormEditingContext } from '../form/formEditing'
 import { formatDurationText, parseDurationText } from '../form/utils/duration'
-import { ArrowDownIcon, ArrowUpIcon, CloseIcon, EditIcon, TrashIcon } from '../icons'
+import { ArrowDownIcon, ArrowUpIcon, EditIcon, RemoveIcon, TrashIcon } from '../icons'
 import {
   AddRowButton,
   asRecord,
@@ -654,7 +654,7 @@ function OptionsEditor({
                 </div>
               )}
               <IconButton
-                icon={<CloseIcon />}
+                icon={<RemoveIcon />}
                 label={t.removeOption}
                 variant="ghost"
                 size="sm"

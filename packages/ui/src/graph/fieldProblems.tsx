@@ -10,7 +10,7 @@ import {
 import { keyedByContent } from '../components/keys'
 import { useWorkflowEditing } from '../components/Provider'
 import type { LintFix } from '../editing'
-import { AlertIcon } from '../icons'
+import { WarningIcon } from '../icons'
 import { useGraphEditorStrings } from './editorStrings'
 
 /** A linter problem inside what a dialog edits; `at` is its path from there, such as ['run']. */
@@ -153,7 +153,7 @@ export function ProblemList({ problems }: { problems: ScopedProblem[] }) {
           const field = fieldOf(problem)
           return (
             <li key={key} className="flex gap-1.5">
-              <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+              <WarningIcon className="mt-0.5 h-4 w-4 shrink-0" />
               {field ? (
                 <button
                   type="button"

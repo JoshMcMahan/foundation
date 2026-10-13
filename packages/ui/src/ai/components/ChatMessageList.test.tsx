@@ -30,18 +30,6 @@ vi.mock('../ui/Markdown', () => ({
   default: ({ children }: { children: string }) => <div>{children}</div>,
 }))
 
-vi.mock('../../icons', () => ({
-  ThinkingIcon: () => null,
-  ChevronRightIcon: () => null,
-  CheckIcon: () => null,
-  ClockIcon: () => null,
-  CloseIcon: () => null,
-  ErrorIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
-
 vi.mock('./agent/AgentMessageParts', () => ({
   __esModule: true,
   default: () => <div data-testid="agent-parts" />,

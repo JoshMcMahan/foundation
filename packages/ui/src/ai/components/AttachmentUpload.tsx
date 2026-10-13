@@ -12,14 +12,7 @@ import { useStrings } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import { cx } from '../../cx'
 import { formatBytes } from '../../format'
-import {
-  AddIcon,
-  AlertIcon,
-  FileSolidIcon,
-  ImageSolidIcon,
-  PdfSolidIcon,
-  TrashIcon,
-} from '../../icons'
+import { AddIcon, FileIcon, ImageIcon, PdfIcon, TrashIcon, WarningIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { ATTACHMENTS_INFINITE_KEY } from './attachmentKeys'
@@ -54,15 +47,15 @@ const DEFAULT_MAX_FILES = 10
 
 function getFileIcon(mimeType: string | undefined) {
   if (!mimeType) {
-    return FileSolidIcon
+    return FileIcon
   }
   if (mimeType.startsWith('image/')) {
-    return ImageSolidIcon
+    return ImageIcon
   }
   if (mimeType === 'application/pdf') {
-    return PdfSolidIcon
+    return PdfIcon
   }
-  return FileSolidIcon
+  return FileIcon
 }
 
 const AttachmentUpload = forwardRef<AttachmentUploadHandle, AttachmentUploadProps>(
@@ -259,7 +252,7 @@ const AttachmentUpload = forwardRef<AttachmentUploadHandle, AttachmentUploadProp
                     )}
                     {attachment.error && (
                       <span role="img" aria-label={attachment.error} title={attachment.error}>
-                        <AlertIcon className="h-3.5 w-3.5 text-red-500" />
+                        <WarningIcon className="h-3.5 w-3.5 text-red-500" />
                       </span>
                     )}
                     <button

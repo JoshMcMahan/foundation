@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cx } from '../cx'
-import { AngleRightIcon } from '../icons'
+import { ChevronRightIcon } from '../icons'
 import { type ButtonStyle, buttonClasses } from './buttonClasses'
 import { Loader } from './Loader'
 import { useLink } from './Provider'
@@ -87,7 +87,7 @@ export function MethodButton({
           <Loader inline decorative size={20} color="currentColor" />
         </span>
       ) : (
-        <AngleRightIcon className="size-5 text-[var(--theme-muted-text-color)] shrink-0 ml-2 transition-all duration-200 group-hover:translate-x-[3px] group-hover:text-[var(--theme-app)]" />
+        <ChevronRightIcon className="size-5 text-[var(--theme-muted-text-color)] shrink-0 ml-2 transition-all duration-200 group-hover:translate-x-[3px] group-hover:text-[var(--theme-app)]" />
       )}
     </>
   )

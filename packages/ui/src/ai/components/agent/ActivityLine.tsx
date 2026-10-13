@@ -3,7 +3,7 @@ import { Loader } from '../../../components/Loader'
 import { useElapsed } from '../../../components/relativeTime'
 import { cx } from '../../../cx'
 import { formatCount, formatDuration } from '../../../format'
-import { StopSolidIcon } from '../../../icons'
+import { StopIcon } from '../../../icons'
 import { useChatConfig } from '../../core/config'
 
 /** The agent status words: one is picked per turn and held until it ends. */
@@ -129,7 +129,7 @@ export default function ActivityLine({
             'hover:theme-hover hover:theme-text disabled:cursor-not-allowed disabled:opacity-50',
           )}
         >
-          <StopSolidIcon className="h-3 w-3" />
+          <StopIcon className="h-3 w-3" />
           {strings.activity.stop}
         </button>
       )}

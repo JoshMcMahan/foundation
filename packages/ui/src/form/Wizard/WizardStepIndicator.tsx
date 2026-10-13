@@ -2,7 +2,7 @@ import { Button } from '../../components/Button'
 import { Popover, useClosePopover } from '../../components/Popover'
 import { useStrings } from '../../components/Provider'
 import { cx } from '../../cx'
-import { AlertIcon, CheckIcon } from '../../icons'
+import { CheckIcon, WarningIcon } from '../../icons'
 import type { WizardStepIndicatorProps } from './types'
 import { stepText } from './utils'
 
@@ -119,7 +119,7 @@ function StepItem({
       {status === 'done' ? (
         <CheckIcon className="size-2.5" />
       ) : status === 'invalid' ? (
-        <AlertIcon className="size-3" />
+        <WarningIcon className="size-3" />
       ) : (
         number
       )}

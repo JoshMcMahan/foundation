@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useRef } from 'react'
 import type { FloatingAnchor } from '../components/floating'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { AddIcon, AlertIcon, DragHandleIcon, MoreIcon } from '../icons'
+import { AddIcon, DragHandleIcon, MoreIcon, WarningIcon } from '../icons'
 import type { EditorProblem } from './editorApi'
 import { MarqueeBox, type Point, place } from './editorPrimitives'
 import {
@@ -224,7 +224,7 @@ function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; st
           api.reveal({ line })
         }}
       >
-        <AlertIcon className="h-[0.9em] w-[0.9em]" />
+        <WarningIcon className="h-[0.9em] w-[0.9em]" />
       </button>
     </Tooltip>
   )

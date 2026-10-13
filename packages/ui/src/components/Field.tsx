@@ -2,7 +2,7 @@ import { Field as BaseField } from '@base-ui/react/field'
 import { Fieldset } from '@base-ui/react/fieldset'
 import { createContext, type ReactNode, use, useId } from 'react'
 import { cx } from '../cx'
-import { AlertIcon, EyeIcon, EyeOffIcon } from '../icons'
+import { EyeIcon, EyeOffIcon, WarningIcon } from '../icons'
 import { useStrings } from './Provider'
 import { RequiredMark } from './RequiredMark'
 
@@ -71,7 +71,7 @@ const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-erro
 export function ErrorText({ children }: { children: ReactNode }) {
   return children ? (
     <div role="alert" className={errorTextClassName}>
-      <AlertIcon aria-hidden="true" className="size-3.5 shrink-0" />
+      <WarningIcon aria-hidden="true" className="size-3.5 shrink-0" />
       {children}
     </div>
   ) : null
@@ -148,7 +148,7 @@ export function Field({
       )}
       {error && (
         <BaseField.Error id={errorId} match role="alert" className={errorTextClassName}>
-          <AlertIcon aria-hidden="true" className="size-3.5 shrink-0" />
+          <WarningIcon aria-hidden="true" className="size-3.5 shrink-0" />
           {error}
         </BaseField.Error>
       )}

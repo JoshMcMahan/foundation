@@ -4,7 +4,7 @@ import { positionKeys } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { Skeleton } from '../components/Skeleton'
 import { cx } from '../cx'
-import { AngleRightIcon, FolderIcon, FolderOpenIcon } from '../icons'
+import { ChevronRightIcon, FolderIcon, FolderOpenIcon } from '../icons'
 import { canPreview } from './FilePreview/previewType'
 import { getNodeIcon } from './helpers'
 import type { TreeNode } from './lib/types'
@@ -320,7 +320,7 @@ function RowIcons({
   )
   return (
     <>
-      <AngleRightIcon
+      <ChevronRightIcon
         className={cx(
           'h-3.5 w-3.5 shrink-0 theme-muted-text transition-transform duration-150',
           isExpanded && 'rotate-90',

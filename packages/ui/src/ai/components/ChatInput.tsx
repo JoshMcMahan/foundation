@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react'
 import { cx } from '../../cx'
-import { ArrowUpIcon, PlusOutlineIcon, StopSolidIcon } from '../../icons'
+import { AddIcon, ArrowUpIcon, StopIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import useDragDrop from '../core/useDragDrop'
@@ -133,9 +133,7 @@ function AttachButton({
       aria-label={label}
       title={label}
     >
-      <PlusOutlineIcon
-        className={cx('h-5 w-5 transition-transform duration-200', open && 'rotate-45')}
-      />
+      <AddIcon className={cx('h-5 w-5 transition-transform duration-200', open && 'rotate-45')} />
     </button>
   )
 }
@@ -389,7 +387,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
         aria-label={t.stopGenerating}
         title={t.stopGenerating}
       >
-        <StopSolidIcon className="h-3 w-3" />
+        <StopIcon className="h-3 w-3" />
       </button>
     ) : (
       <SendButton

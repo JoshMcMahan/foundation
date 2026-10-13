@@ -5,7 +5,7 @@ import type { MenuEntry } from '../../components/MenuEntries'
 import { RelativeTime } from '../../components/relativeTime'
 import { SearchInput } from '../../components/SearchInput'
 import { cx } from '../../cx'
-import { ImageIcon, NewChatIcon, SharingIcon } from '../../icons'
+import { ImageIcon, NewChatIcon, UsersIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
@@ -39,7 +39,7 @@ function ConversationRow({
         onClick={onOpen}
       >
         {conv.isOwner === false && (
-          <SharingIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
+          <UsersIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
         )}
         <SidebarRowTitle
           time={<RelativeTime value={conv.updatedAt ?? conv.createdAt} format="compact" />}

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Combobox, type ComboboxGroup } from '../../components/Combobox'
 import { useStrings } from '../../components/Provider'
 import { cx } from '../../cx'
-import { ChevronDownIcon, CloudIcon, RetryIcon, WarningTriangleIcon } from '../../icons'
+import { ChevronDownIcon, CloudIcon, RetryIcon, WarningIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { issueDetail, issueLabel, providerIssueFor } from '../core/providerIssues'
@@ -220,7 +220,7 @@ export default function ModelSelector({
               {selected.provider && (
                 <span className="max-w-[45%] shrink-0 truncate text-xs">{selected.provider}</span>
               )}
-              {issue && <WarningTriangleIcon className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+              {issue && <WarningIcon className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
             </>
           ) : (
             <span

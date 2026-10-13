@@ -22,7 +22,6 @@ import { type FormEditing, FormEditingContext } from '../form/formEditing'
 import { type WizardPages, WizardPagesContext } from '../form/Wizard/wizardPages'
 import {
   AddIcon,
-  AlertIcon,
   ArrowDownIcon,
   ArrowUpIcon,
   CollapseIcon,
@@ -32,8 +31,8 @@ import {
   FilesIcon,
   MinusIcon,
   MoreIcon,
-  PlusOutlineIcon,
   TrashIcon,
+  WarningIcon,
 } from '../icons'
 import { type DependencyGraphEditor, type EditorProblem, overlaps, typing } from './editorApi'
 import { AddChip, BarDivider, DragLabel, EditorBar } from './editorChrome'
@@ -482,7 +481,7 @@ function InputRow({
             className="absolute -left-2 -top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-(--theme-panel-bg) text-(--theme-error) shadow-sm"
             onClick={() => api.reveal(Number.parseInt(found[0] ?? '0', 10))}
           >
-            <AlertIcon className="h-3.5 w-3.5" />
+            <WarningIcon className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
       )}
@@ -557,7 +556,7 @@ function PageActions({
       <IconButton
         size="xs"
         label={t.addPage}
-        icon={<PlusOutlineIcon />}
+        icon={<AddIcon />}
         onClick={(e) => {
           e.stopPropagation()
           api.addPage(parent)

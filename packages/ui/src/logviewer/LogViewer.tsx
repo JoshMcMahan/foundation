@@ -31,11 +31,11 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
+  CloseIcon,
   CopyIcon,
   DownloadIcon,
   ExpandIcon,
   ShrinkIcon,
-  XIcon,
 } from '../icons'
 import { highlightSegments, parseAnsiSegments, plainSegments } from './segments'
 
@@ -754,7 +754,7 @@ export function LogViewer({
                     variant="secondary"
                     size="xs"
                     label={t.clearSelection}
-                    icon={<XIcon />}
+                    icon={<CloseIcon />}
                     onClick={() => setSelectedLines(new Set())}
                   />
                 </span>

@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, Ref } from 'react'
 import { cx } from '../cx'
-import { SearchIcon, XIcon } from '../icons'
+import { CloseIcon, SearchIcon } from '../icons'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { useStrings } from './Provider'
 
@@ -75,7 +75,7 @@ export function SearchInput({
           onClick={() => onValueChange('')}
           className="absolute right-1 flex size-6 cursor-pointer items-center justify-center rounded text-(--theme-muted-text-color) hover:text-(--theme-app)"
         >
-          <XIcon aria-hidden="true" className="size-3" />
+          <CloseIcon aria-hidden="true" className="size-3" />
         </button>
       )}
     </div>

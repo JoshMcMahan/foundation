@@ -3,7 +3,7 @@ import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../compo
 import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { DocumentIcon, OpenInNewGraphIcon } from '../icons'
+import { FileTextIcon, OpenInNewGraphIcon } from '../icons'
 import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
 import type { WorkflowJob, WorkflowSubworkflow } from './types'
@@ -156,7 +156,7 @@ export function Joblist(
                             }}
                             className="link ml-1"
                           >
-                            <DocumentIcon className="w-[1.2em] h-[1.2em]" />
+                            <FileTextIcon className="w-[1.2em] h-[1.2em]" />
                           </button>
                         </Tooltip>
                         <UsesIcon uses={step.uses} subworkflow={step.subworkflow} />

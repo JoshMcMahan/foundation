@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import useSWR from 'swr'
 import { Select } from '../../components/Select'
-import { AngleDownIcon } from '../../icons'
+import { ChevronDownIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { chipClassName } from '../ui/chip'
@@ -50,7 +50,7 @@ export default function AllocationSelector() {
         trigger={
           <button type="button" className={chipClassName}>
             <span className="truncate">{selected?.name ?? t.placeholder}</span>
-            <AngleDownIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <ChevronDownIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
           </button>
         }
       />

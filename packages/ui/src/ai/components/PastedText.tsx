@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { Loader } from '../../components/Loader'
 import { cx } from '../../cx'
 import { formatBytes } from '../../format'
-import { FileIcon, XIcon } from '../../icons'
+import { FileIcon, RemoveIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import { fencePaste } from '../core/pasteLanguage'
 import { splitPastes } from '../core/pastes'
@@ -54,7 +54,7 @@ export function PasteFileCard({
           title={t.remove}
           className="flex-shrink-0 rounded p-0.5 theme-muted-text hover:theme-text"
         >
-          <XIcon className="h-3.5 w-3.5" />
+          <RemoveIcon className="h-3.5 w-3.5" />
         </button>
       )}
     </div>

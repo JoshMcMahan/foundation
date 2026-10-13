@@ -1,4 +1,4 @@
-import { CheckIcon, ClipboardIcon, CopyIcon, HiddenFalseIcon, HiddenTrueIcon } from '../icons'
+import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from '../icons'
 import { useStrings } from './Provider'
 import { useCopy } from './useCopy'
 
@@ -40,7 +40,7 @@ export default function CopyToClipboard({
             },
           })}
     >
-      {showIcon && <ClipboardIcon />}
+      {showIcon && <CopyIcon />}
       {children}
     </Element>
   )
@@ -89,7 +89,7 @@ export function CopyCodeBlock({
             aria-label={isRevealed ? common.hideValue : common.showValue}
             title={isRevealed ? common.hideValue : common.showValue}
           >
-            {isRevealed ? <HiddenFalseIcon /> : <HiddenTrueIcon />}
+            {isRevealed ? <EyeIcon /> : <EyeOffIcon />}
           </button>
         )}
         <button

@@ -6,7 +6,7 @@ import Markdown from '../../components/Markdown'
 import { useStrings } from '../../components/Provider'
 import { cx } from '../../cx'
 import { formatBytes } from '../../format'
-import { DownloadFileIcon, FileIcon, LockIcon, MusicIcon, ZipIcon } from '../../icons'
+import { DownloadIcon, FileIcon, LockIcon, MusicIcon, ZipIcon } from '../../icons'
 import { type CorsAwareRefresh, CorsIssuePreview } from '../helpers'
 import type { TreeNode, TStorage } from '../lib/types'
 import { joinSource, type NotebookOutput, parseDelimited, parseNotebook, stripAnsi } from './parse'
@@ -683,7 +683,7 @@ function NotPreviewable({
           <div className="mt-1 text-sm theme-muted-text">{message}</div>
         </div>
         {onDownload && (
-          <Button variant="primary" icon={<DownloadFileIcon />} onClick={onDownload}>
+          <Button variant="primary" icon={<DownloadIcon />} onClick={onDownload}>
             {t.preview.downloadInstead}
           </Button>
         )}
@@ -709,7 +709,7 @@ function TooLargeInline({
             : t.preview.tooLarge}
         </div>
         {onDownload && (
-          <Button variant="primary" icon={<DownloadFileIcon />} onClick={onDownload}>
+          <Button variant="primary" icon={<DownloadIcon />} onClick={onDownload}>
             {t.preview.downloadInstead}
           </Button>
         )}
@@ -731,7 +731,7 @@ function InlineError({
       <div className="flex max-w-md flex-col items-center gap-3 text-center">
         <div className="text-sm theme-muted-text">{message}</div>
         {onDownload && (
-          <Button variant="secondary" icon={<DownloadFileIcon />} onClick={onDownload}>
+          <Button variant="secondary" icon={<DownloadIcon />} onClick={onDownload}>
             {t.preview.downloadInstead}
           </Button>
         )}

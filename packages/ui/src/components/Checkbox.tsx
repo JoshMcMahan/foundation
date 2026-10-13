@@ -1,6 +1,6 @@
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
 import { cx } from '../cx'
-import { CheckStrokeIcon, MinusIcon } from '../icons'
+import { CheckIcon, MinusIcon } from '../icons'
 
 export { CheckboxGroup } from '@base-ui/react/checkbox-group'
 
@@ -31,7 +31,7 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
             {state.indeterminate ? (
               <MinusIcon aria-hidden="true" className="size-3.5" />
             ) : (
-              <CheckStrokeIcon aria-hidden="true" className="size-3" />
+              <CheckIcon aria-hidden="true" className="size-3" />
             )}
           </span>
         )}

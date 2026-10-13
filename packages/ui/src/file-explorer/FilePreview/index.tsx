@@ -9,7 +9,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
-  DownloadFileIcon,
+  DownloadIcon,
   FileIcon,
   LinkIcon,
   ZoomInIcon,
@@ -137,7 +137,7 @@ export function FilePreview({
         <IconButton
           size="md"
           label={common.download}
-          icon={<DownloadFileIcon />}
+          icon={<DownloadIcon />}
           onClick={() => onDownload(node)}
         />
         <IconButton size="md" label={common.close} icon={<CloseIcon />} onClick={onClose} />

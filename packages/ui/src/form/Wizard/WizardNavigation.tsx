@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/Button'
 import { useStrings } from '../../components/Provider'
-import { AlertIcon } from '../../icons'
+import { WarningIcon } from '../../icons'
 import type { WizardNavigationProps } from './types'
 
 export function WizardNavigation({
@@ -51,7 +51,7 @@ export function WizardNavigation({
     <div>
       {error && (
         <p role="alert" className="mb-3 flex items-center gap-1.5 text-sm text-(--theme-error)">
-          <AlertIcon aria-hidden="true" className="size-4 shrink-0" />
+          <WarningIcon aria-hidden="true" className="size-4 shrink-0" />
           {error}
         </p>
       )}

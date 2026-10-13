@@ -16,20 +16,20 @@ import { toast } from '../components/Toast'
 import { cx } from '../cx'
 import { formatBytes } from '../format'
 import {
-  AlertIcon,
   CustomizeIcon,
   DiskIcon,
-  DocumentIcon,
   FileIcon,
   FileTextIcon,
   FolderIcon,
   ImageIcon,
   PdfIcon,
   RefreshIcon,
+  RetryIcon,
   ShareIcon,
   SpreadsheetIcon,
   UserIcon,
   VideoIcon,
+  WarningIcon,
   ZipIcon,
 } from '../icons'
 import { ListSkeleton } from '../list/index'
@@ -59,7 +59,7 @@ const contentTypeIconMap = [
   },
   {
     pattern: /(document|word)/,
-    icon: <DocumentIcon className="h-4 w-4 text-blue-400" />,
+    icon: <FileTextIcon className="h-4 w-4 text-blue-400" />,
   },
   {
     pattern: /(javascript|json|css|html)/,
@@ -88,7 +88,7 @@ const extensionIconMap = [
   },
   {
     pattern: /^(docx?|odt)$/i,
-    icon: <DocumentIcon className="h-4 w-4 text-blue-400" />,
+    icon: <FileTextIcon className="h-4 w-4 text-blue-400" />,
   },
   {
     pattern: /^(js|ts|json|css|html|md|txt)$/i,
@@ -241,7 +241,7 @@ function NotFoundPreview({ path, onRetry }: { path: string; onRetry: () => void 
         </div>
         <h2 className="text-base font-semibold mb-1">{t.title(name)}</h2>
         <p className="text-sm theme-muted-text mb-4">{t.description}</p>
-        <Button variant="primary" icon={<RefreshIcon />} onClick={onRetry}>
+        <Button variant="primary" icon={<RetryIcon />} onClick={onRetry}>
           {common.retry}
         </Button>
       </div>
@@ -488,7 +488,7 @@ function NoDataAvailablePreview({
       ) : (
         <div className="flex flex-col items-center justify-center max-w-md p-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-500/10 mb-4">
-            <AlertIcon className="h-6 w-6 text-amber-500" />
+            <WarningIcon className="h-6 w-6 text-amber-500" />
           </div>
           <h2 className="text-base font-semibold mb-1">{t.empty.connectionIssue}</h2>
           <p className="text-sm theme-muted-text mb-4">{connectionIssueMessage}</p>

@@ -26,12 +26,13 @@ import type {
 } from '../editing'
 import {
   AddIcon,
-  CloseIcon,
   DuplicateIcon,
   EditIcon,
   GridIcon,
   LinkIcon,
-  RefreshIcon,
+  MatrixIcon,
+  RemoveIcon,
+  ResetLayoutIcon,
   TrashIcon,
 } from '../icons'
 import { type DependencyGraphEditor, overlaps, typing } from './editorApi'
@@ -1076,7 +1077,7 @@ function useGraphEditorState({
       const items: MenuEntry[] = [
         {
           label: matrix ? t.editMatrix : t.editJob,
-          icon: matrix ? <GridIcon /> : <EditIcon />,
+          icon: matrix ? <MatrixIcon /> : <EditIcon />,
           onClick: () => editJob(job),
         },
         {
@@ -1092,7 +1093,7 @@ function useGraphEditorState({
         matrix
           ? {
               label: t.removeMatrix,
-              icon: <CloseIcon />,
+              icon: <RemoveIcon />,
               onClick: () => edit({ type: 'setMatrix', job, variables: null }),
             }
           : {
@@ -1776,7 +1777,7 @@ function EditorToolbar({
       {chip(true)}
       <BarDivider />
       <IconButton
-        icon={<RefreshIcon />}
+        icon={<ResetLayoutIcon />}
         label={t.resetLayout}
         size="sm"
         variant="ghost"

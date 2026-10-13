@@ -3,7 +3,7 @@ import { buttonClasses } from '../components/buttonClasses'
 import { usePersistedState, useStrings } from '../components/Provider'
 import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
-import { SearchIcon, XIcon } from '../icons'
+import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
 const NO_TERMS: string[] = []
 
@@ -129,7 +129,7 @@ export function ListSearchControl({
               aria-label={list.removeSearchTerm(term)}
               className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
             >
-              <XIcon className="w-2.5 h-2.5" />
+              <RemoveIcon className="w-2.5 h-2.5" />
             </button>
           </span>
         ))}
@@ -158,7 +158,7 @@ export function ListSearchControl({
           aria-label={common.clearSearch}
           className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
         >
-          <XIcon className="w-3 h-3" />
+          <CloseIcon className="w-3 h-3" />
         </button>
       </div>
     )

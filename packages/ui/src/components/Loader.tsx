@@ -1,5 +1,5 @@
-import { FaCircleNotch } from 'react-icons/fa'
 import { cx } from '../cx'
+import { RunningIcon } from '../icons'
 import { useStrings } from './Provider'
 
 const RIPPLE_STAGGER_S = 0.22
@@ -40,7 +40,7 @@ export function Loader({
   const { loading } = useStrings().common
   const dimension = typeof size === 'number' ? `${size}px` : size
   const spinner = (
-    <FaCircleNotch
+    <RunningIcon
       aria-hidden="true"
       className="animate-spin motion-reduce:animate-none"
       style={{ fontSize: dimension }}

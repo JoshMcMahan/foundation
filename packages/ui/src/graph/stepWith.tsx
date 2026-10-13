@@ -10,7 +10,7 @@ import {
 } from '../components/Provider'
 import type { LintFix, WorkflowAction, WorkflowActionInput } from '../editing'
 import { DynamicForm } from '../form/Form'
-import { CloseIcon } from '../icons'
+import { RemoveIcon } from '../icons'
 import {
   asRecord,
   ChoiceButtons,
@@ -729,7 +729,7 @@ function ExtraKey({
         <span className="font-mono">{name}</span>
         <span className="text-xs text-(--theme-error)">{t.notActionInput}</span>
         <IconButton
-          icon={<CloseIcon />}
+          icon={<RemoveIcon />}
           label={t.common.remove}
           variant="ghost"
           size="sm"

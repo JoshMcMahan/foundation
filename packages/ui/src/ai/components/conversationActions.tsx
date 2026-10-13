@@ -4,7 +4,7 @@ import { type OpenMenu, useContextMenu } from '../../components/ContextMenu'
 import type { MenuAction, MenuEntry } from '../../components/MenuEntries'
 import { useStrings } from '../../components/Provider'
 import { toast } from '../../components/Toast'
-import { DownloadIcon, EditIcon, ShareIcon, TrashIcon } from '../../icons'
+import { DownloadIcon, RenameIcon, ShareIcon, TrashIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { conversationToMarkdown, downloadText, exportFilename } from '../core/exportConversation'
@@ -92,7 +92,7 @@ export function useConversationActions(): {
   const menuItems = (conv: ConversationSummary): MenuEntry[] => [
     {
       label: common.rename,
-      icon: <EditIcon />,
+      icon: <RenameIcon />,
       onClick: () => requestRename(conv),
     },
     // Only the owner can change who a conversation is shared with.

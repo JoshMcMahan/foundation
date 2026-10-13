@@ -6,14 +6,14 @@ import { type UIStrings, useStrings } from '../components/Provider'
 import { cx } from '../cx'
 import { formatBytes, formatTimeLeft } from '../format'
 import {
-  AlertIcon,
-  AngleDownIcon,
-  AngleUpIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CloseIcon,
-  CloudUploadIcon,
   ExpandVerticalIcon,
   MinimizeIcon,
   SuccessIcon,
+  UploadIcon,
+  WarningIcon,
 } from '../icons'
 import type { UploadFileProgress, UploadSession } from './lib/types'
 
@@ -23,14 +23,14 @@ function getSessionStatusInfo(session: UploadSession, queueLength: number, strin
   switch (session.status) {
     case 'queued':
       return {
-        icon: <CloudUploadIcon className="w-5 h-5 text-blue-600" />,
+        icon: <UploadIcon className="w-5 h-5 text-blue-600" />,
         title: strings.inQueue(session.queueIndex + 1, queueLength),
         shortTitle: strings.queuedShort(session.queueIndex + 1, queueLength),
         bgColor: 'bg-blue-100',
       }
     case 'uploading':
       return {
-        icon: <CloudUploadIcon className="w-5 h-5 text-blue-600" />,
+        icon: <UploadIcon className="w-5 h-5 text-blue-600" />,
         title: strings.uploading,
         shortTitle: strings.uploading,
         bgColor: 'bg-blue-100',
@@ -44,14 +44,14 @@ function getSessionStatusInfo(session: UploadSession, queueLength: number, strin
       }
     case 'failed':
       return {
-        icon: <AlertIcon className="w-5 h-5 text-red-600" />,
+        icon: <WarningIcon className="w-5 h-5 text-red-600" />,
         title: strings.failedTitle,
         shortTitle: strings.failed,
         bgColor: 'bg-red-100',
       }
     default:
       return {
-        icon: <CloudUploadIcon className="w-5 h-5 theme-muted-text" />,
+        icon: <UploadIcon className="w-5 h-5 theme-muted-text" />,
         title: strings.unknownTitle,
         shortTitle: strings.unknownShort,
         bgColor: 'bg-(--theme-muted-panel-bg)',
@@ -348,7 +348,7 @@ export function UploadSessionToast({
             {isUploading && (
               <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex gap-2">
-                  <AlertIcon className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <WarningIcon className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-800">{strings.keepPageOpen}</p>
                 </div>
               </div>
@@ -374,9 +374,9 @@ export function UploadSessionToast({
                 >
                   <span>{strings.fileCount(session.uploadNodes.length)}</span>
                   {isFileListExpanded ? (
-                    <AngleUpIcon className="w-4 h-4" />
+                    <ChevronUpIcon className="w-4 h-4" />
                   ) : (
-                    <AngleDownIcon className="w-4 h-4" />
+                    <ChevronDownIcon className="w-4 h-4" />
                   )}
                 </button>
 

@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { cx } from '../cx'
-import { TooltipIcon } from '../icons'
+import { HelpIcon } from '../icons'
 import { ExternalLink } from './ExternalLink'
 import { keyedByContent } from './keys'
 import { Popover } from './Popover'
@@ -70,7 +70,7 @@ export function InfoTip({ text, side = 'top', className, children }: InfoTipProp
           aria-label={children ? undefined : t.moreInfo}
           className={cx('inline-flex items-center cursor-help', !children && 'tooltip', className)}
         >
-          {children ?? <TooltipIcon aria-hidden="true" />}
+          {children ?? <HelpIcon aria-hidden="true" />}
         </button>
       }
     >

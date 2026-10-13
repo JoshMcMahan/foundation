@@ -8,7 +8,7 @@ import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { formatBytes } from '../format'
-import { EyeIcon } from '../icons'
+import { PreviewIcon } from '../icons'
 import { MoreButton, RowSelectCheckbox, rowContextMenuProps, useRowMenuActive } from '../list/index'
 import type { TreeNode } from './lib/types'
 
@@ -199,7 +199,7 @@ export function FileRow({
                     : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
                 )}
               >
-                <EyeIcon />
+                <PreviewIcon />
               </button>
             </Tooltip>
           )}

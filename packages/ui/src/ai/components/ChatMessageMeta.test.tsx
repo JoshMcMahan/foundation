@@ -5,25 +5,6 @@ import { DateTime } from 'luxon'
 import type { ChatMessage as Message } from '../types'
 import ChatMessage from './ChatMessage'
 
-vi.mock('../../icons', () => ({
-  CheckIcon: () => <span data-testid="check-icon">✓</span>,
-  RefreshIcon: () => <span data-testid="refresh-icon">↻</span>,
-  EditIcon: () => <span data-testid="edit-icon">✎</span>,
-  CopyIcon: () => <span data-testid="copy-icon">📋</span>,
-  ErrorIcon: () => <span data-testid="error-icon">⚠</span>,
-  RetryIcon: () => <span data-testid="retry-icon">↺</span>,
-  FileIcon: () => <span data-testid="file-icon">📄</span>,
-  DownloadFileIcon: () => <span data-testid="download-file-icon">⬇</span>,
-  ThinkingIcon: () => <span data-testid="thinking-icon">💭</span>,
-  ChevronRightIcon: () => <span data-testid="chevron-right-icon">›</span>,
-  AngleLeftIcon: () => <span data-testid="angle-left-icon">‹</span>,
-  AngleRightIcon: () => <span data-testid="angle-right-icon">›</span>,
-  CloseIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
-
 vi.mock('./agent/AgentMessageParts', () => ({
   __esModule: true,
   default: () => <div data-testid="agent-parts-mock" />,

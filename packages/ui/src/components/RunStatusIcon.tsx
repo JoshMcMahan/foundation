@@ -17,19 +17,17 @@ interface Look {
   icon: IconType
   /** Still under way, so it turns. */
   spin?: boolean
-  /** The glyph is drawn small within its box; this brings it up to its neighbours' size. */
-  scale?: number
 }
 
 const looks: Record<NonNullable<RunStatus>, Look> = {
   started: { tone: 'warning', icon: RunningIcon, spin: true },
   running: { tone: 'warning', icon: RunningIcon, spin: true },
-  completed: { tone: 'success', icon: SuccessIcon, scale: 1.25 },
-  failed: { tone: 'error', icon: FailIcon, scale: 1.25 },
-  error: { tone: 'error', icon: FailIcon, scale: 1.25 },
-  skipped: { tone: 'muted', icon: SkipIcon, scale: 1.25 },
-  'skipped-failed': { tone: 'muted', icon: SkipIcon, scale: 1.25 },
-  canceled: { tone: 'info', icon: CancelIcon, scale: 1.5 },
+  completed: { tone: 'success', icon: SuccessIcon },
+  failed: { tone: 'error', icon: FailIcon },
+  error: { tone: 'error', icon: FailIcon },
+  skipped: { tone: 'muted', icon: SkipIcon },
+  'skipped-failed': { tone: 'muted', icon: SkipIcon },
+  canceled: { tone: 'info', icon: CancelIcon },
   faulted: { tone: 'error', icon: RunningIcon, spin: true },
   canceling: { tone: 'info', icon: RunningIcon, spin: true },
   '': { tone: 'muted', icon: NotRunningIcon },
@@ -61,11 +59,7 @@ export function RunStatusIcon({
       data-status={status || 'not-run'}
       className={cx('flex h-2 items-center', toneText[look.tone], className)}
     >
-      <Icon
-        aria-hidden="true"
-        className={cx(look.spin && 'animate-spin rounded-full')}
-        style={look.scale ? { transform: `scale(${look.scale})` } : undefined}
-      />
+      <Icon aria-hidden="true" className={cx(look.spin && 'animate-spin rounded-full')} />
     </span>
   )
 }

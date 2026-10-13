@@ -6,27 +6,6 @@ import { toast } from '../../components/Toast'
 import type { SidebarPresentation, SidebarState } from '../core/sidebarState'
 import ChatSidebar from './ChatSidebar'
 
-vi.mock('../../icons', () => ({
-  CloseIcon: () => <span />,
-  ConnectIcon: () => <span />,
-  DownloadIcon: () => <span />,
-  EditIcon: () => <span />,
-  ErrorIcon: () => <span />,
-  ImageIcon: () => <span />,
-  InfoIcon: () => <span />,
-  MoreIcon: () => <span />,
-  NewChatIcon: () => <span />,
-  SearchIcon: () => <span />,
-  SettingsIcon: () => <span />,
-  ShareIcon: () => <span />,
-  SharingIcon: () => <span />,
-  SidebarIcon: () => <span />,
-  SuccessIcon: () => <span />,
-  TrashIcon: () => <span />,
-  WarningIcon: () => <span />,
-  XIcon: () => <span />,
-}))
-
 const downloadTextMock = vi.fn()
 vi.mock('../core/exportConversation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../core/exportConversation')>()),

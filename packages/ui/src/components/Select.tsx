@@ -1,7 +1,7 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
 import type { ReactElement, ReactNode } from 'react'
 import { cx } from '../cx'
-import { AngleDownIcon, CheckIcon } from '../icons'
+import { CheckIcon, ChevronDownIcon } from '../icons'
 import { fieldBox } from './fieldBox'
 import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 import { Tooltip } from './Tooltip'
@@ -97,7 +97,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
               : undefined}
           </BaseSelect.Value>
           <BaseSelect.Icon className="shrink-0 text-(--theme-muted-text-color)">
-            <AngleDownIcon aria-hidden="true" />
+            <ChevronDownIcon aria-hidden="true" />
           </BaseSelect.Icon>
         </BaseSelect.Trigger>
       )}

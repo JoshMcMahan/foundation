@@ -34,20 +34,20 @@ import { cx } from '../cx'
 import { formatBytes, formatDateTime } from '../format'
 import {
   AccessIcon,
-  AlertIcon,
-  AngleDownIcon,
+  ChevronDownIcon,
   ChevronRightIcon,
-  ClipboardIcon,
   CollapseIcon,
-  DownloadFileIcon,
-  EyeIcon,
+  CopyIcon,
+  DownloadIcon,
   FileIcon,
   FileTextIcon,
   FolderIcon,
   LinkIcon,
+  PreviewIcon,
   ShareIcon,
   TrashIcon,
   UploadIcon,
+  WarningIcon,
 } from '../icons'
 import {
   assembleRowMenu,
@@ -133,7 +133,7 @@ function UriCard({ value }: { value: string }) {
         className="shrink-0 inline-flex items-center justify-center px-3 border-l theme-border theme-muted-text group-hover:text-(--theme-link) group-hover:bg-(--theme-link)/5 transition-colors duration-150"
         title={common.copyToClipboard}
       >
-        <ClipboardIcon className="h-3.5 w-3.5" />
+        <CopyIcon className="h-3.5 w-3.5" />
       </span>
     </CopyToClipboard>
   )
@@ -1072,7 +1072,7 @@ export default function FileExplorer({
       actions.push({
         key: 'preview',
         label: t.preview.preview,
-        icon: <EyeIcon />,
+        icon: <PreviewIcon />,
         onClick: () => openPreview(node),
       })
     }
@@ -1080,7 +1080,7 @@ export default function FileExplorer({
       actions.push({
         key: 'download',
         label: common.download,
-        icon: <DownloadFileIcon />,
+        icon: <DownloadIcon />,
         onClick: () => downloadNode(node),
       })
       if (nodeCanShare) {
@@ -1684,7 +1684,7 @@ export default function FileExplorer({
                         >
                           <UploadIcon />
                           <span className="hidden md:inline">{t.chrome.upload}</span>
-                          <AngleDownIcon />
+                          <ChevronDownIcon />
                         </Menu.Trigger>
                         <MenuPopup align="end" className="w-36">
                           <MenuItem onClick={() => fileInputRef.current?.click()}>
@@ -1707,9 +1707,9 @@ export default function FileExplorer({
                           !selectedNode.storageId
                         }
                       >
-                        <DownloadFileIcon />
+                        <DownloadIcon />
                         <span className="hidden md:inline">{common.download}</span>
-                        <AngleDownIcon />
+                        <ChevronDownIcon />
                       </Menu.Trigger>
                       <MenuPopup align="end" className="w-72">
                         <MenuItem onClick={handleDownload}>{t.chrome.downloadFromBrowser}</MenuItem>
@@ -2076,7 +2076,7 @@ export default function FileExplorer({
           {isUploadSizeExceeded(pendingUpload?.totalSize ?? 0) && (
             <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-2">
-                <AlertIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <WarningIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-amber-800">
                   <div className="font-semibold mb-1">{t.confirmUpload.sizeLimitTitle}</div>
                   <div className="text-sm">

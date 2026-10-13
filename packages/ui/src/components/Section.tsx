@@ -1,7 +1,7 @@
 import { Collapsible } from '@base-ui/react/collapsible'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
-import { AngleRightIcon } from '../icons'
+import { ChevronRightIcon } from '../icons'
 import { collapsePanelClassName } from './Disclosure'
 
 export type SectionVariant = 'plain' | 'card'
@@ -99,7 +99,7 @@ export function Section({
               titleClasses[variant],
             )}
           >
-            <AngleRightIcon
+            <ChevronRightIcon
               aria-hidden="true"
               className={cx(
                 'shrink-0 transition-transform group-data-panel-open:rotate-90 motion-reduce:transition-none',

@@ -7,7 +7,7 @@ import { RelativeTime } from '../../components/relativeTime'
 import { toast } from '../../components/Toast'
 import { cx } from '../../cx'
 import { formatBytes } from '../../format'
-import { DownloadFileIcon, FileIcon, TrashIcon } from '../../icons'
+import { DownloadIcon, FileIcon, TrashIcon } from '../../icons'
 import { safeUrl } from '../../safeUrl'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -167,7 +167,7 @@ export default function AttachmentManager() {
                               className="p-1.5 rounded-lg hover:theme-hover theme-muted-text transition-colors"
                               title={common.download}
                             >
-                              <DownloadFileIcon className="w-4 h-4" />
+                              <DownloadIcon className="w-4 h-4" />
                             </button>
                             <button
                               type="button"

@@ -1,6 +1,6 @@
 import { NumberField } from '@base-ui/react/number-field'
 import { cx } from '../cx'
-import { AngleDownIcon, AngleUpIcon } from '../icons'
+import { ChevronDownIcon, ChevronUpIcon } from '../icons'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 
 export interface NumberInputProps
@@ -70,10 +70,10 @@ export function NumberInput({
         {steppers && (
           <div className="absolute inset-y-0 right-0 flex flex-col">
             <NumberField.Increment className={stepperClassName}>
-              <AngleUpIcon aria-hidden="true" className="size-3" />
+              <ChevronUpIcon aria-hidden="true" className="size-3" />
             </NumberField.Increment>
             <NumberField.Decrement className={stepperClassName}>
-              <AngleDownIcon aria-hidden="true" className="size-3" />
+              <ChevronDownIcon aria-hidden="true" className="size-3" />
             </NumberField.Decrement>
           </div>
         )}

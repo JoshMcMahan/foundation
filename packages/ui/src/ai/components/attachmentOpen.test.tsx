@@ -4,22 +4,6 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import type { AttachmentRef, ChatMessage as Message } from '../types'
 import ChatMessage from './ChatMessage'
 
-vi.mock('../../icons', () => ({
-  CheckIcon: () => null,
-  RefreshIcon: () => null,
-  EditIcon: () => null,
-  CopyIcon: () => null,
-  ErrorIcon: () => null,
-  RetryIcon: () => null,
-  FileIcon: () => null,
-  DownloadFileIcon: () => null,
-  ThinkingIcon: () => null,
-  ChevronRightIcon: () => null,
-  CloseIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
 vi.mock('../ui/Markdown', () => ({
   __esModule: true,
   default: ({ children }: { children: string }) => <div>{children}</div>,

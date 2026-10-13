@@ -37,19 +37,6 @@ vi.mock('@parallelworks/ui', async () => ({
   TooltipInfo: () => null,
 }))
 
-vi.mock('@parallelworks/ui/icons', () => ({
-  AlertIcon: () => null,
-  AngleRightIcon: () => null,
-  CheckIcon: () => null,
-  SuccessCheckmark: () => null,
-  TrashIcon: () => null,
-  CloseIcon: () => null,
-  ErrorIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
-
 vi.mock('./infraFieldRegistry', () => ({ INFRA_FIELD_COMPONENTS: {} }))
 
 vi.mock('./fieldRegistry', async (importOriginal) => {

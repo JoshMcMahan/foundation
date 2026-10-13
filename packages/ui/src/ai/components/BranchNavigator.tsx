@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { AngleLeftIcon, AngleRightIcon } from '../../icons'
+import { ChevronLeftIcon, ChevronRightIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import type { ChatMessage as Message } from '../types'
 
@@ -61,7 +61,7 @@ export default function BranchNavigator({
         title={t.previous}
         aria-label={t.previous}
       >
-        <AngleLeftIcon className="w-3.5 h-3.5" />
+        <ChevronLeftIcon className="w-3.5 h-3.5" />
       </button>
       <span className="min-w-[3ch] text-center tabular-nums">
         {currentIndex + 1}/{siblings.length}
@@ -74,7 +74,7 @@ export default function BranchNavigator({
         title={t.next}
         aria-label={t.next}
       >
-        <AngleRightIcon className="w-3.5 h-3.5" />
+        <ChevronRightIcon className="w-3.5 h-3.5" />
       </button>
     </div>
   )

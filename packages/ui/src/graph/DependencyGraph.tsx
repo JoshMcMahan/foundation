@@ -38,7 +38,7 @@ import {
   ArrowRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  DocumentIcon,
+  FileTextIcon,
   ZoomInIcon,
   ZoomOutIcon,
 } from '../icons'
@@ -1844,7 +1844,7 @@ export default function DependencyGraph({
               onClick={() => setSublogOpen(generalLogPath)}
               className="link"
             >
-              <DocumentIcon className="w-4 h-4" />
+              <FileTextIcon className="w-4 h-4" />
             </button>
           </div>
           <div className="mx-4 mb-4 overflow-y-auto">{summarySidebar}</div>

@@ -5,25 +5,6 @@ import type { ChatMessage as Message } from '../types'
 import ChatMessage from './ChatMessage'
 
 // Mock the icons
-vi.mock('../../icons', () => ({
-  CheckIcon: () => <span data-testid="check-icon">✓</span>,
-  RefreshIcon: () => <span data-testid="refresh-icon">↻</span>,
-  EditIcon: () => <span data-testid="edit-icon">✎</span>,
-  CopyIcon: () => <span data-testid="copy-icon">📋</span>,
-  ErrorIcon: () => <span data-testid="error-icon">⚠</span>,
-  RetryIcon: () => <span data-testid="retry-icon">↺</span>,
-  FileIcon: () => <span data-testid="file-icon">📄</span>,
-  DownloadFileIcon: () => <span data-testid="download-file-icon">⬇</span>,
-  ThinkingIcon: () => <span data-testid="thinking-icon">💭</span>,
-  ChevronRightIcon: () => <span data-testid="chevron-right-icon">›</span>,
-  AngleLeftIcon: () => <span data-testid="angle-left-icon">‹</span>,
-  AngleRightIcon: () => <span data-testid="angle-right-icon">›</span>,
-  CloseIcon: () => null,
-  InfoIcon: () => null,
-  SuccessIcon: () => null,
-  WarningIcon: () => null,
-}))
-
 // Parts messages delegate to the agent renderer; its internals are covered
 // by its own suite.
 vi.mock('./agent/AgentMessageParts', () => ({
@@ -147,7 +128,6 @@ describe('ChatMessage', () => {
       render(<ChatMessage {...defaultProps} message={message} />)
 
       expect(screen.getByText('Failed to send message')).toBeInTheDocument()
-      expect(screen.getByTestId('error-icon')).toBeInTheDocument()
     })
 
     it('shows retry button when onRetry is provided', () => {
@@ -159,8 +139,7 @@ describe('ChatMessage', () => {
 
       render(<ChatMessage {...defaultProps} message={message} onRetry={onRetry} />)
 
-      expect(screen.getByText('Retry')).toBeInTheDocument()
-      expect(screen.getByTestId('retry-icon')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
     })
 
     it('calls onRetry with message id when retry button clicked', () => {
@@ -346,7 +325,7 @@ describe('ChatMessage', () => {
 
       // Action buttons should become visible
       await waitFor(() => {
-        expect(screen.getByTestId('copy-icon')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Copy message' })).toBeInTheDocument()
       })
     })
 
@@ -359,7 +338,7 @@ describe('ChatMessage', () => {
 
       render(<ChatMessage {...defaultProps} message={message} onRegenerate={onRegenerate} />)
 
-      expect(screen.getByTestId('refresh-icon')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Regenerate response' })).toBeInTheDocument()
     })
   })
 

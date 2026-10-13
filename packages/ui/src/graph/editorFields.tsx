@@ -21,7 +21,7 @@ import { SegmentedControl } from '../components/SegmentedControl'
 import { Switch } from '../components/Switch'
 import { Tooltip } from '../components/Tooltip'
 import type { FieldPatch } from '../editing'
-import { AddIcon, CloseIcon, ExpressionIcon } from '../icons'
+import { AddIcon, ExpressionIcon, RemoveIcon } from '../icons'
 import { type GraphEditorStrings, useGraphEditorStrings } from './editorStrings'
 import { useFieldLint } from './fieldProblems'
 import { asRecord, type Json } from './records'
@@ -516,7 +516,7 @@ function KeyValueRow({
           />
         </div>
         <IconButton
-          icon={<CloseIcon />}
+          icon={<RemoveIcon />}
           label={t.common.remove}
           variant="ghost"
           size="sm"
@@ -572,7 +572,7 @@ export function StringListEditor({
             />
           </div>
           <IconButton
-            icon={<CloseIcon />}
+            icon={<RemoveIcon />}
             label={t.common.remove}
             variant="ghost"
             size="sm"

@@ -205,15 +205,43 @@ a layer; the defaults sit in a cascade layer, so the host's own rule wins.
 
 ```tsx
 import { AddIcon, TrashIcon } from '@parallelworks/ui/icons'
+
+<Button><AddIcon /> Add</Button>
+<TrashIcon className="size-4 text-(--theme-error)" />
 ```
 
-The barrel re-exports a curated, stable set of icon names over `react-icons`
-so applications never depend on a specific icon pack directly.
+`@parallelworks/ui/icons` is the one import point for interface icons. Each
+name is a meaning, such as `RetryIcon` or `WarningIcon`, drawn from
+[Lucide](https://lucide.dev), so every icon shares one 24px grid and one 2px
+stroke. Don't import `lucide-react` directly: a name here keeps one glyph per
+meaning across the apps.
 
-Each icon ships as its own module under `dist/icons/<set>/`, so an application
-bundles an icon only into the chunks that render it. Every module carries its
-icon's data, copied from its `react-icons` set at build time, and opens with that
-set's name and license.
+- **Size and colour:** an icon is `1em` square in `currentColor`, so it follows
+  the text around it. A class such as `size-4` or `h-3 w-3` sets another size,
+  and `size` takes pixels.
+- **Accessibility:** an icon is decoration, hidden from assistive technology,
+  unless a `title` or `aria-label` names it. Name one only when nothing beside
+  it says what it means.
+- **Filled variants:** a filled glyph marks a state, such as `PinFilledIcon`
+  for pinned.
+- **One name per meaning:** pick the name for what the thing is, even where a
+  nearby name would look similar. For compute, `ClusterIcon` is a group of
+  nodes, `NodeIcon` one host or node in it, and `InstanceIcon` a VM or cloud
+  instance. `RemoveIcon` takes an item out of a list, while `CloseIcon` closes,
+  dismisses or clears; they share the X glyph, the convention for both.
+  `DestroyIcon` tears down what was provisioned, while `TrashIcon` deletes a
+  record.
+- **Adding an icon:** pick the [Lucide glyph](https://lucide.dev/icons) and add
+  `export const NameIcon = /* @__PURE__ */ icon(Glyph)` to `src/icons.tsx`,
+  named for what it means rather than what it shows. Reuse an existing name
+  when the meaning is the same.
+
+Logos of other companies' products, such as `GitHubIcon` or `UbuntuIcon`, are
+in `@parallelworks/ui/brand-icons`. They take the same props, are filled in the
+text's colour, and are only for naming the product. They come from Simple Icons
+(CC0) and Bootstrap Icons (MIT), and the file carries their notices.
+
+The `UI/Icons` story shows every icon and logo by name.
 
 ## Workflow engine
 

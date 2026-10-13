@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { keyedByContent } from '../components/keys'
 import { Popover } from '../components/Popover'
 import { Tooltip } from '../components/Tooltip'
-import { AlertIcon } from '../icons'
+import { WarningIcon } from '../icons'
 import type { EditorProblem } from './editorApi'
 import { useGraphEditorStrings } from './editorStrings'
 import { toolbarPanel } from './toolbarPanel'
@@ -34,7 +34,7 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
             aria-label={label}
             className="flex h-7 cursor-pointer items-center gap-1 rounded px-2 text-xs font-medium text-(--theme-error) theme-hover"
           >
-            <AlertIcon className="h-3.5 w-3.5" />
+            <WarningIcon className="h-3.5 w-3.5" />
             {problems.length}
           </button>
         </Tooltip>

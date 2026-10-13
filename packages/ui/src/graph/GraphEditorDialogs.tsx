@@ -10,7 +10,7 @@ import type { GraphEdit, WorkflowEditing } from '../editing'
 import { useLintContext, useLintEditing } from '../editor/lintContext'
 import type { NestedWorkflowText } from '../editor/nestedText'
 import { JOB_YAML_PATH, STEP_YAML_PATH } from '../editor/settingsYaml'
-import { ArrowDownIcon, ArrowUpIcon, CloseIcon, TrashIcon } from '../icons'
+import { ArrowDownIcon, ArrowUpIcon, RemoveIcon, TrashIcon } from '../icons'
 import {
   AddRowButton,
   asRecord,
@@ -496,7 +496,7 @@ function OutputsEditor({
             }
           />
           <IconButton
-            icon={<CloseIcon />}
+            icon={<RemoveIcon />}
             label={t.common.remove}
             variant="ghost"
             size="sm"
@@ -661,7 +661,7 @@ function MatrixEntries({
                 />
               </div>
               <IconButton
-                icon={<CloseIcon />}
+                icon={<RemoveIcon />}
                 label={t.removeEntry}
                 variant="ghost"
                 size="sm"
@@ -752,7 +752,7 @@ function MatrixVariable({
         )}
       </div>
       <IconButton
-        icon={<CloseIcon />}
+        icon={<RemoveIcon />}
         label={t.removeVariable}
         variant="ghost"
         size="sm"

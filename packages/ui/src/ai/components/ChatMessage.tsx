@@ -9,11 +9,10 @@ import { formatBytes, formatDuration } from '../../format'
 import {
   CheckIcon,
   CopyIcon,
-  DownloadFileIcon,
+  DownloadIcon,
   EditIcon,
   ErrorIcon,
   FileIcon,
-  RefreshIcon,
   RetryIcon,
 } from '../../icons'
 import { safeUrl } from '../../safeUrl'
@@ -450,7 +449,7 @@ function ChatMessage({
                         {att.size ? (
                           <span className="theme-muted-text">({formatBytes(att.size)})</span>
                         ) : null}
-                        <DownloadFileIcon className="w-3 h-3 flex-shrink-0" />
+                        <DownloadIcon className="w-3 h-3 flex-shrink-0" />
                       </button>
                     )
                   }
@@ -521,7 +520,7 @@ function ChatMessage({
                     className="p-1.5 rounded-md hover:chat-tint theme-muted-text hover:theme-text transition-colors"
                     title={t.regenerate}
                   >
-                    <RefreshIcon className="w-4 h-4" />
+                    <RetryIcon className="w-4 h-4" />
                   </button>
                 )}
 

@@ -5,16 +5,7 @@ import { IconButton } from '../components/IconButton'
 import type { MenuAction, MenuEntry, MenuSubmenu } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
 import { cx } from '../cx'
-import {
-  ClipboardIcon,
-  CopyIcon,
-  IdCardIcon,
-  KeyIcon,
-  LinkIcon,
-  MailIcon,
-  MoreIcon,
-  UserIcon,
-} from '../icons'
+import { CopyIcon, IdCardIcon, KeyIcon, LinkIcon, MailIcon, MoreIcon, UserIcon } from '../icons'
 
 /** An action on a row, which its menu lists and its pinned buttons show, named by `key`. */
 export interface RowAction extends MenuAction {
@@ -145,7 +136,7 @@ export function useCopySubmenu(): CopySubmenu {
       ]
       return {
         label: common.copy,
-        icon: <ClipboardIcon />,
+        icon: <CopyIcon />,
         items: fields.flatMap(({ label, value, icon }): MenuAction[] =>
           value ? [{ label: common.copyThing(label), icon, copy: { text: value, label } }] : [],
         ),

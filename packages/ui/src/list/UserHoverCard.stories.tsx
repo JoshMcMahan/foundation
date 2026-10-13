@@ -4,7 +4,7 @@ import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { AvatarSize } from '../components/Avatar'
 import { Avatar } from '../components/Avatar'
 import { HoverCard } from '../components/HoverCard'
-import { AccessIcon, CalendarIcon, ClockIcon, LicenseIcon, MailIcon } from '../icons'
+import { CalendarIcon, ClockIcon, LicenseIcon, MailIcon, UsersIcon } from '../icons'
 import { HoverCardRow, UserHoverCard } from './UserHoverCard'
 
 const meta: Meta = {
@@ -51,7 +51,7 @@ function Rows() {
       <HoverCardRow icon={<MailIcon />} title="Copy email" truncate onClick={() => {}}>
         ada.lovelace@example.com
       </HoverCardRow>
-      <HoverCardRow icon={<AccessIcon />} align="start">
+      <HoverCardRow icon={<UsersIcon />} align="start">
         analytical-engine, mathematics, research-computing
       </HoverCardRow>
       <HoverCardRow icon={<ClockIcon />} title="Europe/London">

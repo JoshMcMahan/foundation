@@ -1,9 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { IconsManifest } from 'react-icons/lib'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig } from 'vite'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'))
 const yamlServer = JSON.parse(
@@ -36,73 +34,8 @@ function thirdPartyNotices(moduleIds: string[]): string {
   return `/*!\nThird-party software bundled into this file:\n\n${body}\n*/`
 }
 
-const ICON_PREFIX = 'ui-icon:'
-const iconDir = path.resolve('src/icons')
-
-// react-icons ships each set as one module, so a consumer's bundler puts every
-// icon the app uses anywhere into one shared chunk. Each icon becomes its own
-// module instead, holding that icon's data under its set's license.
-function perIconModules(): Plugin {
-  const sets = new Map<string, string>()
-  const setSource = (set: string) => {
-    if (!sets.has(set)) {
-      sets.set(set, readFileSync(fileURLToPath(import.meta.resolve(`react-icons/${set}`)), 'utf8'))
-    }
-    return sets.get(set) as string
-  }
-  return {
-    name: 'per-icon-modules',
-    enforce: 'pre',
-    transform(code, id) {
-      if (id.includes('/node_modules/') || !code.includes("from 'react-icons/")) {
-        return
-      }
-      return code.replaceAll(
-        /\b(import|export) \{([^}]*)\} from 'react-icons\/([a-z0-9]+)'/g,
-        (statement, keyword: string, specifiers: string, set: string) =>
-          set === 'lib'
-            ? statement
-            : specifiers
-                .split(',')
-                .map((specifier) => specifier.trim())
-                .filter(Boolean)
-                .map((specifier) => {
-                  const icon = specifier.split(/\s+as\s+/)[0]
-                  return `${keyword} { ${specifier} } from '${ICON_PREFIX}${set}/${icon}'`
-                })
-                .join('\n'),
-      )
-    },
-    resolveId(source) {
-      if (source.startsWith(ICON_PREFIX)) {
-        return path.join(iconDir, `${source.slice(ICON_PREFIX.length)}.js`)
-      }
-    },
-    load(id) {
-      if (!id.startsWith(`${iconDir}/`)) {
-        return
-      }
-      const [set, icon] = id.slice(iconDir.length + 1, -'.js'.length).split('/')
-      const data = new RegExp(
-        `export function ${icon} \\(props\\) \\{\\s*return GenIcon\\((.*)\\)\\(props\\);`,
-      ).exec(setSource(set))?.[1]
-      const source = IconsManifest.find((entry) => entry.id === set)
-      if (!data || !source) {
-        throw new Error(`react-icons/${set} has no ${icon}`)
-      }
-      return [
-        `/*! ${icon}: ${source.name} (${source.projectUrl}), ${source.license} ${source.licenseUrl} */`,
-        `import { GenIcon } from 'react-icons/lib'`,
-        `export function ${icon}(props) {`,
-        `  return GenIcon(${data})(props)`,
-        '}',
-      ].join('\n')
-    },
-  }
-}
-
 export default defineConfig({
-  plugins: [react(), perIconModules()],
+  plugins: [react()],
   // Relative asset URLs, so a consumer's bundler sees and copies the workers.
   base: './',
   // The YAML server reports its version from process.env, which a browser
@@ -133,6 +66,7 @@ export default defineConfig({
       entry: {
         index: 'src/index.ts',
         icons: 'src/icons.tsx',
+        brandIcons: 'src/brandIcons.tsx',
         'theme/index': 'src/theme/index.ts',
         'logviewer/index': 'src/logviewer/index.ts',
         'graph/index': 'src/graph/index.ts',

@@ -5,7 +5,7 @@ import { Input } from '../components/Input'
 import { useWorkflowEditing } from '../components/Provider'
 import type { GraphEdit } from '../editing'
 import { SETTINGS_YAML_PATH } from '../editor/settingsYaml'
-import { CloseIcon } from '../icons'
+import { RemoveIcon } from '../icons'
 import {
   AddRowButton,
   asRecord,
@@ -240,7 +240,7 @@ function Card({
         {children}
       </div>
       <IconButton
-        icon={<CloseIcon />}
+        icon={<RemoveIcon />}
         label={removeLabel}
         variant="ghost"
         size="sm"
