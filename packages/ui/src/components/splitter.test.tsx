@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { useSplitter } from './splitter'
 
 function Panel({
@@ -30,6 +30,28 @@ function Panel({
   )
 }
 
+/** A panel that hands back the width it renders, as one measured by a ResizeObserver does. */
+function MeasuredPanel({ onCommit }: { onCommit: (px: number) => void }) {
+  const [chosen, setChosen] = useState<number | null>(null)
+  const [rendered, setRendered] = useState(300)
+  const splitter = useSplitter({
+    width: chosen ?? rendered,
+    onWidthChange: (px) => {
+      onCommit(px)
+      setChosen(px)
+    },
+    min: 200,
+    max: 500,
+    side: 'right',
+  })
+  useLayoutEffect(() => setRendered(splitter.width), [splitter.width])
+  return (
+    <div data-testid="panel" style={{ width: splitter.width }}>
+      <div {...splitter.separatorProps} />
+    </div>
+  )
+}
+
 const handle = () => screen.getByRole('separator', { name: 'Resize panel' })
 const pointer = (type: string, clientX: number) =>
   fireEvent(handle(), new MouseEvent(type, { bubbles: true, clientX }))
@@ -47,6 +69,16 @@ describe('useSplitter', () => {
     pointer('pointerup', 900)
     expect(onCommit).toHaveBeenCalledOnce()
     expect(onCommit).toHaveBeenCalledWith(500)
+  })
+
+  it('commits a drag on a panel whose width follows what it renders', () => {
+    const onCommit = vi.fn()
+    render(<MeasuredPanel onCommit={onCommit} />)
+    pointer('pointerdown', 100)
+    pointer('pointermove', 180)
+    pointer('pointerup', 180)
+    expect(onCommit).toHaveBeenCalledWith(380)
+    expect(screen.getByTestId('panel').style.width).toBe('380px')
   })
 
   it('widens away from the panel from a left-edge handle', () => {

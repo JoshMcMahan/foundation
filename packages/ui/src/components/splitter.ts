@@ -46,7 +46,8 @@ export function useSplitter({
 }: SplitterOptions): Splitter {
   const t = useStrings().common
   const [live, setLive] = useState<number | null>(null)
-  const drag = useRef<{ x: number; width: number } | null>(null)
+  // `live` is kept here as well: a release can arrive before the last move has rendered.
+  const drag = useRef<{ x: number; width: number; live: number } | null>(null)
   // The handle on a panel's left edge widens it when moved left.
   const grows = side === 'left' ? -1 : 1
   const maxWidth = () => (typeof max === 'function' ? max() : max)
@@ -56,17 +57,22 @@ export function useSplitter({
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    drag.current = { x: e.clientX, width }
+    drag.current = { x: e.clientX, width, live: width }
     setLive(width)
   }
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current) {
-      setLive(clamp(drag.current.width + (e.clientX - drag.current.x) * grows))
+    const current = drag.current
+    if (current) {
+      current.live = clamp(current.width + (e.clientX - current.x) * grows)
+      setLive(current.live)
     }
   }
   const onPointerUp = () => {
-    if (drag.current && live !== null && live !== width) {
-      onWidthChange(live)
+    // Against the width the drag began at: a caller that measures its panel
+    // has already caught `width` up to the live one by the time it ends.
+    const ended = drag.current
+    if (ended && ended.live !== ended.width) {
+      onWidthChange(ended.live)
     }
     drag.current = null
     setLive(null)
