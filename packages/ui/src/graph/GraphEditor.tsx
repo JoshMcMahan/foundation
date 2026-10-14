@@ -1853,11 +1853,16 @@ function EditorDialogs({
     editor.onEdit(edit)
   }
   const openOnAdd = openOnAddOf(editor)
+  // A job or step being added only exists in the dialog's copy of the workflow, parsed once
+  // rather than on each render of the open dialog.
+  const addition = dialog?.addition
+  const copy = useMemo(
+    () => (addition ? asRecord(editing.loadYaml(addition.yml)) : null),
+    [addition, editing],
+  )
   if (!dialog) {
     return null
   }
-  // A job or step being added only exists in the dialog's copy of the workflow.
-  const copy = dialog.addition ? asRecord(editing.loadYaml(dialog.addition.yml)) : null
   const here = copy ? asRecord(copy['jobs']) : jobs
   const source = dialog.addition?.yml ?? editor.readSource?.()
   if (dialog.kind === 'job') {

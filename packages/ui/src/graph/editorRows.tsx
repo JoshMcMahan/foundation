@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef } from 'react'
 import type { FloatingAnchor } from '../components/floating'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
@@ -192,22 +192,23 @@ const onBadge = (target: EventTarget) =>
   target instanceof Element && !!target.closest('[data-problem-badge]')
 
 /** A step's problems, or a job's with its steps', listed on hover; a click shows the first one's line. */
+const NO_PROBLEMS: EditorProblem[] = []
+
 function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; step?: number }) {
   const t = api.t
+  // The list itself, which changes only when the problems do: filtering it in the selector would
+  // run for every row on every store change, a drag's pointer moves included.
+  const problems = useUi(api, (state) => state.problems, NO_PROBLEMS)
   // A job's badge also lists its steps' problems, which stay in view while its steps are closed.
-  const mine = (problems: EditorProblem[]) =>
-    step === undefined
-      ? problems.filter((problem) => problem.job === job)
-      : problemsIn(problems, job, step)
-  const messages = useUi(
-    api,
-    (state) =>
-      mine(state.problems)
-        .map((problem) => problem.message)
-        .join('\n'),
-    '',
+  const mine = useMemo(
+    () =>
+      step === undefined
+        ? problems.filter((problem) => problem.job === job)
+        : problemsIn(problems, job, step),
+    [problems, job, step],
   )
-  const line = useUi(api, (state) => mine(state.problems)[0]?.line ?? 0, 0)
+  const messages = mine.map((problem) => problem.message).join('\n')
+  const line = mine[0]?.line ?? 0
   if (!messages) {
     return null
   }
@@ -216,7 +217,7 @@ function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; st
       <button
         type="button"
         data-problem-badge=""
-        aria-label={t.problemCount(messages.split('\n').length)}
+        aria-label={t.problemCount(mine.length)}
         className="cursor-pointer rounded p-0.5 text-(--theme-error) hover:bg-(--theme-muted-panel-bg)"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
@@ -405,15 +406,21 @@ function PortCircle({
   zIndex?: number
 }) {
   const api = useGraphEditor()
-  const drag = useUi(api, (state) => state.drag, null)
+  // Booleans, not the drag itself: a drag is a new object on every pointer move, and every
+  // circle in the graph would re-render with it.
+  const anyDrag = useUi(api, (state) => state.drag !== null, false)
+  const dragging = useUi(
+    api,
+    ({ drag }) =>
+      drag?.payload.kind === 'connect' && drag.payload.port === port && drag.payload.side === side,
+    false,
+  )
   if (!api) {
     return null
   }
-  const dragging =
-    drag?.payload.kind === 'connect' && drag.payload.port === port && drag.payload.side === side
   return (
     // A hint popping up over the drop target mid-drag would hide the graph.
-    <Tooltip content={hint} disabled={Boolean(drag)}>
+    <Tooltip content={hint} disabled={anyDrag}>
       <span
         role="none"
         data-dag-port={side}
@@ -626,7 +633,7 @@ export function EdgeEnds({
   zIndex: number
 }) {
   const api = useGraphEditor()
-  const drag = useUi(api, (state) => state.drag, null)
+  const anyDrag = useUi(api, (state) => state.drag !== null, false)
   if (!api) {
     return null
   }
@@ -636,7 +643,7 @@ export function EdgeEnds({
     <Tooltip
       key={side}
       content={inUse ? t.dependencyInUse : t.moveDependencyEnd}
-      disabled={Boolean(drag)}
+      disabled={anyDrag}
     >
       <span
         role="none"
