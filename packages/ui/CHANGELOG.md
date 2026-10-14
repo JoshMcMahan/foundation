@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.48.0](https://github.com/parallelworks/foundation/compare/ui-v0.47.0...ui-v0.48.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** icons for signing in, removing access, swapping, help desks, mail, expiry and review ([#248](https://github.com/parallelworks/foundation/issues/248))
+
+### Features
+
+* **ui:** icons for signing in, removing access, swapping, help desks, mail, expiry and review ([#248](https://github.com/parallelworks/foundation/issues/248)) ([c8dd6f3](https://github.com/parallelworks/foundation/commit/c8dd6f3181ad5581b6c28b4c254e08938babcc76))
+
 ## [0.47.0](https://github.com/parallelworks/foundation/compare/ui-v0.46.0...ui-v0.47.0) (2026-10-14)
 
 
