@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.46.0](https://github.com/parallelworks/foundation/compare/ui-v0.45.0...ui-v0.46.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** use American spelling, including the canceled upload status ([#243](https://github.com/parallelworks/foundation/issues/243))
+
+### Bug Fixes
+
+* **ui:** toasts centre over the page beside the host's sidebar, below its top bar ([#241](https://github.com/parallelworks/foundation/issues/241)) ([8042f95](https://github.com/parallelworks/foundation/commit/8042f95ab208e0888e406ad4f62a93cefe51d5a4))
+* **ui:** use American spelling, including the canceled upload status ([#243](https://github.com/parallelworks/foundation/issues/243)) ([e2efe30](https://github.com/parallelworks/foundation/commit/e2efe301b464bdb97ac6c64eafab8147e4774977))
+
 ## [0.45.0](https://github.com/parallelworks/foundation/compare/ui-v0.44.0...ui-v0.45.0) (2026-10-13)
 
 
