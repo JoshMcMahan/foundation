@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as callout from './components/Callout.stories'
 import * as combobox from './components/Combobox.stories'
+import * as copy from './components/CopyButton.stories'
 import * as controls from './components/controls.stories'
 import * as descriptionList from './components/DescriptionList.stories'
 import * as fields from './components/fields.stories'
@@ -66,6 +67,7 @@ const SUITES = {
   loading,
   combobox,
   controls,
+  copy,
   fields,
   menus,
   overlays,

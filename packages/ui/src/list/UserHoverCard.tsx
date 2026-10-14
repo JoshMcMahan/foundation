@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
 import { Avatar } from '../components/Avatar'
+import { CopyButton } from '../components/CopyButton'
 import { type UILinkComponent, useLink, useStrings } from '../components/Provider'
 import { LoadingRegion, Skeleton } from '../components/Skeleton'
-import { Tooltip } from '../components/Tooltip'
-import { useCopy } from '../components/useCopy'
 import { cx } from '../cx'
-import { CopyIcon } from '../icons'
 
 /** A person's card, for `HoverCard`'s `card`. */
 export interface UserHoverCardProps {
@@ -35,8 +33,7 @@ export function UserHoverCard({
   loading = false,
   children,
 }: UserHoverCardProps) {
-  const { common, list: t } = useStrings()
-  const { copy } = useCopy()
+  const { list: t } = useStrings()
   const SlotLink = useLink()
   const Link = linkComponent ?? SlotLink
   const displayName = name || username
@@ -68,7 +65,6 @@ export function UserHoverCard({
 
   // Hosts pass a handle or an email address as the username; name what is copied.
   const copyLabel = EMAIL.test(username) ? t.labelEmail : t.labelUsername
-  const onCopy = () => void copy(username, { label: copyLabel })
 
   return (
     <div className="w-64 p-3">
@@ -86,21 +82,18 @@ export function UserHoverCard({
           <div className="flex min-w-0 flex-1 items-start gap-3">{header}</div>
         )}
         {username && (
-          <Tooltip content={common.copyThing(copyLabel)}>
-            <button
-              type="button"
-              aria-label={common.copyThing(copyLabel)}
-              onClick={onCopy}
-              className={cx(
-                'shrink-0 cursor-pointer rounded p-0.5 text-(--theme-muted-text-color) opacity-0 transition hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-3.5 [&>svg]:w-3.5',
-                // Shown while the value or the button is under the pointer, on keyboard
-                // focus, and always where there is no hover to reveal it.
-                'hover:opacity-100 group-has-[[data-copy-value]:hover]/copy:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--theme-link) pointer-coarse:opacity-100',
-              )}
-            >
-              <CopyIcon aria-hidden="true" />
-            </button>
-          </Tooltip>
+          <CopyButton
+            text={username}
+            label={copyLabel}
+            size="xs"
+            className={cx(
+              // The negative margin gives its padding back to the name beside it.
+              '-mr-1 opacity-0',
+              // Shown while the value or the button is under the pointer, on keyboard
+              // focus, and always where there is no hover to reveal it.
+              'hover:opacity-100 group-has-[[data-copy-value]:hover]/copy:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100',
+            )}
+          />
         )}
       </div>
       {loading ? (

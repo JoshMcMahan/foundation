@@ -15,7 +15,7 @@ import { buttonClasses } from '../components/buttonClasses'
 import Callout from '../components/Callout'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useContextMenu } from '../components/ContextMenu'
-import CopyToClipboard, { CopyCodeBlock } from '../components/CopyToClipboard'
+import { CopyButton, CopyCodeBlock } from '../components/CopyButton'
 import { CreateModal } from '../components/CreateModal'
 import { InfoTip } from '../components/InfoTip'
 import { keyedByContent } from '../components/keys'
@@ -39,7 +39,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   CollapseIcon,
-  CopyIcon,
   DownloadIcon,
   FileIcon,
   FileTextIcon,
@@ -113,15 +112,12 @@ import {
 } from './lib/utils'
 import { TreeView } from './TreeView'
 
+// The URI stays selectable text; its own button copies it whole.
 function UriCard({ value }: { value: string }) {
-  const { common } = useStrings()
+  const { fileExplorer: t } = useStrings()
   const scheme = getUriScheme(value)
   return (
-    <CopyToClipboard
-      text={value}
-      showIcon={false}
-      className="group flex items-stretch rounded-lg border theme-border bg-(--theme-input-bg) overflow-hidden cursor-copy hover:border-(--theme-link)/50 transition-colors duration-150"
-    >
+    <div className="flex items-stretch overflow-hidden rounded-lg border theme-border bg-(--theme-input-bg)">
       {scheme && (
         <span className="shrink-0 inline-flex items-center px-3 bg-(--theme-muted-panel-bg) border-r theme-border font-mono text-[11px] font-semibold uppercase tracking-widest theme-muted-text">
           {scheme}
@@ -130,13 +126,10 @@ function UriCard({ value }: { value: string }) {
       <span className="flex-1 min-w-0 inline-flex items-center px-3 py-2 font-mono text-[12.5px] leading-snug break-all text-(--theme-focus)">
         {value}
       </span>
-      <span
-        className="shrink-0 inline-flex items-center justify-center px-3 border-l theme-border theme-muted-text group-hover:text-(--theme-link) group-hover:bg-(--theme-link)/5 transition-colors duration-150"
-        title={common.copyToClipboard}
-      >
-        <CopyIcon className="h-3.5 w-3.5" />
+      <span className="shrink-0 inline-flex items-center border-l theme-border px-1.5">
+        <CopyButton text={value} aria-label={t.preview.copyUri} />
       </span>
-    </CopyToClipboard>
+    </div>
   )
 }
 
@@ -1744,7 +1737,7 @@ export default function FileExplorer({
                             {/* Copyable text, not an action, so it sits outside the items. */}
                             <div className="px-2 py-1.5">
                               <p className="text-sm text-center pb-1.5">{downloadCommand.label}</p>
-                              <CopyCodeBlock textToCopy={downloadCommandText}>
+                              <CopyCodeBlock text={downloadCommandText}>
                                 <div className="overflow-x-auto text-xs">
                                   {keyedByContent(downloadCommandText.split('\n'), (l) => l).map(
                                     ({ key, item: line }) => (

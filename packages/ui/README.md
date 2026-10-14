@@ -85,7 +85,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A person | `Avatar` |
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
 | A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
-| A copy action | `useCopy`, or `CopyToClipboard` for its button |
+| A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet; `useCopy` for a menu row or a control of your own |
 | A live relative time or duration | `RelativeTime`, `Elapsed` |
 | Rendered Markdown | `Markdown` |
 | Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |

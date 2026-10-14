@@ -7,12 +7,10 @@ import {
   useRef,
 } from 'react'
 import { cx } from '../cx'
-import { CheckIcon, CopyIcon } from '../icons'
-import { IconButton } from './IconButton'
+import { CopyButton } from './CopyButton'
 import { InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
 import { withPathBreaks } from './pathBreaks'
-import { useCopy } from './useCopy'
 
 /** `plain` sets rows apart by space alone; `divided` rules a line between them; `card`
  *  also frames them in a panel. */
@@ -223,29 +221,25 @@ function CopyValue({
   label: ReactNode
   labelId: string
 }) {
-  const { common: t } = useStrings()
-  const { copy, copied } = useCopy()
   const buttonId = useId()
   const button = useRef<HTMLButtonElement>(null)
-  const onClick = () => {
+  const shown = () => {
     const value = button.current?.closest('dd')?.querySelector<HTMLElement>('[data-value]')
     // innerText keeps the line breaks the reader sees between lines of a value.
-    const shown = value?.innerText ?? value?.textContent
-    // A label that isn't plain text can't name the copy in the toast; it says only
-    // that something was copied.
-    void copy(text ?? shown ?? '', typeof label === 'string' ? { label } : undefined)
+    return value?.innerText ?? value?.textContent ?? ''
   }
   return (
-    <IconButton
+    <CopyButton
       ref={button}
       id={buttonId}
       size="xs"
-      label={copied ? t.copied : t.copy}
+      text={text ?? shown}
+      // A label that isn't plain text can't name the copy in the toast; it says only
+      // that something was copied.
+      label={typeof label === 'string' ? label : undefined}
       // The button's own name and then the row's label, "Copy Session ID", so each copy
       // button says what it copies whatever the label holds.
-      aria-labelledby={`${buttonId} ${labelId}`}
-      icon={copied ? <CheckIcon /> : <CopyIcon />}
-      onClick={onClick}
+      aria-labelledby={typeof label === 'string' ? undefined : `${buttonId} ${labelId}`}
       className="-my-0.5"
     />
   )

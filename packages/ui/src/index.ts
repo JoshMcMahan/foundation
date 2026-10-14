@@ -38,7 +38,12 @@ export {
   type OpenMenuOptions,
   useContextMenu,
 } from './components/ContextMenu'
-export { CopyCodeBlock, default as CopyToClipboard } from './components/CopyToClipboard'
+export {
+  CopyButton,
+  type CopyButtonProps,
+  CopyCodeBlock,
+  type CopyCodeBlockProps,
+} from './components/CopyButton'
 export {
   CreateModal,
   CreateModalSelect,

@@ -6,7 +6,7 @@ import {
 } from '@parallelworks/workflow-parser'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useId, useState } from 'react'
-import CopyToClipboard from '../components/CopyToClipboard'
+import { CopyButton } from '../components/CopyButton'
 import { DynamicForm } from './Form'
 import type { FormLayoutNode } from './layout'
 import { initializeValues } from './lib'
@@ -74,13 +74,7 @@ function WorkflowExample({ workflowYaml, allowLayoutCSS, showYaml }: ExampleProp
         >
           {expanded ? 'Hide workflow YAML' : 'Edit workflow YAML'}
         </button>
-        <CopyToClipboard
-          as="button"
-          text={draft}
-          className="inline-flex items-center gap-2 rounded border px-3 py-2 theme-hover"
-        >
-          Copy YAML
-        </CopyToClipboard>
+        <CopyButton text={draft} label="workflow YAML" showLabel size="md" />
       </div>
       <div
         className={expanded ? 'grid items-start gap-6' : ''}
