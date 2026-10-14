@@ -213,7 +213,9 @@ function ToastViewport() {
       <BaseToast.Viewport
         data-toast-viewport=""
         aria-label={common.notifications}
-        className="fixed inset-x-0 top-3 z-(--layer-toast) mx-auto w-[calc(100vw-2rem)] outline-none sm:w-96"
+        // Centred over the page beside the host's fixed sidebar and below its top bar, not over
+        // the whole window, so a toast sits above the content it is about.
+        className="fixed top-[calc(var(--app-inset-top,0px)+0.75rem)] right-0 left-(--app-inset-start,0px) z-(--layer-toast) mx-auto w-[calc(100vw-var(--app-inset-start,0px)-2rem)] outline-none sm:w-96"
       >
         <ToastList />
       </BaseToast.Viewport>

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { Button } from './Button'
 import { ProgressBar } from './Meter'
@@ -209,6 +209,65 @@ export const OverAModal: StoryObj = {
       expect(within(region()).queryByText('The cluster is offline')).not.toBeInTheDocument(),
     )
     await expect(screen.getByRole('dialog', { name: 'Edit the cluster' })).toBeVisible()
+    toast.dismiss()
+  },
+}
+
+const SIDEBAR = 240
+const TOP_BAR = 48
+
+function HostChrome() {
+  // A host sets these on the document root; the story sets and clears them.
+  useLayoutEffect(() => {
+    const root = document.documentElement.style
+    root.setProperty('--app-inset-start', `${SIDEBAR}px`)
+    root.setProperty('--app-inset-top', `${TOP_BAR}px`)
+    return () => {
+      root.removeProperty('--app-inset-start')
+      root.removeProperty('--app-inset-top')
+    }
+  }, [])
+  return (
+    <div className="fixed inset-0">
+      <div
+        data-testid="top-bar"
+        className="fixed inset-x-0 top-0 border-b border-(--theme-border) bg-(--theme-panel-bg)"
+        style={{ height: TOP_BAR }}
+      />
+      <div
+        className="fixed bottom-0 left-0 border-r border-(--theme-border) bg-(--theme-sidebar-bg)"
+        style={{ top: TOP_BAR, width: SIDEBAR }}
+      />
+      <div
+        data-testid="content"
+        className="fixed right-0 bottom-0 p-8"
+        style={{ top: TOP_BAR, left: SIDEBAR }}
+      >
+        <Button variant="primary" onClick={() => toast.success('Your changes are saved.')}>
+          Save
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Beside a host's fixed sidebar and below its top bar, a toast centres over the
+ *  page content, not the whole window, once the host sets `--app-inset-start` and
+ *  `--app-inset-top`. */
+export const BesideHostChrome: StoryObj = {
+  render: () => <HostChrome />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
+    const shown = await shownToast('Your changes are saved.')
+    const content = canvas.getByTestId('content').getBoundingClientRect()
+    const bar = canvas.getByTestId('top-bar').getBoundingClientRect()
+    const centre = (r: DOMRect) => r.left + r.width / 2
+    // It slides in from above, so its place is checked once it has landed.
+    await waitFor(() =>
+      expect(shown.getBoundingClientRect().top).toBeGreaterThanOrEqual(bar.bottom),
+    )
+    await expect(Math.abs(centre(shown.getBoundingClientRect()) - centre(content))).toBeLessThan(2)
     toast.dismiss()
   },
 }

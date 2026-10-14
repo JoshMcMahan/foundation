@@ -300,8 +300,8 @@ root:
 
 | Variable            | Meaning                                                                 |
 | ------------------- | ----------------------------------------------------------------------- |
-| `--app-inset-top`   | The height of a fixed top bar. A drawer starts below it.                |
-| `--app-inset-start` | The width of a fixed sidebar on the start side. A drawer at its widest leaves that strip, and never less than 2.5rem. |
+| `--app-inset-top`   | The height of a fixed top bar. Drawers and toasts start below it.       |
+| `--app-inset-start` | The width of a fixed sidebar on the start side. Toasts centre over the page beside it, and a drawer at its widest leaves that strip, and never less than 2.5rem. Update it when the sidebar collapses. |
 
 ```ts
 document.documentElement.style.setProperty('--app-inset-top', '56px')
