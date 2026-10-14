@@ -30,7 +30,7 @@ function CspIcon({ cspKind, className }: { cspKind: CspKind; className?: string 
   if (custom) {
     return <>{custom}</>
   }
-  return <CloudIcon className={cx('text-purple-500', className)} />
+  return <CloudIcon className={cx('theme-muted-text', className)} />
 }
 
 // Extract provider key from a model ID.
@@ -117,7 +117,7 @@ export default function ModelSelector({
   const groups = useMemo(() => {
     const status = (label: string, description: string): ComboboxGroup => ({
       label,
-      icon: <CloudIcon className="h-3 w-3 text-amber-500" />,
+      icon: <CloudIcon className="h-3 w-3 text-(--theme-warning)" />,
       description,
       items: [],
     })
@@ -220,7 +220,7 @@ export default function ModelSelector({
               {selected.provider && (
                 <span className="max-w-[45%] shrink-0 truncate text-xs">{selected.provider}</span>
               )}
-              {issue && <WarningIcon className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
+              {issue && <WarningIcon className="h-3.5 w-3.5 shrink-0 text-(--theme-warning)" />}
             </>
           ) : (
             <span

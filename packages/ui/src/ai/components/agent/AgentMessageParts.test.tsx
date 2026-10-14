@@ -135,7 +135,7 @@ describe('AgentMessageParts dispatch', () => {
           el?.textContent === 'new line' && el.tagName === 'SPAN' && el.classList.contains('pr-3'),
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('new')).toHaveClass('bg-green-500/30')
+    expect(screen.getByText('new')).toHaveClass('bg-(--theme-success)/30')
     expect(screen.getByText('Added 1 line, removed 1 line')).toBeInTheDocument()
   })
 })

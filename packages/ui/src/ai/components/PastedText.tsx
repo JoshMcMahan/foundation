@@ -33,7 +33,7 @@ export function PasteFileCard({
       className={cx(
         'inline-flex max-w-full items-center gap-2.5 rounded-xl px-3 py-2 align-top whitespace-normal',
         'bg-(--theme-panel-bg)',
-        error ? 'border border-red-500' : 'chat-hairline',
+        error ? 'border border-(--theme-error)' : 'chat-hairline',
       )}
     >
       <FileIcon className="h-5 w-5 flex-shrink-0 theme-muted-text" />
@@ -41,7 +41,12 @@ export function PasteFileCard({
         <div className="truncate text-sm font-medium theme-text">
           {id ? `paste-${id}.txt` : t.title}
         </div>
-        <div className={cx('truncate text-xs', error ? 'text-red-500' : 'theme-muted-text')}>
+        <div
+          className={cx(
+            'truncate text-xs',
+            error ? 'text-(--theme-error-text)' : 'theme-muted-text',
+          )}
+        >
           {detail}
         </div>
       </div>

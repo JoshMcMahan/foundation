@@ -1,13 +1,15 @@
 import { DateTime } from 'luxon'
 import { type KeyboardEvent, memo, useEffect, useRef, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
+import { Button } from '../../components/Button'
+import { Callout } from '../../components/Callout'
 import { CopyButton } from '../../components/CopyButton'
 import { IconButton } from '../../components/IconButton'
 import { useStrings } from '../../components/Provider'
 import { RelativeTime } from '../../components/relativeTime'
 import { cx } from '../../cx'
 import { formatDuration } from '../../format'
-import { EditIcon, ErrorIcon, RetryIcon } from '../../icons'
+import { EditIcon, RetryIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
@@ -357,20 +359,21 @@ function ChatMessage({
 
             {/* Error Display */}
             {hasError && (
-              <div className="flex items-center gap-2 mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                <ErrorIcon className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <span className="text-sm text-red-700 flex-1">{message.error}</span>
-                {onRetry && (
-                  <button
-                    type="button"
-                    onClick={() => onRetry(message.id)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-500/15 rounded transition-colors"
-                  >
-                    <RetryIcon className="w-3 h-3" />
-                    {common.retry}
-                  </button>
-                )}
-              </div>
+              <Callout
+                tone="error"
+                size="sm"
+                className="mt-2"
+                action={
+                  onRetry && (
+                    <Button size="sm" variant="outline" onClick={() => onRetry(message.id)}>
+                      <RetryIcon />
+                      {common.retry}
+                    </Button>
+                  )
+                }
+              >
+                {message.error}
+              </Callout>
             )}
 
             {message.attachments && message.attachments.length > 0 && (

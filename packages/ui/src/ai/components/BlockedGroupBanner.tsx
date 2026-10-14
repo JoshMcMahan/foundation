@@ -1,4 +1,4 @@
-import { WarningIcon } from '../../icons'
+import { Callout } from '../../components/Callout'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { getProviderKeyFromModelId } from './ModelSelector'
@@ -18,14 +18,13 @@ export default function BlockedGroupBanner() {
   }
 
   return (
-    <div className="mx-4 mt-2 flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-      <WarningIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-amber-700">
-          {strings.blockedGroup.title(provider.group)}
-        </p>
-        <p className="text-xs text-amber-600/80 mt-0.5">{strings.blockedGroup.message}</p>
-      </div>
-    </div>
+    <Callout
+      tone="warning"
+      size="sm"
+      className="mx-4 mt-2"
+      title={strings.blockedGroup.title(provider.group)}
+    >
+      {strings.blockedGroup.message}
+    </Callout>
   )
 }

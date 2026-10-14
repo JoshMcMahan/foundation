@@ -271,10 +271,10 @@ export default function ShareDialog({ conversationId, isOpen, onClose }: ShareDi
                           <button
                             type="button"
                             onClick={() => handleRemoveTeam(perm.team)}
-                            className="p-1 rounded hover:bg-red-500/10"
+                            className="p-1 rounded hover:bg-(--theme-error-muted)"
                             aria-label={`${common.remove} ${perm.teamName || perm.team}`}
                           >
-                            <TrashIcon className="w-3 h-3 text-red-500" />
+                            <TrashIcon className="w-3 h-3 text-(--theme-error)" />
                           </button>
                         </Tooltip>
                       </div>

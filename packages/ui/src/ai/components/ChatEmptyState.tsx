@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '../../components/Button'
+import { Callout } from '../../components/Callout'
 import { keyedByContent } from '../../components/keys'
 import { useStrings } from '../../components/Provider'
 import { AddIcon, CloudIcon } from '../../icons'
@@ -7,7 +9,6 @@ import { useChatConfig } from '../core/config'
 import { getGreeting } from '../core/greeting'
 import useDragDrop from '../core/useDragDrop'
 import type { AttachmentMeta } from '../types'
-import { NoticeCard } from '../ui/Notice'
 import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatStage from './ChatStage'
@@ -120,19 +121,19 @@ export default function ChatEmptyState({
         <ProviderIssueBanner />
         {sessionUnreachable && !sessionBannerDismissed && (
           <div className="mx-4 mt-2">
-            <NoticeCard tone="warning" onDismiss={() => setSessionBannerDismissed(true)}>
-              <span className="block font-medium">
-                {t.sessionUnreachableTitle(targetSession?.split(':').pop() ?? '')}
-              </span>
-              <span className="mt-0.5 block">{t.sessionUnreachableBody}</span>
-              <button
-                type="button"
-                onClick={() => refreshModels()}
-                className="mt-1 font-medium underline-offset-2 hover:underline"
-              >
-                {common.retry}
-              </button>
-            </NoticeCard>
+            <Callout
+              tone="warning"
+              size="sm"
+              title={t.sessionUnreachableTitle(targetSession?.split(':').pop() ?? '')}
+              action={
+                <Button size="sm" variant="outline" onClick={() => refreshModels()}>
+                  {common.retry}
+                </Button>
+              }
+              onDismiss={() => setSessionBannerDismissed(true)}
+            >
+              {t.sessionUnreachableBody}
+            </Callout>
           </div>
         )}
         <div

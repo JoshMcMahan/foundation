@@ -161,6 +161,28 @@ export const ReasoningOpened: StoryObj<{ open: boolean }> = {
   },
 }
 
+const failed: ChatMessage[] = [
+  makeMessage({ role: 'user', content: 'Summarize the last build log.' }),
+  makeMessage({
+    role: 'assistant',
+    content: '',
+    error: 'The provider returned 429 Too Many Requests. Try again in a minute.',
+  }),
+]
+
+// A reply that failed, in the theme's error tone, with retry when the host
+// passes onRetryMessage.
+export const FailedReply: StoryObj<{ retry: boolean }> = {
+  args: { retry: true },
+  render: ({ retry }) => (
+    <MessageList
+      messages={failed}
+      allMessages={failed}
+      {...(retry ? { onRetryMessage: () => {} } : {})}
+    />
+  ),
+}
+
 // Files sent with a message: pictures as thumbnails and the rest as chips, each
 // a link to its download. With `preview` the host takes a plain click and opens
 // the file in its own viewer; a modified click still opens the link.

@@ -97,7 +97,7 @@ export function SidebarGroupHeading({
       data-testid={testId}
       className={cx(
         'mt-5 mb-1 whitespace-nowrap px-2 text-xs font-medium',
-        tone === 'attention' ? 'text-amber-700 dark:text-amber-300' : 'theme-muted-text',
+        tone === 'attention' ? 'text-(--theme-warning-text)' : 'theme-muted-text',
       )}
     >
       {children}
