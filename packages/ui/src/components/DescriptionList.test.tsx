@@ -102,4 +102,31 @@ describe('DescriptionList', () => {
     )
     expect(screen.getByRole('button', { name: 'Copy Token' })).toBeInTheDocument()
   })
+
+  it('lets a path or URL wrap after its slashes, in plain text or a link', async () => {
+    const writeText = setClipboard()
+    const { container } = render(
+      <DescriptionList>
+        <DescriptionListItem label="Path" mono copy>
+          /mnt/shared/runs
+        </DescriptionListItem>
+        <DescriptionListItem label="URL">
+          <a href="https://example.com/u/ada">https://example.com/u/ada</a>
+        </DescriptionListItem>
+        <DescriptionListItem label="Owner">ada</DescriptionListItem>
+      </DescriptionList>,
+    )
+    const [path, url, owner] = [...container.querySelectorAll('[data-value]')].map(
+      (value) => value.innerHTML,
+    )
+    expect(path).toBe('/<wbr>mnt/<wbr>shared/<wbr>runs')
+    expect(url).toBe(
+      '<a href="https://example.com/u/ada">https://<wbr>example.com/<wbr>u/<wbr>ada</a>',
+    )
+    expect(owner).toBe('ada')
+    // The breaks add nothing to the text the copy takes or a reader hears.
+    expect(screen.getByRole('link')).toHaveAccessibleName('https://example.com/u/ada')
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Path' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('/mnt/shared/runs'))
+  })
 })

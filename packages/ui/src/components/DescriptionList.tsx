@@ -4,6 +4,7 @@ import { CheckIcon, CopyIcon } from '../icons'
 import { IconButton } from './IconButton'
 import { InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
+import { withPathBreaks } from './pathBreaks'
 import { useCopy } from './useCopy'
 
 /** `plain` sets rows apart by space alone; `divided` rules a line between them; `card`
@@ -58,7 +59,8 @@ export default function DescriptionList({
 
 export interface DescriptionListItemProps {
   label: ReactNode
-  /** The value. Nothing, an empty string or `false` shows the library's empty mark. */
+  /** The value. Nothing, an empty string or `false` shows the library's empty mark.
+   *  A path or URL in it, or in a link that is it, wraps after its slashes. */
   children?: ReactNode
   /** Help behind an info button beside the label. */
   tooltip?: string | undefined
@@ -97,6 +99,8 @@ export function DescriptionListItem({
           <EmptyValue />
         ) : (
           <>
+            {/* Wraps between a path's segments first, and mid-word only for a segment
+                too long for a line of its own, such as a hash. */}
             <div
               data-value
               className={cx(
@@ -104,7 +108,7 @@ export function DescriptionListItem({
                 mono && 'font-mono text-[0.8125rem]',
               )}
             >
-              {children}
+              {withPathBreaks(children)}
             </div>
             {copy !== false && (
               <CopyValue text={copy === true ? undefined : copy} label={label} labelId={labelId} />

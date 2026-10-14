@@ -3,6 +3,8 @@
 // rather than forcing a table column as wide as itself or splitting mid-word.
 // Fenced blocks are left alone, and <wbr> never reaches the clipboard.
 
+import { pathPieces } from './pathBreaks'
+
 interface HastText {
   type: 'text'
   value: string
@@ -17,23 +19,13 @@ interface HastElement {
 
 type HastNode = HastText | HastElement | { type: string; children?: HastNode[] }
 
-const BREAK_AFTER = /(?<=[/])/
-
 function withBreaks(text: string): HastNode[] {
-  const pieces = text.split(BREAK_AFTER)
   const out: HastNode[] = []
-  pieces.forEach((piece, i) => {
+  pathPieces(text).forEach((piece, i) => {
     if (i > 0) {
-      out.push({
-        type: 'element',
-        tagName: 'wbr',
-        properties: {},
-        children: [],
-      })
+      out.push({ type: 'element', tagName: 'wbr', properties: {}, children: [] })
     }
-    if (piece !== '') {
-      out.push({ type: 'text', value: piece })
-    }
+    out.push({ type: 'text', value: piece })
   })
   return out
 }
