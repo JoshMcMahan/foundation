@@ -61,7 +61,7 @@ function HeaderControl({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`${name} (${common.opensInNewTab})`}
+            aria-label={`${name} ${common.opensInNewTab}`}
             className={className}
           >
             {children}

@@ -14,6 +14,7 @@ import {
 import type { Breadcrumb } from './PageHeader'
 import { PageHeader, PageHeaderBar, PageHeaderProvider } from './PageHeader'
 import { PageHeaderAction, PageHeaderAddButton, PageHeaderMenu } from './PageHeaderAction'
+import { useLink } from './Provider'
 import { SegmentedControl } from './SegmentedControl'
 
 /** What a host's shell does: the provider above everything, the bar in its
@@ -136,12 +137,14 @@ export const InShell: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const trail = canvas.getByRole('navigation', { name: 'Breadcrumb' })
-    // A narrow bar hides all but the parent, so count every step.
-    await expect(trail.querySelectorAll('ol > li')).toHaveLength(3)
-    await expect(within(trail).getByRole('link', { name: 'Buckets' })).toHaveAttribute(
-      'href',
-      '/storage/buckets',
-    )
+    // A narrow shell folds the ancestors into a menu; a wide one shows them all.
+    if (!args.narrow) {
+      await expect(trail.querySelectorAll('ol > li')).toHaveLength(3)
+      await expect(within(trail).getByRole('link', { name: 'Buckets' })).toHaveAttribute(
+        'href',
+        '/storage/buckets',
+      )
+    }
     const title = canvas.getByRole('heading', { level: 1 })
     await expect(title).toHaveTextContent('training-data')
     await expect(title).toHaveAttribute('aria-current', 'page')
@@ -407,11 +410,11 @@ export const LoadingName: Story = {
   },
 }
 
-/** Long names truncate, with the full name on hover; a narrow bar keeps only
- *  the parent, the way back. */
+/** A trail too wide for its bar folds all but the parent, the way back, into a
+ *  menu of links; the page's own name truncates only once nothing else can go,
+ *  with the full name on hover. */
 export const LongTrail: Story = {
   args: {
-    narrow: true,
     breadcrumbs: [
       { label: 'Organizations', href: '/org' },
       { label: 'Research computing division', href: '/org/research' },
@@ -420,12 +423,21 @@ export const LongTrail: Story = {
     ],
   },
   render: (args) => <BucketPage {...args} />,
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const title = canvas.getByRole('heading', { level: 1 })
     await waitFor(() => expect(title.scrollWidth).toBeGreaterThan(title.clientWidth))
-    await expect(canvas.getByRole('link', { name: 'Cloud accounts' })).toBeVisible()
+    // A phone-width shell has no room for the parent beside the name either.
+    if (!args.narrow) {
+      await expect(canvas.getByRole('link', { name: 'Cloud accounts' })).toBeVisible()
+    }
     await expect(canvas.queryByRole('link', { name: 'Organizations' })).toBeNull()
+    // The folded crumbs are links in a menu.
+    await userEvent.click(canvas.getByRole('button', { name: 'Show full path' }))
+    const body = within(canvasElement.ownerDocument.body)
+    const org = await body.findByRole('menuitem', { name: 'Organizations' })
+    await expect(org.closest('a')).toHaveAttribute('href', '/org')
+    await userEvent.keyboard('{Escape}')
   },
 }
 
@@ -461,17 +473,25 @@ export const LayoutAndPage: Story = {
  *  action of the page left behind. */
 export const Navigation: Story = {
   render: () => {
+    // Links through the host's link, as a page would; the story's link routes
+    // by the click rather than leaving the story.
     function App() {
+      const Link = useLink()
       const [page, setPage] = useState<'list' | 'detail'>('list')
+      const link = 'text-(--theme-link) hover:underline'
       return page === 'list' ? (
         <>
           <PageHeader
             breadcrumbs={[{ label: 'Buckets' }]}
             actions={<PageHeaderAddButton label="New bucket" word="create" onClick={() => {}} />}
           />
-          <button type="button" className="link" onClick={() => setPage('detail')}>
+          <Link
+            href="/storage/buckets/training-data"
+            className={link}
+            onClick={() => setPage('detail')}
+          >
             Open training-data
-          </button>
+          </Link>
         </>
       ) : (
         <>
@@ -481,9 +501,9 @@ export const Navigation: Story = {
               <PageHeaderAction icon={TrashIcon} label="Delete" destructive onClick={() => {}} />
             }
           />
-          <button type="button" className="link" onClick={() => setPage('list')}>
+          <Link href="/storage/buckets" className={link} onClick={() => setPage('list')}>
             Back to buckets
-          </button>
+          </Link>
         </>
       )
     }
@@ -495,10 +515,10 @@ export const Navigation: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Open training-data' }))
+    await userEvent.click(canvas.getByRole('link', { name: 'Open training-data' }))
     await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('training-data')
     await expect(canvas.queryByRole('button', { name: 'New bucket' })).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: 'Back to buckets' }))
+    await userEvent.click(canvas.getByRole('link', { name: 'Back to buckets' }))
     await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('Buckets')
     await expect(canvas.queryByRole('button', { name: 'Delete' })).toBeNull()
   },

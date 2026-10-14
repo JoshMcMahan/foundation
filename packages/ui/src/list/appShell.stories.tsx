@@ -6,12 +6,15 @@ import { useContextMenu } from '../components/ContextMenu'
 import { keyedByContent } from '../components/keys'
 import type { MenuEntry } from '../components/MenuEntries'
 import { PageHeader, PageHeaderBar, PageHeaderProvider } from '../components/PageHeader'
-import { PageHeaderAction, PageHeaderAddButton } from '../components/PageHeaderAction'
+import {
+  PageHeaderAction,
+  PageHeaderAddButton,
+  PageHeaderMenu,
+} from '../components/PageHeaderAction'
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
 import {
-  AddIcon,
   ClusterIcon,
   EditIcon,
   PowerIcon,
@@ -412,24 +415,8 @@ export const RowMenuOpen: Story = {
   },
 }
 
-const DETAIL_GROUPS: ToolbarItem[][] = [
-  [
-    {
-      key: 'terminal',
-      label: 'Terminal',
-      icon: <TerminalIcon />,
-      href: '/clusters/gpu-trainer-01/terminal',
-    },
-    { key: 'stop', label: 'Stop', icon: <StopIcon />, onClick: () => {} },
-  ],
-  [
-    {
-      key: 'snapshot',
-      label: 'Snapshot',
-      icon: <SnapshotIcon />,
-      onClick: () => {},
-    },
-  ],
+// The log panel's own controls: toggles for how it follows, and its refresh.
+const LOG_GROUPS: ToolbarItem[][] = [
   [
     {
       key: 'auto-refresh',
@@ -442,21 +429,13 @@ const DETAIL_GROUPS: ToolbarItem[][] = [
   ],
 ]
 
-const DETAIL_RIGHT: ToolbarItem[] = [
+const LOG_RIGHT: ToolbarItem[] = [
   { key: 'refresh', label: 'Refresh', icon: <RefreshIcon />, onClick: () => {} },
-  { key: 'add-node', label: 'Add node', icon: <AddIcon />, onClick: () => {} },
-  {
-    key: 'delete',
-    label: 'Delete',
-    icon: <TrashIcon />,
-    onClick: () => {},
-    disabled: true,
-    disabledReason: 'Stop the cluster before deleting it',
-  },
+  { key: 'snapshot', label: 'Snapshot', icon: <SnapshotIcon />, onClick: () => {} },
 ]
 
-/** ActionToolbar's real habitat is a detail page, not a list — list pages put
- * search and view controls in the header's toolbar slot instead. */
+/** A detail page: its commands sit at the end of the bar and its menu beside
+ *  the title; `ActionToolbar` holds the controls of a panel on the page. */
 export const DetailPageShell: StoryObj = {
   render: () => (
     <MockHost>
@@ -472,21 +451,48 @@ export const DetailPageShell: StoryObj = {
                   { label: 'gpu-trainer-01' },
                 ]}
                 titleActions={
-                  <PageHeaderAction
-                    icon={EditIcon}
-                    iconOnly
-                    label="Edit"
-                    href="/clusters/gpu-trainer-01/edit"
-                  />
+                  <>
+                    <PageHeaderAction
+                      icon={EditIcon}
+                      iconOnly
+                      label="Edit"
+                      href="/clusters/gpu-trainer-01/edit"
+                    />
+                    <PageHeaderMenu
+                      label="Cluster actions"
+                      items={[
+                        { label: 'Snapshot', icon: <SnapshotIcon />, onClick: () => {} },
+                        {
+                          label: 'Delete',
+                          icon: <TrashIcon />,
+                          destructive: true,
+                          onClick: () => {},
+                          disabled: true,
+                          disabledReason: 'Stop the cluster before deleting it',
+                        },
+                      ]}
+                    />
+                  </>
+                }
+                actions={
+                  <>
+                    <PageHeaderAction
+                      icon={TerminalIcon}
+                      label="Terminal"
+                      href="/clusters/gpu-trainer-01/terminal"
+                    />
+                    <PageHeaderAction icon={StopIcon} label="Stop" onClick={() => {}} />
+                    <PageHeaderAddButton label="Add node" onClick={() => {}} />
+                  </>
                 }
               />
-              <div className="px-4">
-                <ActionToolbar groups={DETAIL_GROUPS} right={DETAIL_RIGHT} sticky />
-                <div className="py-5 text-sm text-(--theme-muted-text-color)">
-                  Narrow the Storybook canvas to watch the right-hand actions collapse into the ⋯
-                  menu.
-                </div>
-              </div>
+              <section className="space-y-2 p-4">
+                <h2 className="m-0 text-sm font-medium text-(--theme-app)">Logs</h2>
+                <ActionToolbar groups={LOG_GROUPS} right={LOG_RIGHT} />
+                <pre className="m-0 rounded-md border border-(--theme-border) p-3 text-xs text-(--theme-muted-text-color)">
+                  {'node-0  ready\nnode-1  ready\nscheduler  accepting jobs'}
+                </pre>
+              </section>
             </div>
             <HostBindingLog events={host.events} />
           </div>
@@ -494,4 +500,14 @@ export const DetailPageShell: StoryObj = {
       )}
     </MockHost>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const stop = canvas.getByRole('button', { name: 'Stop' })
+    const autoRefresh = canvas.getByRole('button', { name: 'Auto refresh' })
+    // The page's commands come before the panel's controls: they sit in the bar.
+    await expect(
+      stop.compareDocumentPosition(autoRefresh) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await expect(autoRefresh).toHaveAttribute('aria-pressed', 'true')
+  },
 }

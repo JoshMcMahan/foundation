@@ -136,10 +136,16 @@ A page declares its header in one place, and the shell shows it:
 - **`breadcrumbs`** is the whole trail, ending with the page itself, which the
   bar makes the page's one `h1` (`aria-current="page"`). Don't render another
   `h1`. An empty label, such as a name still loading, shows a placeholder. The
-  trail is a list in a `nav` landmark named by the strings' `breadcrumb`; long
-  names truncate, and a narrow bar keeps only the parent.
+  trail is a list in a `nav` landmark named by the strings' `breadcrumb`. A
+  trail too wide for its bar folds its ancestors into a "…" menu of links
+  (named by `showFullPath`), keeping the parent when it fits beside the page's
+  name; the name truncates last, with the full name on hover.
 - **`titleActions`** sit beside the title, for actions on the page's subject.
-  **`actions`** sit at the end of the bar, for the page's commands.
+  **`actions`** sit at the end of the bar, for the page's commands: a detail
+  page's Start, Stop or Terminal go here, not in a row of buttons below it.
+  `ActionToolbar` (from `./list`) is for the controls of a panel on the page,
+  such as a log's follow and refresh: its buttons are outlined, and `primary`
+  fills the one, if any, the panel leads to.
   **`toolbar`** is a row under the bar, such as tabs or a time range.
 - **`hidden`** takes the bar away while the page is mounted, for a page that
   fills the window.

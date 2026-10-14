@@ -90,6 +90,8 @@ export interface UIStrings {
     clearSearch: string
     filterPlaceholder: string
     breadcrumb: string
+    /** Names the menu of the breadcrumbs a narrow trail folds away. */
+    showFullPath: string
     yes: string
     no: string
     /** Read after a link that opens a new tab. */
@@ -740,6 +742,7 @@ const DEFAULTS: UIProviderValue = {
       clearSearch: 'Clear search',
       filterPlaceholder: 'Filter…',
       breadcrumb: 'Breadcrumb',
+      showFullPath: 'Show full path',
       yes: 'Yes',
       no: 'No',
       opensInNewTab: '(opens in a new tab)',
