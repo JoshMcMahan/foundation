@@ -550,9 +550,30 @@ export const InfoTips: StoryObj = {
   },
 }
 
+/** A thing's summary: its mark, name and kind, a row of badges, and its actions. */
+export const OverviewStory: StoryObj<{ loading: boolean }> = {
+  name: 'Overview',
+  args: { loading: false },
+  render: ({ loading }) => (
+    <Overview
+      className="max-w-xl"
+      loading={loading}
+      iconSize={48}
+      icon={<Avatar name="Grace Hopper" size="2xl" />}
+      name="gpu-trainer-01"
+      type="Cluster"
+      actions={<Button size="sm">Restart</Button>}
+    >
+      <StatusBadge variant="success" dot>
+        Running
+      </StatusBadge>
+    </Overview>
+  ),
+}
+
 export const OverviewLoading: StoryObj = {
   name: 'Overview loading',
-  render: () => <Overview Icon={null} name="Resource" loading className="max-w-sm gap-3" />,
+  render: () => <Overview icon={null} name="Resource" loading className="max-w-sm" />,
 }
 
 export const Switches: StoryObj<{

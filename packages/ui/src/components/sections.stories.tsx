@@ -189,11 +189,10 @@ export const LinkTabs: StoryObj = {
   },
 }
 
-const offsets = { underHeader: 40, underToolbar: 88 } as const
-type StickyTabsArgs = { sticky: keyof typeof offsets; panels: boolean }
+type StickyTabsArgs = { toolbar: boolean; panels: boolean }
 const lines = Array.from({ length: 40 }, (_, line) => line + 1)
 
-function StickyTabsDemo({ sticky, panels }: StickyTabsArgs) {
+function StickyTabsDemo({ toolbar, panels }: StickyTabsArgs) {
   const [page, setPage] = useState('overview')
   const filler = lines.map((line) => (
     <p key={line} className="py-2 text-sm theme-muted-text">
@@ -201,44 +200,47 @@ function StickyTabsDemo({ sticky, panels }: StickyTabsArgs) {
     </p>
   ))
   return (
-    // The page's own scroller, as a host's main pane is, with its pinned header on top.
-    <div data-testid="page" className="max-w-xl overflow-y-auto" style={{ height: 448 }}>
-      <div className="sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)">
-        <div className="flex h-10 items-center border-b border-(--theme-border) px-4 text-sm font-semibold">
-          Resource
-        </div>
-        {sticky === 'underToolbar' && (
-          <div className="flex h-12 items-center border-b border-(--theme-border) px-4 text-sm">
+    // The shell's header bar sits above the page's own scroller, as PageHeaderBar does.
+    <div className="flex max-w-xl flex-col" style={{ height: 448 }}>
+      <div className="flex h-11 shrink-0 items-center border-b border-(--theme-border) px-4 text-sm font-semibold">
+        Resource
+      </div>
+      <div data-testid="page" className="min-h-0 flex-1 overflow-y-auto">
+        {toolbar && (
+          <div className="sticky top-0 z-(--layer-sticky) flex h-12 items-center border-b border-(--theme-border) bg-(--theme-app-bg) px-4 text-sm">
             Toolbar
           </div>
         )}
+        <Tabs
+          label="Resource"
+          sticky
+          // Under the page's own pinned toolbar.
+          className={toolbar ? 'top-12' : undefined}
+          value={page}
+          onValueChange={setPage}
+          items={views.map((view) => ({ ...view, ...(panels ? {} : { href: `#${view.value}` }) }))}
+        >
+          {panels &&
+            views.map((view) => (
+              <TabPanel key={view.value} value={view.value} className="px-4">
+                {filler}
+              </TabPanel>
+            ))}
+        </Tabs>
+        {!panels && <div className="px-4">{filler}</div>}
       </div>
-      <Tabs
-        label="Resource"
-        sticky={sticky}
-        value={page}
-        onValueChange={setPage}
-        items={views.map((view) => ({ ...view, ...(panels ? {} : { href: `#${view.value}` }) }))}
-      >
-        {panels &&
-          views.map((view) => (
-            <TabPanel key={view.value} value={view.value} className="px-4">
-              {filler}
-            </TabPanel>
-          ))}
-      </Tabs>
-      {!panels && <div className="px-4">{filler}</div>}
     </div>
   )
 }
 
-// The tab row stays pinned under the page's header as the page scrolls, whether
-// the tabs link to pages, which leaves them no panels, or show panels below.
+// The tab row stays pinned to the top of the page's scroller, under the shell's
+// header, whether the tabs link to pages, which leaves them no panels, or show
+// panels below; or under a toolbar the page pins above them.
 export const StickyTabs: StoryObj<StickyTabsArgs> = {
   name: 'Sticky tabs',
-  args: { sticky: 'underHeader', panels: false },
+  args: { toolbar: false, panels: false },
   argTypes: {
-    sticky: { control: 'inline-radio', options: Object.keys(offsets) },
+    toolbar: { description: 'A toolbar the page pins above the tabs.' },
     panels: { description: 'Panels under the tabs, rather than tabs that link to pages.' },
   },
   render: (args) => <StickyTabsDemo {...args} />,
@@ -251,7 +253,7 @@ export const StickyTabs: StoryObj<StickyTabsArgs> = {
     for (const top of [600, page.scrollHeight]) {
       page.scrollTo({ top })
       await waitFor(() => expect(page.scrollTop).toBeGreaterThan(500))
-      await expect(offset()).toBe(offsets[args.sticky])
+      await expect(offset()).toBe(args.toolbar ? 48 : 0)
     }
   },
 }

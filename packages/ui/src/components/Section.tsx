@@ -140,7 +140,7 @@ export function Section({
             {...titleProps}
             aria-describedby={describedBy}
             className={cx(
-              'group flex min-w-0 cursor-pointer items-center gap-1 text-left',
+              'group flex min-w-0 cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
               fill && 'w-full',
               titleClasses[variant],
               foldedTitleClasses[variant],

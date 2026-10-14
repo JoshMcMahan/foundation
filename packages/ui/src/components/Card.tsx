@@ -56,12 +56,15 @@ export function Card({
   })
 }
 
-interface CardHeaderProps {
+export interface CardHeaderProps {
   badge?: ReactNode
   title: string
   description?: ReactNode
   className?: string
   align?: 'center' | 'left'
+  /** The title's level in the page's outline: 1 for a card that is the page, such
+   *  as sign-in; 2 or 3 for a card among others under the page's own title. */
+  headingLevel?: 1 | 2 | 3 | undefined
 }
 
 export function CardHeader({
@@ -70,22 +73,19 @@ export function CardHeader({
   description,
   className = '',
   align = 'center',
+  headingLevel = 1,
 }: CardHeaderProps) {
+  const Heading = `h${headingLevel}` as const
   return (
     <div className={cx(align === 'center' ? 'text-center' : 'text-left', 'mb-6', className)}>
       {badge && (
-        <div className="inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium bg-[var(--theme-muted-panel-bg)] border border-[var(--theme-border)] rounded-full text-[var(--theme-muted-text-color)] mb-4 transition-colors duration-200">
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-(--theme-border) bg-(--theme-muted-panel-bg) px-3 py-1.5 text-xs font-medium text-(--theme-muted-text-color)">
           {badge}
         </div>
       )}
-      <h1
-        className="text-2xl font-bold tracking-tight text-[var(--theme-app)]"
-        style={{ letterSpacing: '-0.025em' }}
-      >
-        {title}
-      </h1>
+      <Heading className="text-2xl font-bold tracking-tight text-(--theme-app)">{title}</Heading>
       {description && (
-        <p className="text-[var(--theme-muted-text-color)] text-sm leading-relaxed mt-2">
+        <p className="mt-2 text-sm leading-relaxed text-(--theme-muted-text-color)">
           {description}
         </p>
       )}

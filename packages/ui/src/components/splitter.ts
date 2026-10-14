@@ -112,7 +112,7 @@ export function useSplitter({
       onKeyDown,
       ...(defaultWidth === undefined ? {} : { onDoubleClick: () => onWidthChange(defaultWidth) }),
       className: cx(
-        'absolute inset-y-0 z-10 w-1.5 cursor-col-resize touch-none transition-colors focus-visible:bg-(--theme-link) focus-visible:outline-none',
+        'absolute inset-y-0 z-10 w-1.5 cursor-col-resize touch-none transition-colors focus-visible:bg-(--theme-focus) focus-visible:outline-none',
         side === 'left' ? '-left-0.75' : '-right-0.75',
         live === null ? 'hover:bg-(--theme-border)' : 'bg-(--theme-accent)',
       ),

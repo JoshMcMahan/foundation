@@ -103,4 +103,9 @@ describe('useSplitter', () => {
     expect(handle()).toHaveAttribute('aria-valuemin', '200')
     expect(handle()).toHaveAttribute('aria-valuemax', '500')
   })
+
+  it('fills the handle with the focus color when the keyboard reaches it', () => {
+    render(<Panel onCommit={vi.fn()} />)
+    expect(screen.getByRole('separator').className).toContain('focus-visible:bg-(--theme-focus)')
+  })
 })

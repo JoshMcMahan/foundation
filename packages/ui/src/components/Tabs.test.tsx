@@ -47,24 +47,27 @@ describe('Tabs', () => {
       <Tabs
         label="Resource"
         value="settings"
-        sticky="underHeader"
+        sticky
         testId="tabs"
         items={items.map((item) => ({ ...item, href: `/r/${item.value}` }))}
       />,
     )
     expect(screen.getByTestId('tabs')).toHaveClass('contents')
     rerender(
-      <Tabs
-        label="Resource"
-        defaultValue="overview"
-        sticky="underHeader"
-        testId="tabs"
-        items={items}
-      >
+      <Tabs label="Resource" defaultValue="overview" sticky testId="tabs" items={items}>
         <TabPanel value="overview">Overview panel</TabPanel>
       </Tabs>,
     )
     expect(screen.getByTestId('tabs')).not.toHaveClass('contents')
+  })
+
+  it('pins the row to the top of the scroller, or where the caller moves it', () => {
+    const { rerender } = render(<Tabs label="Resource" sticky items={items} />)
+    const row = () => screen.getByRole('tablist').parentElement as HTMLElement
+    expect(row()).toHaveClass('sticky', 'top-0')
+    rerender(<Tabs label="Resource" sticky className="top-12" items={items} />)
+    expect(row()).toHaveClass('top-12')
+    expect(row()).not.toHaveClass('top-0')
   })
 
   it('moves between tabs with the arrow keys', async () => {

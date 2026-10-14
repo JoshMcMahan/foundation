@@ -51,7 +51,7 @@ export function Disclosure({
     >
       <Collapsible.Trigger
         className={cx(
-          'group/disclosure flex min-w-0 items-start gap-2 text-left',
+          'group/disclosure flex min-w-0 items-start gap-2 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
           disabled ? 'cursor-default' : 'cursor-pointer',
           summaryClassName,
         )}

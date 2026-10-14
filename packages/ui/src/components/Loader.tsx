@@ -67,7 +67,7 @@ export function Loader({
       )}
     >
       <span
-        className={cx('inline-flex', !color && 'text-(--theme-accent,#3b82f6)')}
+        className={cx('inline-flex', !color && 'text-(--theme-accent)')}
         style={color ? { color } : undefined}
       >
         {variant === 'logo' ? (

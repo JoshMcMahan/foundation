@@ -22,12 +22,10 @@ export interface TabItem<Value extends string = string> {
   testId?: string
 }
 
-// Detail pages pin their tabs under the breadcrumb strip (40px), or under the
-// strip and a pinned toolbar below it (40px + 48px).
-const stickyClasses = {
-  underHeader: 'sticky top-10 z-(--layer-sticky) bg-(--theme-app-bg)',
-  underToolbar: 'sticky top-22 z-(--layer-sticky) bg-(--theme-app-bg)',
-}
+// The shell's PageHeaderBar sits above the page's scroller, so pinned tabs stick
+// to the scroller's top. Something pinned above them inside the page, such as a
+// toolbar, moves them down with a `top-*` in `className`.
+const stickyClassName = 'sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)'
 
 export interface TabsProps<Value extends string> extends SegmentLayout {
   /** Names the set of tabs for assistive technology. */
@@ -43,8 +41,9 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
   variant?: 'line' | 'segmented' | undefined
   /** At the tab row's far end, such as a picker for what the tabs show. */
   end?: ReactNode
-  /** Pins the tab row as the page scrolls. */
-  sticky?: keyof typeof stickyClasses | undefined
+  /** Pins the tab row to the top of the page's scroller as it scrolls; give it a
+   *  `top-*` in `className` to pin it under something else pinned there. */
+  sticky?: boolean | undefined
   /** On the tab row. */
   className?: string | undefined
   testId?: string | undefined
@@ -88,7 +87,7 @@ export function Tabs<Value extends string>({
         className={
           segmented
             ? segmentClassName(item.value === current, layout)
-            : 'flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-2 text-sm font-semibold theme-muted-text outline-none transition-colors hover:theme-text focus-visible:rounded-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-link) data-active:text-(--theme-link) data-disabled:cursor-not-allowed data-disabled:opacity-50'
+            : 'flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-2 text-sm font-semibold theme-muted-text transition-colors hover:theme-text focus-visible:rounded-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus) data-active:text-(--theme-link) data-disabled:cursor-not-allowed data-disabled:opacity-50'
         }
       >
         <SegmentContent {...item} iconOnly={layout.iconOnly} />
@@ -123,7 +122,7 @@ export function Tabs<Value extends string>({
           className={cx(
             'flex items-center justify-between gap-2',
             !segmented && 'border-b border-(--theme-border)',
-            sticky && stickyClasses[sticky],
+            sticky && stickyClassName,
             className,
           )}
         >
@@ -163,7 +162,10 @@ export function TabPanel({
     <BaseTabs.Panel
       value={value}
       keepMounted={keepMounted}
-      className={cx('outline-none', className)}
+      className={cx(
+        'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
+        className,
+      )}
     >
       {children}
     </BaseTabs.Panel>

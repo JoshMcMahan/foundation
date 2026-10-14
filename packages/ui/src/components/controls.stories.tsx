@@ -245,12 +245,27 @@ export const Inputs: StoryObj = {
 }
 
 /** A raised surface for one task, at three sizes; `elevated` for one standing alone on a page. */
-export const Cards: StoryObj<{ size: 'sm' | 'md' | 'lg'; elevated: boolean }> = {
-  args: { size: 'md', elevated: false },
-  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
-  render: (args) => (
+export const Cards: StoryObj<{
+  size: 'sm' | 'md' | 'lg'
+  elevated: boolean
+  headingLevel: 1 | 2 | 3
+}> = {
+  args: { size: 'md', elevated: false, headingLevel: 1 },
+  argTypes: {
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
+    headingLevel: {
+      control: 'inline-radio',
+      options: [1, 2, 3],
+      description: "The title's level: 1 for a card that is the page.",
+    },
+  },
+  render: ({ headingLevel, ...args }) => (
     <Card {...args}>
-      <CardHeader title="Connect a cluster" description="Bring an existing cluster online" />
+      <CardHeader
+        headingLevel={headingLevel}
+        title="Connect a cluster"
+        description="Bring an existing cluster online"
+      />
       <p className="text-sm text-(--theme-muted-text-color)">
         Body content sits on the card surface.
       </p>
@@ -385,18 +400,22 @@ export const PaginationLinks: StoryObj = {
   },
 }
 
-function SettingsDemo() {
+function SettingsDemo({ headingLevel = 2 }: { headingLevel?: 2 | 3 }) {
   const [enabled, setEnabled] = useState(true)
   const [mode, setMode] = useState('auto')
   return (
     <div>
-      <SettingsCard title="Notifications" description="How we reach you">
+      <SettingsCard
+        title="Notifications"
+        description="How we reach you"
+        headingLevel={headingLevel}
+      >
         <SettingsHeading>Email</SettingsHeading>
         <SettingRow label="Run completion" helpText="Email when a workflow run finishes">
           <Switch aria-label="Run completion" checked={enabled} onCheckedChange={setEnabled} />
         </SettingRow>
       </SettingsCard>
-      <SettingsCard title="Digest">
+      <SettingsCard title="Digest" headingLevel={headingLevel}>
         <RadioGroup aria-label="Digest cadence" value={mode} onValueChange={setMode}>
           <SettingModeOption
             value="auto"
@@ -416,10 +435,26 @@ function SettingsDemo() {
   )
 }
 
-export const Settings: StoryObj = {
-  render: () => <SettingsDemo />,
-  play: async ({ canvasElement }) => {
+export const Settings: StoryObj<{ headingLevel: 2 | 3 }> = {
+  args: { headingLevel: 2 },
+  argTypes: {
+    headingLevel: {
+      control: 'inline-radio',
+      options: [2, 3],
+      description: "The cards' title level; a SettingsHeading sits one below.",
+    },
+  },
+  render: (args) => <SettingsDemo {...args} />,
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Notifications' })).toHaveProperty(
+      'tagName',
+      `H${args.headingLevel}`,
+    )
+    await expect(canvas.getByRole('heading', { name: 'Email' })).toHaveProperty(
+      'tagName',
+      `H${args.headingLevel + 1}`,
+    )
     await userEvent.click(canvas.getByText('Daily'))
     const daily = canvas.getByRole('radio', { name: 'Daily' })
     await expect(daily).toBeChecked()
