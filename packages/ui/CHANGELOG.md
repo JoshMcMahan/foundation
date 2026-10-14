@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.0](https://github.com/parallelworks/foundation/compare/ui-v0.49.0...ui-v0.50.0) (2026-10-14)
+
+
+### Features
+
+* **ui:** destructive breadcrumb actions, and Field takes size ([#260](https://github.com/parallelworks/foundation/issues/260)) ([9d21676](https://github.com/parallelworks/foundation/commit/9d21676ea477201e0b9e359227ebaefc367dcdd9))
+
 ## [0.49.0](https://github.com/parallelworks/foundation/compare/ui-v0.48.1...ui-v0.49.0) (2026-10-14)
 
 
