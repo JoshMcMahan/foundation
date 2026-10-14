@@ -199,6 +199,11 @@ export {
   toast,
 } from './components/Toast'
 export {
+  ToggleGroup,
+  type ToggleGroupOption,
+  type ToggleGroupProps,
+} from './components/ToggleGroup'
+export {
   Tooltip,
   type TooltipProps,
   TooltipProvider,

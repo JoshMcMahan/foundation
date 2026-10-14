@@ -36,6 +36,8 @@ export interface UIStrings {
     share: string
     send: string
     filter: string
+    /** A filter's choice that turns it off, showing everything. */
+    all: string
     loading: string
     loadMore: string
     showMore: string
@@ -681,6 +683,7 @@ const DEFAULTS: UIProviderValue = {
       share: 'Share',
       send: 'Send',
       filter: 'Filter',
+      all: 'All',
       loading: 'Loading…',
       loadMore: 'Load more',
       showMore: 'Show more',

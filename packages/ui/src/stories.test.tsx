@@ -20,6 +20,7 @@ import * as primitives from './components/primitives.stories'
 import * as sections from './components/sections.stories'
 import * as themeEditor from './components/ThemeEditor.stories'
 import * as toasts from './components/Toast.stories'
+import * as toggleGroup from './components/ToggleGroup.stories'
 import * as fileExplorer from './file-explorer/FileExplorer.stories'
 import * as form from './form/DynamicForm.stories'
 import * as layoutShowcase from './form/LayoutShowcase.stories'
@@ -64,6 +65,7 @@ const SUITES = {
   menus,
   overlays,
   toasts,
+  toggleGroup,
   pageHeader,
   logviewer,
   list,

@@ -35,6 +35,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A number, a date | `NumberInput`, `DatePicker` |
 | On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on |
 | One of a few choices, all shown | `RadioGroup` in a form; `SegmentedControl` in a toolbar, or as a field's control in a `Field group` |
+| Narrowing a list by values, such as statuses: several at once, or one or none | `ToggleGroup` |
 | Narrowing what is shown by typing | `SearchInput`; `ListSearchControl` on a list page's toolbar |
 | A value from a list | `Select`, or `Combobox` when the list needs filtering |
 | Free text with suggestions, or tags | `Autocomplete`; `Combobox` with `multiple creatable` |
@@ -78,6 +79,12 @@ Some pairs look alike and are split on purpose:
   thing, each with its own panel or route. A `SegmentedControl` sets a value,
   such as a time range, that changes what one view shows. `Tabs` with
   `variant="segmented"` look the same, so the choice rests on what pressing does.
+- **SegmentedControl or ToggleGroup.** A `SegmentedControl` holds a setting
+  that always has exactly one value, such as a time range or which view of the
+  data to show. A `ToggleGroup` filters a list by values and may be off: its
+  options are pressed independently, or one or none with `multiple={false}`,
+  and `all` leads with an All option for "no filter". Each option can carry a
+  status dot or icon and a count.
 - **SearchInput or ListSearchControl.** A `SearchInput` is a box that is
   always shown and narrows what sits beside it, such as a panel's rows or a
   log's lines. `ListSearchControl` belongs to a list page's toolbar: it folds to
