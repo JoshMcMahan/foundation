@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 
 if (typeof structuredClone === 'undefined') {
   ;(global as Record<string, unknown>)['structuredClone'] = (obj: unknown): unknown =>
@@ -12,12 +13,12 @@ vi.mock('../components/Provider', async (importOriginal) =>
 )
 
 vi.mock('./Editor', () => ({
-  default: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+  Editor: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <textarea data-testid="editor" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
 }))
 
-import Code from './FormCodePanel'
+import { FormCodePanel as Code } from './FormCodePanel'
 
 const editorValue = () => JSON.parse((screen.getByTestId('editor') as HTMLTextAreaElement).value)
 
@@ -67,6 +68,20 @@ describe('Code show-hidden toggle', () => {
       name: 'renamed',
       region: 'us-east-1',
     })
+  })
+
+  it('keeps the text as typed while the values it parses to come back unchanged', () => {
+    function Controlled() {
+      const [values, setValues] = useState<Record<string, unknown>>(data)
+      return <Code formJSON={formJSON} data={values} mutate={setValues} />
+    }
+    render(<Controlled />)
+    const typed = '{"region": "eu-west-1"}'
+
+    fireEvent.change(screen.getByTestId('editor'), { target: { value: typed } })
+
+    // Reformatted as the form lays out JSON, the text would move the cursor under the person typing.
+    expect(screen.getByTestId('editor')).toHaveValue(typed)
   })
 
   it('does not render the toggle when there are no hidden fields', () => {

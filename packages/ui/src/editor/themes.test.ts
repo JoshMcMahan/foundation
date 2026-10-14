@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { defineEditorThemes, expandShorthandHex } from './themes'
+import { defineEditorThemes, expandShorthandHex, followThemeTokens } from './themes'
 
 const validColor = /^#?([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/
 
@@ -33,12 +33,7 @@ describe('defineEditorThemes syntax', () => {
       defineTheme: (name: string, data: { rules: { token: string; foreground?: string }[] }) =>
         themes.set(name, data),
     } as unknown as Parameters<typeof defineEditorThemes>[0])
-    expect([...themes.keys()].sort()).toEqual([
-      'app-dark',
-      'app-dark-disabled',
-      'app-light',
-      'app-light-disabled',
-    ])
+    expect([...themes.keys()].sort()).toEqual(['app-dark', 'app-light'])
     const rule = (token: string) => themes.get('app-light')?.rules.find((r) => r.token === token)
     expect(rule('string')?.foreground).toBe('00aa00')
     // Display-p3 red is outside sRGB; Monaco gets its sRGB mapping.
@@ -65,5 +60,40 @@ describe('defineEditorThemes', () => {
         expect(validColor.test(value) || value === 'transparent').toBe(true)
       }
     }
+  })
+})
+
+describe('followThemeTokens', () => {
+  it('redefines once a frame for every editor, and only when the tokens changed', async () => {
+    const defineTheme = vi.fn()
+    const setTheme = vi.fn()
+    const editor = { defineTheme, setTheme } as unknown as Parameters<typeof defineEditorThemes>[0]
+    const stops = [
+      followThemeTokens(editor, () => 'app-light'),
+      followThemeTokens(editor, () => 'app-light'),
+    ]
+    defineEditorThemes(editor)
+    defineTheme.mockClear()
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+
+    document.documentElement.style.setProperty('--theme-code-string', '#112233')
+    document.documentElement.style.setProperty('--theme-code-number', '#445566')
+    await frame()
+    await frame()
+    // Two themes, defined once for both editors and both properties.
+    expect(defineTheme).toHaveBeenCalledTimes(2)
+    expect(setTheme).toHaveBeenCalledTimes(1)
+
+    document.documentElement.classList.add('unrelated')
+    await frame()
+    await frame()
+    expect(defineTheme).toHaveBeenCalledTimes(2)
+
+    for (const stop of stops) {
+      stop()
+    }
+    document.documentElement.classList.remove('unrelated')
+    document.documentElement.style.removeProperty('--theme-code-string')
+    document.documentElement.style.removeProperty('--theme-code-number')
   })
 })

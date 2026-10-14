@@ -4,19 +4,16 @@ import { act, fireEvent, screen } from '@testing-library/react'
 import type { FieldComponentProps } from '../form/types/fieldComponentTypes'
 import { renderInForm } from '../test/form'
 import type { IEditorField } from './EditorField'
-import EditorField from './EditorField'
-import type { IEditorProps } from './Monaco'
+import { EditorField } from './EditorField'
+import type { EditorProps } from './Monaco'
 
-// Mock the Editor as a textarea — also forwards `data-editor-key` so we can
-// assert the React key (via DOM remount) and `data-value-passed` to assert
-// what `value` prop EditorField actually passes through (undefined vs string).
+// The editor as a textarea that shows the value it was last handed, as Monaco's sync does.
 vi.mock('./Editor', () => ({
-  __esModule: true,
-  default: ({ value, onChange }: IEditorProps) => (
+  Editor: ({ value, onChange, disabled }: EditorProps) => (
     <textarea
       data-testid="mock-editor"
-      data-value-passed={value === undefined ? 'undefined' : String(value)}
-      defaultValue={value ?? ''}
+      value={value ?? ''}
+      disabled={disabled}
       onChange={(e) => onChange?.(e.target.value)}
     />
   ),
@@ -33,46 +30,30 @@ describe('EditorField', () => {
   it('passes the current form value through to the editor', () => {
     renderInForm(<EditorField {...props} />, { testEditorField: 'my-script' })
 
-    expect(screen.getByTestId('mock-editor')).toHaveAttribute('data-value-passed', 'my-script')
+    expect(screen.getByTestId('mock-editor')).toHaveValue('my-script')
   })
 
-  it('stops passing value to the editor once the user has edited it', () => {
-    const { form } = renderInForm(<EditorField {...props} />, {
-      testEditorField: 'initial',
-      editorKeyPostfix: '',
-    })
-
+  it('writes edits to the form and takes a value set from outside after them', () => {
+    const { form } = renderInForm(<EditorField {...props} />, { testEditorField: 'initial' })
     const editor = screen.getByTestId('mock-editor')
-    expect(editor).toHaveAttribute('data-value-passed', 'initial')
 
     act(() => {
       fireEvent.change(editor, { target: { value: 'user-typed' } })
     })
     expect(form.getValues('testEditorField')).toBe('user-typed')
+    expect(editor).toHaveValue('user-typed')
 
-    // A change from outside should NOT reset the editor's value prop: EditorField passes `undefined`
-    // once the user has typed, so Monaco's model.setValue() never fires and the cursor stays put.
+    // A reset reaches the editor without remounting it.
     act(() => {
       form.setValue('testEditorField', 'externally-set')
     })
-    expect(editor).toHaveAttribute('data-value-passed', 'undefined')
+    expect(screen.getByTestId('mock-editor')).toBe(editor)
+    expect(editor).toHaveValue('externally-set')
   })
 
-  it('forces editor remount when editorKeyPostfix changes', () => {
-    const { form } = renderInForm(<EditorField {...props} />, {
-      testEditorField: 'v1',
-      editorKeyPostfix: 'k1',
-    })
+  it('disables the editor with the field', () => {
+    renderInForm(<EditorField {...props} disabled />, { testEditorField: 'x' })
 
-    const before = screen.getByTestId('mock-editor')
-    act(() => {
-      form.setValue('editorKeyPostfix', 'k2')
-    })
-    const after = screen.getByTestId('mock-editor')
-    // React keying causes a fresh DOM node when the key changes.
-    expect(after).not.toBe(before)
-    // The new mount should re-show the current form value (touchedRef
-    // resets because the component is a fresh instance).
-    expect(after).toHaveAttribute('data-value-passed', 'v1')
+    expect(screen.getByTestId('mock-editor')).toBeDisabled()
   })
 })

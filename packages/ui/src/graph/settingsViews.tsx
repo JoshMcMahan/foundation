@@ -1,15 +1,12 @@
-import { lazy, Suspense } from 'react'
 import { ErrorText } from '../components/Field'
-import { Loader } from '../components/Loader'
 import { Tooltip } from '../components/Tooltip'
 import type { WorkflowEditing } from '../editing'
+import { Editor } from '../editor/Editor'
 import type { EditorMarker } from '../editor/Monaco'
 import type { NestedWorkflowText } from '../editor/nestedText'
 import { ChoiceButtons, type Strings } from './editorFields'
 import { useGraphEditorStrings } from './editorStrings'
 import { ProblemList, type ScopedProblem } from './fieldProblems'
-
-const MonacoEditor = lazy(() => import('../editor/Monaco'))
 
 /** Which view the job, step, input and settings dialogs open in. */
 export type SettingsView = 'form' | 'yaml'
@@ -79,21 +76,18 @@ export function YamlPane({
   // Schema problems show as squiggles and, as in the workflow editor, don't block saving.
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="h-[50vh] overflow-hidden rounded-md border theme-border">
-        <Suspense fallback={<Loader />}>
-          <MonacoEditor
-            path={path}
-            language="yaml"
-            value={value}
-            height="100%"
-            // A few lines of settings would otherwise scroll a whole pane past their end.
-            scrollBeyondLastLine={false}
-            onChange={onChange}
-            markers={scoped.markers}
-            {...(nested ? { nested } : {})}
-          />
-        </Suspense>
-      </div>
+      <Editor
+        path={path}
+        language="yaml"
+        value={value}
+        height="50vh"
+        className="overflow-hidden rounded-md"
+        // A few lines of settings would otherwise scroll a whole pane past their end.
+        scrollBeyondLastLine={false}
+        onChange={onChange}
+        markers={scoped.markers}
+        {...(nested ? { nested } : {})}
+      />
       <ErrorText>{problem}</ErrorText>
       <ProblemList problems={scoped.problems} />
     </div>

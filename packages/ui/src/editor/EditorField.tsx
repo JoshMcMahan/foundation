@@ -1,12 +1,9 @@
-import { useMemo, useRef } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
 import { Field } from '../components/Field'
-import { cx } from '../cx'
 import { fieldFrame } from '../form/fieldFrame'
 import type { FieldComponentProps } from '../form/types/fieldComponentTypes'
 import type { BaseField } from '../form/types/fieldTypes'
 import { useFieldValue } from '../form/useFieldValue'
-import Editor from './Editor'
+import { Editor } from './Editor'
 
 export interface IEditorField extends BaseField {
   type: 'editor'
@@ -16,46 +13,25 @@ export interface IEditorField extends BaseField {
   }
 }
 
-export default function EditorField(props: FieldComponentProps<IEditorField>) {
+/** A form field that edits its value as code, in the language its `options` name (shell by default). */
+export function EditorField(props: FieldComponentProps<IEditorField>) {
   const { field, label, disabled, onChange } = props
   // The form names every field before it renders one.
-  const fieldName = field.name ?? ''
-
-  const [value, change] = useFieldValue<string | undefined>(fieldName)
-  // Once the person edits, Monaco owns the text: handing it back each render would set the model's
-  // value and move the cursor.
-  const touchedRef = useRef(false)
-
-  const handleChange = (val: string) => {
-    touchedRef.current = true
-    onChange?.(val)
-    change(val)
-  }
-
-  // A host remounts the editor with fresh text by setting `editorKeyPostfix` among the form's values.
-  const { control } = useFormContext()
-  const resetKey = useWatch({ control, name: 'editorKeyPostfix' })
-  const editorKeyPostfix = typeof resetKey === 'string' ? resetKey : ''
-
-  const postfixKey = useMemo(() => {
-    const randomKey = Math.random().toString(36).substring(7)
-    return editorKeyPostfix || randomKey
-  }, [editorKeyPostfix])
+  const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
 
   return (
     <Field {...fieldFrame(props)}>
       <Editor
-        key={fieldName + postfixKey}
         ariaLabel={label}
         height="200px"
-        path={fieldName}
-        {...(touchedRef.current || value === undefined ? {} : { value })}
-        className={cx(
-          'bg-(--theme-input-bg) w-11 border focus:border rounded text-[10px] leading-4 pl-[6px]',
-          disabled && 'opacity-75',
-        )}
-        readOnly={disabled}
-        onChange={handleChange}
+        // The editor keeps the cursor where it is when the form hands back the text it just sent,
+        // and takes a reset or another field's change as it comes.
+        value={value ?? ''}
+        disabled={disabled}
+        onChange={(text) => {
+          onChange?.(text)
+          change(text)
+        }}
         language={field.options?.language || 'shell'}
       />
     </Field>

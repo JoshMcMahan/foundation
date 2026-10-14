@@ -1,8 +1,8 @@
-export { default as Editor } from './Editor'
-export { default as EditorField, type IEditorField } from './EditorField'
-export { default as FormCodePanel } from './FormCodePanel'
+export { Editor } from './Editor'
+export { EditorField, type IEditorField } from './EditorField'
+export { FormCodePanel, type FormCodePanelProps } from './FormCodePanel'
 export { HOST_MARKER_OWNER, LINT_OWNER } from './lintOwner'
-export type { IEditorProps, ISchemaError } from './Monaco'
+export type { EditorMarker, EditorProps, ValidationMarker } from './Monaco'
 export { type NestedWorkflowText, nestedWorkflowText } from './nestedText'
 export { revealLines } from './reveal'
 export {
@@ -15,4 +15,4 @@ export {
 } from './settingsYaml'
 export { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 export { setupMonacoWorkers } from './workers'
-export { configureEditorYaml } from './yaml'
+export { configureEditorYaml, type SchemasSettings } from './yaml'

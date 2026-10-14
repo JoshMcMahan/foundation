@@ -27,9 +27,21 @@ const fake = vi.hoisted(() => {
         listener()
       }
     }),
-    pushEditOperations: vi.fn((_: unknown, [edit]: { text: string }[]) => {
-      model.value = edit?.text ?? ''
-    }),
+    // One line of text: a position's column is its offset plus one.
+    getPositionAt: (offset: number) => ({ lineNumber: 1, column: offset + 1 }),
+    pushEditOperations: vi.fn(
+      (
+        _: unknown,
+        [edit]: { text: string; range: { startColumn: number; endColumn: number } }[],
+      ) => {
+        if (edit) {
+          model.value =
+            model.value.slice(0, edit.range.startColumn - 1) +
+            edit.text +
+            model.value.slice(edit.range.endColumn - 1)
+        }
+      },
+    ),
     getFullModelRange: () => ({}),
     isDisposed: () => false,
     getLineCount: () => 3,
@@ -55,6 +67,14 @@ const fake = vi.hoisted(() => {
 
 vi.mock('monaco-editor', () => ({
   Uri: { parse: (path: string) => path },
+  Range: class {
+    startColumn: number
+    endColumn: number
+    constructor(_startLine: number, startColumn: number, _endLine: number, endColumn: number) {
+      this.startColumn = startColumn
+      this.endColumn = endColumn
+    }
+  },
   MarkerSeverity: { Error: 8 },
   editor: {
     defineTheme: vi.fn(),
@@ -69,10 +89,13 @@ vi.mock('monaco-editor', () => ({
     onDidChangeMarkers: (listener: (resources: string[]) => void) =>
       fake.listen(fake.markerListeners, listener, 'markers'),
     create: () => ({
+      getDomNode: () => null,
       updateOptions: vi.fn(),
       getModel: () => fake.model,
       getValue: () => fake.model.value,
       pushUndoStop: vi.fn(),
+      saveViewState: () => null,
+      restoreViewState: vi.fn(),
       dispose: vi.fn(),
     }),
   },
@@ -151,7 +174,17 @@ test('settles once the markers it would set are the ones there', () => {
 test('applies an outside change as an undoable edit with preserveUndo', () => {
   const { rerender } = render(<MonacoEditor preserveUndo value="a: 1" />)
   rerender(<MonacoEditor preserveUndo value="a: 2" />)
-  expect(fake.model.pushEditOperations).toHaveBeenCalled()
+  // Only the character that differs is replaced, so a cursor elsewhere stays where it is.
+  expect(fake.model.pushEditOperations).toHaveBeenCalledWith(
+    [],
+    [
+      expect.objectContaining({
+        text: '2',
+        range: expect.objectContaining({ startColumn: 4, endColumn: 5 }),
+      }),
+    ],
+    expect.any(Function),
+  )
   expect(fake.model.value).toBe('a: 2')
 })
 

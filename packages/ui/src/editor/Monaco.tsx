@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { useStrings } from '../components/Provider'
 import { useCssIsDark } from '../components/useCssIsDark'
 import { cx } from '../cx'
 import type { WorkflowEditing } from '../editing'
@@ -20,7 +21,8 @@ import { ensureYamlLanguage } from './yamlLanguage'
 
 setupMonacoWorkers()
 
-export type ISchemaError = monaco.editor.IMarker
+/** A problem Monaco or the YAML service found in the text, as `onValidate` reports it. */
+export type ValidationMarker = monaco.editor.IMarker
 
 // yaml-language-server's code for a schema it couldn't load, which says nothing about the text.
 const SCHEMA_UNREADABLE = '768'
@@ -75,14 +77,31 @@ function editorText(value: string): string {
 }
 
 const noop = () => {}
-export interface IEditorProps extends monaco.editor.IStandaloneEditorConstructionOptions {
+
+const DISABLED_BACKGROUNDS = [
+  '--vscode-editor-background',
+  '--vscode-editorGutter-background',
+  '--vscode-editorStickyScroll-background',
+  '--vscode-minimap-background',
+  '--vscode-editorOverviewRuler-background',
+]
+
+export interface EditorProps extends monaco.editor.IStandaloneEditorConstructionOptions {
   className?: string
+  /** Shows the text greyed out and read-only, as a disabled field does. */
   disabled?: boolean | undefined
+  /** The text as the person edits it, with carriage returns removed. */
   onChange?: (value: string) => void
-  onValidate?: (errors: ISchemaError[]) => void
+  /** Every marker on the text, each time they change: the schema's, the lint's and the host's. */
+  onValidate?: (markers: ValidationMarker[]) => void
   width?: string | number
   height?: string | number
-  path?: 'file:///workflow.yaml' | string
+  /**
+   * The model's URI. A YAML schema registered with `configureEditorYaml` applies where its
+   * `fileMatch` matches this path, and `revealLines` finds the editor by it. Each editor gets one
+   * of its own when left out. It is read once: give the editor a `key` to edit another path.
+   */
+  path?: string
   /** Apply outside `value` changes as undoable edits instead of resetting the undo history. */
   preserveUndo?: boolean
   /** Checks a whole workflow for what the schema can't, such as needs read but never listed. */
@@ -93,6 +112,30 @@ export interface IEditorProps extends monaco.editor.IStandaloneEditorConstructio
   nested?: NestedWorkflowText
 }
 
+// The edit that turns `from` into `to`, touching only what differs, so a cursor or selection
+// outside it stays where it is.
+function minimalEdit(
+  model: monaco.editor.ITextModel,
+  from: string,
+  to: string,
+): monaco.editor.IIdentifiedSingleEditOperation {
+  let start = 0
+  const shortest = Math.min(from.length, to.length)
+  while (start < shortest && from[start] === to[start]) {
+    start++
+  }
+  let end = 0
+  while (end < shortest - start && from[from.length - 1 - end] === to[to.length - 1 - end]) {
+    end++
+  }
+  const a = model.getPositionAt(start)
+  const b = model.getPositionAt(from.length - end)
+  return {
+    range: new monaco.Range(a.lineNumber, a.column, b.lineNumber, b.column),
+    text: to.slice(start, to.length - end),
+  }
+}
+
 export default function MonacoEditor({
   className,
   disabled,
@@ -100,30 +143,56 @@ export default function MonacoEditor({
   onValidate = noop,
   width = '100%',
   height = '100%',
-  // `path` is for multi-model editors, but we also use it to determine
-  // if we should use the workflow schema or not.
-  path = 'file:///default',
+  path: pathProp,
   preserveUndo = false,
   lint = false,
   markers,
   nested,
+  value,
+  language,
   ...options
-}: IEditorProps) {
+}: EditorProps) {
+  const { common: t } = useStrings()
+  // Editors that shared one URI would share one model, and a second would take the first's text.
+  const ownPath = `file:///editor/${useId().replace(/[^\w-]/g, '')}`
+  const pathRef = useRef(pathProp ?? ownPath)
+  const path = pathRef.current
   const isDark = useCssIsDark()
+  const isDarkRef = useRef(isDark)
+  isDarkRef.current = isDark
   // Always a boolean: Monaco keeps the last readOnly it was given, so leaving it unset once
   // `disabled` turns false would keep an editor that opened disabled locked.
   const readOnly = Boolean(disabled || options.readOnly)
+  const containerRef = useRef<HTMLDivElement>(null)
   const monacoRef = useRef<ReturnType<typeof monaco.editor.create>>(null)
   const isSyncingValueRef = useRef(false)
   const lintSources = useLintSources()
   const lintSourcesRef = useRef<LintSources>(lintSources)
   lintSourcesRef.current = lintSources
   const runLintRef = useRef<(() => void) | null>(null)
-  const unregisterRevealRef = useRef<(() => void) | null>(null)
-  const listenersRef = useRef<monaco.IDisposable[]>([])
   const nestedRef = useRef(nested)
   nestedRef.current = nested
   const isNested = nested !== undefined
+  // The editor is made once; its listeners call whatever the host passes now.
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onValidateRef = useRef(onValidate)
+  onValidateRef.current = onValidate
+  const markersRef = useRef(markers)
+  markersRef.current = markers
+  // Everything Monaco takes as an option, compared by value: hosts pass these inline.
+  const editorOptions: monaco.editor.IEditorOptions = {
+    ariaLabel: t.codeEditor,
+    readOnlyMessage: { value: t.readOnlyText },
+    ...options,
+    readOnly,
+    // A disabled editor shows no current line, as a disabled field shows no caret.
+    renderLineHighlight: disabled ? 'none' : (options.renderLineHighlight ?? 'line'),
+  }
+  const optionsKey = JSON.stringify(editorOptions)
+  const optionsRef = useRef(editorOptions)
+  optionsRef.current = editorOptions
+  const initialRef = useRef({ value, language })
 
   // The checks load with the engine, on demand; the text is checked again once they have, and
   // cleared when they're turned off.
@@ -132,6 +201,165 @@ export default function MonacoEditor({
   lintEditingRef.current = lintEditing
   const lintRef = useRef(lint)
   lintRef.current = lint
+
+  // Made and disposed in one effect, so StrictMode's second mount makes a fresh editor rather
+  // than keeping one whose listeners were torn down.
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) {
+      return
+    }
+    defineEditorThemes(monaco.editor)
+    monaco.editor.setTheme(getThemeName(isDarkRef.current))
+    const { value: initial, language: initialLanguage } = initialRef.current
+    const model = modelFor(monaco.Uri.parse(path), initial ?? '', initialLanguage)
+    const editor = monaco.editor.create(container, {
+      automaticLayout: true,
+      model,
+      ...optionsRef.current,
+      fixedOverflowWidgets: true,
+      suggest: {
+        preview: true,
+        // prevents the variable names from being shown as completion suggestions
+        showWords: false,
+        showInlineDetails: true,
+      },
+    })
+
+    // A refilled model may still hold the last editor's markers; the lint's come back once it runs.
+    setMarkers(
+      model,
+      HOST_MARKER_OWNER,
+      (markersRef.current ?? []).map((marker) => lintMarker(model, marker)),
+    )
+    setMarkers(model, LINT_OWNER, [])
+    // The cross-reference checks read a shape they can only take for granted once the
+    // schema is satisfied, so the schema's problems come first and alone.
+    const runLint = () => {
+      const editing = lintEditingRef.current
+      if (!lintRef.current || !editing || model.isDisposed()) {
+        return
+      }
+      const schema = monaco.editor
+        .getModelMarkers({ resource: model.uri })
+        .filter(
+          (marker) =>
+            marker.owner !== LINT_OWNER &&
+            marker.owner !== HOST_MARKER_OWNER &&
+            String(marker.code ?? '') !== SCHEMA_UNREADABLE,
+        )
+      const source = model.getValue()
+      setMarkers(
+        model,
+        LINT_OWNER,
+        schema.length > 0
+          ? []
+          : editing
+              .lintWorkflow(source, lintContext(editing, source, lintSourcesRef.current, runLint))
+              .map((problem) => lintMarker(model, problem)),
+      )
+    }
+    runLintRef.current = runLint
+    let lintTimer: number | undefined
+    const validate = () => {
+      runLint()
+      onValidateRef.current(monaco.editor.getModelMarkers({ resource: model.uri }))
+    }
+    const modelListeners = [
+      model.onDidChangeContent(() => {
+        if (lintRef.current) {
+          window.clearTimeout(lintTimer)
+          lintTimer = window.setTimeout(runLint, 300)
+        }
+        // Skip onChange for programmatic setValue calls (value prop sync)
+        // to avoid an infinite re-render loop.
+        if (isSyncingValueRef.current) {
+          return
+        }
+        // Windows line endings break bash scripts.
+        onChangeRef.current(editorText(editor.getValue()))
+      }),
+      // Markers rather than decorations: a model's markers can clear without its decorations changing.
+      monaco.editor.onDidChangeMarkers((resources) => {
+        const uri = model.uri.toString()
+        if (resources.some((resource) => resource.toString() === uri)) {
+          validate()
+        }
+      }),
+      { dispose: () => window.clearTimeout(lintTimer) },
+    ]
+    holdListeners(model, modelListeners)
+    validate()
+    const unregisterReveal = registerRevealer(path, (start, end) => {
+      const last = Math.min(Math.max(start, end), model.getLineCount())
+      editor.revealLinesInCenterIfOutsideViewport(start, last)
+      editor.setPosition({
+        lineNumber: start,
+        column: model.getLineFirstNonWhitespaceColumn(start) || 1,
+      })
+      const flash = editor.createDecorationsCollection([
+        {
+          range: new monaco.Range(start, 1, last, 1),
+          options: { isWholeLine: true, className: 'bg-(--theme-accent)/20' },
+        },
+      ])
+      window.setTimeout(() => flash.clear(), 1500)
+    })
+    const unfollow = followThemeTokens(monaco.editor, () => getThemeName(isDarkRef.current))
+
+    ensureYamlLanguage()
+    monacoRef.current = editor
+    return () => {
+      unfollow()
+      unregisterReveal()
+      for (const listener of modelListeners) {
+        listener.dispose()
+      }
+      editor.dispose()
+      monacoRef.current = null
+      runLintRef.current = null
+      // The YAML service and completion providers are global and outlive every editor. A YAML
+      // model stays for the next editor on its path, since the service keeps its parse by
+      // version; any other model goes with its editor.
+      if (!model.isDisposed() && model.getLanguageId() !== 'yaml') {
+        model.dispose()
+      }
+    }
+  }, [path])
+
+  useEffect(() => {
+    if (monacoRef.current) {
+      defineEditorThemes(monaco.editor)
+      monaco.editor.setTheme(getThemeName(isDark))
+    }
+  }, [isDark])
+
+  // Monaco has one theme for the whole page, so a disabled editor greys out by its own colors
+  // rather than switching a theme every other editor would follow. They go inline on the
+  // editor's node: Monaco's stylesheet sets them there, outside the package's layer.
+  useEffect(() => {
+    const node = monacoRef.current?.getDomNode()
+    for (const name of DISABLED_BACKGROUNDS) {
+      if (disabled) {
+        node?.style.setProperty(name, 'var(--theme-input-disabled-bg)')
+      } else {
+        node?.style.removeProperty(name)
+      }
+    }
+  }, [disabled])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: optionsKey stands for the options by value.
+  useEffect(() => {
+    monacoRef.current?.updateOptions(optionsRef.current)
+  }, [optionsKey])
+
+  useEffect(() => {
+    const model = monacoRef.current?.getModel()
+    if (model && language && model.getLanguageId() !== language) {
+      monaco.editor.setModelLanguage(model, language)
+    }
+  }, [language])
+
   useEffect(() => {
     const model = monacoRef.current?.getModel()
     if (!lint && model) {
@@ -159,178 +387,49 @@ export default function MonacoEditor({
     return publishNestedText(monaco.Uri.parse(path).toString(), nestedRef)
   }, [path, isNested])
 
-  // Update theme when the scheme or disabled state changes
-  const themeName = useRef(getThemeName(isDark, disabled))
-  themeName.current = getThemeName(isDark, disabled)
-  useEffect(() => {
-    if (!monacoRef.current) {
+  // Reconcile before paint so an older passive effect cannot overwrite a new edit. Only what
+  // differs is replaced, so the cursor, selection and scroll stay put when the host hands back
+  // text that differs elsewhere or not at all.
+  useLayoutEffect(() => {
+    const editor = monacoRef.current
+    const model = editor?.getModel()
+    if (!editor || !model || value === undefined) {
       return
     }
-    defineEditorThemes(monaco.editor)
-    monaco.editor.setTheme(getThemeName(isDark, disabled))
-    monacoRef.current.updateOptions({ readOnly })
-  }, [disabled, isDark, readOnly])
-  // And when the host applies other tokens in the same mode, as a theme editor does.
-  useEffect(() => followThemeTokens(monaco.editor, () => themeName.current), [])
-
-  // Reconcile before paint so an older passive effect cannot overwrite a new edit.
-  useLayoutEffect(() => {
-    const model = monacoRef.current?.getModel()
-    if (
-      !model ||
-      options.value === undefined ||
-      editorText(model.getValue()) === editorText(options.value)
-    ) {
+    const current = model.getValue()
+    if (editorText(current) === editorText(value)) {
       return
     }
     isSyncingValueRef.current = true
     try {
       if (preserveUndo) {
-        const editor = monacoRef.current
-        editor?.pushUndoStop()
-        model.pushEditOperations(
-          [],
-          [{ range: model.getFullModelRange(), text: options.value }],
-          () => null,
-        )
-        editor?.pushUndoStop()
+        editor.pushUndoStop()
+        model.pushEditOperations([], [minimalEdit(model, current, value)], () => null)
+        editor.pushUndoStop()
       } else {
-        model.setValue(options.value)
+        // Outside text starts a new history: undoing past it would bring back text the host replaced.
+        const view = editor.saveViewState()
+        model.setValue(value)
+        if (view) {
+          editor.restoreViewState(view)
+        }
       }
     } finally {
       isSyncingValueRef.current = false
     }
-  }, [options.value, preserveUndo])
-
-  // Dispose only the editor on unmount; the YAML service and completion providers
-  // are global and outlive every editor.
-  useEffect(() => {
-    return () => {
-      unregisterRevealRef.current?.()
-      for (const listener of listenersRef.current) {
-        listener.dispose()
-      }
-      monacoRef.current?.dispose()
-      monacoRef.current = null
-    }
-  }, [])
-
-  /** Strips CR (\r) — Windows line endings break bash scripts. */
-  const onChangeWrapper = (value: string) => {
-    value = editorText(value)
-    onChange(value)
-  }
+  }, [value, preserveUndo])
 
   return (
     <div
+      ref={containerRef}
       style={{ width, height }}
-      className={cx('relative border rounded', className)}
-      ref={(ref) => {
-        if (ref && !monacoRef.current) {
-          defineEditorThemes(monaco.editor)
-          monaco.editor.setTheme(getThemeName(isDark, disabled))
-          const model = modelFor(monaco.Uri.parse(path), options.value ?? '', options.language)
-          const editor = monaco.editor.create(ref, {
-            automaticLayout: true,
-            model,
-            ...options,
-            readOnly,
-            fixedOverflowWidgets: true,
-            suggest: {
-              preview: true,
-              // prevents the variable names from being shown as completion suggestions
-              showWords: false,
-              showInlineDetails: true,
-            },
-          })
-
-          // A refilled model may still hold the last editor's markers; the lint's come back once it runs.
-          setMarkers(
-            model,
-            HOST_MARKER_OWNER,
-            (markers ?? []).map((marker) => lintMarker(model, marker)),
-          )
-          setMarkers(model, LINT_OWNER, [])
-          // The cross-reference checks read a shape they can only take for granted once the
-          // schema is satisfied, so the schema's problems come first and alone.
-          const runLint = () => {
-            const editing = lintEditingRef.current
-            if (!lintRef.current || !editing || model.isDisposed()) {
-              return
-            }
-            const schema = monaco.editor
-              .getModelMarkers({ resource: model.uri })
-              .filter(
-                (marker) =>
-                  marker.owner !== LINT_OWNER &&
-                  marker.owner !== HOST_MARKER_OWNER &&
-                  String(marker.code ?? '') !== SCHEMA_UNREADABLE,
-              )
-            const source = model.getValue()
-            setMarkers(
-              model,
-              LINT_OWNER,
-              schema.length > 0
-                ? []
-                : editing
-                    .lintWorkflow(
-                      source,
-                      lintContext(editing, source, lintSourcesRef.current, runLint),
-                    )
-                    .map((problem) => lintMarker(model, problem)),
-            )
-          }
-          runLintRef.current = runLint
-          let lintTimer: number | undefined
-          const validate = () => {
-            runLint()
-            onValidate(monaco.editor.getModelMarkers({ resource: model.uri }))
-          }
-          const modelListeners = [
-            model.onDidChangeContent(() => {
-              if (lintRef.current) {
-                window.clearTimeout(lintTimer)
-                lintTimer = window.setTimeout(runLint, 300)
-              }
-              // Skip onChange for programmatic setValue calls (value prop sync)
-              // to avoid an infinite re-render loop.
-              if (isSyncingValueRef.current) {
-                return
-              }
-              onChangeWrapper(editor.getValue())
-            }),
-            // Markers rather than decorations: a model's markers can clear without its decorations changing.
-            monaco.editor.onDidChangeMarkers((resources) => {
-              const uri = model.uri.toString()
-              if (resources.some((resource) => resource.toString() === uri)) {
-                validate()
-              }
-            }),
-            { dispose: () => window.clearTimeout(lintTimer) },
-          ]
-          holdListeners(model, modelListeners)
-          listenersRef.current = modelListeners
-          validate()
-          unregisterRevealRef.current = registerRevealer(path, (start, end) => {
-            const last = Math.min(Math.max(start, end), model.getLineCount())
-            editor.revealLinesInCenterIfOutsideViewport(start, last)
-            editor.setPosition({
-              lineNumber: start,
-              column: model.getLineFirstNonWhitespaceColumn(start) || 1,
-            })
-            const flash = editor.createDecorationsCollection([
-              {
-                range: new monaco.Range(start, 1, last, 1),
-                options: { isWholeLine: true, className: 'bg-(--theme-accent)/20' },
-              },
-            ])
-            window.setTimeout(() => flash.clear(), 1500)
-          })
-
-          ensureYamlLanguage()
-          monacoRef.current = editor
-        }
-      }}
+      data-disabled={disabled ? '' : undefined}
+      className={cx(
+        'relative rounded border border-(--theme-border)',
+        'focus-within:border-(--theme-accent) focus-within:ring-1 focus-within:ring-(--theme-accent)',
+        'data-disabled:[&_.cursors-layer]:hidden data-disabled:[&_.view-lines]:opacity-60',
+        className,
+      )}
     />
   )
 }

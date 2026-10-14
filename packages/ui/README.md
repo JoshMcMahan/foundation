@@ -68,6 +68,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A copy action | `useCopy`, or `CopyToClipboard` for its button |
 | A live relative time or duration | `RelativeTime`, `Elapsed` |
 | Rendered Markdown | `Markdown` |
+| Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
 | A value that survives a reload | `usePersistedState` |
 | Choosing the app's colors | `ThemeEditor`, applied with `useApplyTheme` |
 
@@ -575,7 +576,14 @@ configureEditorYaml([
 ])
 ```
 
-Without them, those views still edit, but check nothing against the schema.
+Without them, those views still edit, but check nothing against the schema. Registering a schema
+under a `uri` already registered replaces it, and `configureEditorYaml` returns a function that
+removes what it added.
+
+`Editor` is controlled like an input: pass `value` and `onChange`, and hand back the text it sent.
+Text that comes back unchanged leaves the cursor alone, and a reset from outside keeps the cursor
+and scroll where they were. Each editor has a model of its own unless it is given a `path`, and it
+is named `UIStrings.common.codeEditor` unless given an `ariaLabel`.
 
 ## AI chat
 

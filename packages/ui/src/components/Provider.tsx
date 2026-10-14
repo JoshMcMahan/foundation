@@ -100,6 +100,10 @@ export interface UIStrings {
     no: string
     /** Read after a link that opens a new tab. */
     opensInNewTab: string
+    /** Names a code editor that has no label of its own. */
+    codeEditor: string
+    /** Shown when someone types in a read-only code editor. */
+    readOnlyText: string
     /** Names the handle that resizes a panel. */
     resizePanel: string
     /** A resizable panel's width, read aloud. */
@@ -776,6 +780,8 @@ const DEFAULTS: UIProviderValue = {
       yes: 'Yes',
       no: 'No',
       opensInNewTab: '(opens in a new tab)',
+      codeEditor: 'Code editor',
+      readOnlyText: 'This text is read-only.',
       resizePanel: 'Resize panel',
       panelWidth: (px) => `${px} pixels wide`,
       refresh: 'Refresh',

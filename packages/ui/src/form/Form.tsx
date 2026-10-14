@@ -1143,9 +1143,7 @@ function DynamicFormBody({
   }, [form, load, loaded, parsed])
 
   const report = useEffectEvent((values: FormValues) => {
-    // A host bumps `editorKeyPostfix` to remount its editors; it is no input of the form.
-    const { editorKeyPostfix: _, ...rest } = values
-    onValuesChange?.(rest)
+    onValuesChange?.(values)
   })
   useEffect(
     () => form.subscribe({ formState: { values: true }, callback: ({ values }) => report(values) }),
