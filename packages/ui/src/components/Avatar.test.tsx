@@ -43,6 +43,11 @@ describe('Avatar', () => {
     expect(screen.getByRole('img', { name: 'Avatar del usuario' })).toBeInTheDocument()
   })
 
+  it('says the presence its status dot shows', () => {
+    render(<Avatar name="Ada Lovelace" status="busy" />)
+    expect(screen.getByRole('img', { name: 'Ada Lovelace, busy' })).toBeInTheDocument()
+  })
+
   it('shows one initial at the extra-small size', () => {
     render(<Avatar name="Ada Lovelace" size="xs" />)
     expect(screen.getByText('A')).toBeInTheDocument()

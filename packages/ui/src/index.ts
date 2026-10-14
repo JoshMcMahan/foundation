@@ -19,7 +19,7 @@ export {
   type ButtonVariant,
   buttonClasses,
 } from './components/buttonClasses'
-export { default as Callout } from './components/Callout'
+export { Callout, type CalloutProps, type CalloutTone } from './components/Callout'
 export { Card, CardHeader, type CardProps } from './components/Card'
 export { Checkbox, CheckboxGroup, type CheckboxProps } from './components/Checkbox'
 export { ColorInput, type ColorInputProps } from './components/ColorInput'

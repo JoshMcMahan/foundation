@@ -120,11 +120,7 @@ export default function ChatEmptyState({
         <ProviderIssueBanner />
         {sessionUnreachable && !sessionBannerDismissed && (
           <div className="mx-4 mt-2">
-            <NoticeCard
-              tone="warning"
-              onDismiss={() => setSessionBannerDismissed(true)}
-              dismissLabel={common.dismiss}
-            >
+            <NoticeCard tone="warning" onDismiss={() => setSessionBannerDismissed(true)}>
               <span className="block font-medium">
                 {t.sessionUnreachableTitle(targetSession?.split(':').pop() ?? '')}
               </span>

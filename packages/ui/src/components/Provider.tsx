@@ -81,6 +81,10 @@ export interface UIStrings {
     remove: string
     sort: string
     userAvatar: string
+    /** A person's presence beside their avatar, read with their name. */
+    presence: Record<'online' | 'offline' | 'busy' | 'away', string>
+    /** An avatar's name with the person's presence, such as "Ada Lovelace, online". */
+    withPresence: (name: string, presence: string) => string
     moreInfo: string
     /** The name of a menu of actions on a page or row. */
     actions: string
@@ -758,6 +762,8 @@ const DEFAULTS: UIProviderValue = {
       remove: 'Remove',
       sort: 'Sort',
       userAvatar: 'User avatar',
+      presence: { online: 'online', offline: 'offline', busy: 'busy', away: 'away' },
+      withPresence: (name, presence) => `${name}, ${presence}`,
       moreInfo: 'More information',
       actions: 'Actions',
       edit: 'Edit',

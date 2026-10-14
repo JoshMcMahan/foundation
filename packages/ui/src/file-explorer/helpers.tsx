@@ -1,6 +1,6 @@
 import { type JSX, useState, useTransition } from 'react'
 import { Button } from '../components/Button'
-import Callout from '../components/Callout'
+import { Callout } from '../components/Callout'
 import { ProgressBar } from '../components/Meter'
 import {
   type UIData,
@@ -289,11 +289,10 @@ function CorsIssuePreview({
 
   return (
     <div className="flex flex-col items-center justify-center max-w-lg mx-auto">
-      <Callout className="text-left" type="info">
-        <h4 className="font-semibold mb-2">{t.explanation.title}</h4>
+      <Callout className="my-4 text-left" tone="info" title={t.explanation.title}>
         <p className="mb-2">{t.explanation.description}</p>
         <p>{t.explanation.action}</p>
-        <p className="mt-2 text-sm italic">{t.explanation.note}</p>
+        <p className="mt-2 italic">{t.explanation.note}</p>
       </Callout>
       <div className="flex gap-3 justify-center">
         <Button

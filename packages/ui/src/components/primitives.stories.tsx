@@ -6,7 +6,6 @@ import { formatBytes } from '../format'
 import { Avatar } from './Avatar'
 import { Button } from './Button'
 import { buttonClasses } from './buttonClasses'
-import Callout from './Callout'
 import { Autocomplete, Combobox } from './Combobox'
 import { ConfirmModal } from './ConfirmModal'
 import { CreateModal, CreateModalSwitch } from './CreateModal'
@@ -15,7 +14,6 @@ import { EmptyState } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
-import { Loader } from './Loader'
 import { type BarTone, Meter, ProgressBar } from './Meter'
 import { Modal, ModalDescription, type ModalProps, ModalTitle } from './Modal'
 import { NumberInput } from './NumberInput'
@@ -85,23 +83,6 @@ export const Badges: StoryObj = {
   ),
 }
 
-/** Callouts in the theme's tones: a note for guidance, an alert for a warning or an error. */
-export const Feedback: StoryObj = {
-  render: () => (
-    <div className="flex flex-col gap-4 max-w-xl">
-      <Callout type="info">Informational callout with guidance.</Callout>
-      <Callout type="warning">Something needs attention.</Callout>
-      <Callout type="error">Something went wrong.</Callout>
-      <Loader label="Loading resources" size={40} />
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getAllByRole('alert')).toHaveLength(2)
-    await expect(canvas.getByRole('note')).toHaveTextContent('Informational callout')
-  },
-}
-
 /** A picture, or initials until it loads and when it fails; one image to assistive
  *  technology either way. */
 export const Avatars: StoryObj = {
@@ -117,10 +98,13 @@ export const Avatars: StoryObj = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('img', { name: 'Grace Hopper' })).toHaveTextContent('GH')
+    // The name says the presence the dot shows.
+    await expect(canvas.getByRole('img', { name: 'Grace Hopper, away' })).toHaveTextContent('GH')
     // A picture that fails keeps the initials.
     await waitFor(() =>
-      expect(canvas.getByRole('img', { name: 'Katherine Johnson' })).toHaveTextContent('KJ'),
+      expect(canvas.getByRole('img', { name: 'Katherine Johnson, offline' })).toHaveTextContent(
+        'KJ',
+      ),
     )
   },
 }

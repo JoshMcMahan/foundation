@@ -48,7 +48,7 @@ export function StatusBadge({
         <span className="relative flex h-2 w-2">
           <span
             className={cx(
-              'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+              'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:hidden',
               toneFill[variant],
             )}
           />
@@ -81,7 +81,7 @@ export function StatusDot({
       {pulse && (
         <span
           className={cx(
-            'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+            'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:hidden',
             toneFill[variant],
           )}
         />

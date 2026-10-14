@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { keyedByContent } from '../components/keys'
 import { useStrings } from '../components/Provider'
+import { type Tone, toneIcon, toneSurface, toneText } from '../components/tone'
 import { cx } from '../cx'
 import { ChevronDownIcon, ChevronRightIcon, ErrorIcon, InfoIcon, WarningIcon } from '../icons'
 import type { WorkflowJob } from './types'
@@ -29,33 +30,12 @@ const typeOrder: Record<AnnotationType, number> = {
   notice: 2,
 }
 
-const typeConfig: Record<
-  AnnotationType,
-  {
-    icon: typeof ErrorIcon
-    accentClass: string
-    bgClass: string
-    countBg: string
-  }
-> = {
-  error: {
-    icon: ErrorIcon,
-    accentClass: 'text-red-500',
-    bgClass: 'bg-red-500/5 dark:bg-red-500/10',
-    countBg: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  },
-  warning: {
-    icon: WarningIcon,
-    accentClass: 'text-yellow-500',
-    bgClass: 'bg-yellow-500/5 dark:bg-yellow-500/10',
-    countBg: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
-  },
-  notice: {
-    icon: InfoIcon,
-    accentClass: 'text-blue-500',
-    bgClass: 'bg-blue-500/5 dark:bg-blue-500/10',
-    countBg: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  },
+// Annotations read in the theme's status tones: the vivid shade for an icon, the
+// text shade for words.
+const typeConfig: Record<AnnotationType, { icon: typeof ErrorIcon; tone: Tone }> = {
+  error: { icon: ErrorIcon, tone: 'error' },
+  warning: { icon: WarningIcon, tone: 'warning' },
+  notice: { icon: InfoIcon, tone: 'info' },
 }
 
 function collectAnnotations(
@@ -131,6 +111,7 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
       {/* Clickable header — always visible */}
       <button
         type="button"
+        aria-expanded={expanded}
         onClick={() => setExpanded((prev) => !prev)}
         className={cx(
           'w-full flex items-center gap-3 px-4 py-2.5 text-left',
@@ -154,8 +135,8 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
               <span
                 key={type}
                 className={cx(
-                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                  config.countBg,
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                  toneSurface[config.tone],
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -175,13 +156,10 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
               const Icon = config.icon
 
               return (
-                <div
-                  key={key}
-                  className={cx('flex items-start gap-2.5 px-4 py-2 text-sm', config.bgClass)}
-                >
-                  <Icon className={cx('w-4 h-4 mt-0.5 shrink-0', config.accentClass)} />
+                <div key={key} className="flex items-start gap-2.5 px-4 py-2 text-sm">
+                  <Icon className={cx('w-4 h-4 mt-0.5 shrink-0', toneIcon[config.tone])} />
                   <div className="flex-1 min-w-0">
-                    <span className={cx('font-medium', config.accentClass)}>
+                    <span className={cx('font-medium', toneText[config.tone])}>
                       {annotation.title ||
                         t.annotationType[annotation.type] ||
                         t.annotationType.notice}

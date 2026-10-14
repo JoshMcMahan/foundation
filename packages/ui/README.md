@@ -57,6 +57,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A preview of what a link leads to | `HoverCard` |
 | A task that blocks the page | `Modal`; `ConfirmModal` to confirm one action |
 | A panel beside the page | `Drawer` |
+| A message set into the page: guidance, a warning, an error | `Callout`; `variant="bar"` across a surface under its header |
 | A passing notice, or the progress of work in the background | `toast` |
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
 | Pages of a long list | `Pagination` |

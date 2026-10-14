@@ -42,13 +42,16 @@ export function avatarInitials(name: string | undefined): string {
 }
 
 /** A person's picture, or their initials while it loads or when it fails. It is
- *  one image to assistive technology, named for the person, whichever shows. */
+ *  one image to assistive technology, named for the person, whichever shows,
+ *  and their presence when it has a status dot. */
 export function Avatar({ src, name, size = 'md', status, className }: AvatarProps) {
   const { common } = useStrings()
+  const who = name || common.userAvatar
   return (
     <span
       role="img"
-      aria-label={name || common.userAvatar}
+      // The dot's color is its only sign of the status, so the name says it too.
+      aria-label={status ? common.withPresence(who, common.presence[status]) : who}
       className={cx('relative inline-flex shrink-0', className)}
     >
       <BaseAvatar.Root

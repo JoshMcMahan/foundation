@@ -3,6 +3,7 @@ import { Progress } from '@base-ui/react/progress'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { Tooltip } from './Tooltip'
+import { toneFill } from './tone'
 
 /** A bar's color: the theme's accent, a status, or muted for something stopped. */
 export type BarTone = 'accent' | 'success' | 'warning' | 'error' | 'muted'
@@ -11,10 +12,10 @@ export type BarTone = 'accent' | 'success' | 'warning' | 'error' | 'muted'
 // every theme: a host may set the accent to a color that reads as a warning.
 const fillClassName: Record<BarTone, string> = {
   accent: 'bg-(--theme-accent)',
-  success: 'bg-(--theme-success)',
-  warning: 'bg-(--theme-warning)',
-  error: 'bg-(--theme-error)',
-  muted: 'bg-(--theme-muted-text-color)',
+  success: toneFill.success,
+  warning: toneFill.warning,
+  error: toneFill.error,
+  muted: toneFill.muted,
 }
 
 const trackClassName = {

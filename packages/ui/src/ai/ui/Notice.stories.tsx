@@ -32,7 +32,7 @@ export const Cards: StoryObj = {
   render: () => (
     <div className="flex max-w-xl flex-col gap-2 p-4">
       <NoticeCard>The session ended.</NoticeCard>
-      <NoticeCard tone="warning" onDismiss={() => {}} dismissLabel="Dismiss">
+      <NoticeCard tone="warning" onDismiss={() => {}}>
         The model fell back to a smaller context window.
       </NoticeCard>
     </div>

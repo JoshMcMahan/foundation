@@ -9,7 +9,7 @@ import {
   type Theme,
 } from '../theme/index'
 import { Button } from './Button'
-import Callout from './Callout'
+import { Callout } from './Callout'
 import { ThemeEditor } from './ThemeEditor'
 import { useApplyTheme, useColorMode } from './useTheme'
 
@@ -153,9 +153,7 @@ function AppWideDemo() {
       data-testid="app-region"
       className="flex max-w-3xl flex-col gap-4 rounded-xl bg-(--theme-app-bg) p-4 text-(--theme-app)"
     >
-      <Callout type="info" className="my-0">
-        Everything in this region follows the theme as it changes.
-      </Callout>
+      <Callout tone="info">Everything in this region follows the theme as it changes.</Callout>
       <div className="flex gap-2">
         <Button variant="primary">Save changes</Button>
         <Button>Cancel</Button>
