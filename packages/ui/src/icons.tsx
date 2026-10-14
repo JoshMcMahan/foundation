@@ -94,6 +94,7 @@ import {
   Flag,
   FlaskConical,
   Folder,
+  FolderKanban,
   FolderOpen,
   FolderPlus,
   Folders,
@@ -128,6 +129,7 @@ import {
   Languages,
   Layers,
   LayoutGrid,
+  LibraryBig,
   Link,
   List,
   ListOrdered,
@@ -405,6 +407,7 @@ export const KeyIcon = /* @__PURE__ */ icon(Key)
 export const KubernetesNamespaceIcon = /* @__PURE__ */ icon(SquareDashed)
 export const LanguageIcon = /* @__PURE__ */ icon(Languages)
 export const LegalIcon = /* @__PURE__ */ icon(Scale)
+export const LibraryIcon = /* @__PURE__ */ icon(LibraryBig)
 export const LicenseIcon = /* @__PURE__ */ icon(BadgeCheck)
 export const LinkIcon = /* @__PURE__ */ icon(Link)
 export const ListViewIcon = /* @__PURE__ */ icon(List)
@@ -450,6 +453,7 @@ export const PowerIcon = /* @__PURE__ */ icon(Power)
 export const PowershellIcon = /* @__PURE__ */ icon(SquareChevronRight)
 export const PreviewIcon = /* @__PURE__ */ icon(ScanEye)
 export const PrintIcon = /* @__PURE__ */ icon(Printer)
+export const ProjectIcon = /* @__PURE__ */ icon(FolderKanban)
 export const PublishIcon = /* @__PURE__ */ icon(Rocket)
 export const PullRequestIcon = /* @__PURE__ */ icon(GitPullRequest)
 export const QRCodeIcon = /* @__PURE__ */ icon(QrCode)

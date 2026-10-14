@@ -535,6 +535,9 @@ meaning across the apps.
   record. `RemoveUserIcon` takes someone out of a group or project, while
   `DisableUserIcon` turns off their account. `ChangesRequestedIcon` asks for
   changes to something sent, while `FlaggedIcon` marks an item for attention.
+  `ProjectIcon` is a project, while `FolderIcon` is a folder of files.
+  `LibraryIcon` is a collection of write-ups to browse, while `NotebookIcon`
+  is one notebook.
   `PendingIcon` is a requirement not met yet and `NotRunningIcon` a run not
   started; they share the empty circle, so keep them out of the same list.
 - **Adding an icon:** pick the [Lucide glyph](https://lucide.dev/icons) and add
