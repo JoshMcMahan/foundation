@@ -1,6 +1,6 @@
 import { Toggle } from '@base-ui/react/toggle'
 import type { ReactNode } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { ChevronDownIcon, FavoriteIcon, FavoriteOutlineIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
@@ -86,7 +86,7 @@ export function CreateModal({
   const submittingText = submittingLabel ?? t.creating
   const descriptionText = descriptionPlaceholder ?? t.addDescription
 
-  const [name, setName] = useState('')
+  const [name, setName] = useState(initialName ?? '')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [favorite, setFavorite] = useState(false)
@@ -94,17 +94,23 @@ export function CreateModal({
   const [nameTouched, setNameTouched] = useState(false)
   const [interacted, setInteracted] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
+  const nameMessageId = useId()
 
-  useEffect(() => {
-    if (open) {
-      setName(initialName ?? '')
+  // Each opening starts a fresh form. Reset while rendering, not in an effect,
+  // so the last form's values never paint for a frame.
+  const session = open ? (initialName ?? '') : null
+  const [shownSession, setShownSession] = useState(session)
+  if (session !== shownSession) {
+    setShownSession(session)
+    if (session !== null) {
+      setName(session)
       setDescription('')
       setSubmitting(false)
       setFavorite(false)
       setNameTouched(false)
       setInteracted(false)
     }
-  }, [open, initialName])
+  }
 
   const nameError = name.trim() ? (validateName?.(name.trim()) ?? null) : null
   const hint = !nameError && name.trim() ? nameHint?.(name.trim()) : null
@@ -164,7 +170,7 @@ export function CreateModal({
       open={open}
       onClose={onClose}
       aria-label={`${submitText}: ${typeLabel}`}
-      className="w-[560px] max-w-full flex flex-col max-h-full"
+      size="lg"
       dismissible={!isDirty}
       // The name, ahead of the type chip; a form without one starts at its first control.
       initialFocus={() => nameRef.current ?? true}
@@ -185,12 +191,46 @@ export function CreateModal({
           e.preventDefault()
         }
       }}
+      footer={
+        <>
+          {showFavorite && (
+            <div className="me-auto">
+              <Tooltip content={favorite ? t.favoriteHintOn : t.favoriteHintOff}>
+                <Toggle
+                  pressed={favorite}
+                  onPressedChange={setFavorite}
+                  aria-label={t.favorite}
+                  className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+                >
+                  {favorite ? (
+                    <FavoriteIcon className="text-(--theme-favorite)" />
+                  ) : (
+                    <FavoriteOutlineIcon />
+                  )}
+                  {favorite ? t.favorited : t.favorite}
+                </Toggle>
+              </Tooltip>
+            </div>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {hideSubmit ? common.close : common.cancel}
+          </Button>
+          {!hideSubmit && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSubmit}
+              aria-disabled={!canSubmit}
+              loading={submitting}
+            >
+              {submitting ? submittingText : submitText}
+            </Button>
+          )}
+        </>
+      }
     >
-      <div
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-        onChangeCapture={() => setInteracted(true)}
-      >
-        <div className="px-4 pt-4">
+      <div onChangeCapture={() => setInteracted(true)}>
+        <div>
           {typeMenu && typeMenu.length > 0 ? (
             <ActionMenu
               items={typeMenu}
@@ -238,6 +278,10 @@ export function CreateModal({
                 }}
                 placeholder={namePlaceholder}
                 aria-label={namePlaceholder}
+                aria-required={!nameOptional}
+                // The ring is the only other sign it's missing or wrong.
+                aria-invalid={nameMissing || !!nameError}
+                aria-describedby={nameError || hint ? nameMessageId : undefined}
                 onAnimationEnd={() => setNameFlash(false)}
                 className={cx(
                   // Padding gives the ring/flash box breathing room; the
@@ -248,8 +292,16 @@ export function CreateModal({
                   nameMissing ? 'ring-1 ring-(--theme-error)' : 'focus:ring-0',
                 )}
               />
-              {nameError && <p className="mt-1 text-xs text-(--theme-error-text)">{nameError}</p>}
-              {hint && <p className="mt-1 text-xs text-(--theme-muted-text-color)">{hint}</p>}
+              {nameError && (
+                <p id={nameMessageId} className="mt-1 text-xs text-(--theme-error-text)">
+                  {nameError}
+                </p>
+              )}
+              {hint && (
+                <p id={nameMessageId} className="mt-1 text-xs text-(--theme-muted-text-color)">
+                  {hint}
+                </p>
+              )}
               {showDescription ? (
                 <textarea
                   autoComplete="off"
@@ -270,10 +322,10 @@ export function CreateModal({
           {children && <div className="mb-3 flex flex-col gap-3">{children}</div>}
         </div>
         {properties && (
-          <div className="flex flex-wrap items-center gap-1.5 px-4 pt-1 pb-3">{properties}</div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-3">{properties}</div>
         )}
         {advanced && (
-          <div className="px-4 pb-3">
+          <div className="pb-3">
             <Disclosure
               summary={t.advanced}
               summaryClassName="text-xs font-medium text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
@@ -283,43 +335,6 @@ export function CreateModal({
             </Disclosure>
           </div>
         )}
-      </div>
-      <div className="shrink-0 flex items-center justify-between gap-2 px-4 py-3">
-        {showFavorite ? (
-          <Tooltip content={favorite ? t.favoriteHintOn : t.favoriteHintOff}>
-            <Toggle
-              pressed={favorite}
-              onPressedChange={setFavorite}
-              aria-label={t.favorite}
-              className={buttonClasses({ variant: 'ghost', size: 'md' })}
-            >
-              {favorite ? (
-                <FavoriteIcon className="text-(--theme-favorite)" />
-              ) : (
-                <FavoriteOutlineIcon />
-              )}
-              {favorite ? t.favorited : t.favorite}
-            </Toggle>
-          </Tooltip>
-        ) : (
-          <span />
-        )}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            {hideSubmit ? common.close : common.cancel}
-          </Button>
-          {!hideSubmit && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSubmit}
-              aria-disabled={!canSubmit}
-              loading={submitting}
-            >
-              {submitting ? submittingText : submitText}
-            </Button>
-          )}
-        </div>
       </div>
     </Modal>
   )

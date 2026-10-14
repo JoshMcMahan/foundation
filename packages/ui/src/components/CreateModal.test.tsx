@@ -51,6 +51,43 @@ describe('CreateModal fields', () => {
   })
 })
 
+describe('CreateModal name', () => {
+  it('says a wrong name is invalid, and why', async () => {
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Widget"
+        namePlaceholder="widget-name"
+        validateName={(name) => (name.includes(' ') ? 'No spaces allowed' : null)}
+        onSubmit={vi.fn()}
+      />,
+    )
+    const name = await screen.findByRole('textbox', { name: 'widget-name' })
+    expect(name).toBeRequired()
+    expect(name).not.toBeInvalid()
+    fireEvent.change(name, { target: { value: 'my widget' } })
+    expect(name).toBeInvalid()
+    expect(name).toHaveAccessibleDescription('No spaces allowed')
+  })
+
+  it('starts each opening with a fresh name', async () => {
+    const props = {
+      onClose: vi.fn(),
+      typeLabel: 'Widget',
+      namePlaceholder: 'widget-name',
+      onSubmit: vi.fn(),
+    }
+    const { rerender } = render(<CreateModal open {...props} />)
+    fireEvent.change(await screen.findByRole('textbox', { name: 'widget-name' }), {
+      target: { value: 'first' },
+    })
+    rerender(<CreateModal open={false} {...props} />)
+    rerender(<CreateModal open {...props} />)
+    expect(await screen.findByRole('textbox', { name: 'widget-name' })).toHaveValue('')
+  })
+})
+
 describe('CreateModal submit state', () => {
   it('recovers the submit button when onSubmit rejects', async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error('boom'))

@@ -6,6 +6,7 @@ import { formatBytes } from '../format'
 import { Avatar } from './Avatar'
 import { Button } from './Button'
 import { buttonClasses } from './buttonClasses'
+import { Checkbox } from './Checkbox'
 import { Autocomplete, Combobox } from './Combobox'
 import { ConfirmModal } from './ConfirmModal'
 import { CreateModal, CreateModalSwitch } from './CreateModal'
@@ -14,8 +15,9 @@ import { EmptyState } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
+import { positionKeys } from './keys'
 import { type BarTone, Meter, ProgressBar } from './Meter'
-import { Modal, ModalDescription, type ModalProps, ModalTitle } from './Modal'
+import { Modal, type ModalProps } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
 import { RunStatusIcon, runStatusTone } from './RunStatusIcon'
@@ -131,7 +133,9 @@ export const EmptyStates: StoryObj<{ variant: 'panel' | 'bare' }> = {
   ),
 }
 
-function ModalDemo({ align, dismissible }: Pick<ModalProps, 'align' | 'dismissible'>) {
+type ModalArgs = Pick<ModalProps, 'align' | 'dismissible' | 'size'> & { paragraphs: number }
+
+function ModalDemo({ align, dismissible, size = 'md', paragraphs = 1 }: Partial<ModalArgs>) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -143,17 +147,21 @@ function ModalDemo({ align, dismissible }: Pick<ModalProps, 'align' | 'dismissib
         onClose={() => setOpen(false)}
         align={align}
         dismissible={dismissible}
-        className="w-[480px] max-w-full p-6"
-      >
-        <ModalTitle className="text-lg font-semibold">Release notes</ModalTitle>
-        <ModalDescription className="mt-1.5 text-sm text-(--theme-muted-text-color)">
-          Focus stays inside until the modal closes, then returns to the button that opened it.
-        </ModalDescription>
-        <div className="mt-5 flex justify-end">
-          <Button variant="primary" onClick={() => setOpen(false)}>
+        size={size}
+        title="Release notes"
+        description="Focus stays inside until the modal closes, then returns to the button that opened it."
+        footer={
+          <Button variant="primary" size="sm" onClick={() => setOpen(false)}>
             Done
           </Button>
-        </div>
+        }
+      >
+        {positionKeys(paragraphs, 'note').map((key) => (
+          <p key={key} className="mb-3 text-sm last:mb-0">
+            This version speeds up the scheduler, adds a retry policy to every job, and keeps logs
+            for thirty days instead of seven.
+          </p>
+        ))}
       </Modal>
     </>
   )
@@ -163,21 +171,40 @@ const openModal = async (canvasElement: HTMLElement, name = 'Open modal') => {
   await userEvent.click(within(canvasElement).getByRole('button', { name }))
 }
 
-/** A plain modal: Escape and the backdrop close it. */
-export const ModalStory: StoryObj<Pick<ModalProps, 'align' | 'dismissible'>> = {
+/** The standard layout: a title that names it, a description, a body and a footer. Escape
+ *  and the backdrop close it. */
+export const ModalStory: StoryObj<ModalArgs> = {
   name: 'Modal',
-  args: { align: 'top', dismissible: true },
+  args: { align: 'top', dismissible: true, size: 'md', paragraphs: 1 },
   argTypes: {
     align: { control: 'inline-radio', options: ['top', 'center'] },
     dismissible: { control: 'boolean', description: 'False ignores Escape and the backdrop.' },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg', 'xl'] },
+    paragraphs: {
+      control: { type: 'range', min: 1, max: 30 },
+      description: 'How long the body runs.',
+    },
   },
   render: (args) => <ModalDemo {...args} />,
   play: async ({ canvasElement }) => {
     await openModal(canvasElement)
     const dialog = await screen.findByRole('dialog', { name: 'Release notes' })
     await waitFor(() => expect(dialog).toBeVisible())
-    await userEvent.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(dialog).toHaveAccessibleDescription(/Focus stays inside/)
+  },
+}
+
+/** A body taller than the window scrolls on its own, keeping the title and the footer in view. */
+export const ModalLongBody: StoryObj = {
+  name: 'Modal, long body',
+  render: () => <ModalDemo paragraphs={30} />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Release notes' })
+    await waitFor(() => expect(dialog).toBeVisible())
+    const done = within(dialog).getByRole('button', { name: 'Done' })
+    const bottom = done.getBoundingClientRect().bottom
+    await expect(bottom).toBeLessThanOrEqual(window.innerHeight)
   },
 }
 
@@ -195,6 +222,7 @@ export const ModalNotDismissible: StoryObj = {
 
 function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [snapshots, setSnapshots] = useState(false)
   return (
     <>
       <Button variant="primary" onClick={() => setOpen(true)}>
@@ -210,7 +238,14 @@ function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
         }
         confirmLabel={destructive ? 'Delete' : 'Confirm'}
         onConfirm={() => setOpen(false)}
-      />
+      >
+        {destructive && (
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={snapshots} onCheckedChange={setSnapshots} />
+            Also delete its snapshots
+          </label>
+        )}
+      </ConfirmModal>
     </>
   )
 }
@@ -253,6 +288,7 @@ function CreateModalDemo() {
         namePlaceholder="widget-name"
         validateName={(name) => (name.includes(' ') ? 'No spaces allowed' : null)}
         onSubmit={async () => true}
+        showFavorite
         properties={
           <CreateModalSwitch label="Public" checked={shared} onCheckedChange={setShared} />
         }

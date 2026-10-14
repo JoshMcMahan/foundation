@@ -2,7 +2,7 @@ import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Dialog } from '@base-ui/react/dialog'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
-import { pressedToast } from './Toast'
+import { closeHandler, dialogFooterClassName } from './dismiss'
 
 /** The panel a modal draws by default; pass `panel={false}` to paint your own. */
 export const modalPanelClassName =
@@ -13,9 +13,30 @@ export const ModalTitle = Dialog.Title
 /** Describes the modal for assistive technology; renders a `<p>`. */
 export const ModalDescription = Dialog.Description
 
-export interface ModalProps extends Omit<Dialog.Popup.Props, 'className' | 'children' | 'render'> {
+const sizeClasses = {
+  sm: 'w-[400px]',
+  md: 'w-[480px]',
+  lg: 'w-[560px]',
+  xl: 'w-[672px]',
+} as const
+
+export type ModalSize = keyof typeof sizeClasses
+
+export interface ModalProps
+  extends Omit<Dialog.Popup.Props, 'className' | 'children' | 'render' | 'title'> {
   open: boolean
   onClose: () => void
+  /** The header's heading, which names the modal. Without one, name it with
+   *  `aria-label`, or with a `ModalTitle` among the children. */
+  title?: ReactNode
+  /** A line under the title, which describes the modal. */
+  description?: ReactNode
+  /** Actions along the bottom edge, such as Cancel and Save, ruled off from the
+   *  body; they stay in view as a tall body scrolls. */
+  footer?: ReactNode
+  /** Its width, which narrows to fit a small window. Without one, it's as wide
+   *  as its content. */
+  size?: ModalSize | undefined
   /** A confirmation the person must answer: it takes the alertdialog role and the
    *  backdrop doesn't close it. Escape still cancels while it's dismissible. */
   alert?: boolean | undefined
@@ -28,15 +49,24 @@ export interface ModalProps extends Omit<Dialog.Popup.Props, 'className' | 'chil
   panel?: boolean
   /** The backdrop's dimming, for a modal that needs a darker or blurred stage. */
   backdropClassName?: string
+  /** On the panel. */
   className?: string
-  children: ReactNode
+  /** The body. With a title or a footer it sits padded between them and scrolls
+   *  when the window is short; without either, it is the whole panel. */
+  children?: ReactNode
 }
 
 /** A modal dialog: focus stays inside, the page behind is inert and doesn't scroll,
- *  and focus returns to where it was on close. Name it with `ModalTitle` or `aria-label`. */
+ *  and focus returns to where it was on close. Give it a `title`, a `description`
+ *  and a `footer` for the standard layout, as a Drawer has, or lay out the whole
+ *  panel with the children. */
 export function Modal({
   open,
   onClose,
+  title,
+  description,
+  footer,
+  size,
   alert = false,
   dismissible = true,
   align = 'top',
@@ -46,19 +76,10 @@ export function Modal({
   children,
   ...popupProps
 }: ModalProps) {
-  const onOpenChange = (next: boolean, details: Dialog.Root.ChangeEventDetails) => {
-    if (next) {
-      return
-    }
-    if (
-      (!dismissible && details.reason === 'escape-key') ||
-      (details.reason === 'outside-press' && pressedToast(details.event))
-    ) {
-      details.cancel()
-      return
-    }
-    onClose()
-  }
+  const onOpenChange = closeHandler(dismissible, onClose)
+  const header = title !== undefined || description !== undefined
+  const body = children !== undefined && children !== null && children !== false
+  const laidOut = header || footer !== undefined
   const content = (
     <Dialog.Portal>
       <Dialog.Backdrop className={cx('fixed inset-0 z-(--layer-modal)', backdropClassName)} />
@@ -72,9 +93,39 @@ export function Modal({
       >
         <Dialog.Popup
           {...popupProps}
-          className={cx(panel && modalPanelClassName, 'outline-none', className)}
+          className={cx(
+            panel && modalPanelClassName,
+            size && [sizeClasses[size], 'max-w-full'],
+            laidOut && 'flex max-h-full flex-col',
+            'outline-none',
+            className,
+          )}
         >
-          {children}
+          {laidOut ? (
+            <>
+              {header && (
+                <div className={cx('shrink-0 px-5 pt-5', !body && 'pb-5')}>
+                  {title !== undefined && (
+                    <ModalTitle className="m-0 text-lg font-semibold">{title}</ModalTitle>
+                  )}
+                  {description !== undefined && (
+                    <ModalDescription className="m-0 mt-1.5 text-sm text-(--theme-muted-text-color)">
+                      {description}
+                    </ModalDescription>
+                  )}
+                </div>
+              )}
+              {body && (
+                // A short window scrolls the body alone, keeping the title and the actions in view.
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+                  {children}
+                </div>
+              )}
+              {footer !== undefined && <div className={dialogFooterClassName}>{footer}</div>}
+            </>
+          ) : (
+            children
+          )}
         </Dialog.Popup>
       </Dialog.Viewport>
     </Dialog.Portal>

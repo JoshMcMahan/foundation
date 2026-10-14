@@ -2,9 +2,10 @@ import { Drawer as BaseDrawer } from '@base-ui/react/drawer'
 import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { CloseIcon } from '../icons'
+import { closeHandler, dialogFooterClassName } from './dismiss'
+import { IconButton } from './IconButton'
 import { useStrings } from './Provider'
 import { useSplitter } from './splitter'
-import { pressedToast } from './Toast'
 
 export interface DrawerProps
   extends Omit<BaseDrawer.Popup.Props, 'className' | 'children' | 'render' | 'title'> {
@@ -91,19 +92,7 @@ export function Drawer({
   // A contained drawer fills its container; one over the window leaves the host's top bar uncovered.
   const area = contained ? 'absolute inset-0' : 'fixed inset-x-0 bottom-0 top-(--app-inset-top,0px)'
 
-  const onOpenChange = (next: boolean, details: BaseDrawer.Root.ChangeEventDetails) => {
-    if (next) {
-      return
-    }
-    if (
-      (!dismissible && details.reason === 'escape-key') ||
-      (details.reason === 'outside-press' && pressedToast(details.event))
-    ) {
-      details.cancel()
-      return
-    }
-    onClose()
-  }
+  const onOpenChange = closeHandler(dismissible, onClose)
 
   return (
     <BaseDrawer.Root
@@ -160,7 +149,8 @@ export function Drawer({
                 <div className="flex shrink-0 items-start gap-3 border-b border-(--theme-border) px-4 py-3">
                   <div className="min-w-0 flex-1">
                     {title !== undefined && (
-                      <BaseDrawer.Title className="truncate text-sm font-semibold">
+                      // A long name wraps rather than hiding its end, which may be what tells two apart.
+                      <BaseDrawer.Title className="m-0 text-sm font-semibold wrap-break-word">
                         {title}
                       </BaseDrawer.Title>
                     )}
@@ -172,11 +162,14 @@ export function Drawer({
                   </div>
                   {closeButton && (
                     <BaseDrawer.Close
-                      aria-label={common.close}
-                      className="-m-1 shrink-0 cursor-pointer rounded-md p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app)"
-                    >
-                      <CloseIcon className="h-4 w-4" />
-                    </BaseDrawer.Close>
+                      render={
+                        <IconButton
+                          icon={<CloseIcon />}
+                          label={common.close}
+                          className="-my-1 -me-1.5"
+                        />
+                      }
+                    />
                   )}
                 </div>
               )}
@@ -189,11 +182,7 @@ export function Drawer({
               >
                 {children}
               </div>
-              {footer && (
-                <div className="flex shrink-0 justify-end gap-2 border-t border-(--theme-border) px-4 py-3">
-                  {footer}
-                </div>
-              )}
+              {footer && <div className={cx(dialogFooterClassName, 'px-4')}>{footer}</div>}
             </BaseDrawer.Content>
           </BaseDrawer.Popup>
         </BaseDrawer.Viewport>
