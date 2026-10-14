@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.1](https://github.com/parallelworks/foundation/compare/v0.14.0...v0.14.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **deps:** build with Go 1.27.2 for the standard library security fixes ([#205](https://github.com/parallelworks/foundation/issues/205)) ([577ef73](https://github.com/parallelworks/foundation/commit/577ef7309a0b3d9ccde21b4289b0fa32520c40cb))
+* **spa:** reloading a page whose URL ends in a file name shows a 404 ([#251](https://github.com/parallelworks/foundation/issues/251)) ([9f93ac7](https://github.com/parallelworks/foundation/commit/9f93ac7f96e028f7f88aa14a81eed18d9d8c8d81))
+
 ## [0.14.0](https://github.com/parallelworks/foundation/compare/v0.13.0...v0.14.0) (2026-10-07)
 
 
