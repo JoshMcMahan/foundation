@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react'
+import { cx } from '../cx'
+import { panelItemClassName } from './floating'
 
+/** An option's row in a Select's or a Combobox's list, so both lists look alike: the icon, the
+ *  label over its description, and the check at the end. */
+export const pickerItemClassName = cx(panelItemClassName, 'data-selected:font-medium')
+
+/** An option of a Select or a Combobox. */
 export interface ComboboxItem<Value = string> {
   value: Value
   label: string

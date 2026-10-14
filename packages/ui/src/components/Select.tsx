@@ -1,19 +1,14 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
-import type { ReactElement, ReactNode } from 'react'
+import { type ReactElement, type ReactNode, useId } from 'react'
 import { cx } from '../cx'
 import { CheckIcon, ChevronDownIcon } from '../icons'
+import { type ComboboxItem, pickerItemClassName } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
-import { panelClassName, panelItemClassName, positionerClassName } from './floating'
+import { panelClassName, positionerClassName } from './floating'
 import { Tooltip } from './Tooltip'
 
-export interface SelectItem<Value> {
-  value: Value
-  label: string
-  /** A second line under the label, such as what an option does. */
-  description?: string | undefined
-  icon?: ReactNode
-  disabled?: boolean | undefined
-}
+/** An option of a Select: the same shape as a Combobox's, so a list moves between them as is. */
+export type SelectItem<Value> = ComboboxItem<Value>
 
 export type SelectProps<Value, Multiple extends boolean | undefined = false> = Omit<
   BaseSelect.Root.Props<Value, Multiple>,
@@ -59,6 +54,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   onItemHighlighted,
   ...rootProps
 }: SelectProps<Value, Multiple>) {
+  const uid = useId()
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   const triggerProps = {
     'aria-label': ariaLabel,
@@ -114,27 +110,35 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
             )}
           >
             <BaseSelect.List className="max-h-[min(15rem,var(--available-height))] overflow-y-auto py-1">
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <BaseSelect.Item
                   key={String(item.value)}
                   value={item.value}
                   disabled={item.disabled}
+                  // Named by its label, with the description read after it.
+                  aria-labelledby={`${uid}${index}label`}
+                  aria-describedby={item.description && `${uid}${index}description`}
                   // Select highlights an item by focusing it.
                   onFocus={onItemHighlighted && (() => onItemHighlighted(item.value))}
-                  className={cx('grid grid-cols-[1rem_1fr]', panelItemClassName)}
+                  className={pickerItemClassName}
                 >
-                  <BaseSelect.ItemIndicator className="col-start-1">
-                    <CheckIcon className="size-3.5" />
-                  </BaseSelect.ItemIndicator>
-                  <span className="col-start-2 flex min-w-0 items-center gap-2">
-                    {item.icon}
-                    <BaseSelect.ItemText className="truncate">{item.label}</BaseSelect.ItemText>
+                  {item.icon && <span className="flex shrink-0 items-center">{item.icon}</span>}
+                  <span className="flex min-w-0 flex-col">
+                    <BaseSelect.ItemText id={`${uid}${index}label`} className="truncate">
+                      {item.label}
+                    </BaseSelect.ItemText>
+                    {item.description && (
+                      <span
+                        id={`${uid}${index}description`}
+                        className="text-xs leading-snug text-(--theme-muted-text-color)"
+                      >
+                        {item.description}
+                      </span>
+                    )}
                   </span>
-                  {item.description && (
-                    <span className="col-start-2 text-xs text-(--theme-muted-text-color)">
-                      {item.description}
-                    </span>
-                  )}
+                  <BaseSelect.ItemIndicator className="ml-auto flex shrink-0 items-center">
+                    <CheckIcon aria-hidden="true" className="size-3.5" />
+                  </BaseSelect.ItemIndicator>
                 </BaseSelect.Item>
               ))}
             </BaseSelect.List>

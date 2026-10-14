@@ -94,3 +94,15 @@ describe('Select with a button trigger', () => {
     await waitFor(() => expect(openTooltip()).toHaveTextContent('How the agent edits files'))
   })
 })
+
+describe('Select options', () => {
+  it('lay out as a Combobox’s do: label over description, the check at the end', async () => {
+    render(<Select aria-label="Mode" items={modes} defaultValue="ask" />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Mode' }))
+    const option = await screen.findByRole('option', { name: 'Ask' })
+    expect(option).toHaveAccessibleDescription('Asks before every change')
+    const [text, indicator] = [...option.children]
+    expect(text).toHaveTextContent('AskAsks before every change')
+    expect(indicator?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+})

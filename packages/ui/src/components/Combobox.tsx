@@ -9,6 +9,7 @@ import {
   type Ref,
   type RefObject,
   useCallback,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -21,9 +22,10 @@ import {
   type ComboboxItems,
   type ComboboxLeaf,
   isComboboxGroup as isGroup,
+  pickerItemClassName,
 } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
-import { panelClassName, panelItemClassName, positionerClassName } from './floating'
+import { panelClassName, positionerClassName } from './floating'
 import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
@@ -212,9 +214,9 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   } = props
   const entries = useEntries(items)
   const filter = useEntryFilter()
-  const strings = useStrings()
-  const t = strings.dropdown
+  const t = useStrings().dropdown
   const list = useRef<VirtualListHandle>(null)
+  const uid = useId()
   const [inputValue, setInputValue] = useState<string | null>(null)
 
   // Values the list doesn't have still show, under itemToStringLabel.
@@ -288,11 +290,12 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       value={entry}
       disabled={entry.disabled || (full && !isChosen(entry))}
       {...rowProps.props}
-      className={itemClassName}
+      {...optionNaming(uid, rowProps.props.index, entry)}
+      className={pickerItemClassName}
     >
-      <ItemContent entry={entry} />
+      <ItemContent entry={entry} id={`${uid}${rowProps.props.index}`} />
       <BaseCombobox.ItemIndicator className="ml-auto flex shrink-0 items-center">
-        <CheckIcon className="size-3.5" />
+        <CheckIcon aria-hidden="true" className="size-3.5" />
       </BaseCombobox.ItemIndicator>
     </BaseCombobox.Item>
   )
@@ -335,18 +338,20 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
           >
             <BaseCombobox.Value>
               {(values: Entry<Value>[]) =>
-                values.map((entry) => (
+                values.map((entry, index) => (
                   <BaseCombobox.Chip
-                    key={entry.label}
+                    // Two values may share a label, such as a created tag and a listed one.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a value has no key of its own; the label alone may repeat
+                    key={`${index}:${entry.label}`}
                     aria-label={entry.label}
                     className="flex items-center gap-1 rounded bg-(--theme-muted-panel-bg) py-0.5 pr-0.5 pl-1.5 text-xs outline-none data-highlighted:bg-(--theme-hover)"
                   >
                     {entry.label}
                     <BaseCombobox.ChipRemove
-                      aria-label={`${strings.common.remove} ${entry.label}`}
+                      aria-label={t.removeValue(entry.label)}
                       className="flex size-4 items-center justify-center rounded hover:bg-(--theme-hover)"
                     >
-                      <RemoveIcon className="size-3" />
+                      <RemoveIcon aria-hidden="true" className="size-3" />
                     </BaseCombobox.ChipRemove>
                   </BaseCombobox.Chip>
                 ))
@@ -369,7 +374,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
           data-testid="combobox-button"
           className={triggerClassName}
         >
-          <ChevronDownIcon className="size-3" />
+          <ChevronDownIcon aria-hidden="true" className="size-3" />
         </BaseCombobox.Trigger>
       </BaseCombobox.InputGroup>
       <ListPopup<Value>
@@ -439,6 +444,7 @@ export function Autocomplete({
   const filter = useEntryFilter()
   const t = useStrings().dropdown
   const list = useRef<VirtualListHandle>(null)
+  const uid = useId()
 
   return (
     <BaseAutocomplete.Root
@@ -475,7 +481,7 @@ export function Autocomplete({
             data-testid="combobox-button"
             className={triggerClassName}
           >
-            <ChevronDownIcon className="size-3" />
+            <ChevronDownIcon aria-hidden="true" className="size-3" />
           </BaseAutocomplete.Trigger>
         )}
       </BaseAutocomplete.InputGroup>
@@ -487,9 +493,10 @@ export function Autocomplete({
             value={entry}
             disabled={entry.disabled}
             {...rowProps.props}
-            className={itemClassName}
+            {...optionNaming(uid, rowProps.props.index, entry)}
+            className={pickerItemClassName}
           >
-            <ItemContent entry={entry} />
+            <ItemContent entry={entry} id={`${uid}${rowProps.props.index}`} />
           </BaseAutocomplete.Item>
         )}
       />
@@ -497,18 +504,30 @@ export function Autocomplete({
   )
 }
 
-const itemClassName = cx(panelItemClassName, 'data-selected:font-medium')
+/** An option is named by its label, with its description read after it rather than as part of
+ *  its name. */
+function optionNaming<Value>(uid: string, index: number, entry: Entry<Value>) {
+  return {
+    'aria-labelledby': `${uid}${index}label`,
+    'aria-describedby': entry.description ? `${uid}${index}description` : undefined,
+  }
+}
 
-function ItemContent<Value>({ entry }: { entry: Entry<Value> }) {
+function ItemContent<Value>({ entry, id }: { entry: Entry<Value>; id: string }) {
   return (
     <>
       {entry.icon && <span className="flex shrink-0 items-center">{entry.icon}</span>}
       <span className="flex min-w-0 flex-col">
         <Tooltip content={entry.label} overflowOnly>
-          <span className="truncate">{entry.label}</span>
+          <span id={`${id}label`} className="truncate">
+            {entry.label}
+          </span>
         </Tooltip>
         {entry.description && (
-          <span className="text-xs leading-snug text-(--theme-muted-text-color)">
+          <span
+            id={`${id}description`}
+            className="text-xs leading-snug text-(--theme-muted-text-color)"
+          >
             {entry.description}
           </span>
         )}

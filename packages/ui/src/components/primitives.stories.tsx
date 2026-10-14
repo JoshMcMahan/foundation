@@ -635,10 +635,11 @@ export const SwitchesRightToLeft: typeof Switches = {
   args: { ...Switches.args, rightToLeft: true },
 }
 
+// Described as a Combobox's options are, so the two lists can be compared.
 const SIZES = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large', disabled: true },
+  { value: 'small', label: 'Small', description: '2 vCPU, 8 GB' },
+  { value: 'medium', label: 'Medium', description: '4 vCPU, 16 GB' },
+  { value: 'large', label: 'Large', description: '8 vCPU, 32 GB', disabled: true },
 ]
 
 function SelectsDemo({

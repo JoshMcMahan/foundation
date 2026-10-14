@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { Autocomplete, Combobox, type ComboboxItems } from './Combobox'
+import { UIProvider } from './Provider'
 
 // jsdom has no layout, so the virtual list would measure its scroller as empty and draw no rows.
 beforeAll(() => {
@@ -182,6 +183,48 @@ describe('Combobox', () => {
       render(<Multiple onValueChange={onValueChange} />)
       fireEvent.click(screen.getByRole('button', { name: 'Remove Small' }))
       expect(onValueChange).toHaveBeenLastCalledWith([])
+    })
+
+    it('shows a chip for each of two values that share a label, and removes the one pressed', () => {
+      const onValueChange = vi.fn()
+      render(
+        <Combobox
+          multiple
+          aria-label="Owners"
+          items={[
+            { value: 'u1', label: 'Sam Lee' },
+            { value: 'u2', label: 'Sam Lee' },
+          ]}
+          defaultValue={['u1', 'u2']}
+          onValueChange={onValueChange}
+        />,
+      )
+      const removes = screen.getAllByRole('button', { name: 'Remove Sam Lee' })
+      expect(removes).toHaveLength(2)
+      fireEvent.click(removes[1] as HTMLElement)
+      expect(onValueChange).toHaveBeenLastCalledWith(['u1'])
+    })
+
+    it('names an option by its label and describes it by its description', async () => {
+      render(
+        <Combobox
+          aria-label="Size"
+          items={[{ value: 's', label: 'Small', description: '2 vCPU' }]}
+        />,
+      )
+      const list = await open()
+      expect(within(list).getByRole('option', { name: 'Small' })).toHaveAccessibleDescription(
+        '2 vCPU',
+      )
+    })
+
+    it('names the remove button from the Provider, so a language can order the words', () => {
+      render(
+        <UIProvider strings={{ dropdown: { removeValue: (label) => `${label} entfernen` } }}>
+          <Multiple />
+        </UIProvider>,
+      )
+      expect(screen.getByRole('button', { name: 'Small entfernen' })).toBeInTheDocument()
     })
   })
 
