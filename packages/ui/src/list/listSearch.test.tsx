@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { memoryStorage } from '../test/storage'
-import { ListSearchControl, useListSearch } from './listSearch'
+import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 
 function Harness({ storageKey }: { storageKey?: string }) {
   const search = useListSearch(true, storageKey)
@@ -92,5 +92,45 @@ describe('list search term chips', () => {
     expect(getInput()).toHaveValue('alpha')
     expect(screen.getByTestId('queries')).toHaveTextContent(/^alpha$/)
     expect(screen.queryByLabelText('Remove filter alpha')).not.toBeInTheDocument()
+  })
+})
+
+describe('list search field', () => {
+  it('is named by its label, not only its placeholder', () => {
+    render(<Harness />)
+    openSearch()
+    expect(screen.getByRole('textbox', { name: 'Search' })).toBe(getInput())
+  })
+
+  it('closes on Escape in the field', () => {
+    render(<Harness />)
+    openSearch()
+    fireEvent.change(getInput(), { target: { value: 'alpha' } })
+    fireEvent.keyDown(getInput(), { key: 'Escape' })
+    expect(screen.queryByPlaceholderText('Filter')).not.toBeInTheDocument()
+  })
+
+  it('keeps its query when Escape closes something else on the page', () => {
+    render(<Harness />)
+    openSearch()
+    fireEvent.change(getInput(), { target: { value: 'alpha' } })
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(getInput()).toHaveValue('alpha')
+  })
+})
+
+describe('ListCount', () => {
+  it('reports the count as a status, grouped in the locale', () => {
+    render(
+      <ListCount total={1204} matches={1204} filterActive={false} noun="run" nounPlural="runs" />,
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      `${new Intl.NumberFormat().format(1204)} runs`,
+    )
+  })
+
+  it('says how many of the total a filter left', () => {
+    render(<ListCount total={8} matches={3} filterActive noun="run" nounPlural="runs" />)
+    expect(screen.getByRole('status')).toHaveTextContent('3 of 8 runs')
   })
 })

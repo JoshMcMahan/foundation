@@ -7,6 +7,9 @@ import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
 const NO_TERMS: string[] = []
 
+// Grouped in the reader's locale: 1,204 or 1.204.
+const COUNT = new Intl.NumberFormat()
+
 /** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active). */
 export function useListSearch(enabled = true, storageKey?: string) {
   const [filter, setFilter] = useState('')
@@ -29,11 +32,6 @@ export function useListSearch(enabled = true, storageKey?: string) {
       return
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false)
-        setFilter('')
-        return
-      }
       if (isTextEntryContext(e.target)) {
         return
       }
@@ -47,7 +45,7 @@ export function useListSearch(enabled = true, storageKey?: string) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [searchOpen, enabled])
+  }, [enabled])
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => {
@@ -138,8 +136,14 @@ export function ListSearchControl({
           value={search.filter}
           onChange={(e) => search.setFilter(e.target.value)}
           onFocus={search.openSearch}
+          aria-label={label}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            // Escape belongs to the field, not the window: a dialog or menu
+            // open over the list closes on its own Escape and keeps the search.
+            if (e.key === 'Escape' && search.searchOpen) {
+              e.preventDefault()
+              search.closeSearch()
+            } else if (e.key === 'Enter') {
               e.preventDefault()
               search.addTerm(search.filter)
             } else if (e.key === 'Backspace' && !search.filter) {
@@ -164,7 +168,7 @@ export function ListSearchControl({
     )
   }
   return (
-    <Tooltip content={label} shortcut="⌘+F">
+    <Tooltip content={label} shortcut="/">
       <button
         type="button"
         onClick={search.openSearch}
@@ -190,12 +194,14 @@ export function ListCount({
   noun: string
   nounPlural: string
 }) {
+  const { list: t } = useStrings()
   return (
     <div className="flex items-center h-9">
-      <span className="text-[13px] text-(--theme-muted-text-color)">
+      {/* A status, so a screen reader hears the count change as a filter narrows it. */}
+      <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
         {filterActive
-          ? `${matches} of ${total} ${nounPlural}`
-          : `${total} ${total === 1 ? noun : nounPlural}`}
+          ? t.matchCount(COUNT.format(matches), COUNT.format(total), nounPlural)
+          : t.count(COUNT.format(total), total === 1 ? noun : nounPlural)}
       </span>
     </div>
   )

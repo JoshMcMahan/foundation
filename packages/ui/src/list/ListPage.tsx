@@ -17,16 +17,6 @@ import { ListActionsHeader, NAME_MIN_WIDTH_PX, StretchRowLinkContext } from './L
 import type { ListView, ListViewChrome } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
-/** Whether the shell adds pt-4 padding that the edge-to-edge list must cancel with a negative margin. */
-const SECTION_SHELL_PADDED = {
-  main: false,
-  kubernetes: false,
-  admin: true,
-  org: true,
-} as const
-
-export type ListSection = keyof typeof SECTION_SHELL_PADDED
-
 /** Defaults mean rows outside a ListView fully show actions (no view = show everything). */
 const RowActionsContext = createContext<{
   show: boolean
@@ -59,9 +49,10 @@ export function ListRowActionsProvider({
 }
 
 export interface ListPageProps {
-  section?: ListSection
-  /** Force edge-to-edge negative margin for a main-shell page nested under a padded route layout. */
-  shellPadded?: boolean
+  /** Reaches past the host's content padding (`p-4`) to the container's
+   *  edges, for a host whose page container is padded. A list runs edge to
+   *  edge so its rows' hover and dividers span the page. */
+  bleed?: boolean | undefined
   /** The list's search, filters and view controls, above the rows. The page's
    *  trail and actions go in its `PageHeader`. */
   toolbar?: ReactNode
@@ -71,19 +62,9 @@ export interface ListPageProps {
 }
 
 /** A list filling the page: its toolbar stays put while only the rows scroll. */
-export function ListPage({
-  section = 'main',
-  shellPadded,
-  toolbar,
-  view,
-  children,
-}: ListPageProps) {
-  const cancelShellPadding = shellPadded ?? SECTION_SHELL_PADDED[section]
+export function ListPage({ bleed = false, toolbar, view, children }: ListPageProps) {
   return (
-    // FIXME(edge-to-edge): the negative margin cancels a padded route shell's
-    // content padding (`pt-4 px-4`); drop it once list routes own a
-    // zero-padding container at the layout level.
-    <div className={cx('flex h-full min-h-0 flex-col', cancelShellPadding && '-m-4')}>
+    <div className={cx('flex h-full min-h-0 flex-col', bleed && '-m-4')}>
       {toolbar && <div className="shrink-0 px-4">{toolbar}</div>}
       {/* The list body is the @container priority columns measure to auto-hide. */}
       <div className="relative @container min-h-0 flex-1 overflow-auto">
@@ -212,7 +193,11 @@ export function ListRow({
     <tr
       className={cx(
         'group',
-        selected ? 'bg-blue-500/5' : menuActive ? 'theme-hover' : 'hover:theme-hover',
+        selected
+          ? 'bg-(--theme-accent-subtle)/60'
+          : menuActive
+            ? 'theme-hover'
+            : 'hover:theme-hover',
         (href || onActivate || selectionActive) && 'cursor-pointer',
         // The row is its stretched link's box; other controls rise above the link.
         stretch &&

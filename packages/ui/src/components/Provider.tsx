@@ -511,6 +511,12 @@ export interface UIStrings {
     labelId: string
     labelUrl: string
     couldNotLoad: (noun: string) => string
+    /** What `ListError` names when the host gives no noun. */
+    data: string
+    /** A list's size, as `ListCount` shows it; `count` is formatted and `noun` agrees with it. */
+    count: (count: string, noun: string) => string
+    /** How many rows a filter left, of how many. */
+    matchCount: (matches: string, total: string, nounPlural: string) => string
     displayOptions: string
     grouping: string
     ordering: string
@@ -1168,6 +1174,9 @@ const DEFAULTS: UIProviderValue = {
       labelId: 'ID',
       labelUrl: 'URL',
       couldNotLoad: (noun) => `Couldn't load ${noun}`,
+      data: 'data',
+      count: (count, noun) => `${count} ${noun}`,
+      matchCount: (matches, total, nounPlural) => `${matches} of ${total} ${nounPlural}`,
       displayOptions: 'Display options',
       grouping: 'Grouping',
       ordering: 'Ordering',

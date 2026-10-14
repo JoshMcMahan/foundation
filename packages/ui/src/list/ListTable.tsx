@@ -121,17 +121,24 @@ export function GroupRow({
   )
 }
 
-export function ListError({ error, noun = 'data' }: { error: unknown; noun?: string }) {
+export function ListError({
+  error,
+  noun,
+}: {
+  error: unknown
+  /** What failed to load, as the heading names it: "Couldn't load clusters". */
+  noun?: string | undefined
+}) {
   const { list: t } = useStrings()
   const message =
     error && typeof error === 'object' && 'message' in error
       ? String((error as { message?: unknown }).message)
       : undefined
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <ErrorIcon className="h-10 w-10 text-red-400 opacity-80" />
+    <div role="alert" className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+      <ErrorIcon aria-hidden="true" className="h-10 w-10 text-(--theme-error)" />
       <div className="space-y-1">
-        <p className="text-sm font-medium text-(--theme-app)">{t.couldNotLoad(noun)}</p>
+        <p className="text-sm font-medium text-(--theme-app)">{t.couldNotLoad(noun ?? t.data)}</p>
         {message && <p className="max-w-md text-xs text-(--theme-muted-text-color)">{message}</p>}
       </div>
     </div>
@@ -220,7 +227,8 @@ export function ListActionsHeader({
       caps={false}
       style={{ width, minWidth: width }}
       className={cx(
-        'relative py-2 text-right @max-[43rem]:w-[52px]! @max-[43rem]:min-w-[52px]!',
+        // Below 44rem, where ListRow folds pinned buttons into ⋯, only ⋯ needs room.
+        'relative py-2 text-right @max-[44rem]:w-[52px]! @max-[44rem]:min-w-[52px]!',
         className,
       )}
     >

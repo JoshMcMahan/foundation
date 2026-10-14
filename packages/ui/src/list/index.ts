@@ -11,7 +11,6 @@ export {
   type ListPageProps,
   ListRow,
   ListRowActionsProvider,
-  type ListSection,
   useListNavigate,
 } from './ListPage'
 export {

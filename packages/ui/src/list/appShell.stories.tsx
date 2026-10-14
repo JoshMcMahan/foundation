@@ -26,7 +26,7 @@ import {
 } from '../icons'
 import { ActionToolbar, type ToolbarItem } from './ActionToolbar'
 import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
-import { ListError, ListSkeleton, listTableProps, NameCell } from './ListTable'
+import { ListError, ListSkeleton, listTableProps, NameCell, RowSelectCheckbox } from './ListTable'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 import { useListView } from './listView'
@@ -167,14 +167,27 @@ interface ShellArgs {
   narrow?: boolean
   /** Only clusters that need a look show a status, so some rows' Status cells are empty. */
   sparseStatus?: boolean
+  /** Rows carry a checkbox, and two start selected. */
+  selectable?: boolean
 }
 
-function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
+function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) {
   const copySubmenu = useCopySubmenu()
   const goTo = useListNavigate()
   const { openMenu, contextMenu } = useContextMenu()
   const search = useListSearch()
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
+  const [checked, setChecked] = useState<ReadonlySet<string>>(
+    () => new Set(selectable ? ['row-1', 'row-2'] : []),
+  )
+  const toggleChecked = (id: string) =>
+    setChecked((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) {
+        next.add(id)
+      }
+      return next
+    })
 
   const all = useMemo(() => (state === 'empty' ? [] : makeRows(rowCount)), [state, rowCount])
 
@@ -285,14 +298,16 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
         view={view}
         toolbar={
           <div className="flex items-center justify-between gap-3 py-1.5">
-            <ListCount
-              total={all.length}
-              matches={rows.length}
-              filterActive={query.length > 0 || view.activeFilterCount > 0}
-              noun="cluster"
-              nounPlural="clusters"
-            />
-            <div className="flex items-center gap-2">
+            {state === 'ready' && (
+              <ListCount
+                total={all.length}
+                matches={rows.length}
+                filterActive={query.length > 0 || view.activeFilterCount > 0}
+                noun="cluster"
+                nounPlural="clusters"
+              />
+            )}
+            <div className="ml-auto flex items-center gap-2">
               <ListSearchControl search={search} placeholder="Search clusters" />
               <ListFilterMenu view={view} />
               <ListDisplayMenu view={view} />
@@ -313,10 +328,29 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
           </div>
         ) : (
           <Table {...listTableProps}>
+            {selectable && (
+              <Table.Header caps={false} className="w-10">
+                <span className="sr-only">Select</span>
+              </Table.Header>
+            )}
             <ListColumns view={view} />
             {rows.map((row) => (
               <ListRow
                 key={row.id}
+                selected={checked.has(row.id)}
+                selectionActive={checked.size > 0}
+                onRowSelect={() => toggleChecked(row.id)}
+                leading={
+                  selectable && (
+                    <Table.Item className="w-10 py-2.5">
+                      <RowSelectCheckbox
+                        checked={checked.has(row.id)}
+                        label={`Select ${row.name}`}
+                        onToggle={() => toggleChecked(row.id)}
+                      />
+                    </Table.Item>
+                  )
+                }
                 href={`/clusters/${row.name}`}
                 items={menuItems(row)}
                 goTo={goTo}
@@ -369,6 +403,7 @@ const meta: Meta<ShellArgs> = {
     rowCount: { control: { type: 'range', min: 1, max: 40, step: 1 } },
     narrow: { control: 'boolean' },
     sparseStatus: { control: 'boolean' },
+    selectable: { control: 'boolean' },
   },
   render: (args) => (
     <MockHost>
@@ -397,6 +432,9 @@ export const Loading: Story = { args: { state: 'loading' } }
 export const Empty: Story = { args: { state: 'empty' } }
 
 export const LoadFailed: Story = { args: { state: 'error' } }
+
+/** Checked rows take the accent's tint; while any is checked, a row click toggles it. */
+export const SelectedRows: Story = { args: { selectable: true } }
 
 /** At phone width the Status column gives way and each status sits under its row's name. */
 export const NarrowStacksStatus: Story = { args: { narrow: true } }

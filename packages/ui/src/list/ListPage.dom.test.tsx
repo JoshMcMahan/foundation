@@ -3,8 +3,8 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Table } from '../components/Table'
 import { openTooltip } from '../test/tooltip'
-import { ListRow, ListRowActionsProvider } from './ListPage'
-import { NameCell } from './ListTable'
+import { ListPage, ListRow, ListRowActionsProvider } from './ListPage'
+import { ListError, NameCell } from './ListTable'
 import type { ListViewChrome } from './listView'
 import type { RowAction } from './rowMenu'
 
@@ -195,5 +195,27 @@ describe('ListRow stacked columns', () => {
       </ListRowActionsProvider>,
     )
     expect(screen.getAllByRole('cell')[0]?.querySelector('[data-stacked]')).toBeNull()
+  })
+})
+
+describe('ListPage bleed', () => {
+  it("reaches past the host's padding only when asked", () => {
+    const { container, rerender } = render(<ListPage>rows</ListPage>)
+    expect(container.firstElementChild).not.toHaveClass('-m-4')
+    rerender(<ListPage bleed>rows</ListPage>)
+    expect(container.firstElementChild).toHaveClass('-m-4')
+  })
+})
+
+describe('ListError', () => {
+  it('announces the failure and names what failed', () => {
+    render(<ListError error={new Error('upstream timed out')} noun="clusters" />)
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load clusters")
+    expect(screen.getByRole('alert')).toHaveTextContent('upstream timed out')
+  })
+
+  it("falls back to the provider's noun", () => {
+    render(<ListError error={null} />)
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load data")
   })
 })
