@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.51.0](https://github.com/parallelworks/foundation/compare/ui-v0.50.0...ui-v0.51.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** menu and row actions require onClick, href or copy ([#265](https://github.com/parallelworks/foundation/issues/265))
+* **ui:** description lists fit drawers and cards, with copyable, monospace and empty values ([#263](https://github.com/parallelworks/foundation/issues/263))
+* **ui:** give each status a vivid shade for graphics and a text shade for words ([#264](https://github.com/parallelworks/foundation/issues/264))
+
+### Features
+
+* **ui:** description lists fit drawers and cards, with copyable, monospace and empty values ([#263](https://github.com/parallelworks/foundation/issues/263)) ([82c2840](https://github.com/parallelworks/foundation/commit/82c28408eadc700c29f53e343c7b2f085eaa3c1e))
+* **ui:** give each status a vivid shade for graphics and a text shade for words ([#264](https://github.com/parallelworks/foundation/issues/264)) ([170e53a](https://github.com/parallelworks/foundation/commit/170e53a91db8e4106f1997ea1073e54093aa572e))
+* **ui:** menu and row actions require onClick, href or copy ([#265](https://github.com/parallelworks/foundation/issues/265)) ([44f73f7](https://github.com/parallelworks/foundation/commit/44f73f78a6e13b96ae2f743ff2dfa6e8bd2d2feb))
+
 ## [0.50.0](https://github.com/parallelworks/foundation/compare/ui-v0.49.0...ui-v0.50.0) (2026-10-14)
 
 
