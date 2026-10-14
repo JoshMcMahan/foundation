@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.0](https://github.com/parallelworks/foundation/compare/ui-v0.48.1...ui-v0.49.0) (2026-10-14)
+
+
+### Features
+
+* **ui:** OneTimeCodeInput can focus its first box on mount ([#257](https://github.com/parallelworks/foundation/issues/257)) ([ff012db](https://github.com/parallelworks/foundation/commit/ff012db18c6a61ab21fec2e98b964b36bc29fd3b))
+
 ## [0.48.1](https://github.com/parallelworks/foundation/compare/ui-v0.48.0...ui-v0.48.1) (2026-10-14)
 
 
