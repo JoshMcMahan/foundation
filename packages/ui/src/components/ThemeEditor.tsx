@@ -337,10 +337,12 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
           <p>{t.previewBody}</p>
           <p className="text-xs text-(--theme-muted-text-color)">{t.previewMuted}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-(--theme-success-muted) px-2 py-0.5 text-xs text-(--theme-success)">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-(--theme-success-muted) px-2 py-0.5 text-xs text-(--theme-success-text)">
+              <span className="size-1.5 rounded-full bg-(--theme-success)" />
               {t.previewPassed}
             </span>
-            <span className="rounded-full bg-(--theme-error-muted) px-2 py-0.5 text-xs text-(--theme-error)">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-(--theme-error-muted) px-2 py-0.5 text-xs text-(--theme-error-text)">
+              <span className="size-1.5 rounded-full bg-(--theme-error)" />
               {t.previewFailed}
             </span>
             <span className="text-(--theme-link) underline underline-offset-2">

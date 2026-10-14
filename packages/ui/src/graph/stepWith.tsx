@@ -727,7 +727,7 @@ function ExtraKey({
     <div id={id} tabIndex={-1} className="flex flex-col gap-1">
       <div className="flex items-center gap-2 text-sm">
         <span className="font-mono">{name}</span>
-        <span className="text-xs text-(--theme-error)">{t.notActionInput}</span>
+        <span className="text-xs text-(--theme-error-text)">{t.notActionInput}</span>
         <IconButton
           icon={<RemoveIcon />}
           label={t.common.remove}

@@ -7,9 +7,9 @@ interface IBaseCheckmarkProps {
 }
 
 export function SuccessCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <SuccessIcon className={cx(colored && 'text-green-500', className)} />
+  return <SuccessIcon className={cx(colored && 'text-(--theme-success)', className)} />
 }
 
 export function ErrorCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <ErrorIcon className={cx(colored && 'text-red-400', className)} />
+  return <ErrorIcon className={cx(colored && 'text-(--theme-error)', className)} />
 }

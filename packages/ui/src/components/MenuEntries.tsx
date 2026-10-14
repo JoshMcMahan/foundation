@@ -167,7 +167,7 @@ function SubmenuRow({ submenu }: { submenu: MenuSubmenu }) {
   )
 }
 
-const destructiveClassName = 'text-(--theme-error) data-highlighted:text-(--theme-error)'
+const destructiveClassName = 'text-(--theme-error-text) data-highlighted:text-(--theme-error-text)'
 
 function ActionRow({ action }: { action: MenuAction }) {
   const Link = useLink()

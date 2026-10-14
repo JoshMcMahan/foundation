@@ -29,7 +29,7 @@ const variants: Record<ButtonVariant, string> = {
   ghost:
     'text-(--theme-muted-text-color) hover:not-disabled:not-aria-disabled:bg-(--theme-muted-panel-bg) hover:not-disabled:not-aria-disabled:text-(--theme-app) aria-pressed:bg-(--theme-muted-panel-bg) aria-pressed:text-(--theme-link) data-selected:bg-(--theme-muted-panel-bg) data-selected:text-(--theme-link) data-popup-open:bg-(--theme-muted-panel-bg) data-popup-open:text-(--theme-app)',
   danger:
-    'bg-(--theme-error) text-white hover:not-disabled:not-aria-disabled:bg-(--theme-error)/90',
+    'bg-(--theme-error-solid) text-white hover:not-disabled:not-aria-disabled:bg-(--theme-error-solid)/90',
 }
 
 // Each size names every box property once: a utility overriding another for the

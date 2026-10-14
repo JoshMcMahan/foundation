@@ -50,7 +50,10 @@ export function WizardNavigation({
   return (
     <div>
       {error && (
-        <p role="alert" className="mb-3 flex items-center gap-1.5 text-sm text-(--theme-error)">
+        <p
+          role="alert"
+          className="mb-3 flex items-center gap-1.5 text-sm text-(--theme-error-text)"
+        >
           <WarningIcon aria-hidden="true" className="size-4 shrink-0" />
           {error}
         </p>

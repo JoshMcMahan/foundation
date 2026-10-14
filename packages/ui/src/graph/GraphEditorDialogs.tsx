@@ -1002,7 +1002,7 @@ function JobForm({
                       />
                       <span className="font-mono">{other}</span>
                       {!Object.hasOwn(jobs, other) && (
-                        <span className="text-xs text-(--theme-error)">{t.missingJob}</span>
+                        <span className="text-xs text-(--theme-error-text)">{t.missingJob}</span>
                       )}
                     </FieldOption>
                     {entry && isMatrixJob(other) && (

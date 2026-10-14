@@ -32,7 +32,7 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
           <button
             type="button"
             aria-label={label}
-            className="flex h-7 cursor-pointer items-center gap-1 rounded px-2 text-xs font-medium text-(--theme-error) theme-hover"
+            className="flex h-7 cursor-pointer items-center gap-1 rounded px-2 text-xs font-medium text-(--theme-error-text) theme-hover"
           >
             <WarningIcon className="h-3.5 w-3.5" />
             {problems.length}
@@ -47,7 +47,7 @@ export function ProblemsButton({ problems }: { problems: ListedProblem[] }) {
             const text = (
               <>
                 <span className="mr-1.5 theme-muted-text">{t.problemLine(problem.line)}</span>
-                <span className="text-(--theme-error)">{problem.message}</span>
+                <span className="text-(--theme-error-text)">{problem.message}</span>
               </>
             )
             return (

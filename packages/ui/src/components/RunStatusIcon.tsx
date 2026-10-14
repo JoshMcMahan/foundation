@@ -10,7 +10,7 @@ import {
   SuccessIcon,
 } from '../icons'
 import { useStrings } from './Provider'
-import { type Tone, toneText } from './tone'
+import { type Tone, toneIcon } from './tone'
 
 interface Look {
   tone: Tone
@@ -57,7 +57,7 @@ export function RunStatusIcon({
     <span
       {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       data-status={status || 'not-run'}
-      className={cx('flex h-2 items-center', toneText[look.tone], className)}
+      className={cx('flex h-2 items-center', toneIcon[look.tone], className)}
     >
       <Icon aria-hidden="true" className={cx(look.spin && 'animate-spin rounded-full')} />
     </span>

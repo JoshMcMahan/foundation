@@ -147,7 +147,7 @@ export function ProblemList({ problems }: { problems: ScopedProblem[] }) {
       .filter(([key]) => within(problem, key))
       .sort(([a], [b]) => b.length - a.length)[0]?.[1]
   return (
-    <ul className="flex flex-col gap-1 text-sm text-(--theme-error)">
+    <ul className="flex flex-col gap-1 text-sm text-(--theme-error-text)">
       {keyedByContent(problems, (problem) => `${problem.at.join('.')}:${problem.message}`).map(
         ({ key, item: problem }) => {
           const field = fieldOf(problem)

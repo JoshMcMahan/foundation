@@ -27,8 +27,8 @@ describe('Meter', () => {
 
   it.each([
     [50, 'bg-(--theme-accent)'],
-    [85, 'bg-amber-500'],
-    [95, 'bg-red-600'],
+    [85, 'bg-(--theme-warning)'],
+    [95, 'bg-(--theme-error)'],
   ])('colors %s by its levels', (value, color) => {
     render(<Meter value={value} aria-label="Used" />)
     expect(fill(screen.getByRole('meter'))).toHaveClass(color)
@@ -36,7 +36,7 @@ describe('Meter', () => {
 
   it('takes a tone over its levels', () => {
     render(<Meter value={10} tone="error" aria-label="Frozen" />)
-    expect(fill(screen.getByRole('meter'))).toHaveClass('bg-red-600')
+    expect(fill(screen.getByRole('meter'))).toHaveClass('bg-(--theme-error)')
   })
 
   it('shows its value on hover when asked to', async () => {
@@ -78,7 +78,7 @@ describe('ProgressBar', () => {
     const bar = screen.getByRole('progressbar', { name: 'report.csv' })
     expect(bar).toHaveTextContent('Completed')
     expect(bar).not.toHaveTextContent('100%')
-    expect(fill(bar)).toHaveClass('bg-green-600')
+    expect(fill(bar)).toHaveClass('bg-(--theme-success)')
   })
 
   it('is indeterminate without a value', () => {

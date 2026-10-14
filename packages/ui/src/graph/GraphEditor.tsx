@@ -1813,7 +1813,7 @@ function DragOverlays({
           className={cx(
             'absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border-2 border-dashed px-4 py-2 text-sm',
             overTrash
-              ? 'border-(--theme-error) bg-(--theme-error-muted) text-(--theme-error)'
+              ? 'border-(--theme-error) bg-(--theme-error-muted) text-(--theme-error-text)'
               : 'theme-border bg-(--theme-panel-bg) theme-muted-text',
           )}
         >

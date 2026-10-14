@@ -79,7 +79,7 @@ const labelSizes = {
 } satisfies Record<FieldBoxSize, Record<string, string>>
 const labelClassName = 'flex items-center gap-1 font-medium'
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
-const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-error)'
+const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-error-text)'
 
 /** An error in the look a Field gives its own, for a control outside a Field, or for a part of
  *  one rather than the whole of it, such as a row of a list editor. Give it an `id` and name it

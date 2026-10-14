@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deltaE, JND, oklch, parseColor, toHex } from './color'
-import { contrastRatio, measure, type Shown, shownValue } from './contrast'
+import { contrastRatio, isDarkColor, measure, over, type Shown, shownValue } from './contrast'
 import { PLACEHOLDER_ON } from './derive'
 import {
   applyTheme,
@@ -125,12 +125,42 @@ const TEXT_ON: ThemeToken[] = [
 ]
 const CODE_ON: ThemeToken[] = ['--theme-code-bg', '--theme-panel-bg', '--theme-app-bg']
 
+const STATUSES = ['success', 'error', 'warning', 'info', 'favorite'] as const
+// The surfaces a status's icon, dot, border or words sit on.
+const STATUS_ON: ThemeToken[] = [
+  '--theme-app-bg',
+  '--theme-panel-bg',
+  '--theme-panel-hover',
+  '--theme-muted-panel-bg',
+  '--theme-hover',
+  '--theme-input-bg',
+]
+const WHITE = shownValue('#ffffff') as Shown
+
+/** A translucent token as it shows over an opaque one, composited in the fill's gamut. */
+function composited(vars: Partial<ThemeVariables>, fill: ThemeToken, under: ThemeToken): Shown {
+  const value = vars[fill] as string
+  const m =
+    /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(value) ??
+    /^color\(display-p3 ([\d.]+) ([\d.]+) ([\d.]+) \/ ([\d.]+)\)$/.exec(value)
+  const backdrop = parseColor(vars[under] as string)
+  if (!m || !backdrop) {
+    throw new Error(`${fill} over ${under} can't be composited: ${value}`)
+  }
+  const gamut = value.startsWith('color(') ? 'p3' : 'srgb'
+  const rgb = [m[1], m[2], m[3]].map((v) => Number(v) / (gamut === 'p3' ? 1 : 255))
+  const shown = over({ rgb: rgb as Shown['rgb'], gamut }, Number(m[4]), backdrop)
+  // An sRGB screen blends 8-bit channels, as the generator measures it.
+  const eight = (v: number) => Math.round(Number((v * 255).toFixed(6))) / 255
+  return gamut === 'p3' ? shown : { ...shown, rgb: shown.rgb.map(eight) as Shown['rgb'] }
+}
+
 /** Every pair the generator promises, with its WCAG floor and the APCA floor at contrast 0. */
 function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, number][] {
   const out: [ThemeToken, Shown, number, number][] = []
-  const on = (fg: ThemeToken, bgs: ThemeToken[], wcag: number, apca = 0) => {
+  const on = (fg: ThemeToken, bgs: (ThemeToken | Shown)[], wcag: number, apca = 0) => {
     for (const bg of bgs) {
-      out.push([fg, shownOf(vars, bg), wcag, apca])
+      out.push([fg, typeof bg === 'string' ? shownOf(vars, bg) : bg, wcag, apca])
     }
   }
   on('--theme-app', TEXT_ON, 4.5, 75)
@@ -139,8 +169,16 @@ function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, numbe
   on('--theme-link', ['--theme-app-bg', '--theme-panel-bg', '--theme-hover'], 4.5, 60)
   on('--theme-focus', ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'], 3)
   on('--theme-accent-text', ['--theme-accent', '--theme-accent-hover'], 4.5)
-  for (const status of ['success', 'error', 'warning', 'info', 'favorite'] as const) {
-    on(`--theme-${status}`, ['--theme-app-bg', '--theme-panel-bg'], 4.5, 60)
+  for (const status of STATUSES) {
+    // Both shades also sit on the status's own muted fill, as in a badge or a callout.
+    const muted = (['--theme-app-bg', '--theme-panel-bg'] as const).map((under) =>
+      composited(vars, `--theme-${status}-muted`, under),
+    )
+    // The vivid shade is a graphic: WCAG 1.4.11's 3:1, no text target.
+    on(`--theme-${status}`, [...STATUS_ON, ...muted], 3)
+    on(`--theme-${status}-text`, [...STATUS_ON, ...muted], 4.5, 60)
+    // A solid fill keeps a white label.
+    on(`--theme-${status}-solid`, [WHITE], 4.5)
   }
   on('--theme-sidebar-text', ['--theme-sidebar-bg', '--theme-sidebar-hover'], 4.5, 75)
   on('--theme-sidebar-active-text', ['--theme-sidebar-active-bg'], 4.5, 75)
@@ -207,6 +245,21 @@ describe('generateTheme', () => {
       }
     },
   )
+
+  it('keeps status graphics vivid on light bases, short of the contrast text needs', () => {
+    // Held to text's targets, a red icon or dot turns near-maroon; a graphic needs only 3:1.
+    for (const { base, accent } of GRID.filter((s) => s.contrast === 30)) {
+      const vars = deriveTheme({ interface: { base, accent } })
+      if (isDarkColor(vars['--theme-app-bg'])) {
+        continue
+      }
+      for (const status of STATUSES) {
+        const on = (token: ThemeToken) => contrastRatio(vars[token], vars['--theme-app-bg'])
+        expect(on(`--theme-${status}`), status).toBeLessThan(4.5)
+        expect(on(`--theme-${status}-text`), status).toBeGreaterThan(on(`--theme-${status}`))
+      }
+    }
+  })
 
   it('fills buttons with the accent exactly as picked', () => {
     for (const { base, accent } of GRID) {

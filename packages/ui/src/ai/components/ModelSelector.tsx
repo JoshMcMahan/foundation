@@ -180,7 +180,7 @@ export default function ModelSelector({
   }
   if (modelsError && models.length === 0) {
     return (
-      <span className={cx(chipClassName, 'cursor-default text-(--theme-error)')}>
+      <span className={cx(chipClassName, 'cursor-default text-(--theme-error-text)')}>
         {t.failed}
         <button
           type="button"

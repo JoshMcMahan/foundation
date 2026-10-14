@@ -248,7 +248,7 @@ export function CreateModal({
                   nameMissing ? 'ring-1 ring-(--theme-error)' : 'focus:ring-0',
                 )}
               />
-              {nameError && <p className="mt-1 text-xs text-(--theme-error)">{nameError}</p>}
+              {nameError && <p className="mt-1 text-xs text-(--theme-error-text)">{nameError}</p>}
               {hint && <p className="mt-1 text-xs text-(--theme-muted-text-color)">{hint}</p>}
               {showDescription ? (
                 <textarea

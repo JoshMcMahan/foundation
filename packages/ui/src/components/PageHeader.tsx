@@ -186,7 +186,7 @@ export function BreadcrumbsActionButton({
   const Link = useLink()
   const className = cx(
     breadcrumbsActionClasses,
-    destructive ? 'text-(--theme-error)' : 'text-(--theme-link)',
+    destructive ? 'text-(--theme-error-text)' : 'text-(--theme-link)',
   )
   const content = (
     <>

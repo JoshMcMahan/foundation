@@ -288,7 +288,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
         <div
           className={cx(
             'ml-5 mt-0.5 text-[13px]',
-            part.status === 'error' ? 'text-(--theme-error)' : 'theme-muted-text',
+            part.status === 'error' ? 'text-(--theme-error-text)' : 'theme-muted-text',
           )}
         >
           {summary}
@@ -351,7 +351,7 @@ function SubagentCard({ part }: { part: SubagentPart }) {
         }
         panelClassName={cx(
           'ml-5 mt-0.5 space-y-1 text-[13px]',
-          part.status === 'failed' ? 'text-(--theme-error)' : 'theme-muted-text',
+          part.status === 'failed' ? 'text-(--theme-error-text)' : 'theme-muted-text',
         )}
       >
         {actions.length > 0 && (
@@ -373,7 +373,7 @@ function SubagentCard({ part }: { part: SubagentPart }) {
         <div
           className={cx(
             'ml-5 mt-0.5 text-[13px]',
-            part.status === 'failed' ? 'text-(--theme-error)' : 'theme-muted-text',
+            part.status === 'failed' ? 'text-(--theme-error-text)' : 'theme-muted-text',
           )}
         >
           {outcome}

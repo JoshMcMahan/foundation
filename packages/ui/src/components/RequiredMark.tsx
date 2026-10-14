@@ -1,6 +1,6 @@
 export function RequiredMark() {
   return (
-    <span aria-hidden="true" className="text-red-500 ml-0.5">
+    <span aria-hidden="true" className="ml-0.5 text-(--theme-error)">
       *
     </span>
   )

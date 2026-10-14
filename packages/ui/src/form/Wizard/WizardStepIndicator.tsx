@@ -140,7 +140,7 @@ function StepItem({
       </span>
       {status === 'done' && <span className="sr-only">{strings.stepDone}</span>}
       {status === 'invalid' && (
-        <span className="text-xs text-(--theme-error)">{strings.stepNeedsAttention}</span>
+        <span className="text-xs text-(--theme-error-text)">{strings.stepNeedsAttention}</span>
       )}
       {description && (
         <span className="text-xs text-(--theme-muted-text-color)">{description}</span>

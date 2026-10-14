@@ -23,7 +23,7 @@ export function DragLabel({
     <div
       className={cx(
         'pointer-events-none absolute z-30 rounded-md border bg-(--theme-panel-bg) px-2 py-1 text-xs shadow',
-        refused ? 'border-(--theme-error) text-(--theme-error)' : 'theme-border',
+        refused ? 'border-(--theme-error) text-(--theme-error-text)' : 'theme-border',
       )}
       style={{ left: at.x + 12, top: at.y + 12 }}
     >

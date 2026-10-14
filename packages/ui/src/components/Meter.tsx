@@ -7,13 +7,13 @@ import { Tooltip } from './Tooltip'
 /** A bar's color: the theme's accent, a status, or muted for something stopped. */
 export type BarTone = 'accent' | 'success' | 'warning' | 'error' | 'muted'
 
-// Status hues are fixed, as StatusBadge's are: a host theme may set the accent
-// to a color that would read as a warning, or not contrast with the track.
+// A bar is a graphic, so it takes a status's vivid shade, whose hue is fixed in
+// every theme: a host may set the accent to a color that reads as a warning.
 const fillClassName: Record<BarTone, string> = {
   accent: 'bg-(--theme-accent)',
-  success: 'bg-green-600',
-  warning: 'bg-amber-500',
-  error: 'bg-red-600',
+  success: 'bg-(--theme-success)',
+  warning: 'bg-(--theme-warning)',
+  error: 'bg-(--theme-error)',
   muted: 'bg-(--theme-muted-text-color)',
 }
 

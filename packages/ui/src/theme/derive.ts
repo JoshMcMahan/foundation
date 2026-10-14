@@ -1,10 +1,10 @@
 // The generator: a scheme's three choices become every `--theme-*` token.
 //
 // Surfaces sit at fixed lightness offsets from the base, scaled by contrast.
-// Everything read as text, and the focus ring and strong borders, is solved:
-// its lightness moves, at its own hue and chroma, until it meets a WCAG 2 ratio
-// and an APCA target on every surface it can sit on. The accent the person
-// picked fills buttons exactly. It all happens in OKLCH; each color is mapped
+// Everything read as text, and the focus ring, status graphics and strong
+// borders, is solved: its lightness moves, at its own hue and chroma, until it
+// meets a WCAG 2 ratio, and for text an APCA target, on every surface it can
+// sit on. The accent the person picked fills buttons exactly. It all happens in OKLCH; each color is mapped
 // into sRGB, and into display-p3 where that shows more of it, only at the end,
 // and the contrast it was solved for is checked again in display-p3.
 import {
@@ -58,14 +58,24 @@ export const THEME_TOKENS = [
   '--theme-focus-ring',
   // Status
   '--theme-success',
+  '--theme-success-text',
+  '--theme-success-solid',
   '--theme-success-muted',
   '--theme-error',
+  '--theme-error-text',
+  '--theme-error-solid',
   '--theme-error-muted',
   '--theme-warning',
+  '--theme-warning-text',
+  '--theme-warning-solid',
   '--theme-warning-muted',
   '--theme-info',
+  '--theme-info-text',
+  '--theme-info-solid',
   '--theme-info-muted',
   '--theme-favorite',
+  '--theme-favorite-text',
+  '--theme-favorite-solid',
   '--theme-favorite-muted',
   // Shadows
   '--theme-shadow-sm',
@@ -167,12 +177,15 @@ function targets(k: number) {
     // as a typed value, yet at the 3:1 of large text and UI so it stays legible. WCAG doesn't
     // hold a placeholder to 4.5:1; APCA's guidance puts such hints near Lc 45.
     placeholder: at([3, 3, 4.5], [45, 50, 65]),
-    // A focus indicator and a control's boundary are UI, which WCAG 2 holds to 3:1.
-    focus: { wcag: byContrast(k, [3, 3, 4.5]) },
+    // A focus indicator, a status icon or dot, and a control's boundary are UI, which WCAG 2
+    // holds to 3:1 (1.4.11).
+    graphic: { wcag: byContrast(k, [3, 3, 4.5]) },
     control: { wcag: byContrast(k, [1.6, 2.2, 3]) },
-    onAccent: { wcag: 4.5 },
+    label: { wcag: 4.5 },
   }
 }
+
+const WHITE: Oklch = { l: 1, c: 0, h: 0 }
 
 // Fixed hues in OKLCH degrees: status and syntax colors keep their meaning in
 // every theme; only their lightness is solved.
@@ -216,8 +229,9 @@ interface Paint {
   alpha?: number
 }
 
-/** What a foreground sits on: a token, or a translucent fill over a token. */
-type Backdrop = ThemeToken | { fill: ThemeToken; over: ThemeToken }
+/** What a foreground sits on: a token, a translucent fill over a token, or a fixed color
+ *  such as the white label on a solid status fill. */
+type Backdrop = ThemeToken | { fill: ThemeToken; over: ThemeToken } | { fixed: Oklch }
 
 /** A contrast a foreground was solved for, kept to check the display-p3 output against. */
 interface Check {
@@ -249,7 +263,11 @@ function build(
   const paints = {} as Record<ThemeToken, Paint>
   const checks: Check[] = []
   const hexOf = (d: Backdrop) =>
-    typeof d === 'string' ? toHex(paints[d].color) : compositeHex(paints[d.fill], paints[d.over])
+    typeof d === 'string'
+      ? toHex(paints[d].color)
+      : 'fixed' in d
+        ? toHex(d.fixed)
+        : compositeHex(paints[d.fill], paints[d.over])
   const set = (token: ThemeToken, color: Oklch, alpha?: number) => {
     paints[token] = alpha === undefined ? { color } : { color, alpha }
     return color
@@ -320,7 +338,7 @@ function build(
     '--theme-focus',
     accent,
     ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'],
-    t.focus,
+    t.graphic,
   )
   set('--theme-focus-ring', focus, dark ? 0.35 : 0.25)
   solved(
@@ -337,31 +355,51 @@ function build(
     '--theme-accent-text',
     { l: white ? 1 : 0, c: 0, h: 0 },
     ['--theme-accent', '--theme-accent-hover'],
-    t.onAccent,
+    t.label,
   )
 
+  // A status is drawn in a vivid shade and written in a text shade. The vivid shade is a
+  // graphic, an icon, dot, border or bar, which WCAG holds to 3:1, so it keeps near its
+  // most saturated lightness; held to text's targets it turned muddy. Text in the status is
+  // solved like other secondary text. Both also sit on the status's own muted fill, as in a
+  // badge or a callout.
   const mutedAlpha = dark ? 0.15 : 0.1
+  const statusOn: Backdrop[] = [
+    '--theme-app-bg',
+    '--theme-panel-bg',
+    '--theme-panel-hover',
+    '--theme-muted-panel-bg',
+    '--theme-hover',
+    '--theme-input-bg',
+  ]
   for (const [name, hue] of Object.entries(STATUS)) {
     const token = `--theme-${name}` as ThemeToken
     const muted = `--theme-${name}-muted` as ThemeToken
-    const plain: ThemeToken[] = ['--theme-app-bg', '--theme-panel-bg', '--theme-muted-panel-bg']
     const on: Backdrop[] = [
-      ...plain,
+      ...statusOn,
       { fill: muted, over: '--theme-app-bg' },
       { fill: muted, over: '--theme-panel-bg' },
     ]
-    // Also readable on its own muted fill, as in a callout. The fill follows the
-    // color, so solve until the pair settles.
-    let color = solve({ l: dark ? 0.75 : 0.55, c: 0.17, h: hue }, plain.map(hexOf), t.secondary)
+    // The fill follows the vivid shade, so solve until the pair settles.
+    let vivid = solve({ l: dark ? 0.7 : 0.66, c: 0.2, h: hue }, statusOn.map(hexOf), t.graphic)
     for (let round = 0; round < 6; round++) {
-      set(muted, color, mutedAlpha)
-      const next = solve(color, on.map(hexOf), t.secondary)
-      if (next === color) {
+      set(muted, vivid, mutedAlpha)
+      const next = solve(vivid, on.map(hexOf), t.graphic)
+      if (next === vivid) {
         break
       }
-      color = next
+      vivid = next
     }
-    keep(token, color, on, t.secondary)
+    keep(token, vivid, on, t.graphic)
+    solved(
+      `--theme-${name}-text` as ThemeToken,
+      { l: dark ? 0.75 : 0.55, c: 0.17, h: hue },
+      on,
+      t.secondary,
+    )
+    // A fill under a white label, such as a destructive button: the vivid shade, deepened
+    // only as far as the label needs. Solid buttons keep white labels in both modes.
+    solved(`--theme-${name}-solid` as ThemeToken, vivid, [{ fixed: WHITE }], t.label)
   }
 
   // The sidebar: the same generator on its own base and accent.
@@ -478,6 +516,9 @@ function p3Overrides(paints: Record<ThemeToken, Paint>, checks: Check[]): Partia
     if (typeof d === 'string') {
       return show(d)
     }
+    if ('fixed' in d) {
+      return shown(d.fixed, 'srgb')
+    }
     const fill = paints[d.fill]
     return over(show(d.fill), fill.alpha ?? 1, rendered(paints[d.over].color, gamutOf(d.over)))
   }
@@ -496,7 +537,7 @@ function p3Overrides(paints: Record<ThemeToken, Paint>, checks: Check[]): Partia
         }
       }
       for (const d of check.on) {
-        for (const token of typeof d === 'string' ? [d] : [d.fill, d.over]) {
+        for (const token of typeof d === 'string' ? [d] : 'fixed' in d ? [] : [d.fill, d.over]) {
           changed = wide.delete(token) || changed
         }
       }
