@@ -14,6 +14,7 @@ import {
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
+import { cx } from '../cx'
 import {
   ClusterIcon,
   EditIcon,
@@ -26,7 +27,14 @@ import {
 } from '../icons'
 import { ActionToolbar, type ToolbarItem } from './ActionToolbar'
 import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
-import { ListError, ListSkeleton, listTableProps, NameCell, RowSelectCheckbox } from './ListTable'
+import {
+  GroupRow,
+  ListError,
+  ListSkeleton,
+  listTableProps,
+  NameCell,
+  RowSelectCheckbox,
+} from './ListTable'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 import { useListView } from './listView'
@@ -169,9 +177,20 @@ interface ShellArgs {
   sparseStatus?: boolean
   /** Rows carry a checkbox, and two start selected. */
   selectable?: boolean
+  /** The column-header row shows until the user turns it off in Display options. */
+  columnHeaders?: boolean
+  /** Rows start grouped by status, under a row per group. */
+  grouped?: boolean
 }
 
-function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) {
+function ClustersPage({
+  state,
+  rowCount,
+  sparseStatus,
+  selectable,
+  columnHeaders = true,
+  grouped = false,
+}: ShellArgs) {
   const copySubmenu = useCopySubmenu()
   const goTo = useListNavigate()
   const { openMenu, contextMenu } = useContextMenu()
@@ -192,26 +211,35 @@ function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) 
   const all = useMemo(() => (state === 'empty' ? [] : makeRows(rowCount)), [state, rowCount])
 
   const view = useListView<ShellRow>({
-    storageKey: 'workshop-app-shell-clusters',
+    // A key per starting display, so changing those controls starts the view
+    // over rather than keeping what an earlier story left in storage.
+    storageKey: `workshop-app-shell-clusters${columnHeaders ? '' : ':no-headers'}${grouped ? ':grouped' : ''}`,
+    // Each column sorts by the order of the same name; Nodes sorts only from
+    // Display options, as it has no column.
     columns: [
-      { key: 'name', label: 'Name', alwaysVisible: true },
-      { key: 'location', label: 'Location', priority: 'medium' },
+      { key: 'name', label: 'Name', alwaysVisible: true, orderBy: 'name' },
+      { key: 'location', label: 'Location', priority: 'medium', orderBy: 'location' },
       // No priority: on a phone it moves under the name rather than dropping.
-      { key: 'status', label: 'Status' },
-      { key: 'owner', label: 'Owner', priority: 'low' },
+      { key: 'status', label: 'Status', orderBy: 'status' },
+      { key: 'owner', label: 'Owner', priority: 'low', orderBy: 'owner' },
     ],
     orderBys: [
+      { value: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
       {
-        value: 'name',
-        label: 'Name',
-        compare: (a, b) => a.name.localeCompare(b.name),
+        value: 'location',
+        label: 'Location',
+        compare: (a, b) => a.location.localeCompare(b.location),
       },
-      {
-        value: 'nodes',
-        label: 'Nodes',
-        compare: (a, b) => a.nodes - b.nodes,
-      },
+      { value: 'status', label: 'Status', compare: (a, b) => a.status.localeCompare(b.status) },
+      { value: 'owner', label: 'Owner', compare: (a, b) => a.owner.localeCompare(b.owner) },
+      { value: 'nodes', label: 'Nodes', compare: (a, b) => a.nodes - b.nodes },
     ],
+    groupBys: [
+      { value: 'none', label: 'None' },
+      { value: 'status', label: 'Status' },
+    ],
+    defaultGroupBy: grouped ? 'status' : 'none',
+    defaultShowColumnHeaders: columnHeaders,
     facets: [
       {
         key: 'status',
@@ -280,6 +308,55 @@ function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) 
         ]
       : []
 
+  const renderRow = (row: ShellRow) => (
+    <ListRow
+      key={row.id}
+      selected={checked.has(row.id)}
+      selectionActive={checked.size > 0}
+      onRowSelect={() => toggleChecked(row.id)}
+      leading={
+        selectable && (
+          <Table.Item className="w-10 py-2.5">
+            <RowSelectCheckbox
+              checked={checked.has(row.id)}
+              label={`Select ${row.name}`}
+              onToggle={() => toggleChecked(row.id)}
+            />
+          </Table.Item>
+        )
+      }
+      href={`/clusters/${row.name}`}
+      items={menuItems(row)}
+      goTo={goTo}
+      openMenu={openMenu}
+      pinnedActions={pinnedActions(row)}
+    >
+      <NameCell
+        icon={<ClusterIcon className="h-5 w-5 shrink-0 text-(--theme-muted-text-color)" />}
+        name={row.name}
+        subtitle={`${row.nodes} nodes`}
+        href={`/clusters/${row.name}`}
+      />
+      {view.isVisible('location') && (
+        <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
+          {row.location}
+        </Table.Item>
+      )}
+      {view.isVisible('status') && (
+        <Table.Item className="py-2.5">
+          {(!sparseStatus || row.status !== 'stopped') && (
+            <StatusBadge variant={STATUS_VARIANT[row.status]}>{row.status}</StatusBadge>
+          )}
+        </Table.Item>
+      )}
+      {view.isVisible('owner') && (
+        <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
+          {row.owner}
+        </Table.Item>
+      )}
+    </ListRow>
+  )
+
   return (
     <>
       <PageHeader
@@ -327,63 +404,40 @@ function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) 
             </p>
           </div>
         ) : (
-          <Table {...listTableProps}>
+          <Table
+            {...listTableProps}
+            // Collapsed rather than left out, so the columns keep their widths.
+            theadClassName={cx(
+              listTableProps.theadClassName,
+              !view.showColumnHeaders && 'collapse',
+            )}
+          >
             {selectable && (
               <Table.Header caps={false} className="w-10">
                 <span className="sr-only">Select</span>
               </Table.Header>
             )}
             <ListColumns view={view} />
-            {rows.map((row) => (
-              <ListRow
-                key={row.id}
-                selected={checked.has(row.id)}
-                selectionActive={checked.size > 0}
-                onRowSelect={() => toggleChecked(row.id)}
-                leading={
-                  selectable && (
-                    <Table.Item className="w-10 py-2.5">
-                      <RowSelectCheckbox
-                        checked={checked.has(row.id)}
-                        label={`Select ${row.name}`}
-                        onToggle={() => toggleChecked(row.id)}
-                      />
-                    </Table.Item>
-                  )
-                }
-                href={`/clusters/${row.name}`}
-                items={menuItems(row)}
-                goTo={goTo}
-                openMenu={openMenu}
-                pinnedActions={pinnedActions(row)}
-              >
-                <NameCell
-                  icon={
-                    <ClusterIcon className="h-5 w-5 shrink-0 text-(--theme-muted-text-color)" />
-                  }
-                  name={row.name}
-                  subtitle={`${row.nodes} nodes`}
-                  href={`/clusters/${row.name}`}
-                />
-                {view.isVisible('location') && (
-                  <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
-                    {row.location}
-                  </Table.Item>
-                )}
-                {view.isVisible('status') && (
-                  <Table.Item className="py-2.5">
-                    {(!sparseStatus || row.status !== 'stopped') && (
-                      <StatusBadge variant={STATUS_VARIANT[row.status]}>{row.status}</StatusBadge>
-                    )}
-                  </Table.Item>
-                )}
-                {view.isVisible('owner') && (
-                  <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
-                    {row.owner}
-                  </Table.Item>
-                )}
-              </ListRow>
-            ))}
+            {view.groupBy === 'status'
+              ? STATUSES.flatMap((status) => {
+                  const group = rows.filter((row) => row.status === status)
+                  return group.length === 0
+                    ? []
+                    : [
+                        <GroupRow
+                          key={status}
+                          label={status}
+                          count={group.length}
+                          colSpan={
+                            (selectable ? 1 : 0) +
+                            view.visibleColumns.length +
+                            (view.showActions ? 1 : 0)
+                          }
+                        />,
+                        ...group.map(renderRow),
+                      ]
+                })
+              : rows.map(renderRow)}
           </Table>
         )}
         {contextMenu}
@@ -394,16 +448,18 @@ function ClustersPage({ state, rowCount, sparseStatus, selectable }: ShellArgs) 
 
 const meta: Meta<ShellArgs> = {
   title: 'UI/App Shell',
-  args: { state: 'ready', rowCount: 8 },
+  args: { state: 'ready', rowCount: 8, columnHeaders: true, grouped: false },
   argTypes: {
     state: {
       control: 'inline-radio',
       options: ['ready', 'loading', 'empty', 'error'],
     },
-    rowCount: { control: { type: 'range', min: 1, max: 40, step: 1 } },
+    rowCount: { control: { type: 'range', min: 1, max: 60, step: 1 } },
     narrow: { control: 'boolean' },
     sparseStatus: { control: 'boolean' },
     selectable: { control: 'boolean' },
+    columnHeaders: { control: 'boolean' },
+    grouped: { control: 'boolean' },
   },
   render: (args) => (
     <MockHost>
@@ -426,6 +482,20 @@ export default meta
 type Story = StoryObj<ShellArgs>
 
 export const ListPageShell: Story = {}
+
+/** A long list scrolls under its header row, which stays put below the page
+ *  header and the toolbar. Each column's header sorts by it, and Display
+ *  options' Ordering shows the same order; the default order sorts by no
+ *  column, so no header shows a direction until one is clicked. */
+export const ScrollingSortableHeaders: Story = { args: { rowCount: 40 } }
+
+/** Group rows and the selection column scroll under the stuck header too. */
+export const ScrollingGroupedAndSelected: Story = {
+  args: { rowCount: 40, grouped: true, selectable: true },
+}
+
+/** Display options can hide the header row; the columns keep their widths. */
+export const ColumnHeadersOff: Story = { args: { columnHeaders: false } }
 
 export const Loading: Story = { args: { state: 'loading' } }
 

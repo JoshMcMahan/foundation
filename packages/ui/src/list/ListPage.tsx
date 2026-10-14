@@ -10,7 +10,7 @@ import {
   warnIfInert,
 } from '../components/MenuEntries'
 import { useNavigation } from '../components/Provider'
-import { Table } from '../components/Table'
+import { type SortDirection, Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ListActionsHeader, NAME_MIN_WIDTH_PX, StretchRowLinkContext } from './ListTable'
@@ -285,24 +285,39 @@ function PinnedActionButton({ action, visible }: { action: RowAction; visible: b
   )
 }
 
-/** Name column min-width is by role, not position, so a leading checkbox doesn't shift it. */
+function columnSort<T>(view: ListView<T>, orderBy: string): SortDirection {
+  if (view.orderBy !== orderBy) {
+    return 'none'
+  }
+  return view.orderDir === 'asc' ? 'ascending' : 'descending'
+}
+
+/** Name column min-width is by role, not position, so a leading checkbox
+ *  doesn't shift it. A column with an `orderBy` the view offers sorts by it. */
 export function ListColumns<T>({ view }: { view: ListView<T> }) {
   return (
     <>
-      {view.visibleColumns.map((col, i) => (
-        <Table.Header
-          key={col.key}
-          caps={false}
-          className={cx(col.headerClassName, view.columnClasses[i])}
-          style={col.alwaysVisible ? { minWidth: NAME_MIN_WIDTH_PX } : undefined}
-        >
-          {col.label}
-        </Table.Header>
-      ))}
+      {view.visibleColumns.map((col, i) => {
+        // A column naming an order the view doesn't offer stays a plain title.
+        const orderBy = view.orderBys.some((o) => o.value === col.orderBy) ? col.orderBy : undefined
+        return (
+          <Table.Header
+            key={col.key}
+            caps={false}
+            className={cx(col.headerClassName, view.columnClasses[i])}
+            style={col.alwaysVisible ? { minWidth: NAME_MIN_WIDTH_PX } : undefined}
+            sort={orderBy === undefined ? undefined : columnSort(view, orderBy)}
+            onSort={orderBy === undefined ? undefined : () => view.sortBy(orderBy)}
+          >
+            {col.label}
+          </Table.Header>
+        )
+      })}
       <ListActionsHeader view={view} />
     </>
   )
 }
+
 // Hoisted into <thead> (see Table getHeaders).
 ListColumns.isTableHeader = true
 

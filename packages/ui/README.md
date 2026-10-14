@@ -477,6 +477,7 @@ root:
 | ------------------- | ----------------------------------------------------------------------- |
 | `--app-inset-top`   | The height of a fixed top bar. Drawers and toasts start below it.       |
 | `--app-inset-start` | The width of a fixed sidebar on the start side. Toasts center over the page beside it, and a drawer at its widest leaves that strip, and never less than 2.5rem. Update it when the sidebar collapses. |
+| `--table-header-top` | How far below the top of its scrolling box a table's sticky header row stops (`Table stickyHeader`, which list tables use). Set it on the scrolling box, or an ancestor, when something else sticks at that box's top, such as a page header in a page that scrolls as a whole. Inside `ListPage` the rows scroll in their own box below the header and toolbar, so it stays 0. |
 
 ```ts
 document.documentElement.style.setProperty('--app-inset-top', '56px')

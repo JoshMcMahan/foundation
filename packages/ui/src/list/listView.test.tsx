@@ -124,3 +124,54 @@ describe('stacked columns', () => {
     ])
   })
 })
+
+describe('ordering', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  const ORDERS = [
+    { value: 'name', label: 'Name', compare: () => 0 },
+    { value: 'size', label: 'Size', compare: () => 0 },
+  ]
+
+  it('sortBy orders by a new value ascending and flips the current one', () => {
+    const { result } = renderHook(() =>
+      useListView<Row>({ storageKey: 'order', columns: COLUMNS, orderBys: ORDERS }),
+    )
+    act(() => result.current.toggleOrderDir())
+    expect(result.current.orderDir).toBe('desc')
+    act(() => result.current.sortBy('size'))
+    expect([result.current.orderBy, result.current.orderDir]).toEqual(['size', 'asc'])
+    act(() => result.current.sortBy('size'))
+    expect([result.current.orderBy, result.current.orderDir]).toEqual(['size', 'desc'])
+  })
+})
+
+describe('column headers', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  const headers = (defaultShowColumnHeaders?: boolean) =>
+    renderHook(() =>
+      useListView<Row>({
+        storageKey: 'headers',
+        columns: COLUMNS,
+        ...(defaultShowColumnHeaders !== undefined && { defaultShowColumnHeaders }),
+      }),
+    ).result
+
+  it('show by default', () => {
+    expect(headers().current.showColumnHeaders).toBe(true)
+  })
+
+  it('stay hidden on a page that hides them', () => {
+    expect(headers(false).current.showColumnHeaders).toBe(false)
+  })
+
+  it('follow what the user chose over the default', () => {
+    window.localStorage.setItem('headers:showColumnHeaders', 'false')
+    expect(headers().current.showColumnHeaders).toBe(false)
+  })
+})

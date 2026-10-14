@@ -109,6 +109,13 @@ interface TableProps {
   rounded?: boolean
   roundedBottom?: boolean
   isLoading?: boolean
+  /** The header row stays in view while the rows scroll under it. It sticks
+   *  to the nearest scrolling ancestor, `--table-header-top` below its top
+   *  edge (0 unless an ancestor sets it), so the table no longer scrolls or
+   *  clips on its own: a box that scrolls itself is all a sticky header can
+   *  stick to. Its ancestor scrolls it sideways as well as down. Rows pass
+   *  under the header, so a `theadClassName` of your own needs a background. */
+  stickyHeader?: boolean | undefined
   /** Forwarded to the `<table>`, for attributes that must sit on the element owning
    *  the rows — `role='grid'`, aria-activedescendant, aria-rowcount. `className` is
    *  excluded because it is spread after the table's own classes; use the
@@ -147,6 +154,7 @@ export function Table({
   rounded = false,
   roundedBottom = false,
   isLoading = false,
+  stickyHeader = false,
   tableProps,
 }: TableProps) {
   const childList = React.Children.toArray(children)
@@ -156,7 +164,11 @@ export function Table({
     <DensityContext value={density}>
       <div
         aria-busy={isLoading}
-        className={cx('flex w-full flex-col', !hasOverflow && 'overflow-hidden', wrapperClassName)}
+        className={cx(
+          'flex w-full flex-col',
+          !hasOverflow && !stickyHeader && 'overflow-hidden',
+          wrapperClassName,
+        )}
       >
         {isLoading ? (
           <div className="flex h-32 items-center justify-center">
@@ -165,7 +177,8 @@ export function Table({
         ) : (
           <div
             className={cx(
-              'inline-block min-w-full overflow-x-auto align-middle',
+              'inline-block min-w-full align-middle',
+              !stickyHeader && 'overflow-x-auto',
               panel && 'theme-panel',
               !borderless && 'border theme-border',
               rounded && 'rounded-2xl',
@@ -174,7 +187,16 @@ export function Table({
             )}
           >
             <table className={cx('min-w-full divide-y theme-border', className)} {...tableProps}>
-              <thead className={theadClassName}>
+              <thead
+                className={cx(
+                  // Collapsed borders stay where the row was, so the line under
+                  // a stuck header is a shadow that moves with it. It sits on
+                  // the sticky layer, under menus and popovers.
+                  stickyHeader &&
+                    'sticky top-(--table-header-top,0px) z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
+                  theadClassName,
+                )}
+              >
                 <tr>{childList.filter(isHeaderChild)}</tr>
               </thead>
               <tbody className={tbodyClassName}>{childList.filter((c) => !isHeaderChild(c))}</tbody>

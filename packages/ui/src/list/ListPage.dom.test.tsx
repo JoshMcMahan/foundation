@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { Table } from '../components/Table'
+import { memoryStorage } from '../test/storage'
 import { openTooltip } from '../test/tooltip'
-import { ListPage, ListRow, ListRowActionsProvider } from './ListPage'
-import { ListError, NameCell } from './ListTable'
-import type { ListViewChrome } from './listView'
+import { ListColumns, ListPage, ListRow, ListRowActionsProvider } from './ListPage'
+import { ListError, listTableProps, NameCell } from './ListTable'
+import { ListDisplayMenu } from './ListViewControls'
+import { type ListViewChrome, useListView } from './listView'
 import type { RowAction } from './rowMenu'
 
 function renderRow(disabled: boolean, onSelect: () => void) {
@@ -217,5 +219,131 @@ describe('ListError', () => {
   it("falls back to the provider's noun", () => {
     render(<ListError error={null} />)
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load data")
+  })
+})
+
+type Host = { name: string; nodes: number; favorite: boolean }
+
+const HOSTS: Host[] = [
+  { name: 'beta', nodes: 1, favorite: false },
+  { name: 'alpha', nodes: 3, favorite: true },
+  { name: 'gamma', nodes: 2, favorite: false },
+]
+
+function SortableList({ favorites = false }: { favorites?: boolean }) {
+  const view = useListView<Host>({
+    storageKey: 'sortable-list',
+    columns: [
+      { key: 'name', label: 'Name', alwaysVisible: true, orderBy: 'name' },
+      { key: 'nodes', label: 'Nodes', orderBy: 'nodes' },
+      // Names an order the view doesn't offer, so it stays a plain title.
+      { key: 'owner', label: 'Owner', orderBy: 'owner' },
+    ],
+    orderBys: [
+      { value: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
+      { value: 'nodes', label: 'Nodes', compare: (a, b) => a.nodes - b.nodes },
+    ],
+    ...(favorites && { isFavorite: (row: Host) => row.favorite }),
+  })
+  return (
+    <>
+      <ListDisplayMenu view={view} />
+      <Table {...listTableProps}>
+        <ListColumns view={view} />
+        {view.applyOrder(HOSTS).map((row) => (
+          <tr key={row.name}>
+            <Table.Item>{row.name}</Table.Item>
+            <Table.Item>{row.nodes}</Table.Item>
+            <Table.Item />
+          </tr>
+        ))}
+      </Table>
+    </>
+  )
+}
+
+const header = (name: string) => screen.getByRole('columnheader', { name })
+const names = () =>
+  screen
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) => row.firstChild?.textContent)
+const openDisplay = () => fireEvent.click(screen.getByRole('button', { name: 'Display options' }))
+
+describe('ListColumns sorting', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  it('marks the column the list orders by, and only sortable columns', () => {
+    render(<SortableList />)
+    expect(header('Name')).toHaveAttribute('aria-sort', 'ascending')
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'none')
+    expect(header('Owner')).not.toHaveAttribute('aria-sort')
+    expect(within(header('Owner')).queryByRole('button')).toBeNull()
+  })
+
+  it('orders by an unsorted column ascending, then flips it, and Display options follows', () => {
+    render(<SortableList />)
+    fireEvent.click(within(header('Nodes')).getByRole('button'))
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'ascending')
+    expect(header('Name')).toHaveAttribute('aria-sort', 'none')
+    expect(names()).toEqual(['beta', 'gamma', 'alpha'])
+
+    fireEvent.click(within(header('Nodes')).getByRole('button'))
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'descending')
+    expect(names()).toEqual(['alpha', 'gamma', 'beta'])
+
+    openDisplay()
+    expect(screen.getByRole('combobox', { name: 'Ordering' })).toHaveTextContent('Nodes')
+    expect(screen.getByRole('button', { name: 'Descending' })).toBeInTheDocument()
+  })
+
+  it('a third click flips it back rather than dropping the order', () => {
+    render(<SortableList />)
+    const nodes = () => within(header('Nodes')).getByRole('button')
+    fireEvent.click(nodes())
+    fireEvent.click(nodes())
+    fireEvent.click(nodes())
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('follows Display options', async () => {
+    render(<SortableList />)
+    openDisplay()
+    fireEvent.click(screen.getByRole('button', { name: 'Ascending' }))
+    expect(header('Name')).toHaveAttribute('aria-sort', 'descending')
+    expect(names()).toEqual(['gamma', 'beta', 'alpha'])
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Ordering' }))
+    const nodes = await screen.findByRole('option', { name: 'Nodes' })
+    // Base UI commits a mouse click only when the press started on the option.
+    fireEvent.pointerDown(nodes)
+    fireEvent.click(nodes)
+    await waitFor(() => expect(header('Nodes')).toHaveAttribute('aria-sort', 'descending'))
+    expect(header('Name')).toHaveAttribute('aria-sort', 'none')
+  })
+
+  it('persists the order a header picks', () => {
+    const { unmount } = render(<SortableList />)
+    fireEvent.click(within(header('Nodes')).getByRole('button'))
+    unmount()
+    render(<SortableList />)
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('shows no column as sorted under the built-in default order', () => {
+    render(<SortableList favorites />)
+    expect(header('Name')).toHaveAttribute('aria-sort', 'none')
+    expect(header('Nodes')).toHaveAttribute('aria-sort', 'none')
+    fireEvent.click(within(header('Name')).getByRole('button'))
+    expect(header('Name')).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('keeps the header row in view as the rows scroll', () => {
+    render(<SortableList />)
+    const thead = screen.getAllByRole('rowgroup')[0]
+    expect(thead?.tagName).toBe('THEAD')
+    expect(thead).toHaveClass('sticky', 'top-(--table-header-top,0px)', 'z-(--layer-sticky)')
   })
 })

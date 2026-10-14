@@ -23,6 +23,10 @@ export interface ColumnDef {
    * column there: for something short that compares best lined up, like a
    * total. The first column never stacks; it is what the others stack under. */
   stack?: boolean
+  /** The `value` of the {@link OrderByOption} this column sorts by. Its header
+   * then sorts the list: it shows, and sets, the same order as Display
+   * options' Ordering. */
+  orderBy?: string
 }
 
 /** Column responsive importance; `low` drops before `medium`. See {@link ColumnDef.priority}. */
@@ -91,6 +95,8 @@ export interface ListViewConfig<T> {
   actions?: ActionDef[]
   /** Explicit pinned-button count when not using actions+isPinned; sizes the actions column. */
   actionCount?: number
+  /** Whether the column-header row shows before the user changes Display
+   * options (default true). */
   defaultShowColumnHeaders?: boolean
   /** Whether row action affordances show before the user changes Display options. */
   defaultShowActions?: boolean
@@ -140,6 +146,9 @@ export interface ListView<T> extends ListViewChrome {
   setOrderBy: (value: string) => void
   orderDir: OrderDir
   toggleOrderDir: () => void
+  /** Orders by `value` ascending, or flips the direction when the list
+   * already orders by it: a sortable column header's click. */
+  sortBy: (value: string) => void
   applyOrder: (rows: T[]) => T[]
   facets: FilterFacet<T>[]
   filters: Record<string, string[]>
@@ -150,7 +159,7 @@ export interface ListView<T> extends ListViewChrome {
   actions: ActionDef[]
   isPinned: (key: string) => boolean
   togglePinned: (key: string) => void
-  /** Whether the table renders its column-header row (default off). */
+  /** Whether the table renders its column-header row (default on). */
   showColumnHeaders: boolean
   toggleColumnHeaders: () => void
   /** Toggle whether rows expose action affordances. */
@@ -177,7 +186,7 @@ export function useListView<T>({
   facets = [],
   actions = [],
   actionCount,
-  defaultShowColumnHeaders = false,
+  defaultShowColumnHeaders = true,
   defaultShowActions = true,
   isFavorite,
   isOn,
@@ -386,6 +395,17 @@ export function useListView<T>({
     () => setOrderDir((d) => (d === 'asc' ? 'desc' : 'asc')),
     [setOrderDir],
   )
+  const sortBy = useCallback(
+    (value: string) => {
+      if (value === orderBy) {
+        toggleOrderDir()
+        return
+      }
+      setOrderBy(value)
+      setOrderDir('asc')
+    },
+    [orderBy, toggleOrderDir, setOrderBy, setOrderDir],
+  )
   const applyOrder = useCallback(
     (rows: T[]) => {
       const opt = effectiveOrderBys.find((o) => o.value === orderBy)
@@ -468,6 +488,7 @@ export function useListView<T>({
     setOrderBy,
     orderDir,
     toggleOrderDir,
+    sortBy,
     applyOrder,
     facets,
     filters,

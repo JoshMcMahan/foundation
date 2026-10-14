@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../components/Button'
-import Callout from '../components/Callout'
+import { Callout } from '../components/Callout'
 import { IconButton } from '../components/IconButton'
 import { type BarTone, ProgressBar } from '../components/Meter'
 import { type UIStrings, useStrings } from '../components/Provider'
@@ -358,7 +358,7 @@ export function UploadSessionToast({
 
             {/* Warning for active uploads */}
             {isUploading && (
-              <Callout type="warning" className="my-0 mb-4 px-3 py-2 text-xs">
+              <Callout tone="warning" size="sm" className="mb-4">
                 {strings.keepPageOpen}
               </Callout>
             )}

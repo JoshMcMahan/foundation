@@ -11,21 +11,27 @@ import { ErrorIcon } from '../icons'
 const NAME_TEXT = 'font-medium text-[13px] leading-tight text-(--theme-app) truncate'
 const SUBTITLE_TEXT = 'text-xs leading-tight text-(--theme-muted-text-color) truncate'
 
-/** table-auto + horizontal scroll; the name column has a min-width floor so it can't be crushed. */
+/** table-auto; the name column has a min-width floor so it can't be crushed.
+ *  The header row sticks as the rows scroll, so the list's scrolling box
+ *  (`ListPage`'s body) scrolls it sideways too. */
 export const listTableProps = {
   borderless: true,
+  stickyHeader: true,
   panel: false,
   rounded: false,
-  theadClassName: 'text-(--theme-muted-text-color)',
+  // Opaque, as the rows scroll under it.
+  theadClassName: 'bg-(--theme-app-bg) text-(--theme-muted-text-color)',
   tbodyClassName: 'divide-y border-b border-(--theme-border) divide-(--theme-border)',
   className:
     'table-auto w-full [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4',
 } as const
 
 /** Widths come only from the header row, so a windowed body cannot shift the
- *  columns as different content scrolls into view. */
+ *  columns as different content scrolls into view. The windowed table scrolls
+ *  in its own box, so its header doesn't stick. */
 export const listTableFixedProps = {
   ...listTableProps,
+  stickyHeader: false,
   className: listTableProps.className.replace('table-auto', 'table-fixed'),
 } as const
 

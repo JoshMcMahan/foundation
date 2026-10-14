@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { Button } from '../components/Button'
 import { buttonClasses } from '../components/buttonClasses'
-import Callout from '../components/Callout'
+import { Callout } from '../components/Callout'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useContextMenu } from '../components/ContextMenu'
 import { CopyButton, CopyCodeBlock } from '../components/CopyButton'
@@ -2094,8 +2094,7 @@ export default function FileExplorer({
             </span>
           </div>
           {isUploadSizeExceeded(pendingUpload?.totalSize ?? 0) && (
-            <Callout type="warning" className="my-0 mt-3">
-              <div className="font-semibold mb-1">{t.confirmUpload.sizeLimitTitle}</div>
+            <Callout tone="warning" title={t.confirmUpload.sizeLimitTitle} className="mt-3">
               <p>
                 {t.confirmUpload.sizeLimitBody(
                   formatBytes(pendingUpload?.totalSize ?? 0),

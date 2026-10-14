@@ -337,6 +337,34 @@ function TablesDemo({ density }: { density: TableDensity }) {
   )
 }
 
+/** In a box that scrolls, `stickyHeader` keeps the column titles in view
+ *  while the rows pass under them. */
+export const StickyTableHeader: StoryObj<{ stickyHeader: boolean }> = {
+  args: { stickyHeader: true },
+  argTypes: { stickyHeader: { control: 'boolean' } },
+  render: ({ stickyHeader }) => (
+    // Sizes are inline: the package's stylesheet doesn't scan stories.
+    <div className="overflow-auto rounded-md border theme-border" style={{ height: '16rem' }}>
+      <Table borderless panel={false} stickyHeader={stickyHeader}>
+        <Table.Header>Name</Table.Header>
+        <Table.Header>Region</Table.Header>
+        <Table.Header className="text-right">Nodes</Table.Header>
+        {Array.from({ length: 24 }, (_, i) => {
+          const cluster = clusters[i % clusters.length] ?? clusters[0]
+          const name = `${cluster?.name}-${i + 1}`
+          return (
+            <tr key={name}>
+              <Table.Item>{name}</Table.Item>
+              <Table.Item>{cluster?.region}</Table.Item>
+              <Table.Item className="text-right tabular-nums">{cluster?.nodes}</Table.Item>
+            </tr>
+          )
+        })}
+      </Table>
+    </div>
+  ),
+}
+
 /** Column titles line up with the values under them. A sortable column's title is a
  *  button that says its direction; an unsorted one shows its mark on hover and focus.
  *  `compact` fits a short list of keys and values. */
