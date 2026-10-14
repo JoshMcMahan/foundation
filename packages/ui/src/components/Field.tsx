@@ -1,8 +1,9 @@
 import { Field as BaseField } from '@base-ui/react/field'
 import { Fieldset } from '@base-ui/react/fieldset'
-import { createContext, type ReactNode, use, useId } from 'react'
+import { createContext, type OutputHTMLAttributes, type ReactNode, use, useId } from 'react'
 import { cx } from '../cx'
 import { EyeIcon, EyeOffIcon, WarningIcon } from '../icons'
+import type { FieldBoxSize } from './fieldBox'
 import { useStrings } from './Provider'
 import { RequiredMark } from './RequiredMark'
 
@@ -58,7 +59,8 @@ export interface FieldProps {
   id?: string | undefined
   className?: string | undefined
   /** The control, or a function that places the control props on it. A Base UI control, such
-   *  as Select, Combobox, NumberInput, Checkbox or Switch, needs only the `id`. */
+   *  as Select, Combobox, NumberInput, Checkbox or Switch, needs only the `id`. A value shown
+   *  but not edited goes in a `FieldValue`. */
   children: ReactNode | ((control: FieldControlProps) => ReactNode)
 }
 
@@ -66,11 +68,12 @@ const labelClassName = 'flex items-center gap-1 text-sm font-medium text-(--them
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
 const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-error)'
 
-/** An error in the look a Field gives its own, for one under a part of a control rather than
- *  the whole of it, such as a row of a list editor. */
-export function ErrorText({ children }: { children: ReactNode }) {
+/** An error in the look a Field gives its own, for a control outside a Field, or for a part of
+ *  one rather than the whole of it, such as a row of a list editor. Give it an `id` and name it
+ *  in the control's `aria-describedby` so the error is read with the control. */
+export function ErrorText({ id, children }: { id?: string | undefined; children: ReactNode }) {
   return children ? (
-    <div role="alert" className={errorTextClassName}>
+    <div id={id} role="alert" className={errorTextClassName}>
       <WarningIcon aria-hidden="true" className="size-3.5 shrink-0" />
       {children}
     </div>
@@ -248,5 +251,33 @@ export function RevealToggle({
     >
       <Icon aria-hidden="true" className="size-4" />
     </button>
+  )
+}
+
+export interface FieldValueProps extends OutputHTMLAttributes<HTMLOutputElement> {
+  /** Matches the height and text of the controls around it, as `size` does on a control. */
+  size?: FieldBoxSize | undefined
+}
+
+/** A value a Field shows that nobody edits, such as one worked out from other fields. It is an
+ *  `<output>`, which the Field's label names and which reads out when the value changes; list
+ *  the controls it is worked out from in `htmlFor`. It keeps a control's height, so it lines
+ *  up with the fields around it. For a set of names and values on their own, use
+ *  DescriptionList. */
+export function FieldValue({ size = 'md', className, children, ...props }: FieldValueProps) {
+  const control = useFieldControl()
+  return (
+    <output
+      id={control?.id}
+      aria-describedby={control?.['aria-describedby']}
+      {...props}
+      className={cx(
+        'flex min-w-0 items-center break-words text-(--theme-app)',
+        size === 'sm' ? 'min-h-7 text-xs' : 'min-h-9 text-sm',
+        className,
+      )}
+    >
+      {children}
+    </output>
   )
 }

@@ -476,7 +476,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
                       'theme-text block w-full resize-none overflow-hidden',
                       'bg-transparent border-0 px-4',
                       toolbar ? 'pt-3.5 pb-1' : 'pt-3 pb-1',
-                      'placeholder:theme-muted-text',
+                      'placeholder:text-(--theme-placeholder)',
                       'focus:outline-none focus:ring-0',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
                       'text-[1rem] leading-relaxed',

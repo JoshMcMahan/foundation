@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { cx } from '../cx'
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { buttonClasses } from './buttonClasses'
-import { fieldBox } from './fieldBox'
+import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
 import { useStrings } from './Provider'
 
@@ -31,6 +31,9 @@ export interface DatePickerProps {
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
+  /** `sm` for dense places such as toolbars and table cells. */
+  size?: FieldBoxSize | undefined
+  /** On the row that holds the date and the time: its width or margin. */
   className?: string | undefined
 }
 
@@ -93,11 +96,13 @@ const calendarClassNames: Partial<ClassNames> = {
   disabled: 'text-(--theme-muted-text-color) opacity-40',
 }
 
-const triggerClassName = cx(
-  fieldBox(),
-  // Fills its field as every other control does; the time beside it keeps to its content.
-  'flex flex-1 min-w-40 cursor-pointer items-center gap-2 text-left',
-)
+const triggerClassName = (size: FieldBoxSize) =>
+  cx(
+    fieldBox({ size }),
+    // Fills its field as every other control does; the time beside it keeps to its content.
+    'flex flex-1 cursor-pointer items-center text-left',
+    size === 'sm' ? 'min-w-32 gap-1.5' : 'min-w-40 gap-2',
+  )
 
 /**
  * A day from a calendar, and with `withTime` a time beside it. The value is a string as a native
@@ -120,6 +125,7 @@ export function DatePicker({
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
   'aria-required': ariaRequired,
+  size = 'md',
   className,
 }: DatePickerProps) {
   const t = useStrings().datePicker
@@ -154,7 +160,7 @@ export function DatePicker({
     day !== undefined && parseDay(bound)?.getTime() === day.getTime()
 
   return (
-    <div className={cx('flex w-full items-center gap-2', className)}>
+    <div className={cx('flex w-full items-center', size === 'sm' ? 'gap-1.5' : 'gap-2', className)}>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger
           id={id}
@@ -164,13 +170,16 @@ export function DatePicker({
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
           aria-required={ariaRequired || undefined}
-          className={triggerClassName}
+          className={triggerClassName(size)}
         >
           <CalendarIcon
             aria-hidden="true"
-            className="size-3.5 shrink-0 text-(--theme-muted-text-color)"
+            className={cx(
+              'shrink-0 text-(--theme-muted-text-color)',
+              size === 'sm' ? 'size-3' : 'size-3.5',
+            )}
           />
-          <span className={cx('truncate', !day && 'text-(--theme-muted-text-color)')}>
+          <span className={cx('truncate', !day && 'text-(--theme-placeholder)')}>
             {day ? shownDay.format(day) : (placeholder ?? t.pickDate)}
           </span>
         </Popover.Trigger>
@@ -246,7 +255,7 @@ export function DatePicker({
               emit(day ?? earliest ?? new Date(), next)
             }
           }}
-          className={cx(fieldBox(), 'w-auto tabular-nums')}
+          className={cx(fieldBox({ size }), 'w-auto tabular-nums')}
         />
       )}
     </div>

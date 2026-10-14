@@ -19,7 +19,7 @@ const sizes = {
 } satisfies Record<FieldBoxSize, Record<string, string>>
 
 const base =
-  'w-full min-w-0 rounded-md border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-muted-text-color)'
+  'w-full min-w-0 rounded-md border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder)'
 
 // One look for every state, on the control itself, or on the box around it with `within`.
 const own = cx(

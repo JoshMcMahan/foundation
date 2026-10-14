@@ -243,7 +243,7 @@ export function CreateModal({
                   // Padding gives the ring/flash box breathing room; the
                   // negative margins cancel it out so the text keeps the same
                   // position as the unpadded layout.
-                  'mt-2 -mb-1 -mx-1.5 w-[calc(100%+0.75rem)] rounded-md border-0 px-1.5 py-1 bg-transparent shadow-none text-lg font-medium text-(--theme-app) placeholder:text-(--theme-muted-text-color) focus:outline-none',
+                  'mt-2 -mb-1 -mx-1.5 w-[calc(100%+0.75rem)] rounded-md border-0 px-1.5 py-1 bg-transparent shadow-none text-lg font-medium text-(--theme-app) placeholder:text-(--theme-placeholder) focus:outline-none',
                   nameFlash && 'animate-field-flash',
                   nameMissing ? 'ring-1 ring-(--theme-error)' : 'focus:ring-0',
                 )}
@@ -259,7 +259,7 @@ export function CreateModal({
                   placeholder={descriptionText}
                   aria-label={descriptionText}
                   rows={3}
-                  className="mt-1.5 w-full border-0 p-0 bg-transparent shadow-none resize-none text-sm text-(--theme-app) placeholder:text-(--theme-muted-text-color) focus:outline-none focus:ring-0"
+                  className="mt-1.5 w-full border-0 p-0 bg-transparent shadow-none resize-none text-sm text-(--theme-app) placeholder:text-(--theme-placeholder) focus:outline-none focus:ring-0"
                 />
               ) : (
                 <div className="mt-3" />

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deltaE, JND, oklch, parseColor, toHex } from './color'
 import { contrastRatio, measure, type Shown, shownValue } from './contrast'
+import { PLACEHOLDER_ON } from './derive'
 import {
   applyTheme,
   CODE_STYLES,
@@ -134,7 +135,7 @@ function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, numbe
   }
   on('--theme-app', TEXT_ON, 4.5, 75)
   on('--theme-muted-text-color', TEXT_ON, 4.5, 60)
-  on('--theme-placeholder', ['--theme-input-bg', '--theme-input-disabled-bg'], 3, 45)
+  on('--theme-placeholder', PLACEHOLDER_ON, 3, 45)
   on('--theme-link', ['--theme-app-bg', '--theme-panel-bg', '--theme-hover'], 4.5, 60)
   on('--theme-focus', ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'], 3)
   on('--theme-accent-text', ['--theme-accent', '--theme-accent-hover'], 4.5)
@@ -175,6 +176,19 @@ describe('generateTheme', () => {
           expect(got.wcag, `${fg} WCAG`).toBeGreaterThanOrEqual(wcag)
           expect(got.apca, `${fg} APCA`).toBeGreaterThanOrEqual(apca)
         }
+      }
+    },
+  )
+
+  it.each(GRID)(
+    'keeps a placeholder lighter than a value on $base with $accent at contrast $contrast',
+    (seed) => {
+      const vars = deriveTheme({ interface: seed })
+      for (const bg of PLACEHOLDER_ON) {
+        const surface = shownOf(vars, bg)
+        const hint = measure(shownOf(vars, '--theme-placeholder'), surface)
+        const muted = measure(shownOf(vars, '--theme-muted-text-color'), surface)
+        expect(hint.wcag, bg).toBeLessThan(muted.wcag)
       }
     },
   )

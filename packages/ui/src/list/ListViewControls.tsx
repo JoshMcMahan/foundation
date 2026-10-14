@@ -283,7 +283,7 @@ function FacetSubmenu<T>({ view, facet }: { view: ListView<T>; facet: FilterFace
               <Menu.Input
                 placeholder={strings.list.searchOptions}
                 aria-label={strings.list.searchOptions}
-                className="w-full bg-transparent text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-muted-text-color)"
+                className="w-full bg-transparent text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-placeholder)"
               />
             </div>
             <Menu.List>{rows}</Menu.List>

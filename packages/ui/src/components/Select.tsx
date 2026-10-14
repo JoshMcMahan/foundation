@@ -2,7 +2,7 @@ import { Select as BaseSelect } from '@base-ui/react/select'
 import type { ReactElement, ReactNode } from 'react'
 import { cx } from '../cx'
 import { CheckIcon, ChevronDownIcon } from '../icons'
-import { fieldBox } from './fieldBox'
+import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 import { Tooltip } from './Tooltip'
 
@@ -34,7 +34,7 @@ export type SelectProps<Value, Multiple extends boolean | undefined = false> = O
   /** A hint on the trigger button. */
   triggerTooltip?: ReactNode
   /** `sm` for dense places such as toolbars and table cells. */
-  size?: 'sm' | 'md' | undefined
+  size?: FieldBoxSize | undefined
   /** The item a person is on as they move through the open list, then undefined once it
    *  closes, such as to preview a theme before it is chosen. */
   onItemHighlighted?: ((value: Value | undefined) => void) | undefined
@@ -89,7 +89,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
         >
           <BaseSelect.Value
             placeholder={placeholder}
-            className="truncate data-placeholder:text-(--theme-muted-text-color)"
+            className="truncate data-placeholder:text-(--theme-placeholder)"
           >
             {rootProps.multiple
               ? (values: Value[]) =>

@@ -144,6 +144,16 @@ function byContrast(k: number, [at0, at30, at100]: [number, number, number]): nu
   return k <= 30 ? at0 + ((at30 - at0) * k) / 30 : at30 + ((at100 - at30) * (k - 30)) / 70
 }
 
+/** The surfaces placeholder and disabled text sit on: field boxes, and the bare inputs of
+ *  search bars, menus and dialogs that take their surface's background. */
+export const PLACEHOLDER_ON: ThemeToken[] = [
+  '--theme-input-bg',
+  '--theme-input-disabled-bg',
+  '--theme-app-bg',
+  '--theme-panel-bg',
+  '--theme-muted-panel-bg',
+]
+
 /** The roles' targets at a contrast. WCAG AA is the floor at every contrast. */
 function targets(k: number) {
   const at = (wcag: [number, number, number], apca: [number, number, number]): ContrastTarget => ({
@@ -153,6 +163,9 @@ function targets(k: number) {
   return {
     primary: at([4.5, 7, 12], [75, 90, 105]),
     secondary: at([4.5, 4.5, 7], [60, 70, 85]),
+    // Placeholder and disabled text: below secondary at every contrast, so a hint never reads
+    // as a typed value, yet at the 3:1 of large text and UI so it stays legible. WCAG doesn't
+    // hold a placeholder to 4.5:1; APCA's guidance puts such hints near Lc 45.
     placeholder: at([3, 3, 4.5], [45, 50, 65]),
     // A focus indicator and a control's boundary are UI, which WCAG 2 holds to 3:1.
     focus: { wcag: byContrast(k, [3, 3, 4.5]) },
@@ -296,12 +309,7 @@ function build(
   ]
   solved('--theme-app', ink, textOn, t.primary)
   solved('--theme-muted-text-color', ink, textOn, t.secondary)
-  solved(
-    '--theme-placeholder',
-    ink,
-    ['--theme-input-bg', '--theme-input-disabled-bg', '--theme-app-bg', '--theme-panel-bg'],
-    t.placeholder,
-  )
+  solved('--theme-placeholder', ink, PLACEHOLDER_ON, t.placeholder)
   solved(
     '--theme-link',
     accent,

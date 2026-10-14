@@ -150,7 +150,7 @@ export function ListSearchControl({
             }
           }}
           placeholder={placeholder}
-          className="min-w-24 flex-1 bg-transparent text-[13px] text-(--theme-app) placeholder:text-(--theme-muted-text-color) focus:outline-none"
+          className="min-w-24 flex-1 bg-transparent text-[13px] text-(--theme-app) placeholder:text-(--theme-placeholder) focus:outline-none"
         />
         <button
           type="button"

@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'rea
 import { forwardRef, useState } from 'react'
 import { cx } from '../cx'
 import { Field, type FieldControlProps, RevealToggle } from './Field'
-import { fieldBox } from './fieldBox'
+import { type FieldBoxSize, fieldBox } from './fieldBox'
 
 interface FramedProps {
   /** Without a label the box stands alone; name it with `aria-label`. */
@@ -13,15 +13,20 @@ interface FramedProps {
   description?: ReactNode
   error?: ReactNode
   mono?: boolean
+  /** `sm` for dense places such as toolbars and table cells. */
+  size?: FieldBoxSize | undefined
 }
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement>, FramedProps {}
+// `size` is the box's, not the native character count, which CSS sets better.
+export interface InputProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>,
+    FramedProps {}
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement>, FramedProps {}
 
 /** The Field around a control when it has a label; the control alone when it doesn't. */
-function framed(
-  { label, hint, description, error }: FramedProps,
+export function framed(
+  { label, hint, description, error }: Omit<FramedProps, 'mono' | 'size'>,
   {
     id,
     required,
@@ -49,7 +54,7 @@ function framed(
 
 /** A single-line text field. `type="password"` adds a button that shows what was typed. */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, hint, description, error, className, mono, type, ...props }, ref) => {
+  ({ label, hint, description, error, className, mono, size, type, ...props }, ref) => {
     const [revealed, setRevealed] = useState(false)
     const secret = type === 'password'
     return framed({ label, hint, description, error }, props, (control) => {
@@ -64,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             undefined
           }
           type={secret && revealed ? 'text' : type}
-          className={cx(fieldBox(), mono && 'font-mono', secret && 'pr-9', className)}
+          className={cx(fieldBox({ size }), mono && 'font-mono', secret && 'pr-9', className)}
         />
       )
       return secret ? (
@@ -87,7 +92,7 @@ Input.displayName = 'Input'
 
 /** A multi-line text field that grows by hand. */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, hint, description, error, className, mono, ...props }, ref) =>
+  ({ label, hint, description, error, className, mono, size, ...props }, ref) =>
     framed({ label, hint, description, error }, props, (control) => (
       <textarea
         ref={ref}
@@ -99,8 +104,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           undefined
         }
         className={cx(
-          fieldBox({ multiline: true }),
-          'min-h-24 resize-y',
+          fieldBox({ size, multiline: true }),
+          size === 'sm' ? 'min-h-16' : 'min-h-24',
+          'resize-y',
           mono && 'font-mono',
           className,
         )}

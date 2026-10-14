@@ -109,7 +109,7 @@ export function MenuEntries({
         <Menu.Input
           aria-label={search.placeholder}
           placeholder={search.placeholder}
-          className="w-full rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-1 text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-muted-text-color) focus:border-(--theme-accent)"
+          className="w-full rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-1 text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-placeholder) focus:border-(--theme-accent)"
         />
       </div>
       <Menu.List>

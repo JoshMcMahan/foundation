@@ -32,7 +32,11 @@ Each need has one component. Reach for it before styling markup by hand.
 | Work under way | `Loader`; `Skeleton` in a `LoadingRegion` for the shape of content still loading |
 | Nothing to show yet, or nothing matches | `EmptyState` |
 | A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
-| A number, a date | `NumberInput`, `DatePicker` |
+| A number, a date, a color | `NumberInput`, `DatePicker`, `ColorInput` |
+| A one-time code, such as a sign-in check | `OneTimeCodeInput` |
+| A labeled value nobody edits, among fields | `FieldValue` in a `Field`; `DescriptionList` for a set of them alone |
+| An error beside a control outside a `Field` | `ErrorText` |
+| A dense field in a toolbar or a table cell | any field control with `size="sm"`; a width in `className` wins, and `cx` merges classes the same way |
 | On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on |
 | One of a few choices, all shown | `RadioGroup` in a form; `SegmentedControl` in a toolbar, or as a field's control in a `Field group` |
 | Narrowing a list by values, such as statuses: several at once, or one or none | `ToggleGroup` |

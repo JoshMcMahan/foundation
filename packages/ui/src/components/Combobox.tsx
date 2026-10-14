@@ -22,7 +22,7 @@ import {
   type ComboboxLeaf,
   isComboboxGroup as isGroup,
 } from './comboboxItems'
-import { fieldBox } from './fieldBox'
+import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelItemClassName, positionerClassName } from './floating'
 import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
@@ -45,7 +45,9 @@ interface FieldProps {
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
-  /** Classes for the field box: border, background, size. */
+  /** `sm` for dense places such as toolbars and table cells. */
+  size?: FieldBoxSize | undefined
+  /** Classes for the field box: border, background, width. */
   className?: string | undefined
 }
 
@@ -172,12 +174,18 @@ function useEntryFilter() {
 
 const entryLabel = <Value,>(entry: Entry<Value> | null) => entry?.label ?? ''
 
-const fieldClassName = cx(
-  fieldBox({ within: true, multiline: true, padded: false }),
-  'relative flex items-center gap-1',
-)
-const inputClassName =
-  'h-full min-w-12 flex-1 self-stretch border-0 bg-transparent py-1.5 pl-3 text-inherit outline-none placeholder:text-(--theme-muted-text-color) disabled:cursor-not-allowed'
+const fieldClassName = (size: FieldBoxSize) =>
+  cx(
+    fieldBox({ size, within: true, multiline: true, padded: false }),
+    'relative flex items-center gap-1',
+  )
+// Stretched to the box rather than padded to it, so the text centers as a Select's does; among
+// chips the row pads itself, so the box keeps its height until the chips wrap.
+const inputClassName = (size: FieldBoxSize) =>
+  cx(
+    'min-w-12 flex-1 self-stretch border-0 bg-transparent p-0 text-inherit outline-none placeholder:text-(--theme-placeholder) disabled:cursor-not-allowed',
+    size === 'sm' ? 'pl-2' : 'pl-3',
+  )
 const triggerClassName =
   'flex shrink-0 items-center self-stretch px-2 text-(--theme-muted-text-color) disabled:cursor-not-allowed'
 const popupInputClassName = fieldBox({ size: 'sm' })
@@ -200,6 +208,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     'aria-required': ariaRequired,
     trigger,
     triggerTooltip,
+    size = 'md',
   } = props
   const entries = useEntries(items)
   const filter = useEntryFilter()
@@ -269,7 +278,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       aria-invalid={ariaInvalid || undefined}
       aria-required={ariaRequired || required || undefined}
       autoComplete="off"
-      className={trigger ? popupInputClassName : inputClassName}
+      className={trigger ? popupInputClassName : inputClassName(size)}
     />
   )
 
@@ -313,9 +322,17 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     </>
   ) : (
     <>
-      <BaseCombobox.InputGroup data-testid="combobox" className={cx(fieldClassName, className)}>
+      <BaseCombobox.InputGroup
+        data-testid="combobox"
+        className={cx(fieldClassName(size), className)}
+      >
         {props.multiple ? (
-          <BaseCombobox.Chips className="flex min-w-0 flex-1 flex-wrap items-center gap-1 py-1 pl-1">
+          <BaseCombobox.Chips
+            className={cx(
+              'flex min-w-0 flex-1 flex-wrap items-center gap-1 pl-1',
+              size === 'sm' ? 'py-0.5' : 'py-1',
+            )}
+          >
             <BaseCombobox.Value>
               {(values: Entry<Value>[]) =>
                 values.map((entry) => (
@@ -340,7 +357,9 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
         ) : (
           <>
             {selectedIcon && (
-              <span className="flex shrink-0 items-center pl-3">{selectedIcon}</span>
+              <span className={cx('flex shrink-0 items-center', size === 'sm' ? 'pl-2' : 'pl-3')}>
+                {selectedIcon}
+              </span>
             )}
             {input}
           </>
@@ -414,6 +433,7 @@ export function Autocomplete({
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
   'aria-required': ariaRequired,
+  size = 'md',
 }: AutocompleteProps) {
   const entries = useEntries(items)
   const filter = useEntryFilter()
@@ -434,7 +454,10 @@ export function Autocomplete({
       required={required}
       virtualized
     >
-      <BaseAutocomplete.InputGroup data-testid="combobox" className={cx(fieldClassName, className)}>
+      <BaseAutocomplete.InputGroup
+        data-testid="combobox"
+        className={cx(fieldClassName(size), className)}
+      >
         <BaseAutocomplete.Input
           id={id}
           placeholder={placeholder}
@@ -444,7 +467,7 @@ export function Autocomplete({
           aria-invalid={ariaInvalid || undefined}
           aria-required={ariaRequired || required || undefined}
           autoComplete="off"
-          className={inputClassName}
+          className={inputClassName(size)}
         />
         {entries.flat.length > 0 && (
           <BaseAutocomplete.Trigger

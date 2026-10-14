@@ -21,6 +21,7 @@ import {
   toHex,
 } from '../theme/index'
 import { Button } from './Button'
+import { ColorInput } from './ColorInput'
 import { Disclosure } from './Disclosure'
 import { Field } from './Field'
 import { fieldBox } from './fieldBox'
@@ -140,11 +141,11 @@ export function ThemeEditor({
             onValueChange={setEditing}
           />
         </Field>
-        <ColorField label={t.base} value={seed.base} onChange={(base) => setSeed({ base })} />
-        <ColorField
+        <ColorInput label={t.base} value={seed.base} onValueChange={(base) => setSeed({ base })} />
+        <ColorInput
           label={t.accent}
           value={seed.accent}
-          onChange={(accent) => setSeed({ accent })}
+          onValueChange={(accent) => setSeed({ accent })}
         />
         <Field
           label={t.contrast}
@@ -175,15 +176,17 @@ export function ThemeEditor({
         </label>
         {scheme.sidebar && (
           <div className="flex flex-col gap-5 border-l-2 border-(--theme-border) pl-4">
-            <ColorField
+            <ColorInput
               label={t.sidebarBase}
               value={scheme.sidebar.base ?? derived['--theme-sidebar-bg']}
-              onChange={(base) => update({ ...scheme, sidebar: { ...scheme.sidebar, base } })}
+              onValueChange={(base) => update({ ...scheme, sidebar: { ...scheme.sidebar, base } })}
             />
-            <ColorField
+            <ColorInput
               label={t.sidebarAccent}
               value={scheme.sidebar.accent ?? seed.accent}
-              onChange={(accent) => update({ ...scheme, sidebar: { ...scheme.sidebar, accent } })}
+              onValueChange={(accent) =>
+                update({ ...scheme, sidebar: { ...scheme.sidebar, accent } })
+              }
             />
           </div>
         )}
@@ -225,58 +228,6 @@ function Swatch({ colors }: { colors: string[] }) {
         />
       ))}
     </span>
-  )
-}
-
-/** A color as a picker beside a hex field. A half-typed hex stays in the field, marked, until it parses. */
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (color: string) => void
-}) {
-  const { theme: t } = useStrings()
-  const [draft, setDraft] = useState<string | null>(null)
-  const parsed = parseColor(value)
-  const hex = parsed ? toHex(parsed) : '#000000'
-  const invalid = draft !== null && parseColor(draft) === null
-  return (
-    <Field label={label} error={invalid ? t.invalidColor : undefined}>
-      {(control) => (
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            aria-label={t.pick(label)}
-            value={hex}
-            onChange={(e) => {
-              setDraft(null)
-              onChange(e.target.value)
-            }}
-            className="h-8 w-10 shrink-0 cursor-pointer rounded-md border border-(--theme-border) bg-transparent p-0.5"
-          />
-          <input
-            {...control}
-            className={fieldBox({ size: 'sm' })}
-            spellCheck={false}
-            value={draft ?? value}
-            onChange={(e) => {
-              const text = e.target.value
-              const color = parseColor(text)
-              if (color) {
-                setDraft(null)
-                onChange(text.trim().toLowerCase())
-              } else {
-                setDraft(text)
-              }
-            }}
-            onBlur={() => setDraft(null)}
-          />
-        </div>
-      )}
-    </Field>
   )
 }
 

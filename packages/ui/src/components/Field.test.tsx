@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { Checkbox } from './Checkbox'
-import { Field, FieldOption, FieldRowContext, RevealToggle } from './Field'
+import { ErrorText, Field, FieldOption, FieldRowContext, FieldValue, RevealToggle } from './Field'
 import { fieldBox } from './fieldBox'
 import { Radio, RadioGroup } from './Radio'
 import { Slider } from './Slider'
@@ -158,5 +158,34 @@ describe('Slider', () => {
     expect(thumb).toHaveAttribute('aria-valuenow', '4')
     fireEvent.keyDown(thumb, { key: 'ArrowRight' })
     expect(onValueChange).toHaveBeenLastCalledWith(5)
+  })
+})
+
+describe('FieldValue', () => {
+  it('is an output the Field’s label names and its help describes', () => {
+    render(
+      <Field label="Allocation" description="Workers times GPUs per worker.">
+        <FieldValue htmlFor="workers">8 GPUs</FieldValue>
+      </Field>,
+    )
+    const value = screen.getByRole('status', { name: 'Allocation' })
+    expect(value.tagName).toBe('OUTPUT')
+    expect(value).toHaveTextContent('8 GPUs')
+    expect(value).toHaveAccessibleDescription('Workers times GPUs per worker.')
+    expect(value).toHaveAttribute('for', 'workers')
+  })
+})
+
+describe('ErrorText', () => {
+  it('describes a control outside a Field by its id, and is nothing when empty', () => {
+    const { rerender } = render(
+      <>
+        <input aria-label="Name" aria-describedby="name-error" />
+        <ErrorText id="name-error">Taken</ErrorText>
+      </>,
+    )
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription('Taken')
+    rerender(<ErrorText id="name-error">{null}</ErrorText>)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

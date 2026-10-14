@@ -13,6 +13,7 @@ export interface SearchInputProps
   onValueChange: (value: string) => void
   /** Names the box, and is its placeholder unless `placeholder` says otherwise. */
   label?: string | undefined
+  /** `sm` for dense places such as toolbars and table cells. */
   size?: FieldBoxSize | undefined
   /** On the wrapper: its width or margin. */
   className?: string | undefined

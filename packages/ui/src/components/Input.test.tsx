@@ -4,6 +4,15 @@ import { render, screen } from '@testing-library/react'
 import { Input, Textarea } from './Input'
 
 describe('Input', () => {
+  it('draws the small box at size sm, and lets a host class win over its own', () => {
+    render(<Input aria-label="Filter" size="sm" className="w-40" />)
+
+    const input = screen.getByRole('textbox', { name: 'Filter' })
+    expect(input).toHaveClass('h-7', 'text-xs', 'w-40')
+    expect(input).not.toHaveClass('w-full')
+    expect(input).not.toHaveAttribute('size')
+  })
+
   it('associates the label with the input when no id is given', () => {
     render(<Input label="Email" />)
 

@@ -118,6 +118,16 @@ export interface UIStrings {
     previousMonth: string
     nextMonth: string
   }
+  colorInput: {
+    /** Names the picker beside the hex field: the field's name, or none when it has no plain one. */
+    pick: (name?: string) => string
+    /** Under the hex field while what is typed isn't a color. */
+    invalid: string
+  }
+  oneTimeCode: {
+    /** Names each box after the first, which the field's label names. */
+    character: (position: number, length: number) => string
+  }
   theme: {
     /** Names the light, dark or system choice. */
     appearance: string
@@ -139,9 +149,6 @@ export interface UIStrings {
     sidebarAccent: string
     code: string
     codeStyle: (style: 'balanced' | 'vivid' | 'muted' | 'mono') => string
-    /** Names a color input's picker, beside its hex field. */
-    pick: (name: string) => string
-    invalidColor: string
     copy: string
     /** The thing a copy toast names. */
     copied: string
@@ -752,6 +759,13 @@ const DEFAULTS: UIProviderValue = {
       previousMonth: 'Previous month',
       nextMonth: 'Next month',
     },
+    colorInput: {
+      pick: (name) => (name ? `Pick ${name.toLowerCase()}` : 'Pick a color'),
+      invalid: 'Enter a hex color, such as #1f6feb.',
+    },
+    oneTimeCode: {
+      character: (position, length) => `Character ${position} of ${length}`,
+    },
     theme: {
       appearance: 'Appearance',
       light: 'Light',
@@ -769,8 +783,6 @@ const DEFAULTS: UIProviderValue = {
       code: 'Code',
       codeStyle: (style) =>
         ({ balanced: 'Balanced', vivid: 'Vivid', muted: 'Muted', mono: 'Monochrome' })[style],
-      pick: (name) => `Pick ${name.toLowerCase()}`,
-      invalidColor: 'Enter a hex color, such as #1f6feb.',
       copy: 'Copy theme',
       copied: 'theme',
       import: 'Import theme',
@@ -1353,6 +1365,8 @@ export function UIProvider({
         common: { ...DEFAULTS.strings.common, ...strings?.common },
         dropdown: { ...DEFAULTS.strings.dropdown, ...strings?.dropdown },
         datePicker: { ...DEFAULTS.strings.datePicker, ...strings?.datePicker },
+        colorInput: { ...DEFAULTS.strings.colorInput, ...strings?.colorInput },
+        oneTimeCode: { ...DEFAULTS.strings.oneTimeCode, ...strings?.oneTimeCode },
         theme: { ...DEFAULTS.strings.theme, ...strings?.theme },
         logviewer: { ...DEFAULTS.strings.logviewer, ...strings?.logviewer },
         dag: { ...DEFAULTS.strings.dag, ...strings?.dag },
