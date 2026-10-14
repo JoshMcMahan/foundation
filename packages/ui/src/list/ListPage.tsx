@@ -13,7 +13,12 @@ import { useNavigation } from '../components/Provider'
 import { type SortDirection, Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { ListActionsHeader, NAME_MIN_WIDTH_PX, StretchRowLinkContext } from './ListTable'
+import {
+  HEADERS_OFF,
+  ListActionsHeader,
+  NAME_MIN_WIDTH_PX,
+  StretchRowLinkContext,
+} from './ListTable'
 import type { ListView, ListViewChrome } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
@@ -293,7 +298,10 @@ function columnSort<T>(view: ListView<T>, orderBy: string): SortDirection {
 }
 
 /** Name column min-width is by role, not position, so a leading checkbox
- *  doesn't shift it. A column with an `orderBy` the view offers sorts by it. */
+ *  doesn't shift it. A column with an `orderBy` the view offers sorts by it.
+ *  While the view's column headers are off, the header row collapses: its
+ *  cells still size the columns, but nobody sees or hears them, as with any
+ *  other display option that is off. */
 export function ListColumns<T>({ view }: { view: ListView<T> }) {
   return (
     <>
@@ -304,7 +312,12 @@ export function ListColumns<T>({ view }: { view: ListView<T> }) {
           <Table.Header
             key={col.key}
             caps={false}
-            className={cx(col.headerClassName, view.columnClasses[i])}
+            className={cx(
+              col.headerClassName,
+              view.columnClasses[i],
+              // listTableProps collapses the header row when it holds this marker.
+              !view.showColumnHeaders && HEADERS_OFF,
+            )}
             style={col.alwaysVisible ? { minWidth: NAME_MIN_WIDTH_PX } : undefined}
             sort={orderBy === undefined ? undefined : columnSort(view, orderBy)}
             onSort={orderBy === undefined ? undefined : () => view.sortBy(orderBy)}

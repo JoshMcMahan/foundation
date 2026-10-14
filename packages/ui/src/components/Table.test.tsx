@@ -73,6 +73,25 @@ describe('sortable Table.Header', () => {
     expect(onSort).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Static' })).toBeNull()
   })
+
+  it('shows the sorted column’s mark, and an unsorted one’s only on hover or focus, in reserved space', () => {
+    render(
+      <Table>
+        <Table.Header onSort={() => {}} sort="ascending">
+          Name
+        </Table.Header>
+        <Table.Header onSort={() => {}}>Size</Table.Header>
+      </Table>,
+    )
+    const mark = (name: string) =>
+      screen.getByRole('button', { name }).querySelector('svg') as SVGElement
+    expect(mark('Name')).not.toHaveClass('opacity-0')
+    expect(mark('Size')).toHaveClass(
+      'opacity-0',
+      'group-hover/sort:opacity-40',
+      'group-focus-visible/sort:opacity-40',
+    )
+  })
 })
 
 describe('Table layout', () => {

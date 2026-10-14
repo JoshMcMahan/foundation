@@ -79,13 +79,21 @@ function Header({ children, className, style, colSpan, sort, onSort, caps = true
           type="button"
           onClick={onSort}
           // In a right-aligned column the mark leads, so the title still lines up with the values.
-          className="-mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) in-[.text-right]:flex-row-reverse"
+          className="group/sort -mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) in-[.text-right]:flex-row-reverse"
         >
           {children}
-          {/* A faint mark on an unsorted column says it sorts, on touch as well as hover. */}
+          {/* Only the sorted column shows its mark at rest: a mark on every
+           * column is noise across the row. An unsorted one shows a faint mark
+           * under the pointer or keyboard focus, and always on a touch screen,
+           * which has no hover to find it with. Its space stays reserved, so
+           * the title never moves. */}
           <Icon
             aria-hidden="true"
-            className={cx('size-3.5 shrink-0', (sort ?? 'none') === 'none' && 'opacity-40')}
+            className={cx(
+              'size-3.5 shrink-0',
+              (sort ?? 'none') === 'none' &&
+                'opacity-0 group-hover/sort:opacity-40 group-focus-visible/sort:opacity-40 pointer-coarse:opacity-40',
+            )}
           />
         </button>
       ) : (

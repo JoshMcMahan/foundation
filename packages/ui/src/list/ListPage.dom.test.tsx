@@ -5,7 +5,7 @@ import { Table } from '../components/Table'
 import { memoryStorage } from '../test/storage'
 import { openTooltip } from '../test/tooltip'
 import { ListColumns, ListPage, ListRow, ListRowActionsProvider } from './ListPage'
-import { ListError, listTableProps, NameCell } from './ListTable'
+import { HEADERS_OFF, ListError, ListSelectAllHeader, listTableProps, NameCell } from './ListTable'
 import { ListDisplayMenu } from './ListViewControls'
 import { type ListViewChrome, useListView } from './listView'
 import type { RowAction } from './rowMenu'
@@ -345,5 +345,60 @@ describe('ListColumns sorting', () => {
     const thead = screen.getAllByRole('rowgroup')[0]
     expect(thead?.tagName).toBe('THEAD')
     expect(thead).toHaveClass('sticky', 'top-(--table-header-top,0px)', 'z-(--layer-sticky)')
+  })
+})
+
+describe('ListColumns with headers off', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  it('collapses the header row when Display options turns headers off, keeping its cells', () => {
+    render(<SortableList />)
+    const thead = screen.getAllByRole('rowgroup')[0] as HTMLElement
+    // The list's own thead class collapses the row once a cell carries the marker.
+    expect(thead).toHaveClass('has-[.list-headers-off]:collapse')
+    expect(thead.querySelector(`.${HEADERS_OFF}`)).toBeNull()
+
+    openDisplay()
+    fireEvent.click(screen.getByRole('switch', { name: 'Show column headers' }))
+    // The columns' cells stay to size the columns; the actions header rides along.
+    expect(thead.querySelectorAll(`th.${HEADERS_OFF}`)).toHaveLength(3)
+  })
+})
+
+describe('ListSelectAllHeader', () => {
+  const renderHeader = (selected: number, total: number, onToggle = () => {}) =>
+    render(
+      <Table>
+        <ListSelectAllHeader selected={selected} total={total} onToggle={onToggle} />
+      </Table>,
+    )
+  const box = () => screen.getByRole('checkbox', { name: 'Select all' })
+
+  it('sits in the header row', () => {
+    renderHeader(0, 3)
+    expect(box().closest('thead')).not.toBeNull()
+  })
+
+  it('is clear with nothing selected, mixed with some, and ticked with all', () => {
+    const { unmount } = renderHeader(0, 3)
+    expect(box()).toHaveAttribute('aria-checked', 'false')
+    unmount()
+    const some = renderHeader(1, 3)
+    expect(box()).toHaveAttribute('aria-checked', 'mixed')
+    some.unmount()
+    renderHeader(3, 3)
+    expect(box()).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('toggles on press, and is off with no rows', () => {
+    const onToggle = vi.fn()
+    const { unmount } = renderHeader(1, 3, onToggle)
+    fireEvent.click(box())
+    expect(onToggle).toHaveBeenCalledOnce()
+    unmount()
+    renderHeader(0, 0)
+    expect(box()).toHaveAttribute('aria-disabled', 'true')
   })
 })
