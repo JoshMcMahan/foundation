@@ -13,7 +13,7 @@ require (
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/quasilyte/go-ruleguard v0.4.5
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	golang.org/x/text v0.42.0
 	golang.org/x/tools v0.51.0
 )
