@@ -8,7 +8,6 @@ import {
   useRunAction,
   warnIfInert,
 } from '../components/MenuEntries'
-import { PageHeader, type PageHeaderBreadcrumb } from '../components/PageHeader'
 import { useLink, useNavigation } from '../components/Provider'
 import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
@@ -16,14 +15,6 @@ import { cx } from '../cx'
 import { ListActionsHeader, NAME_MIN_WIDTH_PX } from './ListTable'
 import type { ListView, ListViewChrome } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
-
-/** Negative offsets (admin/org) cancel the shell's pt-4 so rows don't peek through the gap above the pinned header. */
-const SECTION_STICKY_TOP = {
-  main: 'top-0',
-  kubernetes: 'top-0',
-  admin: '-top-4',
-  org: '-top-4',
-} as const
 
 /** Whether the shell adds pt-4 padding that the edge-to-edge list must cancel with a negative margin. */
 const SECTION_SHELL_PADDED = {
@@ -33,7 +24,7 @@ const SECTION_SHELL_PADDED = {
   org: true,
 } as const
 
-export type ListSection = keyof typeof SECTION_STICKY_TOP
+export type ListSection = keyof typeof SECTION_SHELL_PADDED
 
 /** Defaults mean rows outside a ListView fully show actions (no view = show everything). */
 const RowActionsContext = createContext<{
@@ -70,51 +61,29 @@ export interface ListPageProps {
   section?: ListSection
   /** Force edge-to-edge negative margin for a main-shell page nested under a padded route layout. */
   shellPadded?: boolean
-  /** Rendered inside a route layout that already owns the page header (e.g. a
-   * detail page's tab body). Skips this page's own header so the global
-   * breadcrumb strip stays visible, keeping only the toolbar. */
-  embedded?: boolean
-  breadcrumbs?: PageHeaderBreadcrumb[] | undefined
-  title?: ReactNode
-  titleAction?: ReactNode
-  actions?: ReactNode
+  /** The list's search, filters and view controls, above the rows. The page's
+   *  trail and actions go in its `PageHeader`. */
   toolbar?: ReactNode
   /** Omit on pages without a list view — rows show all actions by default. */
   view?: ListViewChrome | undefined
   children: ReactNode
 }
 
+/** A list filling the page: its toolbar stays put while only the rows scroll. */
 export function ListPage({
   section = 'main',
   shellPadded,
-  embedded = false,
-  breadcrumbs,
-  title,
-  titleAction,
-  actions,
   toolbar,
   view,
   children,
 }: ListPageProps) {
   const cancelShellPadding = shellPadded ?? SECTION_SHELL_PADDED[section]
   return (
-    // Fill the shell so the header stays put and only the list body scrolls.
     // FIXME(edge-to-edge): the negative margin cancels a padded route shell's
     // content padding (`pt-4 px-4`); drop it once list routes own a
     // zero-padding container at the layout level.
     <div className={cx('flex h-full min-h-0 flex-col', cancelShellPadding && '-m-4')}>
-      {embedded ? (
-        toolbar && <div className="px-4 py-1.5">{toolbar}</div>
-      ) : (
-        <PageHeader
-          stickyTopClassName={SECTION_STICKY_TOP[section]}
-          breadcrumbs={breadcrumbs}
-          title={title}
-          titleAction={titleAction}
-          actions={actions}
-          toolbar={toolbar}
-        />
-      )}
+      {toolbar && <div className="shrink-0 px-4">{toolbar}</div>}
       {/* The list body is the @container priority columns measure to auto-hide. */}
       <div className="relative @container min-h-0 flex-1 overflow-auto">
         <ListRowActionsProvider view={view}>{children}</ListRowActionsProvider>

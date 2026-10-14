@@ -45,6 +45,8 @@ Each need has one component. Reach for it before styling markup by hand.
 | A value from a list | `Select`, or `Combobox` when the list needs filtering |
 | Free text with suggestions, or tags | `Autocomplete`; `Combobox` with `multiple creatable` |
 | A range | `Slider` |
+| A page's breadcrumbs, title and commands | `PageHeader`, shown by the shell's `PageHeaderBar` (see [Page header](#page-header)) |
+| An action in the page header | `PageHeaderAction`; `PageHeaderAddButton` for "+ Add" or "+ Create"; `PageHeaderMenu` for the "…" menu |
 | A titled part of a page or form | `Section` |
 | More detail under a line | `Disclosure` |
 | Views of one thing | `Tabs` |
@@ -101,6 +103,65 @@ Some pairs look alike and are split on purpose:
 - **Select or Combobox.** A `Select` picks from a short list it shows in full.
   A `Combobox` filters as you type, for a list long enough to search, and is the
   one that takes several values, new ones, or free text (`Autocomplete`).
+
+## Page header
+
+A page declares its header in one place, and the shell shows it:
+
+```tsx
+// The shell, once: the provider above the bar and the routes.
+<PageHeaderProvider>
+  <Sidebar />
+  <div className="flex min-w-0 flex-1 flex-col">
+    <PageHeaderBar compact={fullBleed} persistent={isMobile} />
+    <main><Outlet /></main>
+  </div>
+</PageHeaderProvider>
+
+// A page.
+<PageHeader
+  breadcrumbs={[{ label: 'Clusters', href: '/clusters' }, { label: cluster?.name ?? '' }]}
+  titleActions={
+    <>
+      <PageHeaderAction icon={EditIcon} iconOnly label="Rename" onClick={rename} />
+      <PageHeaderMenu items={menu} />
+    </>
+  }
+  actions={
+    <PageHeaderAction icon={SaveIcon} label="Save" onClick={save} disabled={!dirty} disabledReason="No changes" />
+  }
+/>
+```
+
+- **`breadcrumbs`** is the whole trail, ending with the page itself, which the
+  bar makes the page's one `h1` (`aria-current="page"`). Don't render another
+  `h1`. An empty label, such as a name still loading, shows a placeholder. The
+  trail is a list in a `nav` landmark named by the strings' `breadcrumb`; long
+  names truncate, and a narrow bar keeps only the parent.
+- **`titleActions`** sit beside the title, for actions on the page's subject.
+  **`actions`** sit at the end of the bar, for the page's commands.
+  **`toolbar`** is a row under the bar, such as tabs or a time range.
+- **`hidden`** takes the bar away while the page is mounted, for a page that
+  fills the window.
+
+The actions render in the page's React tree, so they keep its context and
+state, and show in the bar through portals; they come before the page's content
+in focus order. Any component may render a `PageHeader`, such as a form adding
+its Save button: the bar shows the actions of all of them, outermost first,
+and the trail of the last one rendered that has one. A layout renders its own
+before its `Outlet`, so a page under it that names a trail replaces the
+layout's, and a page that doesn't keeps it. Changing pages swaps the header
+before paint, and a page's actions go when it unmounts.
+
+`PageHeaderBar` renders nothing while the page declares nothing, unless it is
+`persistent`, as on a narrow screen where it holds the `navToggle` slot. The
+`breadcrumbPin` slot renders after the trail. Without a `PageHeaderProvider`, a
+`PageHeader` renders its bar in place, for a page with no shell.
+
+The header's actions share one control: a link (`href`, with `external` for a
+new tab), a button (`onClick`, with `pressed` for a toggle) or a menu (`menu`).
+`destructive` takes the error color. A `disabled` one stays focusable and says
+its `disabledReason` in its tooltip and name.
 
 ## Menu and row actions
 

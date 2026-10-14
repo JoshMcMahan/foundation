@@ -1,332 +1,335 @@
-import type { ComponentType, ReactNode } from 'react'
-import { Fragment, useLayoutEffect } from 'react'
+import type { ReactNode } from 'react'
+import {
+  createContext,
+  use,
+  useCallback,
+  useLayoutEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { cx } from '../cx'
-import { AddIcon, ChevronRightIcon, EditIcon, MoreIcon } from '../icons'
-import { ActionMenu } from './ActionMenu'
-import { useBreadcrumb } from './Breadcrumbs'
-import { buttonClasses } from './buttonClasses'
+import { ChevronRightIcon } from '../icons'
 import { keyedByContent } from './keys'
-import type { MenuEntry } from './MenuEntries'
 import { useLink, useSlots, useStrings } from './Provider'
+import {
+  type Breadcrumb,
+  type PageHeaderRegion,
+  PageHeaderStore,
+  type RegionNodes,
+} from './pageHeaderStore'
+import { Skeleton } from './Skeleton'
 import { Tooltip } from './Tooltip'
 
-export interface PageHeaderBreadcrumb {
-  label: string
-  href?: string
+export type { Breadcrumb } from './pageHeaderStore'
+
+const StoreContext = createContext<PageHeaderStore | null>(null)
+
+/**
+ * Holds the header the current page declares, for the `PageHeaderBar` the
+ * shell renders. Wrap the shell, above both the bar and the routes.
+ */
+export function PageHeaderProvider({ children }: { children: ReactNode }) {
+  const [store] = useState(() => new PageHeaderStore())
+  return <StoreContext value={store}>{children}</StoreContext>
 }
 
-/** A rendered crumb row entry, as handed to the breadcrumbPin slot. */
-export interface PageHeaderCrumb {
-  label: ReactNode
-  href?: string
-}
-
-const headerActionButtonClasses = buttonClasses({ variant: 'ghost', size: 'xs', iconOnly: true })
-const headerAddButtonClasses = buttonClasses({ variant: 'outline', size: 'xs' })
-
-/** With menu, the plus opens a chooser; otherwise navigates to or calls the
- * single action. `word` is the visible verb; `label` stays the full action for
- * the tooltip and screen readers. */
-export function HeaderAddButton({
-  href,
-  onClick,
-  label,
-  word = 'add',
-  menu,
-  disabled = false,
-  disabledHint,
-}: {
-  href?: string
-  onClick?: () => void
-  label: string
-  word?: 'add' | 'create'
-  menu?: MenuEntry[]
-  /** Button mode only. */
-  disabled?: boolean
-  disabledHint?: string
-}) {
-  const { common } = useStrings()
-  const Link = useLink()
-  const content = (
-    <>
-      <AddIcon className="w-3 h-3" />
-      <span>{word === 'create' ? common.create : common.add}</span>
-    </>
-  )
-  if (menu) {
-    return (
-      <ActionMenu items={menu} label={label} triggerClassName={headerAddButtonClasses}>
-        {content}
-      </ActionMenu>
-    )
-  }
-  if (href) {
-    return (
-      <Tooltip content={label}>
-        <Link href={href} aria-label={label} className={headerAddButtonClasses}>
-          {content}
-        </Link>
-      </Tooltip>
-    )
-  }
-  const hint = disabled ? disabledHint : undefined
-  return (
-    <Tooltip content={hint ?? label}>
-      <button
-        type="button"
-        onClick={disabled ? undefined : onClick}
-        aria-label={hint ? `${label}. ${hint}` : label}
-        aria-disabled={disabled || undefined}
-        className={headerAddButtonClasses}
-      >
-        {content}
-      </button>
-    </Tooltip>
-  )
-}
-
-/** The header's "…" menu of actions on the page's subject. */
-export function HeaderActionMenu({ items, label }: { items: MenuEntry[]; label?: string }) {
-  const { common } = useStrings()
-  if (items.length === 0) {
-    return null
-  }
-  return (
-    <ActionMenu
-      items={items}
-      label={label ?? common.actions}
-      triggerClassName={headerActionButtonClasses}
-    >
-      <MoreIcon className="w-3.5 h-3.5" />
-    </ActionMenu>
-  )
-}
-
-export function HeaderEditButton({
-  href,
-  onClick,
-  label: labelProp,
-  disabled,
-  tooltip,
-}: {
-  href?: string
-  onClick?: () => void
-  label?: string
-  disabled?: boolean
-  tooltip?: string | undefined
-}) {
-  const Link = useLink()
-  const { common } = useStrings()
-  const label = labelProp ?? common.edit
-  return (
-    <Tooltip content={tooltip ?? label}>
-      {href && !disabled ? (
-        <Link href={href} aria-label={label} className={headerActionButtonClasses}>
-          <EditIcon className="w-3 h-3" />
-        </Link>
-      ) : (
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          aria-label={label}
-          className={headerActionButtonClasses}
-        >
-          <EditIcon className="w-3 h-3" />
-        </button>
-      )}
-    </Tooltip>
-  )
-}
-
-/** Renders nothing when the modern breadcrumb strip isn't mounted (classic chrome or self-headered pages). */
-export function BreadcrumbsTitleAction({ children }: { children: ReactNode }) {
-  const { titleActionSlot } = useBreadcrumb()
-  if (!titleActionSlot) {
-    return null
-  }
-  return createPortal(children, titleActionSlot)
-}
-
-export function BreadcrumbsRightAction({ children }: { children: ReactNode }) {
-  const { rightActionSlot } = useBreadcrumb()
-  if (!rightActionSlot) {
-    return null
-  }
-  return createPortal(children, rightActionSlot)
-}
-
-// Colored from the theme rather than by a host's `link` class, which would outrank the
-// destructive color.
-const breadcrumbsActionClasses =
-  'flex cursor-pointer items-center gap-1 text-xs whitespace-nowrap hover:not-disabled:underline disabled:cursor-not-allowed disabled:opacity-50'
-
-export function BreadcrumbsActionButton({
-  icon: Icon,
-  label,
-  ariaLabel,
-  href,
-  onClick,
-  disabled,
-  tooltip,
-  destructive = false,
-}: {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  ariaLabel?: string
-  href?: string
-  onClick?: (() => void) | undefined
-  disabled?: boolean
-  tooltip?: string | undefined
-  /** In the error color, as a destructive menu entry is, for an action that removes or breaks
-   *  something. */
-  destructive?: boolean | undefined
-}) {
-  const Link = useLink()
-  const className = cx(
-    breadcrumbsActionClasses,
-    destructive ? 'text-(--theme-error-text)' : 'text-(--theme-link)',
-  )
-  const content = (
-    <>
-      <Icon className="w-3 h-3" />
-      {label}
-    </>
-  )
-  return (
-    <Tooltip content={tooltip}>
-      {href && !disabled ? (
-        <Link href={href} className={className} aria-label={ariaLabel}>
-          {content}
-        </Link>
-      ) : (
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          className={className}
-          aria-label={ariaLabel}
-        >
-          {content}
-        </button>
-      )}
-    </Tooltip>
-  )
-}
-
-interface PageHeaderProps {
-  breadcrumbs?: PageHeaderBreadcrumb[] | undefined
-  title?: ReactNode
-  titleAction?: ReactNode
+export interface PageHeaderProps {
+  /** The trail to this page, ending with the page itself, which becomes its
+   *  `h1`. A crumb with an empty label, such as a name still loading, shows a
+   *  placeholder. */
+  breadcrumbs?: readonly Breadcrumb[] | undefined
+  /** Beside the title: actions on the page's subject, such as edit, rename or
+   *  favorite, or its `PageHeaderMenu`. */
+  titleActions?: ReactNode
+  /** At the end of the bar: the page's commands, such as Save or "+ Create". */
   actions?: ReactNode
+  /** A row under the bar, such as tabs or a time range, that stays put while
+   *  the page scrolls. */
   toolbar?: ReactNode
-  className?: string
-  sticky?: boolean
-  /** Negative offset (e.g. -top-4) prevents rows peeking above the header when the container has top padding. */
-  stickyTopClassName?: string
+  /** Takes the bar away, for a page that fills the window. */
+  hidden?: boolean | undefined
 }
 
-export function PageHeader({
+// Render order stands in for depth: React renders a layout before the routes
+// under it, and a page navigated to after the one it replaced.
+let renderOrder = 0
+
+const subscribeNever = () => () => {}
+
+function createRegionNodes(): RegionNodes | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const node = () => {
+    const el = document.createElement('div')
+    // The region's flex layout and gap reach the actions inside.
+    el.style.display = 'contents'
+    return el
+  }
+  return { titleActions: node(), actions: node(), toolbar: node() }
+}
+
+/**
+ * Declares the page's header: its breadcrumbs, title actions, actions and
+ * toolbar. Under a `PageHeaderProvider` it renders nothing in place: the
+ * shell's `PageHeaderBar` shows it, while the actions stay in the page's React
+ * tree, with its context and state. Without a provider it renders the bar
+ * itself, for a page with no shell.
+ *
+ * Any component may render one, such as a form adding its Save button: the bar
+ * shows the actions of all of them, outermost first, and the trail of the last
+ * one rendered that has one, so a page's trail replaces its layout's.
+ */
+export function PageHeader(props: PageHeaderProps) {
+  const store = use(StoreContext)
+  if (!store) {
+    return props.hidden ? null : (
+      <HeaderLayout
+        breadcrumbs={props.breadcrumbs ?? []}
+        titleActions={props.titleActions}
+        actions={props.actions}
+        toolbar={props.toolbar}
+      />
+    )
+  }
+  return <DeclaredHeader store={store} {...props} />
+}
+
+function DeclaredHeader({
+  store,
   breadcrumbs,
-  title,
-  titleAction,
+  titleActions,
   actions,
   toolbar,
-  className,
-  sticky = true,
-  stickyTopClassName = 'top-0',
-}: PageHeaderProps) {
-  const { setHidden } = useBreadcrumb()
-  const Link = useLink()
-  const { breadcrumbPin, navToggle } = useSlots()
-  const { common } = useStrings()
-  // This header is the page's own breadcrumb trail, so keep the global strip out
-  // of the way while it's mounted — pages no longer need useClearBreadcrumbs().
-  useLayoutEffect(() => {
-    setHidden(true)
-    return () => setHidden(false)
-  }, [setHidden])
-
-  const crumbs: PageHeaderCrumb[] = [...(breadcrumbs ?? [])]
-  const lastLabel = crumbs[crumbs.length - 1]?.label
-  if (title !== null && title !== undefined && title !== lastLabel) {
-    crumbs.push({ label: title })
+  hidden = false,
+}: PageHeaderProps & { store: PageHeaderStore }) {
+  const [order] = useState(() => ++renderOrder)
+  const [nodes] = useState(createRegionNodes)
+  // False while hydrating, so the portals don't differ from the server's
+  // markup, which has none.
+  const client = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  )
+  const fills: Record<PageHeaderRegion, boolean> = {
+    titleActions: present(titleActions),
+    actions: present(actions),
+    toolbar: present(toolbar),
   }
+  // Layout effects publish before paint, so a page never shows the previous
+  // page's trail or actions. The store ignores a declaration equal to the
+  // last, so an inline trail array costs nothing.
+  useLayoutEffect(() => {
+    store.set(order, { breadcrumbs, hidden, nodes, fills })
+  })
+  useLayoutEffect(() => () => store.delete(order), [store, order])
 
-  const crumbRow = crumbs.length > 0 && (
-    <div className="flex items-center gap-1.5 min-w-0">
-      <nav aria-label={common.breadcrumb} className="flex items-center gap-2 min-w-0 text-[13px]">
-        {keyedByContent(
-          crumbs,
-          (c) => c.href ?? (typeof c.label === 'string' ? c.label : 'crumb'),
-        ).map(({ key, item: crumb }, idx) => {
-          const isLast = idx === crumbs.length - 1
-          if (isLast) {
-            return (
-              <h1
-                key={key}
-                className="m-0 text-[13px] font-medium leading-none text-(--theme-app) truncate"
-              >
-                {crumb.label}
-              </h1>
-            )
-          }
-          return (
-            <Fragment key={key}>
-              {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-(--theme-muted-text-color) whitespace-nowrap">
-                  {crumb.label}
-                </span>
-              )}
-              <ChevronRightIcon className="w-3 h-3 opacity-60 shrink-0 text-(--theme-muted-text-color)" />
-            </Fragment>
-          )
-        })}
-      </nav>
-      {titleAction}
-      {breadcrumbPin?.({ crumbs })}
-    </div>
-  )
-  const actionCluster = actions && (
-    <div className="flex items-center gap-1.5 shrink-0">{actions}</div>
-  )
-  const toggle = navToggle?.()
-  const hasLeading = !!crumbRow || !!toggle
-  const leading = hasLeading ? (
-    <div className="flex items-center gap-2 min-w-0">
-      {toggle}
-      {crumbRow}
-    </div>
-  ) : (
-    <div />
-  )
-
+  if (!nodes || !client) {
+    return null
+  }
   return (
-    <div
-      className={cx(
-        sticky && cx('sticky z-(--layer-header)', stickyTopClassName),
-        'w-full bg-(--theme-app-bg)',
-        className,
-      )}
-    >
+    <>
+      {fills.titleActions && createPortal(titleActions, nodes.titleActions)}
+      {fills.actions && createPortal(actions, nodes.actions)}
+      {fills.toolbar && createPortal(toolbar, nodes.toolbar)}
+    </>
+  )
+}
+
+function present(node: ReactNode): boolean {
+  return node !== undefined && node !== null && node !== false && node !== ''
+}
+
+export interface PageHeaderBarProps {
+  /** A shorter bar, for a page that gives the window to an embedded app. */
+  compact?: boolean | undefined
+  /** Keep the bar when the page declares nothing, such as on a narrow screen
+   *  where it holds the navigation toggle. A page's `hidden` still wins. */
+  persistent?: boolean | undefined
+  className?: string | undefined
+}
+
+/**
+ * The bar showing what the current page declares with `PageHeader`. The shell
+ * renders one, inside a `PageHeaderProvider`, wherever its chrome puts it. It
+ * renders nothing while the page declares nothing.
+ */
+export function PageHeaderBar({
+  compact = false,
+  persistent = false,
+  className,
+}: PageHeaderBarProps) {
+  const store = use(StoreContext)
+  if (!store) {
+    throw new Error('PageHeaderBar needs a PageHeaderProvider above it')
+  }
+  const header = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
+  const empty =
+    header.breadcrumbs.length === 0 &&
+    header.titleActions.length === 0 &&
+    header.actions.length === 0 &&
+    header.toolbar.length === 0
+  if (header.hidden || (empty && !persistent)) {
+    return null
+  }
+  return (
+    <HeaderLayout
+      breadcrumbs={header.breadcrumbs}
+      titleActions={header.titleActions.length > 0 && <Mounts nodes={header.titleActions} />}
+      actions={header.actions.length > 0 && <Mounts nodes={header.actions} />}
+      toolbar={header.toolbar.length > 0 && <Mounts nodes={header.toolbar} />}
+      compact={compact}
+      className={className}
+    />
+  )
+}
+
+const nodeKeys = new WeakMap<HTMLElement, number>()
+let nextNodeKey = 0
+
+// A key per node, so a node keeps its span, and React moves rather than
+// remounts it, when a declaration before it comes or goes.
+function nodeKey(node: HTMLElement): number {
+  let key = nodeKeys.get(node)
+  if (key === undefined) {
+    key = ++nextNodeKey
+    nodeKeys.set(node, key)
+  }
+  return key
+}
+
+function Mounts({ nodes }: { nodes: readonly HTMLElement[] }) {
+  return nodes.map((node) => <Mount key={nodeKey(node)} node={node} />)
+}
+
+/** Moves a declaration's region node into the bar. React owns the span and
+ *  keeps it in order; the node inside is the page's. */
+function Mount({ node }: { node: HTMLElement }) {
+  const attach = useCallback(
+    (span: HTMLSpanElement | null) => {
+      if (span && node.parentNode !== span) {
+        span.append(node)
+      }
+    },
+    [node],
+  )
+  return <span ref={attach} className="contents" />
+}
+
+function HeaderLayout({
+  breadcrumbs,
+  titleActions,
+  actions,
+  toolbar,
+  compact = false,
+  className,
+}: {
+  breadcrumbs: readonly Breadcrumb[]
+  titleActions: ReactNode
+  actions: ReactNode
+  toolbar: ReactNode
+  compact?: boolean
+  className?: string | undefined
+}) {
+  const { breadcrumbPin, navToggle } = useSlots()
+  const hasTrail = breadcrumbs.length > 0
+  return (
+    <div className={cx('@container w-full shrink-0 bg-(--theme-app-bg)', className)}>
       <div
         className={cx(
-          'flex items-center justify-between gap-6 px-4 h-11',
-          hasLeading && 'border-b border-(--theme-border)',
+          'flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
+          compact ? 'h-8' : 'h-11',
         )}
       >
-        {leading}
-        {actionCluster}
+        <div className="flex min-w-0 items-center gap-2">
+          {navToggle?.()}
+          {hasTrail && <BreadcrumbTrail crumbs={breadcrumbs} />}
+          {present(titleActions) && (
+            <div className="flex shrink-0 items-center gap-0.5">{titleActions}</div>
+          )}
+          {hasTrail && breadcrumbPin?.({ crumbs: breadcrumbs })}
+        </div>
+        {present(actions) && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
       </div>
-      {toolbar && <div className="px-4">{toolbar}</div>}
+      {present(toolbar) && <div className="px-4">{toolbar}</div>}
     </div>
+  )
+}
+
+const crumbText = 'block truncate text-(--theme-muted-text-color)'
+
+function BreadcrumbTrail({ crumbs }: { crumbs: readonly Breadcrumb[] }) {
+  const Link = useLink()
+  const { common } = useStrings()
+  const ancestors = crumbs.slice(0, -1)
+  const current = crumbs[crumbs.length - 1]
+  return (
+    <nav aria-label={common.breadcrumb} className="min-w-0">
+      <ol className="m-0 flex min-w-0 list-none items-center gap-1.5 p-0 text-[13px] leading-none">
+        {keyedByContent(ancestors, (c) => c.href ?? c.label).map(({ key, item: crumb }, i) => (
+          <li
+            key={key}
+            // A narrow bar keeps only the parent, the way back. It measures
+            // itself rather than the window, since the shell's sidebar takes
+            // a share of the width.
+            className={cx(
+              'flex min-w-0 items-center gap-1.5',
+              i < ancestors.length - 1 && '@max-md:hidden',
+            )}
+          >
+            {crumb.label === '' ? (
+              <CrumbPlaceholder />
+            ) : (
+              <Tooltip content={crumb.label} overflowOnly>
+                {crumb.href ? (
+                  <Link
+                    href={crumb.href}
+                    className={cx(
+                      crumbText,
+                      'max-w-48 rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-link)',
+                    )}
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className={cx(crumbText, 'max-w-48')}>{crumb.label}</span>
+                )}
+              </Tooltip>
+            )}
+            <ChevronRightIcon className="size-3 shrink-0 text-(--theme-muted-text-color) opacity-60" />
+          </li>
+        ))}
+        {current && (
+          <li className="flex min-w-0 items-center">
+            {current.label === '' ? (
+              <h1 aria-current="page" className="m-0">
+                <CrumbPlaceholder />
+              </h1>
+            ) : (
+              <Tooltip content={current.label} overflowOnly>
+                <h1
+                  aria-current="page"
+                  className="m-0 truncate text-[13px] font-medium leading-none text-(--theme-app)"
+                >
+                  {current.label}
+                </h1>
+              </Tooltip>
+            )}
+          </li>
+        )}
+      </ol>
+    </nav>
+  )
+}
+
+function CrumbPlaceholder() {
+  const { common } = useStrings()
+  return (
+    <span className="flex items-center">
+      <Skeleton width="6rem" height="0.8125rem" />
+      <span className="sr-only">{common.loading}</span>
+    </span>
   )
 }

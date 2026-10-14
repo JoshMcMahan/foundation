@@ -580,7 +580,7 @@ export interface UIData {
 }
 
 import type { FieldComponent } from '../form/fieldRegistry'
-import type { PageHeaderCrumb } from './PageHeader'
+import type { Breadcrumb } from './pageHeaderStore'
 
 /** Renders internal navigation; hosts bind their router's Link. Accessibility
  * and tooltip data attributes pass through so header links keep their labels. */
@@ -642,7 +642,7 @@ export interface UISlots {
     groups?: unknown
   }) => ReactNode
   /** Pin affordance rendered after the page header's crumb trail; absent hides it. */
-  breadcrumbPin?: (args: { crumbs: readonly PageHeaderCrumb[] }) => ReactNode
+  breadcrumbPin?: (args: { crumbs: readonly Breadcrumb[] }) => ReactNode
   /** Control rendered at the start of the page header row, before the crumb
    * trail — the host's app-nav toggle. Absent hides it. */
   navToggle?: () => ReactNode

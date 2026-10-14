@@ -2,18 +2,18 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ReactNode } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { expect, screen, userEvent, within } from 'storybook/test'
-import { BreadcrumbProvider } from '../components/Breadcrumbs'
 import { useContextMenu } from '../components/ContextMenu'
 import { keyedByContent } from '../components/keys'
 import type { MenuEntry } from '../components/MenuEntries'
-import { HeaderAddButton, HeaderEditButton, PageHeader } from '../components/PageHeader'
+import { PageHeader, PageHeaderBar, PageHeaderProvider } from '../components/PageHeader'
+import { PageHeaderAction, PageHeaderAddButton } from '../components/PageHeaderAction'
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
-import { cx } from '../cx'
 import {
   AddIcon,
   ClusterIcon,
+  EditIcon,
   PowerIcon,
   RefreshIcon,
   SnapshotIcon,
@@ -139,7 +139,7 @@ function MockHost({ children }: { children: (host: ReturnType<typeof useMockHost
   const host = useMockHost()
   return (
     <UIProvider navigation={host.navigation} strings={host.strings} slots={host.slots}>
-      <BreadcrumbProvider>{children(host)}</BreadcrumbProvider>
+      <PageHeaderProvider>{children(host)}</PageHeaderProvider>
     </UIProvider>
   )
 }
@@ -147,11 +147,10 @@ function MockHost({ children }: { children: (host: ReturnType<typeof useMockHost
 /** Storybook renders in a short frame; the shell fills its host, so give it one. */
 function Viewport({ children, narrow }: { children: ReactNode; narrow?: boolean | undefined }) {
   return (
+    // Sizes are inline: the package's stylesheet doesn't scan stories.
     <div
-      className={cx(
-        'h-[32rem] overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-app-bg)',
-        narrow && 'max-w-[24rem]',
-      )}
+      className="overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-app-bg)"
+      style={{ height: '32rem', maxWidth: narrow ? '24rem' : undefined }}
     >
       {children}
     </div>
@@ -266,81 +265,93 @@ function ClustersPage({ state, rowCount, sparseStatus }: ShellArgs) {
       : []
 
   return (
-    <ListPage
-      breadcrumbs={[{ label: 'Compute', href: '/compute' }]}
-      title="Clusters"
-      titleAction={<HeaderEditButton href="/clusters/settings" />}
-      actions={<HeaderAddButton label="New cluster" word="create" href="/clusters/new" />}
-      view={view}
-      toolbar={
-        <div className="flex items-center justify-between gap-3 py-1.5">
-          <ListCount
-            total={all.length}
-            matches={rows.length}
-            filterActive={query.length > 0 || view.activeFilterCount > 0}
-            noun="cluster"
-            nounPlural="clusters"
+    <>
+      <PageHeader
+        breadcrumbs={[{ label: 'Compute', href: '/compute' }, { label: 'Clusters' }]}
+        titleActions={
+          <PageHeaderAction
+            icon={EditIcon}
+            iconOnly
+            label="Cluster settings"
+            href="/clusters/settings"
           />
-          <div className="flex items-center gap-2">
-            <ListSearchControl search={search} placeholder="Search clusters" />
-            <ListFilterMenu view={view} />
-            <ListDisplayMenu view={view} />
+        }
+        actions={<PageHeaderAddButton label="New cluster" word="create" href="/clusters/new" />}
+      />
+      <ListPage
+        view={view}
+        toolbar={
+          <div className="flex items-center justify-between gap-3 py-1.5">
+            <ListCount
+              total={all.length}
+              matches={rows.length}
+              filterActive={query.length > 0 || view.activeFilterCount > 0}
+              noun="cluster"
+              nounPlural="clusters"
+            />
+            <div className="flex items-center gap-2">
+              <ListSearchControl search={search} placeholder="Search clusters" />
+              <ListFilterMenu view={view} />
+              <ListDisplayMenu view={view} />
+            </div>
           </div>
-        </div>
-      }
-    >
-      {state === 'loading' ? (
-        <ListSkeleton />
-      ) : state === 'error' ? (
-        <ListError error={new Error('upstream timed out')} noun="clusters" />
-      ) : all.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <ClusterIcon className="h-8 w-8 text-(--theme-muted-text-color)" />
-          <p className="mt-3 max-w-sm text-sm text-(--theme-muted-text-color)">
-            No clusters yet. Create one to get started.
-          </p>
-        </div>
-      ) : (
-        <Table {...listTableProps}>
-          <ListColumns view={view} />
-          {rows.map((row) => (
-            <ListRow
-              key={row.id}
-              href={`/clusters/${row.name}`}
-              items={menuItems(row)}
-              goTo={goTo}
-              openMenu={openMenu}
-              pinnedActions={pinnedActions(row)}
-            >
-              <NameCell
-                icon={<ClusterIcon className="h-5 w-5 shrink-0 text-(--theme-muted-text-color)" />}
-                name={row.name}
-                subtitle={`${row.nodes} nodes`}
+        }
+      >
+        {state === 'loading' ? (
+          <ListSkeleton />
+        ) : state === 'error' ? (
+          <ListError error={new Error('upstream timed out')} noun="clusters" />
+        ) : all.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <ClusterIcon className="h-8 w-8 text-(--theme-muted-text-color)" />
+            <p className="mt-3 max-w-sm text-sm text-(--theme-muted-text-color)">
+              No clusters yet. Create one to get started.
+            </p>
+          </div>
+        ) : (
+          <Table {...listTableProps}>
+            <ListColumns view={view} />
+            {rows.map((row) => (
+              <ListRow
+                key={row.id}
                 href={`/clusters/${row.name}`}
-              />
-              {view.isVisible('location') && (
-                <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
-                  {row.location}
-                </Table.Item>
-              )}
-              {view.isVisible('status') && (
-                <Table.Item className="py-2.5">
-                  {(!sparseStatus || row.status !== 'stopped') && (
-                    <StatusBadge variant={STATUS_VARIANT[row.status]}>{row.status}</StatusBadge>
-                  )}
-                </Table.Item>
-              )}
-              {view.isVisible('owner') && (
-                <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
-                  {row.owner}
-                </Table.Item>
-              )}
-            </ListRow>
-          ))}
-        </Table>
-      )}
-      {contextMenu}
-    </ListPage>
+                items={menuItems(row)}
+                goTo={goTo}
+                openMenu={openMenu}
+                pinnedActions={pinnedActions(row)}
+              >
+                <NameCell
+                  icon={
+                    <ClusterIcon className="h-5 w-5 shrink-0 text-(--theme-muted-text-color)" />
+                  }
+                  name={row.name}
+                  subtitle={`${row.nodes} nodes`}
+                  href={`/clusters/${row.name}`}
+                />
+                {view.isVisible('location') && (
+                  <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
+                    {row.location}
+                  </Table.Item>
+                )}
+                {view.isVisible('status') && (
+                  <Table.Item className="py-2.5">
+                    {(!sparseStatus || row.status !== 'stopped') && (
+                      <StatusBadge variant={STATUS_VARIANT[row.status]}>{row.status}</StatusBadge>
+                    )}
+                  </Table.Item>
+                )}
+                {view.isVisible('owner') && (
+                  <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
+                    {row.owner}
+                  </Table.Item>
+                )}
+              </ListRow>
+            ))}
+          </Table>
+        )}
+        {contextMenu}
+      </ListPage>
+    </>
   )
 }
 
@@ -361,6 +372,7 @@ const meta: Meta<ShellArgs> = {
       {(host) => (
         <Viewport narrow={args.narrow}>
           <div className="flex h-full flex-col">
+            <PageHeaderBar />
             <div className="min-h-0 flex-1">
               <ClustersPage {...args} />
             </div>
@@ -451,14 +463,22 @@ export const DetailPageShell: StoryObj = {
       {(host) => (
         <Viewport>
           <div className="flex h-full flex-col">
+            <PageHeaderBar />
             <div className="min-h-0 flex-1 overflow-auto">
               <PageHeader
                 breadcrumbs={[
                   { label: 'Compute', href: '/compute' },
                   { label: 'Clusters', href: '/clusters' },
+                  { label: 'gpu-trainer-01' },
                 ]}
-                title="gpu-trainer-01"
-                titleAction={<HeaderEditButton href="/clusters/gpu-trainer-01/edit" />}
+                titleActions={
+                  <PageHeaderAction
+                    icon={EditIcon}
+                    iconOnly
+                    label="Edit"
+                    href="/clusters/gpu-trainer-01/edit"
+                  />
+                }
               />
               <div className="px-4">
                 <ActionToolbar groups={DETAIL_GROUPS} right={DETAIL_RIGHT} sticky />
