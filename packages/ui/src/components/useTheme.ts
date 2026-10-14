@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useSyncExternalStore } from 'react'
 import {
   applyTheme,
   type ColorPreference,
@@ -13,19 +13,25 @@ import {
 const DARK = '(prefers-color-scheme: dark)'
 const prefersDark = () => typeof matchMedia === 'function' && matchMedia(DARK).matches
 
+function subscribeToScheme(onChange: () => void): () => void {
+  if (typeof matchMedia !== 'function') {
+    return () => {}
+  }
+  const media = matchMedia(DARK)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
+
+const ignore = () => () => {}
+
 /** The mode a preference shows now, following the device while it's `system`. */
 export function useColorMode(preference: ColorPreference): Mode {
-  const [dark, setDark] = useState(prefersDark)
-  useEffect(() => {
-    if (preference !== 'system' || typeof matchMedia !== 'function') {
-      return
-    }
-    const media = matchMedia(DARK)
-    const update = () => setDark(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [preference])
+  // Only `system` listens to the device, and the server renders light.
+  const dark = useSyncExternalStore(
+    preference === 'system' ? subscribeToScheme : ignore,
+    prefersDark,
+    () => false,
+  )
   return resolveMode(preference, dark)
 }
 

@@ -190,7 +190,7 @@ describe('DependencyGraph inline subworkflows', () => {
     // In the same bar as the other view buttons, ahead of them.
     const bar = back.parentElement as HTMLElement
     expect(bar).toContainElement(forward)
-    expect(bar).toContainElement(screen.getByRole('button', { name: 'Reset View' }))
+    expect(bar).toContainElement(screen.getByRole('button', { name: 'Reset view' }))
     fireEvent.click(back)
     expect(screen.getByText('Notify')).toBeInTheDocument()
     expect(back).toBeDisabled()
@@ -320,12 +320,12 @@ describe('DependencyGraph view bar', () => {
     panZoom.state.scale = 0.6
   })
 
-  it('goes back to the run from a subworkflow opened in its own graph on Reset View', () => {
+  it('goes back to the run from a subworkflow opened in its own graph on Reset view', () => {
     render(<DependencyGraph run={run} preview />)
     fireEvent.click(screen.getByText('Build'))
     fireEvent.click(screen.getByRole('button', { name: 'Open in new graph' }))
     expect(screen.queryByText('Notify')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Reset View' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset view' }))
     expect(screen.getByText('Notify')).toBeInTheDocument()
     expect(screen.queryByText('Prep')).not.toBeInTheDocument()
   })

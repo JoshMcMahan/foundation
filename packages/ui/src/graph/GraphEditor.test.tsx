@@ -2376,7 +2376,7 @@ describe('steps, the clipboard and the arrow keys', () => {
   it('sets the same view controls in one bar whether or not the graph is being edited', () => {
     for (const props of [{ editor: editor() }, {}]) {
       render(<DependencyGraphPreview yml={graph} {...props} />)
-      const reset = screen.getByRole('button', { name: 'Reset View' })
+      const reset = screen.getByRole('button', { name: 'Reset view' })
       expect(reset.parentElement).toContainElement(screen.getByRole('button', { name: 'Zoom in' }))
       expect(reset.parentElement).toContainElement(screen.getByRole('button', { name: 'Zoom out' }))
       cleanup()

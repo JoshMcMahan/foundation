@@ -18,7 +18,27 @@ so an application ships only what it imports:
 | `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css` | stylesheets |
 
 Hosts bind strings, navigation, data hooks and the workflow engine through
-`UIProvider`, which also shows the package's toasts.
+`UIProvider`, which also shows the package's toasts:
+
+```tsx
+<UIProvider
+  strings={{ common: { save: 'Speichern' }, fileExplorer: { preview: { open: 'Öffnen' } } }}
+  navigation={{ goTo: navigate }}
+  data={{ useRunFile, usePersistedState }}
+  slots={{ link: RouterLink }}
+  engine={() => import('./engine').then((m) => m.engine)}
+>
+  {app}
+</UIProvider>
+```
+
+Every string has an English default, and `strings` overrides any of them at
+any depth. Each concern has its own context, compared by value, so a host may
+pass object literals: a render that passes equal ones re-renders nothing, and
+new `data` re-renders only what reads data. `navigation` is read when the
+package navigates and never re-renders anything. Define slot components and
+string functions outside a component: one made each render is a new value, and
+a new slot component remounts what it renders.
 
 ## Which component?
 
