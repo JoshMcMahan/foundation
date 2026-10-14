@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
+import { isDev } from '../dev'
 import { FileIcon, FolderIcon } from '../icons'
 import { canPreview } from './FilePreview/previewType'
 import { FileRow, isTwoLineRow, ROW_HEIGHT_SHORT, ROW_HEIGHT_TALL } from './FileRow'
@@ -139,7 +140,7 @@ function Spacer({ height }: { height: number }) {
  *  scrollTop 0 forever, rendering only the first window. */
 function useNestedScrollerWarning(scrollEl: HTMLElement | null, count: number) {
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production' || !scrollEl || count <= 100) {
+    if (!isDev() || !scrollEl || count <= 100) {
       return
     }
     if (scrollEl.scrollHeight <= scrollEl.clientHeight) {
@@ -174,7 +175,7 @@ function useRowPitchAudit(
   items: readonly { index: number }[],
 ) {
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production' || !scrollEl || items.length < 3) {
+    if (!isDev() || !scrollEl || items.length < 3) {
       return
     }
     const rows = [...scrollEl.querySelectorAll('tbody tr')]

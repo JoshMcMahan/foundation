@@ -1,6 +1,7 @@
 import { Menu } from '@base-ui/react/menu'
 import { type ReactNode, useCallback, useState } from 'react'
 import { cx } from '../cx'
+import { isDev } from '../dev'
 import { AppLink } from './AppLink'
 import { EmptyState } from './EmptyState'
 import { keyedByContent } from './keys'
@@ -203,7 +204,7 @@ const warnedInert = new Set<string>()
  *  and silently does nothing. */
 export function warnIfInert(action: MenuAction, where: string) {
   // Checked first and on its own, so a production build drops the rest.
-  if (process.env.NODE_ENV === 'production') {
+  if (!isDev()) {
     return
   }
   if (action.onClick || action.href || action.copy || warnedInert.has(action.label)) {
