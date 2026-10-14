@@ -3,10 +3,16 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { Checkbox } from './Checkbox'
+import { Combobox } from './Combobox'
+import { DatePicker } from './DatePicker'
 import { ErrorText, Field, FieldOption, FieldRowContext, FieldValue, RevealToggle } from './Field'
 import { fieldBox } from './fieldBox'
+import { Input, Textarea } from './Input'
+import { NumberInput } from './NumberInput'
 import { Radio, RadioGroup } from './Radio'
+import { Select } from './Select'
 import { Slider } from './Slider'
+import { Switch } from './Switch'
 
 describe('Field', () => {
   it('in a row of fields, puts its label and control on the row’s two tracks', () => {
@@ -205,5 +211,59 @@ describe('ErrorText', () => {
     expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription('Taken')
     rerender(<ErrorText id="name-error">{null}</ErrorText>)
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+describe('a control placed in a Field', () => {
+  const cases: [string, (props: object) => React.ReactElement, string][] = [
+    ['Input', () => <Input />, 'textbox'],
+    ['Textarea', () => <Textarea />, 'textbox'],
+    ['NumberInput', () => <NumberInput />, 'textbox'],
+    ['Select', () => <Select items={[{ value: 'a', label: 'A' }]} />, 'combobox'],
+    ['Combobox', () => <Combobox items={['a']} />, 'combobox'],
+    ['Switch', () => <Switch />, 'switch'],
+    ['Checkbox', () => <Checkbox />, 'checkbox'],
+    ['DatePicker', () => <DatePicker value="" onValueChange={() => {}} />, 'button'],
+  ]
+  it.each(cases)(
+    '%s takes the label, description and error without a render function',
+    (name, control, role) => {
+      render(
+        <Field label={name} description="Where it runs" error="Pick one">
+          {control({})}
+        </Field>,
+      )
+      const element = screen.getByRole(role, { name })
+      expect(element).toHaveAccessibleDescription('Where it runs Pick one')
+      expect(element).toHaveAttribute('aria-invalid', 'true')
+    },
+  )
+
+  it('still names a native element through the render function', () => {
+    render(<Field label="Zone">{(control) => <select {...control} />}</Field>)
+    expect(screen.getByRole('combobox', { name: 'Zone' })).toBeInTheDocument()
+  })
+})
+
+describe('Field help', () => {
+  it('describes the control, keeps its ? out of the Tab order, and shows under keyboard focus', () => {
+    render(
+      <Field label="Name" description="Shown on the card." help="Lowercase letters.">
+        <Input />
+      </Field>,
+    )
+    const input = screen.getByRole('textbox', { name: 'Name' })
+    expect(input).toHaveAccessibleDescription('Shown on the card. Lowercase letters.')
+    expect(screen.getByRole('button', { name: /More info/ })).toHaveAttribute('tabindex', '-1')
+    // Hidden until the field holds keyboard focus, which CSS on the field's group shows.
+    expect(screen.getByText('Lowercase letters.')).toHaveClass(
+      'hidden',
+      'group-has-[:focus-visible]/field:block',
+    )
+  })
+
+  it('sizes its label to match a small input given a label', () => {
+    render(<Input label="Filter" size="sm" />)
+    expect(screen.getByText('Filter').parentElement).toHaveClass('text-xs')
   })
 })

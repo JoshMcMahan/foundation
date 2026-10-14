@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { InfoTip } from '../../components/InfoTip'
 import { Section } from '../../components/Section'
 import { FieldsFromOptions, resolveMetaOverrides } from '../Form'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
@@ -12,7 +13,7 @@ export interface IObjectField extends BaseField {
 export default function ObjectField({
   field,
   label,
-  tooltipComponent,
+  help,
   labelPosition,
   spaceCompact,
 }: FieldComponentProps<IObjectField>) {
@@ -24,7 +25,8 @@ export default function ObjectField({
   return (
     <Section
       title={field.label || label}
-      beside={tooltipComponent}
+      // A section has no control to read its help with, so its ? keeps its Tab stop.
+      beside={help && <InfoTip text={help} />}
       collapsible={!field.noCollapse}
       defaultOpen={!field.collapsed}
     >

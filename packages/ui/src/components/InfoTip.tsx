@@ -50,11 +50,14 @@ interface InfoTipProps {
   className?: string | undefined
   /** Replaces the info icon as the trigger, such as a status label the text explains. */
   children?: ReactNode
+  /** -1 takes the trigger out of the Tab order, for help that is also read another way, such as
+   *  a Field's, which its control is described by. */
+  tabIndex?: number | undefined
 }
 
 /** Extra detail behind an info trigger. A popover that also opens on hover, so
  *  touch and screen reader users can reach it and its links. */
-export function InfoTip({ text, side = 'top', className, children }: InfoTipProps) {
+export function InfoTip({ text, side = 'top', className, children, tabIndex }: InfoTipProps) {
   const t = useStrings().common
   if (!text) {
     return children ? <span className={className}>{children}</span> : null
@@ -67,6 +70,7 @@ export function InfoTip({ text, side = 'top', className, children }: InfoTipProp
       trigger={
         <button
           type="button"
+          tabIndex={tabIndex}
           aria-label={children ? undefined : t.moreInfo}
           className={cx('inline-flex items-center cursor-help', !children && 'tooltip', className)}
         >

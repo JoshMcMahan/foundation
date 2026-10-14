@@ -24,7 +24,6 @@ import {
 } from 'react-hook-form'
 import { Button } from '../components/Button'
 import { FieldRowContext } from '../components/Field'
-import { InfoTip } from '../components/InfoTip'
 import { Loader } from '../components/Loader'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
 import { Section } from '../components/Section'
@@ -647,21 +646,11 @@ const FormField = memo(function FormField({
   }, [reads.resetBy, name, setValue])
 
   const tooltip = field?.tooltip
-  const tooltipComponent = useMemo(
-    () =>
-      tooltip ? (
-        <InfoTip
-          className="pr-2"
-          text={
-            typeof tooltip === 'string'
-              ? tooltip.replace(/\r/g, '')
-              : // An entry may be an expression that resolves to '' when it does not apply.
-                tooltip.filter(Boolean).join('\n')
-          }
-        />
-      ) : null,
-    [tooltip],
-  )
+  const help =
+    (typeof tooltip === 'string'
+      ? tooltip.replace(/\r/g, '')
+      : // An entry may be an expression that resolves to '' when it does not apply.
+        tooltip?.filter(Boolean).join('\n')) || undefined
 
   const path = editing ? [...editing.parent, fieldName] : null
   if (field === null || fieldName === 'v3') {
@@ -771,7 +760,7 @@ const FormField = memo(function FormField({
           disabled={Boolean(fieldObj.disabled)}
           computeOn={computeOn || fieldObj.computeOn}
           spaceCompact={spaceCompact}
-          tooltipComponent={tooltipComponent}
+          help={help}
         />
       </RequiredFieldContext>
     </div>

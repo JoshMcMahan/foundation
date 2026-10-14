@@ -5,20 +5,12 @@ import type { FieldComponentProps } from './types/fieldComponentTypes'
 /** How a form field's props frame it: its label, help, description, required mark and error,
  *  laid out as the form lays out its fields. Spread on `Field`. */
 export function fieldFrame(
-  {
-    field,
-    label,
-    labelPosition,
-    error,
-    disabled,
-    spaceCompact,
-    tooltipComponent,
-  }: FieldComponentProps,
+  { field, label, labelPosition, error, disabled, spaceCompact, help }: FieldComponentProps,
   { group = false }: { group?: boolean } = {},
 ): Omit<FieldProps, 'children'> {
   return {
     label,
-    hint: tooltipComponent,
+    help,
     description: field.description,
     group,
     required: !resolvedFlag(field.optional),

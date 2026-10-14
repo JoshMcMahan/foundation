@@ -4,6 +4,7 @@ import { createContext, type OutputHTMLAttributes, type ReactNode, use, useId } 
 import { cx } from '../cx'
 import { EyeIcon, EyeOffIcon, WarningIcon } from '../icons'
 import type { FieldBoxSize } from './fieldBox'
+import { formatInfoTipContent, InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
 import { RequiredMark } from './RequiredMark'
 
@@ -18,7 +19,7 @@ export interface FieldControlProps {
   'aria-required'?: true | undefined
 }
 
-const ControlContext = createContext<FieldControlProps | null>(null)
+const ControlContext = createContext<{ control: FieldControlProps; labelId: string } | null>(null)
 
 /** Set by a layout that lines up the fields in a row, as a form's grid does: a stacked field's
  *  label and control take the row's label and control tracks, so controls under labels of
@@ -28,15 +29,27 @@ export const FieldRowContext = createContext(false)
 /** The surrounding Field's control props, for a control drawn further down than the Field's
  *  own children. Null outside a Field. */
 export function useFieldControl(): FieldControlProps | null {
-  return use(ControlContext)
+  return use(ControlContext)?.control ?? null
+}
+
+/** The label's id, for a control that isn't a Base UI one and so isn't named by the label's
+ *  `for`, such as a button that opens a picker. */
+export function useFieldLabelId(): string | undefined {
+  return use(ControlContext)?.labelId
 }
 
 export type FieldLayout = 'stacked' | 'inline'
 
 export interface FieldProps {
   label: ReactNode
-  /** Beside the label and outside it, so it stays out of the control's name: an InfoTip, a count. */
+  /** Beside the label and outside it, so it stays out of the control's name, such as a count. For
+   *  help text, use `help`. */
   hint?: ReactNode
+  /** More about the field, behind a ? beside the label that opens on hover or press. It is read
+   *  with the control as part of its description, so the ? stays out of the Tab order, and it shows
+   *  under the control while the control has keyboard focus. `[text](url)` links and line breaks
+   *  show as such. */
+  help?: string | undefined
   /** Buttons at the far end of the label's row that act on the field, such as one that
    *  switches its control to a typed expression. */
   actions?: ReactNode
@@ -62,9 +75,10 @@ export interface FieldProps {
   /** The control's id; one is made up when left out. */
   id?: string | undefined
   className?: string | undefined
-  /** The control, or a function that places the control props on it. A Base UI control, such
-   *  as Select, Combobox, NumberInput, Checkbox or Switch, needs only the `id`. A value shown
-   *  but not edited goes in a `FieldValue`. */
+  /** The control, or a function that places the control props on it. Any control of this
+   *  package, such as Input, Select, Combobox, NumberInput, Switch or DatePicker, takes its label,
+   *  description and invalid state from the Field on its own; a native element needs the
+   *  function. A value shown but not edited goes in a `FieldValue`. */
   children: ReactNode | ((control: FieldControlProps) => ReactNode)
 }
 
@@ -98,6 +112,7 @@ export function ErrorText({ id, children }: { id?: string | undefined; children:
 export function Field({
   label,
   hint,
+  help,
   actions,
   description,
   error,
@@ -116,9 +131,10 @@ export function Field({
   const id = ownId ?? `${uid}control`
   const labelId = `${uid}label`
   const descriptionId = description ? `${uid}description` : undefined
+  const helpId = help ? `${uid}help` : undefined
   const errorId = error ? `${uid}error` : undefined
   const isInvalid = Boolean(error) || Boolean(invalid)
-  const describedBy = [descriptionId, errorId].filter(Boolean).join(' ')
+  const describedBy = [descriptionId, helpId, errorId].filter(Boolean).join(' ')
   // Only what is set, so spreading it never clears a control's own attribute.
   const control: FieldControlProps = {
     id,
@@ -128,11 +144,14 @@ export function Field({
     ...(required && { 'aria-required': true }),
   }
 
+  const controlContext = { control, labelId }
+
   const inline = layout === 'inline'
   // In a row of fields, the label and the control take the row's two tracks, the label at the
   // foot of its track so it stays by its control.
   const inRow = use(FieldRowContext) && !inline && !group
   const labelSize = labelSizes[size]
+  const helpTip = help && <InfoTip text={help} tabIndex={-1} />
   const labelBox = cx(
     labelClassName,
     labelSize.text,
@@ -145,16 +164,24 @@ export function Field({
         {label}
         {required && <RequiredMark />}
       </span>
+      {helpTip}
       {hint}
       {actions && <span className={actionsClassName}>{actions}</span>}
     </>
   )
+  const placed = typeof children === 'function' ? children(control) : children
   const body = (
     <div className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}>
       {/* A field inside this one, such as in a group, starts its own row. */}
       <FieldRowContext value={false}>
-        <ControlContext value={control}>
-          {typeof children === 'function' ? children(control) : children}
+        <ControlContext value={controlContext}>
+          {inline ? (
+            // A control shorter than the label's row, such as a switch or a row of radios,
+            // centers on it. A grid rather than a flex row, so a control still fills the width.
+            <div className={cx('grid items-center', labelSize.inlineHeight)}>{placed}</div>
+          ) : (
+            placed
+          )}
         </ControlContext>
       </FieldRowContext>
       {description && (
@@ -163,6 +190,16 @@ export function Field({
           className="text-xs leading-relaxed text-(--theme-muted-text-color)"
         >
           {description}
+        </BaseField.Description>
+      )}
+      {help && (
+        // The ? is out of the Tab order, so the help is read with the control, and shown under it
+        // while the control has keyboard focus, along with any link in it.
+        <BaseField.Description
+          id={helpId}
+          className="hidden text-xs leading-relaxed text-(--theme-muted-text-color) group-has-[:focus-visible]/field:block [&_a]:underline"
+        >
+          {formatInfoTipContent(help)}
         </BaseField.Description>
       )}
       {error && (
@@ -174,8 +211,12 @@ export function Field({
     </div>
   )
   const frame = inRow
-    ? cx('contents', className)
-    : cx('flex w-full', inline ? 'items-start' : cx('flex-col', labelSize.stackGap), className)
+    ? cx('group/field contents', className)
+    : cx(
+        'group/field flex w-full',
+        inline ? 'items-start' : cx('flex-col', labelSize.stackGap),
+        className,
+      )
 
   if (group) {
     return (
@@ -208,10 +249,16 @@ export function Field({
     >
       {/* The hint sits beside the label rather than in it, so a help button doesn't name the control. */}
       <div className={labelBox}>
-        <BaseField.Label htmlFor={id} id={labelId} data-field-label>
+        <BaseField.Label
+          // A Base UI control tells the label its id; a function's control takes the one made here.
+          {...(typeof children === 'function' || ownId !== undefined ? { htmlFor: id } : {})}
+          id={labelId}
+          data-field-label
+        >
           {label}
           {required && <RequiredMark />}
         </BaseField.Label>
+        {helpTip}
         {hint}
         {actions && <span className={actionsClassName}>{actions}</span>}
       </div>
@@ -282,9 +329,12 @@ export interface FieldValueProps extends OutputHTMLAttributes<HTMLOutputElement>
  *  DescriptionList. */
 export function FieldValue({ size = 'md', className, children, ...props }: FieldValueProps) {
   const control = useFieldControl()
+  // An output isn't a Base UI control, so the Field's label names it by id rather than by `for`.
+  const labelId = useFieldLabelId()
   return (
     <output
       id={control?.id}
+      aria-labelledby={labelId}
       aria-describedby={control?.['aria-describedby']}
       {...props}
       className={cx(

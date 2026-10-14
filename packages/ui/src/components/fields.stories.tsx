@@ -18,6 +18,7 @@ import { SearchInput } from './SearchInput'
 import { SegmentedControl } from './SegmentedControl'
 import { Select } from './Select'
 import { Slider } from './Slider'
+import { Switch } from './Switch'
 
 const meta: Meta = {
   title: 'UI/Fields',
@@ -152,6 +153,7 @@ interface FrameArgs {
   disabled: boolean
   error: string
   description: string
+  help: string
 }
 
 /** One frame names, describes and flags any control: the label, its hint, a description and an error. */
@@ -163,16 +165,19 @@ export const Frame: StoryObj<FrameArgs> = {
     disabled: false,
     error: '',
     description: 'Letters, numbers and dashes.',
+    help: '',
   },
   argTypes: {
     layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
     size: { control: 'inline-radio', options: ['sm', 'md'] },
   },
-  render: ({ layout, size, required, disabled, error, description }) => (
+  // The controls sit straight in their Fields, which name, describe and mark them.
+  render: ({ layout, size, required, disabled, error, description, help }) => (
     <div className="flex max-w-lg flex-col gap-4">
       <Field
         label="Cluster"
         hint={<code className="text-xs theme-muted-text">cluster</code>}
+        help={help || undefined}
         description={description || undefined}
         error={error || undefined}
         required={required}
@@ -180,18 +185,13 @@ export const Frame: StoryObj<FrameArgs> = {
         layout={layout}
         size={size}
       >
-        {(control) => <input {...control} disabled={disabled} className={fieldBox({ size })} />}
+        <Input disabled={disabled} size={size} />
       </Field>
       <Field label="Zone" required={required} disabled={disabled} layout={layout} size={size}>
-        {(control) => (
-          <Select<string>
-            {...control}
-            placeholder="Zone"
-            items={zones}
-            disabled={disabled}
-            size={size}
-          />
-        )}
+        <Select<string> placeholder="Zone" items={zones} disabled={disabled} size={size} />
+      </Field>
+      <Field label="Monitoring" disabled={disabled} layout={layout} size={size}>
+        <Switch size={size} disabled={disabled} defaultChecked />
       </Field>
       <Field
         label="Precision"
@@ -298,6 +298,25 @@ export const FrameWithActions: StoryObj = {
     await expect(canvas.getByRole('group', { name: 'Runs on' })).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Use an expression instead' }))
     await expect(canvas.getByRole('textbox', { name: 'Runs on' })).toBeInTheDocument()
+  },
+}
+
+/** Help behind the ? beside the label: Tab passes over the ?, the control reads the help as its
+ *  description, and the help shows under the control while it has keyboard focus. */
+export const FrameWithHelp: StoryObj<FrameArgs> = {
+  ...Frame,
+  args: {
+    ...Frame.args,
+    layout: 'inline',
+    help: 'Names the cluster in [the dashboard](https://example.com).\nIt cannot change later.',
+  } as FrameArgs,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.tab()
+    const box = canvas.getByRole('textbox', { name: /Cluster/ })
+    await expect(box).toHaveFocus()
+    await expect(box).toHaveAccessibleDescription(/cannot change later/)
+    await expect(canvas.getByText(/Names the cluster/)).toBeVisible()
   },
 }
 

@@ -29,7 +29,8 @@ export interface FieldComponentProps<TField extends FieldBase = FieldBase> {
   disabled: boolean
   computeOn?: boolean | undefined
   spaceCompact?: boolean
-  tooltipComponent?: React.ReactNode
+  /** The field's help text, from its `tooltip`: `fieldFrame` puts it behind a ? beside the label. */
+  help?: string | undefined
 }
 
 /** Props for a field component, given the field definition it renders. */

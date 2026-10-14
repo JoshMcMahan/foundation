@@ -1,3 +1,4 @@
+import { Input as BaseInput } from '@base-ui/react/input'
 import { type ReactNode, useId, useState } from 'react'
 import { cx } from '../cx'
 import { parseColor, toHex } from '../theme/index'
@@ -75,7 +76,7 @@ export function ColorInput({
   // Framed, the message is the Field's error; alone, it sits under the row.
   const ownError = unparsed && label === undefined
   return framed(
-    { label, hint, description, error: error ?? (unparsed ? t.invalid : undefined) },
+    { label, hint, description, error: error ?? (unparsed ? t.invalid : undefined), size },
     { id, required, disabled },
     (control) => (
       <div className={cx('flex w-full flex-col gap-1', className)}>
@@ -91,7 +92,7 @@ export function ColorInput({
             }}
             className={cx(fieldBox({ size }), swatchClassName, size === 'sm' ? 'w-8' : 'w-10')}
           />
-          <input
+          <BaseInput
             id={id}
             name={name}
             aria-label={ariaLabel}
