@@ -21,6 +21,11 @@ describe('OneTimeCodeInput', () => {
     expect(screen.getByRole('group')).toHaveAccessibleDescription('From your authenticator app.')
   })
 
+  it('focuses its first box on mount when asked', () => {
+    render(<OneTimeCodeInput aria-label="Verification code" autoFocus />)
+    expect(screen.getAllByRole('textbox')[0]).toHaveFocus()
+  })
+
   it('takes a pasted code across its boxes and reports it complete', () => {
     const onValueChange = vi.fn()
     const onValueComplete = vi.fn()

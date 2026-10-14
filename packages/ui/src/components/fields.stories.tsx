@@ -565,16 +565,17 @@ interface CodeArgs {
   length: number
   size: FieldBoxSize
   disabled: boolean
+  autoFocus: boolean
   error: string
 }
 
 const oneTimeCode: StoryObj<CodeArgs> = {
-  args: { length: 6, size: 'md', disabled: false, error: '' },
+  args: { length: 6, size: 'md', disabled: false, error: '', autoFocus: false },
   argTypes: {
     length: { control: { type: 'number', min: 4, max: 8 } },
     size: { control: 'inline-radio', options: ['sm', 'md'] },
   },
-  render: ({ length, size, disabled, error }) => (
+  render: ({ length, size, disabled, error, autoFocus }) => (
     <Field
       label="Verification code"
       description="From your authenticator app."
@@ -582,7 +583,13 @@ const oneTimeCode: StoryObj<CodeArgs> = {
       disabled={disabled}
     >
       {(control) => (
-        <OneTimeCodeInput {...control} length={length} size={size} disabled={disabled} />
+        <OneTimeCodeInput
+          {...control}
+          length={length}
+          size={size}
+          disabled={disabled}
+          autoFocus={autoFocus}
+        />
       )}
     </Field>
   ),

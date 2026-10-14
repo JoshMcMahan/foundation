@@ -12,6 +12,8 @@ export interface OneTimeCodeInputProps
   size?: FieldBoxSize | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
+  /** Focuses the first box on mount, for a page or dialog whose only task is entering the code. */
+  autoFocus?: boolean | undefined
   /** On the row of boxes: its margin or gap. */
   className?: string | undefined
 }
@@ -33,6 +35,7 @@ export function OneTimeCodeInput({
   'aria-label': ariaLabel,
   'aria-invalid': ariaInvalid,
   'aria-required': ariaRequired,
+  autoFocus,
   ...rootProps
 }: OneTimeCodeInputProps) {
   const t = useStrings().oneTimeCode
@@ -62,6 +65,7 @@ export function OneTimeCodeInput({
               : {})}
           {...(ariaInvalid && { 'aria-invalid': true })}
           {...(ariaRequired && { 'aria-required': true })}
+          autoFocus={autoFocus && index === 0}
           className={cx(
             fieldBox({ size }),
             'px-0 text-center font-mono tabular-nums',
