@@ -26,6 +26,17 @@ describe('BreadcrumbsActionButton', () => {
     expect(screen.getByRole('link', { name: 'Save workspace defaults' })).toBeInTheDocument()
   })
 
+  it('takes the error color when destructive', () => {
+    render(
+      <>
+        <BreadcrumbsActionButton icon={Icon} label="Remove" destructive />
+        <BreadcrumbsActionButton icon={Icon} label="Open" href="/somewhere" />
+      </>,
+    )
+    expect(screen.getByRole('button', { name: 'Remove' })).toHaveClass('text-(--theme-error)')
+    expect(screen.getByRole('link', { name: 'Open' })).toHaveClass('text-(--theme-link)')
+  })
+
   it('falls back to the visible label when ariaLabel is absent', () => {
     render(<BreadcrumbsActionButton icon={Icon} label="Save" />)
     const button = screen.getByRole('button', { name: 'Save' })

@@ -53,6 +53,10 @@ export interface FieldProps {
   layout?: FieldLayout | undefined
   /** With `inline`, the label takes only its own width rather than the column's. */
   compact?: boolean | undefined
+  /** Matches the label to a control of the same `size`. At `sm` the label is a small, muted
+   *  caption for a compact control, such as a picker in a toolbar, and an inline label's row
+   *  is the `sm` control's height. Set the control's own `size` to match. */
+  size?: FieldBoxSize | undefined
   /** A set of controls, such as radios or checkboxes, that a legend names instead of a label. */
   group?: boolean | undefined
   /** The control's id; one is made up when left out. */
@@ -64,7 +68,16 @@ export interface FieldProps {
   children: ReactNode | ((control: FieldControlProps) => ReactNode)
 }
 
-const labelClassName = 'flex items-center gap-1 text-sm font-medium text-(--theme-app)'
+// A compact control reads first, so its label steps back to a caption.
+const labelSizes = {
+  sm: {
+    text: 'text-xs text-(--theme-muted-text-color)',
+    inlineHeight: 'min-h-7',
+    stackGap: 'gap-1',
+  },
+  md: { text: 'text-sm text-(--theme-app)', inlineHeight: 'min-h-9', stackGap: 'gap-1.5' },
+} satisfies Record<FieldBoxSize, Record<string, string>>
+const labelClassName = 'flex items-center gap-1 font-medium'
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
 const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-error)'
 
@@ -93,6 +106,7 @@ export function Field({
   disabled = false,
   layout = 'stacked',
   compact = false,
+  size = 'md',
   group = false,
   id: ownId,
   className,
@@ -118,9 +132,11 @@ export function Field({
   // In a row of fields, the label and the control take the row's two tracks, the label at the
   // foot of its track so it stays by its control.
   const inRow = use(FieldRowContext) && !inline && !group
+  const labelSize = labelSizes[size]
   const labelBox = cx(
     labelClassName,
-    inline && cx('min-h-9 shrink-0', compact ? 'mr-2 w-fit' : 'w-52 pr-3'),
+    labelSize.text,
+    inline && cx(labelSize.inlineHeight, 'shrink-0', compact ? 'mr-2 w-fit' : 'w-52 pr-3'),
     inRow && 'row-start-1 self-end',
   )
   const labelContent = (
@@ -159,7 +175,7 @@ export function Field({
   )
   const frame = inRow
     ? cx('contents', className)
-    : cx('flex w-full', inline ? 'items-start' : 'flex-col gap-1.5', className)
+    : cx('flex w-full', inline ? 'items-start' : cx('flex-col', labelSize.stackGap), className)
 
   if (group) {
     return (

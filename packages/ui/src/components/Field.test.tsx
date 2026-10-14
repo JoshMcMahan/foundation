@@ -27,6 +27,24 @@ describe('Field', () => {
     expect(label?.closest('[data-field-row]')).toHaveClass('contents')
   })
 
+  it('sizes an inline label to a control of its size', () => {
+    render(
+      <>
+        <Field label="Allocation" layout="inline" compact size="sm">
+          {(control) => <input {...control} />}
+        </Field>
+        <Field label="Zone" layout="inline">
+          {(control) => <input {...control} />}
+        </Field>
+      </>,
+    )
+    const labelRow = (name: string) =>
+      document.querySelector(`label[for="${screen.getByRole('textbox', { name }).id}"]`)
+        ?.parentElement
+    expect(labelRow('Allocation')).toHaveClass('min-h-7', 'text-xs')
+    expect(labelRow('Zone')).toHaveClass('min-h-9', 'text-sm')
+  })
+
   it('puts actions on the label row, out of the control’s name', () => {
     render(
       <Field label="Needs" actions={<button type="button">Use an expression</button>}>

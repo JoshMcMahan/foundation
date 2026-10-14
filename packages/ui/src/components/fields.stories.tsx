@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
+import { cx } from '../cx'
 import { ExpressionIcon } from '../icons'
 import { Checkbox, CheckboxGroup } from './Checkbox'
 import { ColorInput } from './ColorInput'
@@ -146,6 +147,7 @@ export const BoxDisabled: StoryObj<BoxArgs> = {
 
 interface FrameArgs {
   layout: FieldLayout
+  size: FieldBoxSize
   required: boolean
   disabled: boolean
   error: string
@@ -156,13 +158,17 @@ interface FrameArgs {
 export const Frame: StoryObj<FrameArgs> = {
   args: {
     layout: 'stacked',
+    size: 'md',
     required: true,
     disabled: false,
     error: '',
     description: 'Letters, numbers and dashes.',
   },
-  argTypes: { layout: { control: 'inline-radio', options: ['stacked', 'inline'] } },
-  render: ({ layout, required, disabled, error, description }) => (
+  argTypes: {
+    layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+  },
+  render: ({ layout, size, required, disabled, error, description }) => (
     <div className="flex max-w-lg flex-col gap-4">
       <Field
         label="Cluster"
@@ -172,17 +178,35 @@ export const Frame: StoryObj<FrameArgs> = {
         required={required}
         disabled={disabled}
         layout={layout}
+        size={size}
       >
-        {(control) => <input {...control} disabled={disabled} className={fieldBox()} />}
+        {(control) => <input {...control} disabled={disabled} className={fieldBox({ size })} />}
       </Field>
-      <Field label="Zone" required={required} disabled={disabled} layout={layout}>
+      <Field label="Zone" required={required} disabled={disabled} layout={layout} size={size}>
         {(control) => (
-          <Select<string> {...control} placeholder="Zone" items={zones} disabled={disabled} />
+          <Select<string>
+            {...control}
+            placeholder="Zone"
+            items={zones}
+            disabled={disabled}
+            size={size}
+          />
         )}
       </Field>
-      <Field label="Precision" group required={required} disabled={disabled} layout={layout}>
+      <Field
+        label="Precision"
+        group
+        required={required}
+        disabled={disabled}
+        layout={layout}
+        size={size}
+      >
         {(control) => (
-          <RadioGroup {...control} defaultValue="fp16" className="flex gap-x-5 py-2 text-sm">
+          <RadioGroup
+            {...control}
+            defaultValue="fp16"
+            className={cx('flex gap-x-5', size === 'sm' ? 'py-1.5 text-xs' : 'py-2 text-sm')}
+          >
             <FieldOption className="flex items-center gap-2">
               <Radio value="fp16" />
               Half
@@ -201,6 +225,21 @@ export const Frame: StoryObj<FrameArgs> = {
 export const FrameInline: StoryObj<FrameArgs> = {
   ...Frame,
   args: { ...Frame.args, layout: 'inline' } as FrameArgs,
+}
+
+/** At `sm` the label is a small, muted caption that keeps to the height of `sm` controls. */
+export const FrameSmall: StoryObj<FrameArgs> = {
+  ...Frame,
+  args: { ...Frame.args, size: 'sm' } as FrameArgs,
+  play: async ({ canvasElement }) => {
+    const label = within(canvasElement).getByText('Cluster')
+    await expect(getComputedStyle(label).fontSize).toBe('12px')
+  },
+}
+
+export const FrameSmallInline: StoryObj<FrameArgs> = {
+  ...Frame,
+  args: { ...Frame.args, size: 'sm', layout: 'inline' } as FrameArgs,
 }
 
 export const FrameWithError: StoryObj<FrameArgs> = {
@@ -457,6 +496,34 @@ export const Dense: StoryObj<DenseArgs> = {
   render: (args) => <DenseDemo {...args} />,
 }
 
+/** A compact control with a caption beside it: an inline, `compact`, `sm` Field. The caption
+ *  names the control as any label does. */
+export const Captions: StoryObj = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-4 rounded-md border border-(--theme-border) p-2">
+      <Field label="Allocation" layout="inline" compact size="sm" className="w-auto">
+        {(control) => (
+          <Select<string>
+            {...control}
+            items={zones}
+            defaultValue="east"
+            size="sm"
+            className="w-28 rounded-full"
+          />
+        )}
+      </Field>
+      <Field label="Limit" layout="inline" compact size="sm" className="w-auto">
+        {(control) => <NumberInput {...control} defaultValue={50} size="sm" className="w-20" />}
+      </Field>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Allocation' })).toHaveTextContent('East')
+    await expect(canvas.getByRole('textbox', { name: 'Limit' })).toHaveValue('50')
+  },
+}
+
 interface ReadOnlyArgs {
   layout: FieldLayout
   size: FieldBoxSize
@@ -467,7 +534,7 @@ function ReadOnlyDemo({ layout, size }: ReadOnlyArgs) {
   const [gpus, setGpus] = useState<number | null>(2)
   return (
     <div className="flex max-w-lg flex-col gap-4">
-      <Field label="Workers" layout={layout}>
+      <Field label="Workers" layout={layout} size={size}>
         {(control) => (
           <NumberInput
             {...control}
@@ -478,12 +545,17 @@ function ReadOnlyDemo({ layout, size }: ReadOnlyArgs) {
           />
         )}
       </Field>
-      <Field label="GPUs per worker" layout={layout}>
+      <Field label="GPUs per worker" layout={layout} size={size}>
         {(control) => (
           <NumberInput {...control} value={gpus} onValueChange={setGpus} min={0} size={size} />
         )}
       </Field>
-      <Field label="Allocation" description="Workers times GPUs per worker." layout={layout}>
+      <Field
+        label="Allocation"
+        description="Workers times GPUs per worker."
+        layout={layout}
+        size={size}
+      >
         <FieldValue size={size} className="tabular-nums">
           {(workers ?? 0) * (gpus ?? 0)} GPUs
         </FieldValue>

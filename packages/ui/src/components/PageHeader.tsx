@@ -157,8 +157,10 @@ export function BreadcrumbsRightAction({ children }: { children: ReactNode }) {
   return createPortal(children, rightActionSlot)
 }
 
+// Colored from the theme rather than by a host's `link` class, which would outrank the
+// destructive color.
 const breadcrumbsActionClasses =
-  'flex items-center gap-1 link text-xs whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed'
+  'flex cursor-pointer items-center gap-1 text-xs whitespace-nowrap hover:not-disabled:underline disabled:cursor-not-allowed disabled:opacity-50'
 
 export function BreadcrumbsActionButton({
   icon: Icon,
@@ -168,6 +170,7 @@ export function BreadcrumbsActionButton({
   onClick,
   disabled,
   tooltip,
+  destructive = false,
 }: {
   icon: ComponentType<{ className?: string }>
   label: string
@@ -176,8 +179,15 @@ export function BreadcrumbsActionButton({
   onClick?: (() => void) | undefined
   disabled?: boolean
   tooltip?: string | undefined
+  /** In the error color, as a destructive menu entry is, for an action that removes or breaks
+   *  something. */
+  destructive?: boolean | undefined
 }) {
   const Link = useLink()
+  const className = cx(
+    breadcrumbsActionClasses,
+    destructive ? 'text-(--theme-error)' : 'text-(--theme-link)',
+  )
   const content = (
     <>
       <Icon className="w-3 h-3" />
@@ -187,7 +197,7 @@ export function BreadcrumbsActionButton({
   return (
     <Tooltip content={tooltip}>
       {href && !disabled ? (
-        <Link href={href} className={breadcrumbsActionClasses} aria-label={ariaLabel}>
+        <Link href={href} className={className} aria-label={ariaLabel}>
           {content}
         </Link>
       ) : (
@@ -195,7 +205,7 @@ export function BreadcrumbsActionButton({
           type="button"
           onClick={onClick}
           disabled={disabled}
-          className={breadcrumbsActionClasses}
+          className={className}
           aria-label={ariaLabel}
         >
           {content}
