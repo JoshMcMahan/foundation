@@ -3,8 +3,9 @@
 /** Above dialogs and sticky chrome; hidden while its anchor is scrolled out of view. */
 export const positionerClassName = 'z-(--layer-popover) outline-none data-anchor-hidden:invisible'
 
+// With reduced motion a popup only fades: the scale is the movement.
 const enterExit =
-  'origin-(--transform-origin) transition-[transform,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0'
+  'origin-(--transform-origin) transition-[transform,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:data-starting-style:scale-100 motion-reduce:data-ending-style:scale-100'
 
 /** A panel of choices: a menu, a select's list, a combobox's list. */
 export const panelClassName = `rounded-lg border border-(--theme-border) bg-(--theme-app-bg) text-sm text-(--theme-app) shadow-(--theme-shadow-lg) outline-none ${enterExit}`

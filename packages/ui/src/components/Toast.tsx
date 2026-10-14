@@ -273,7 +273,7 @@ function ToastList() {
           '[&[data-ending-style]:not([data-limited]):not([data-swipe-direction])]:[transform:translateY(-150%)]',
           'data-ending-style:data-[swipe-direction=up]:[transform:translateY(calc(var(--toast-swipe-movement-y)-150%))]',
           'data-ending-style:data-[swipe-direction=right]:[transform:translateX(calc(var(--toast-swipe-movement-x)+150%))_translateY(var(--offset-y))]',
-          'rounded-lg border border-(--theme-border) bg-(--theme-app-bg) text-(--theme-app) shadow-(--theme-shadow-lg) outline-none focus-visible:outline-2 focus-visible:outline-(--theme-link)',
+          'rounded-lg border border-(--theme-border) bg-(--theme-app-bg) text-(--theme-app) shadow-(--theme-shadow-lg) outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--theme-focus)',
           '[transition:transform_0.4s_cubic-bezier(0.22,1,0.36,1),opacity_0.4s,height_0.15s] motion-reduce:transition-none',
           "after:absolute after:inset-x-0 after:top-full after:h-[calc(var(--gap)+1px)] after:content-['']",
         )}
@@ -310,9 +310,12 @@ function ToastList() {
           {dismissible && (
             <BaseToast.Close
               aria-label={common.close}
-              className="-m-1 shrink-0 cursor-pointer rounded-md p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app)"
+              className={cx(
+                buttonClasses({ variant: 'ghost', size: 'sm', iconOnly: true }),
+                '-m-1.5',
+              )}
             >
-              <CloseIcon className="size-4" />
+              <CloseIcon />
             </BaseToast.Close>
           )}
         </BaseToast.Content>

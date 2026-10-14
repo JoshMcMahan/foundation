@@ -13,7 +13,8 @@ interface IconButtonOwnProps {
   size?: ButtonSize
   /** A toggle's state: set, it reads as pressed (`aria-pressed`). */
   pressed?: boolean | undefined
-  /** A dot in the corner, such as for filters narrowing what the page shows. */
+  /** A dot in the corner, such as for filters narrowing what the page shows. It
+   *  is only seen, so say what it means in `label` too, such as "Filters (2 on)". */
   dot?: boolean
   /** A single key, such as F, that presses the button from anywhere on the page
    *  outside a text field. Also shown in the tooltip. */

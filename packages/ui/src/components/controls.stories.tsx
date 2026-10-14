@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import { AddIcon } from '../icons'
+import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon } from '../icons'
 import { Button, MethodButton } from './Button'
 import type { ButtonSize, ButtonVariant } from './buttonClasses'
 import { Card, CardHeader } from './Card'
@@ -108,6 +108,62 @@ export const Buttons: StoryObj = {
     await expect(canvas.getByRole('link', { name: 'Read the docs' })).toBeInTheDocument()
     await expect(canvas.getAllByRole('button', { name: 'Add' })).toHaveLength(15)
   },
+}
+
+function SaveDemo() {
+  const [saving, setSaving] = useState(false)
+  const save = () => {
+    setSaving(true)
+    setTimeout(() => setSaving(false), 1500)
+  }
+  return (
+    <div className="p-8">
+      <Button variant="primary" icon={<SaveIcon />} loading={saving} onClick={save}>
+        {saving ? 'Saving' : 'Save'}
+      </Button>
+    </div>
+  )
+}
+
+/** A button that turns busy keeps keyboard focus while it works, so the reader
+ *  isn't sent back to the top of the page, and can't be pressed again. */
+export const ButtonKeepsFocusWhileBusy: StoryObj = {
+  render: () => <SaveDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
+    const busy = canvas.getByRole('button', { name: 'Saving' })
+    await expect(busy).toHaveAttribute('aria-busy', 'true')
+    await expect(busy).toHaveFocus()
+  },
+}
+
+/** Ways to go on, such as sign-in methods, spaced by their container: one
+ *  loading and one unavailable. The icon reads in the accent's text color, so it
+ *  stays legible on the dark theme's light accent. */
+export const MethodButtons: StoryObj = {
+  render: () => (
+    <div className="max-w-sm space-y-3 p-8">
+      <MethodButton
+        icon={<ShieldIcon />}
+        label="Single sign-on"
+        description="Use your organization identity provider"
+        href="/sso"
+      />
+      <MethodButton
+        icon={<MailIcon />}
+        label="Email link"
+        description="Sent to your inbox"
+        loading
+      />
+      <MethodButton
+        icon={<KeyIcon />}
+        label="Security key"
+        description="Not set up on this account"
+        disabled
+      />
+    </div>
+  ),
 }
 
 interface ButtonLinkArgs {

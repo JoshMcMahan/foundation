@@ -15,9 +15,22 @@ describe('Button', () => {
     )
     const button = screen.getByRole('button', { name: 'Save' })
     expect(button).toHaveAttribute('aria-busy', 'true')
-    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     fireEvent.click(button)
     expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it('keeps focus when it turns busy', () => {
+    const { rerender } = render(<Button onClick={() => {}}>Save</Button>)
+    const button = screen.getByRole('button', { name: 'Save' })
+    button.focus()
+    rerender(
+      <Button loading onClick={() => {}}>
+        Save
+      </Button>,
+    )
+    expect(button).toHaveFocus()
+    expect(button).not.toHaveAttribute('disabled')
   })
 
   it('stays focusable while disabled when asked, for its tooltip', () => {

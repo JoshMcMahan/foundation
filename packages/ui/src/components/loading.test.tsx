@@ -73,6 +73,8 @@ describe('RefreshButton', () => {
   it('says how long ago the data was fetched', () => {
     render(<RefreshButton onRefresh={() => {}} updatedAt={Date.now() - 5 * 60_000} />)
     expect(screen.getByRole('button')).toHaveTextContent('Updated 5 minutes ago')
+    // Named for what it does, not only for when the data is from.
+    expect(screen.getByRole('button')).toHaveAccessibleName(/^Refresh\W+Updated 5 minutes ago$/)
   })
 
   it('keeps its name when only the icon shows', () => {

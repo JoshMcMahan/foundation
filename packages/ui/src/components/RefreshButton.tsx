@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { cx } from '../cx'
 import { RefreshIcon } from '../icons'
 import { type ButtonSize, buttonClasses } from './buttonClasses'
@@ -29,13 +29,6 @@ export function RefreshButton({
 }: RefreshButtonProps) {
   const { common: t } = useStrings()
   const [pending, setPending] = useState(false)
-  const mounted = useRef(true)
-  useEffect(
-    () => () => {
-      mounted.current = false
-    },
-    [],
-  )
   const busy = refreshing || pending
   const ago = useRelativeTime(updatedAt)
 
@@ -46,7 +39,7 @@ export function RefreshButton({
     const result = onRefresh()
     if (result instanceof Promise) {
       setPending(true)
-      result.finally(() => mounted.current && setPending(false))
+      result.finally(() => setPending(false))
     }
   }
 
@@ -68,7 +61,16 @@ export function RefreshButton({
           busy ? 'animate-spin' : 'transition-transform duration-300 group-hover:rotate-180',
         )}
       />
-      {!iconOnly && (ago ? t.updated(ago) : t.refresh)}
+      {!iconOnly &&
+        (ago ? (
+          <>
+            {/* Its name says what it does as well as what it shows. */}
+            <span className="sr-only">{t.refresh}. </span>
+            {t.updated(ago)}
+          </>
+        ) : (
+          t.refresh
+        ))}
     </button>
   )
   return (

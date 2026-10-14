@@ -1,5 +1,5 @@
 import { Popover as BasePopover } from '@base-ui/react/popover'
-import { createContext, type ReactElement, type ReactNode, use, useRef } from 'react'
+import { createContext, type ReactElement, type ReactNode, use, useCallback, useRef } from 'react'
 import { cx } from '../cx'
 import {
   type FloatingAnchor,
@@ -86,6 +86,8 @@ export function Popover({
   const tip = variant === 'tip'
   const popup = useRef<HTMLDivElement>(null)
   const actions = useRef<BasePopover.Root.Actions>(null)
+  // Stable, so the popover re-rendering doesn't re-render every consumer of it.
+  const close = useCallback(() => actions.current?.close(), [])
   return (
     <BasePopover.Root
       actionsRef={actions}
@@ -127,7 +129,7 @@ export function Popover({
             {title && (
               <BasePopover.Title className="mb-2 text-sm font-semibold">{title}</BasePopover.Title>
             )}
-            <CloseContext value={() => actions.current?.close()}>{children}</CloseContext>
+            <CloseContext value={close}>{children}</CloseContext>
           </BasePopover.Popup>
         </BasePopover.Positioner>
       </BasePopover.Portal>

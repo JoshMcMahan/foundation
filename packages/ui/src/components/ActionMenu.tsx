@@ -1,5 +1,6 @@
 import { Menu } from '@base-ui/react/menu'
 import type { ReactNode } from 'react'
+import { buttonClasses } from './buttonClasses'
 import { MenuPopup } from './Menu'
 import { MenuEntries, type MenuEntry, MenuFilter, type MenuSearch } from './MenuEntries'
 import { Tooltip } from './Tooltip'
@@ -18,6 +19,7 @@ export function ActionMenu({
   label: string
   search?: MenuSearch | undefined
   align?: 'start' | 'center' | 'end'
+  /** Styles the trigger; without it the trigger is a ghost icon button. */
   triggerClassName?: string | undefined
   /** The trigger's content. */
   children: ReactNode
@@ -27,7 +29,12 @@ export function ActionMenu({
       {(query) => (
         <Menu.Root>
           <Tooltip content={label}>
-            <Menu.Trigger aria-label={label} className={triggerClassName}>
+            <Menu.Trigger
+              aria-label={label}
+              className={
+                triggerClassName ?? buttonClasses({ variant: 'ghost', size: 'sm', iconOnly: true })
+              }
+            >
               {children}
             </Menu.Trigger>
           </Tooltip>
