@@ -91,7 +91,13 @@ export function Callout({
           <div className={cx(title !== undefined && 'mt-0.5')}>{children}</div>
         )}
       </div>
-      {action !== undefined && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+      {action !== undefined && (
+        // One line tall like the icon, so a button taller than the text centers on
+        // the first line and spills into the padding instead of sitting below it.
+        <div className={cx('flex shrink-0 items-center gap-2', small ? 'h-4' : 'h-5')}>
+          {action}
+        </div>
+      )}
       {onDismiss && (
         <IconButton
           size="xs"
