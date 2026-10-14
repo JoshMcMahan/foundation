@@ -86,4 +86,41 @@ describe('Section', () => {
     expect(screen.getByRole('heading', { name: 'Summary' })).toHaveAttribute('data-section-title')
     expect(screen.getByText('content')).toBeVisible()
   })
+
+  it('describes the section and its toggle with the description, outside the toggle', () => {
+    render(
+      <Section id="access" title="Access" description="Who can see this.">
+        content
+      </Section>,
+    )
+    const trigger = screen.getByRole('button', { name: 'Access' })
+    expect(trigger).toHaveAccessibleDescription('Who can see this.')
+    expect(trigger).not.toHaveTextContent('Who can see this.')
+    expect(document.getElementById('access')).toHaveAccessibleDescription('Who can see this.')
+  })
+
+  it('describes a section that cannot fold, and takes its id', () => {
+    render(
+      <Section
+        id="retention"
+        title="Retention"
+        description="How long runs are kept."
+        collapsible={false}
+      >
+        content
+      </Section>,
+    )
+    const section = document.getElementById('retention')
+    expect(section?.tagName).toBe('SECTION')
+    expect(section).toHaveAccessibleDescription('How long runs are kept.')
+  })
+
+  it('shows a card that cannot fold with an open title, not a folded one', () => {
+    render(
+      <Section variant="card" title="Summary" collapsible={false}>
+        content
+      </Section>,
+    )
+    expect(screen.getByRole('heading', { name: 'Summary' }).className).not.toMatch(/muted/)
+  })
 })

@@ -19,12 +19,16 @@ const body = (
   </p>
 )
 
-export const Sections: StoryObj<{ variant: SectionVariant; collapsible: boolean }> = {
-  args: { variant: 'plain', collapsible: true },
+export const Sections: StoryObj<{
+  variant: SectionVariant
+  collapsible: boolean
+  description: string
+}> = {
+  args: { variant: 'plain', collapsible: true, description: 'Name and owner.' },
   argTypes: { variant: { control: 'inline-radio', options: ['plain', 'card'] } },
-  render: (args) => (
+  render: ({ description, ...args }) => (
     <div className="flex max-w-xl flex-col gap-6">
-      <Section {...args} title="General">
+      <Section {...args} title="General" description={description}>
         {body}
       </Section>
       <Section
@@ -51,6 +55,51 @@ export const Sections: StoryObj<{ variant: SectionVariant; collapsible: boolean 
     await expect(trigger).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(trigger)
     await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'))
+  },
+}
+
+// A page of settings: each a card that can't fold, with what it holds said under
+// its title, its actions at the end, and an id for links to it.
+export const SettingsSections: StoryObj = {
+  name: 'Settings sections',
+  render: () => (
+    <div className="flex max-w-xl flex-col gap-4">
+      <Section
+        variant="card"
+        collapsible={false}
+        id="access"
+        title="Access"
+        description="Who can see and change this resource."
+        actions={
+          <button type="button" className="text-sm text-(--theme-link)">
+            Invite
+          </button>
+        }
+      >
+        {body}
+      </Section>
+      <Section
+        variant="card"
+        collapsible={false}
+        id="retention"
+        title="Retention"
+        description="How long finished runs are kept."
+      >
+        {body}
+      </Section>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const title = canvas.getByRole('heading', { name: 'Access' })
+    const description = canvas.getByText('Who can see and change this resource.')
+    const section = canvasElement.querySelector<HTMLElement>('#access')
+    await expect(section).toHaveAccessibleDescription('Who can see and change this resource.')
+    await expect(section).toContainElement(title)
+    // A card that can't fold is always open, so its title keeps the text color
+    // rather than the muted one a folded card's title takes.
+    await expect(getComputedStyle(title).color).not.toBe(getComputedStyle(description).color)
+    await expect(getComputedStyle(title).color).toBe(getComputedStyle(section as Element).color)
   },
 }
 
@@ -137,6 +186,73 @@ export const LinkTabs: StoryObj = {
     await expect(activity).toHaveAttribute('href', '#activity')
     await userEvent.click(activity)
     await waitFor(() => expect(activity).toHaveAttribute('aria-selected', 'true'))
+  },
+}
+
+const offsets = { underHeader: 40, underToolbar: 88 } as const
+type StickyTabsArgs = { sticky: keyof typeof offsets; panels: boolean }
+const lines = Array.from({ length: 40 }, (_, line) => line + 1)
+
+function StickyTabsDemo({ sticky, panels }: StickyTabsArgs) {
+  const [page, setPage] = useState('overview')
+  const filler = lines.map((line) => (
+    <p key={line} className="py-2 text-sm theme-muted-text">
+      Line {line} of the {page} page.
+    </p>
+  ))
+  return (
+    // The page's own scroller, as a host's main pane is, with its pinned header on top.
+    <div data-testid="page" className="max-w-xl overflow-y-auto" style={{ height: 448 }}>
+      <div className="sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)">
+        <div className="flex h-10 items-center border-b border-(--theme-border) px-4 text-sm font-semibold">
+          Resource
+        </div>
+        {sticky === 'underToolbar' && (
+          <div className="flex h-12 items-center border-b border-(--theme-border) px-4 text-sm">
+            Toolbar
+          </div>
+        )}
+      </div>
+      <Tabs
+        label="Resource"
+        sticky={sticky}
+        value={page}
+        onValueChange={setPage}
+        items={views.map((view) => ({ ...view, ...(panels ? {} : { href: `#${view.value}` }) }))}
+      >
+        {panels &&
+          views.map((view) => (
+            <TabPanel key={view.value} value={view.value} className="px-4">
+              {filler}
+            </TabPanel>
+          ))}
+      </Tabs>
+      {!panels && <div className="px-4">{filler}</div>}
+    </div>
+  )
+}
+
+// The tab row stays pinned under the page's header as the page scrolls, whether
+// the tabs link to pages, which leaves them no panels, or show panels below.
+export const StickyTabs: StoryObj<StickyTabsArgs> = {
+  name: 'Sticky tabs',
+  args: { sticky: 'underHeader', panels: false },
+  argTypes: {
+    sticky: { control: 'inline-radio', options: Object.keys(offsets) },
+    panels: { description: 'Panels under the tabs, rather than tabs that link to pages.' },
+  },
+  render: (args) => <StickyTabsDemo {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const page = canvas.getByTestId('page')
+    // The row is the tab list's parent, which holds the sticky classes.
+    const row = canvas.getByRole('tablist').parentElement as HTMLElement
+    const offset = () => row.getBoundingClientRect().top - page.getBoundingClientRect().top
+    for (const top of [600, page.scrollHeight]) {
+      page.scrollTo({ top })
+      await waitFor(() => expect(page.scrollTop).toBeGreaterThan(500))
+      await expect(offset()).toBe(offsets[args.sticky])
+    }
   },
 }
 

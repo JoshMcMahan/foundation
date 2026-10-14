@@ -41,6 +41,32 @@ describe('Tabs', () => {
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'false')
   })
 
+  // A root with only the row in it would leave a sticky row no room to stick.
+  it('drops the root box for tabs that are pages, keeping it around panels', () => {
+    const { rerender } = render(
+      <Tabs
+        label="Resource"
+        value="settings"
+        sticky="underHeader"
+        testId="tabs"
+        items={items.map((item) => ({ ...item, href: `/r/${item.value}` }))}
+      />,
+    )
+    expect(screen.getByTestId('tabs')).toHaveClass('contents')
+    rerender(
+      <Tabs
+        label="Resource"
+        defaultValue="overview"
+        sticky="underHeader"
+        testId="tabs"
+        items={items}
+      >
+        <TabPanel value="overview">Overview panel</TabPanel>
+      </Tabs>,
+    )
+    expect(screen.getByTestId('tabs')).not.toHaveClass('contents')
+  })
+
   it('moves between tabs with the arrow keys', async () => {
     render(<Tabs label="Resource" items={items} defaultValue="overview" />)
     const overview = screen.getByRole('tab', { name: 'Overview' })

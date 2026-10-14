@@ -114,6 +114,10 @@ export function Tabs<Value extends string>({
       }}
       orientation={layout.iconOnly ? 'vertical' : 'horizontal'}
       data-testid={testId}
+      // Without panels the root holds only the row, so a sticky row would have
+      // no room to stick in and would scroll away with it. Dropping the root's
+      // box lets the row stick within the page that holds it.
+      className={children ? undefined : 'contents'}
     >
       {showRow && (
         <div
