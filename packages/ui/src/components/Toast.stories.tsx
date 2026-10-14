@@ -33,7 +33,8 @@ interface ToastArgs {
   title: string
   timeout: number
   keep: boolean
-  action: boolean
+  action: 'none' | 'button' | 'link'
+  href: string
 }
 
 /** A notice along the top of the window. It closes itself, pausing while the
@@ -45,16 +46,22 @@ export const Toasts: StoryObj<ToastArgs> = {
     title: '',
     timeout: 5000,
     keep: false,
-    action: false,
+    action: 'none',
+    href: '/runs/42?tab=logs#step-3',
   },
   argTypes: {
     tone: { control: 'inline-radio', options: ['info', 'success', 'warning', 'error'] },
     title: { control: 'text', description: 'A bold first line; empty for none.' },
     timeout: { control: 'number', description: 'Milliseconds before it closes itself.' },
     keep: { control: 'boolean', description: 'Stays until dismissed (timeout: false).' },
-    action: { control: 'boolean', description: 'Adds an Undo action.' },
+    action: {
+      control: 'inline-radio',
+      options: ['none', 'button', 'link'],
+      description: 'Adds an Undo button, or a link to what the toast reports on.',
+    },
+    href: { control: 'text', description: 'Where the link action goes.' },
   },
-  render: ({ tone, message, title, timeout, keep, action }) => (
+  render: ({ tone, message, title, timeout, keep, action, href }) => (
     <div className="flex flex-wrap gap-2 p-8">
       <Button
         variant="primary"
@@ -62,7 +69,11 @@ export const Toasts: StoryObj<ToastArgs> = {
           toast[tone](message, {
             ...(title ? { title } : {}),
             timeout: keep ? false : timeout,
-            ...(action ? { action: { label: 'Undo', onClick: () => toast.info('Undone') } } : {}),
+            ...(action === 'button'
+              ? { action: { label: 'Undo', onClick: () => toast.info('Undone') } }
+              : action === 'link'
+                ? { action: { label: 'View run', href } }
+                : {}),
           })
         }
       >
@@ -87,6 +98,23 @@ export const Toasts: StoryObj<ToastArgs> = {
       ).toBe(true),
     )
     toast.dismiss()
+  },
+}
+
+/** An action that navigates is a link, so it opens in a new tab like any other; a plain click
+ *  routes through the host's link and closes the toast. */
+export const LinkAction: StoryObj<ToastArgs> = {
+  ...Toasts,
+  args: { ...Toasts.args, message: 'Run 42 started.', action: 'link', keep: true },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Show toast' }))
+    const shown = await shownToast('Run 42 started.')
+    const link = within(shown).getByRole('link', { name: 'View run' })
+    await expect(link).toHaveAttribute('href', args.href)
+    await userEvent.click(link)
+    await waitFor(() =>
+      expect(within(region()).queryByText('Run 42 started.')).not.toBeInTheDocument(),
+    )
   },
 }
 

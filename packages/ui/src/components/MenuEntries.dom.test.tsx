@@ -14,10 +14,11 @@ describe('the MenuAction type', () => {
       { label: 'Rename', onClick: run },
       { label: 'Wrap lines', checked: true, onClick: run },
       { label: 'Docs', href: '/docs', reloadDocument: true },
+      { label: 'Console', href: 'https://example.com/console', target: '_blank' },
       { label: 'Copy ID', copy: { text: 'c-1', label: 'ID' } },
       { label: 'Archive', disabled: true, disabledReason: 'Stop it first', onClick: run },
     ]
-    expect(actions).toHaveLength(5)
+    expect(actions).toHaveLength(6)
   })
 
   it('rejects an action that does nothing or more than one thing', () => {
@@ -38,10 +39,16 @@ describe('the MenuAction type', () => {
       { label: 'Docs', href: '/docs', checked: true } satisfies MenuAction,
       // @ts-expect-error: only a link can reload the document.
       { label: 'Rename', onClick: run, reloadDocument: true } satisfies MenuAction,
+      // @ts-expect-error: only a link can open a new tab.
+      { label: 'Rename', onClick: run, target: '_blank' } satisfies MenuAction,
+      // @ts-expect-error: only a link can open a new tab.
+      { label: 'Copy', copy: { text: 'c-1', label: 'ID' }, target: '_blank' } satisfies MenuAction,
+      // @ts-expect-error: a new tab, not another window's name.
+      { label: 'Docs', href: '/docs', target: 'docs' } satisfies MenuAction,
       // @ts-expect-error: leave an action that can't run out instead.
       { label: 'Share', onClick: when ? run : undefined } satisfies MenuAction,
     ]
-    expect(rejected).toHaveLength(8)
+    expect(rejected).toHaveLength(11)
   })
 
   it('rejects a row action built elsewhere with no behavior', () => {

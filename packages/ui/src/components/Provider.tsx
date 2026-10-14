@@ -584,10 +584,13 @@ export interface UIData {
 import type { FieldComponent } from '../form/fieldRegistry'
 import type { Breadcrumb } from './pageHeaderStore'
 
-/** Renders internal navigation; hosts bind their router's Link. Accessibility
- * and tooltip data attributes pass through so header links keep their labels. */
-/** An internal navigation link. It passes every other prop, ref included, to
- *  its anchor, so menus and tooltips can attach to it. */
+/** An internal navigation link, which hosts bind to their router's Link. Its
+ *  `href` is a full in-app URL that may carry a search and a hash, such as
+ *  `/runs/42?tab=logs#step-3`, and the host routes all of it client-side on a
+ *  plain click, leaving modified and middle clicks to the browser. It passes
+ *  every other prop, ref included, to its anchor, so menus and tooltips can
+ *  attach to it. Components render it through `AppLink`, which sanitizes the
+ *  href and keeps full page loads and other origins off the router. */
 export type UILinkComponent = React.ComponentType<
   React.ComponentPropsWithRef<'a'> & { href: string }
 >

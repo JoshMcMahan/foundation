@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type MouseEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { isPlainClick } from '../../components/AppLink'
 import type { OpenMenu } from '../../components/ContextMenu'
 import { EmptyState } from '../../components/EmptyState'
 import type { MenuEntry } from '../../components/MenuEntries'
@@ -36,7 +37,11 @@ function ConversationRow({
       <LinkComponent
         target={{ kind: 'conversation', id: conv.id }}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
-        onClick={onOpen}
+        onClick={(e) => {
+          if (isPlainClick(e)) {
+            onOpen()
+          }
+        }}
       >
         {conv.isOwner === false && (
           <UsersIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
@@ -135,10 +140,13 @@ export default function ChatSidebar({
     [filteredConversations, tSidebar],
   )
 
-  const handleNewChat = () => {
-    closeDrawer()
-    clearCurrentConversation()
-    navigation.toNewChat()
+  // The link navigates; this clears the open chat at once, but only for a
+  // click that opens the new chat here rather than in another tab.
+  const handleNewChat = (e: MouseEvent) => {
+    if (isPlainClick(e)) {
+      closeDrawer()
+      clearCurrentConversation()
+    }
   }
 
   const list = (
@@ -188,8 +196,8 @@ export default function ChatSidebar({
             {actions && (
               <>
                 <div className="flex flex-col gap-0.5 px-2 pt-2 pb-1">
-                  <button
-                    type="button"
+                  <LinkComponent
+                    target={{ kind: 'newChat' }}
                     onClick={handleNewChat}
                     className="flex items-center h-9 px-2 gap-3 rounded-lg font-medium transition-colors hover:chat-tint"
                     title={tSidebar.newChat}
@@ -203,7 +211,7 @@ export default function ChatSidebar({
                     >
                       {tSidebar.newChat}
                     </span>
-                  </button>
+                  </LinkComponent>
 
                   {attachmentsAvailable && (
                     <LinkComponent

@@ -11,9 +11,10 @@ import { createPortal } from 'react-dom'
 import { cx } from '../cx'
 import { ChevronRightIcon, MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
+import { AppLink } from './AppLink'
 import { buttonClasses } from './buttonClasses'
 import { keyedByContent } from './keys'
-import { useLink, useSlots, useStrings } from './Provider'
+import { useSlots, useStrings } from './Provider'
 import {
   type Breadcrumb,
   type PageHeaderRegion,
@@ -321,7 +322,6 @@ function useTrailFit(nav: HTMLElement | null, natural: HTMLElement | null): Trai
 }
 
 function BreadcrumbTrail({ crumbs }: { crumbs: readonly Breadcrumb[] }) {
-  const Link = useLink()
   const { common } = useStrings()
   const [nav, setNav] = useState<HTMLElement | null>(null)
   const [natural, setNatural] = useState<HTMLElement | null>(null)
@@ -369,9 +369,9 @@ function BreadcrumbTrail({ crumbs }: { crumbs: readonly Breadcrumb[] }) {
             ) : (
               <Tooltip content={crumb.label} overflowOnly>
                 {crumb.href ? (
-                  <Link href={crumb.href} className={cx(crumbText, crumbLink, 'max-w-48')}>
+                  <AppLink href={crumb.href} className={cx(crumbText, crumbLink, 'max-w-48')}>
                     {crumb.label}
-                  </Link>
+                  </AppLink>
                 ) : (
                   <span className={cx(crumbText, 'max-w-48')}>{crumb.label}</span>
                 )}

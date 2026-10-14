@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { expect, within } from 'storybook/test'
+import { AppLink } from '../../components/AppLink'
 import { useContextMenu } from '../../components/ContextMenu'
 import { Drawer } from '../../components/Drawer'
 import { EmptyState } from '../../components/EmptyState'
@@ -37,6 +39,8 @@ const TASKS: Task[] = [
   { id: 't5', title: 'Profile the slow report query', state: 'idle', age: '3d' },
 ]
 
+const taskHref = (t: Task) => `/tasks/${t.id}?view=log#latest`
+
 const VARIANT = { waiting: 'warning', running: 'success', idle: 'muted' } as const
 
 function grouped(tasks: Task[]): ConversationSidebarGroup<Task>[] {
@@ -55,6 +59,7 @@ function grouped(tasks: Task[]): ConversationSidebarGroup<Task>[] {
 function TaskSidebar({
   tasks,
   startCollapsed,
+  links = false,
   fill = false,
   onToggle,
 }: {
@@ -62,6 +67,8 @@ function TaskSidebar({
   startCollapsed: boolean
   fill?: boolean
   onToggle?: () => void
+  /** Rows and rail items are links to their task, as a routed list's are. */
+  links?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(startCollapsed)
   const [openId, setOpenId] = useState<string | undefined>('t2')
@@ -90,14 +97,25 @@ function TaskSidebar({
             openMenu={openMenu}
             menuItems={[{ label: 'Rename', onClick: () => {} }]}
           >
-            <button
-              type="button"
-              onClick={() => setOpenId(t.id)}
-              className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
-            >
-              {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
-              <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
-            </button>
+            {links ? (
+              <AppLink
+                href={taskHref(t)}
+                onClick={() => setOpenId(t.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+              >
+                {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
+                <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
+              </AppLink>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOpenId(t.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+              >
+                {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
+                <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
+              </button>
+            )}
           </SidebarRow>
         )}
         rail={tasks
@@ -107,6 +125,7 @@ function TaskSidebar({
               key={t.id}
               label={t.title}
               selected={t.id === openId}
+              href={links ? taskHref(t) : undefined}
               onSelect={() => setOpenId(t.id)}
             >
               <StatusDot variant={VARIANT[t.state]} />
@@ -119,10 +138,14 @@ function TaskSidebar({
   )
 }
 
-export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean }> = {
-  args: { collapsed: false, fill: false },
+export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean; links: boolean }> = {
+  args: { collapsed: false, fill: false, links: false },
   argTypes: {
     collapsed: { control: 'boolean' },
+    links: {
+      control: 'boolean',
+      description: 'Rows and rail items link to their task (SidebarRailItem `href`)',
+    },
     fill: {
       control: 'boolean',
       description: 'Take the container width, with no rail or drag handle (as in a drawer)',
@@ -134,8 +157,20 @@ export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean }> = {
       tasks={TASKS}
       startCollapsed={args.collapsed}
       fill={args.fill}
+      links={args.links}
     />
   ),
+}
+
+/** The collapsed rail of a routed list: each item is a link to its task, so it opens in a new
+ *  tab and shows its URL on hover. */
+export const RailLinks: StoryObj<{ collapsed: boolean; fill: boolean; links: boolean }> = {
+  ...Grouped,
+  args: { collapsed: true, fill: false, links: true },
+  play: async ({ canvasElement }) => {
+    const item = within(canvasElement).getByRole('link', { name: 'Fix the flaky upload test' })
+    await expect(item).toHaveAttribute('href', '/tasks/t2?view=log#latest')
+  },
 }
 
 // A host composing its own list puts it in a Drawer with sidebarDrawerProps on a

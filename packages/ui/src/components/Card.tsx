@@ -1,6 +1,7 @@
 import { useRender } from '@base-ui/react/use-render'
 import type { ReactElement, ReactNode } from 'react'
 import { cx } from '../cx'
+import { AppLink, type LinkTarget } from './AppLink'
 
 const sizeClasses = {
   sm: 'max-w-[400px] p-6',
@@ -8,21 +9,37 @@ const sizeClasses = {
   lg: 'max-w-[560px] p-8',
 }
 
-export interface CardProps {
+export interface CardProps extends LinkTarget {
   children: ReactNode
   /** Its width and padding: `sm` for a short form, `lg` for a wide one. */
   size?: keyof typeof sizeClasses | undefined
   /** A stronger shadow, for a card standing alone on a page, such as sign-in. */
   elevated?: boolean | undefined
-  /** Renders the card as this element, such as a link or a button, which makes
-   *  the whole card pressable: it lifts on hover and shows focus. */
+  /** Renders the card as this element, such as a button, which makes the
+   *  whole card pressable: it lifts on hover and shows focus. A card that
+   *  navigates takes `href` instead, which makes it a link the same way. */
   render?: ReactElement | undefined
   className?: string | undefined
 }
 
 /** A raised surface holding one task, such as a sign-in form or a choice among
  *  a few options. */
-export function Card({ children, size = 'md', elevated = false, render, className }: CardProps) {
+export function Card({
+  children,
+  size = 'md',
+  elevated = false,
+  render: renderProp,
+  href,
+  reloadDocument,
+  target,
+  className,
+}: CardProps) {
+  const render =
+    href === undefined ? (
+      renderProp
+    ) : (
+      <AppLink href={href} reloadDocument={reloadDocument} target={target} />
+    )
   return useRender({
     render: render ?? <div />,
     props: {
@@ -31,7 +48,7 @@ export function Card({ children, size = 'md', elevated = false, render, classNam
         elevated ? 'shadow-(--theme-shadow-xl)' : 'shadow-(--theme-shadow)',
         sizeClasses[size],
         render &&
-          'cursor-pointer text-left transition-[background-color,box-shadow] duration-150 hover:bg-(--theme-panel-hover) hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
+          'cursor-pointer text-left text-inherit no-underline transition-[background-color,box-shadow] duration-150 hover:bg-(--theme-panel-hover) hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
         className,
       ),
       children,

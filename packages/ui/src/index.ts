@@ -1,5 +1,11 @@
 export { ActionMenu } from './components/ActionMenu'
 export {
+  AppLink,
+  type AppLinkProps,
+  isPlainClick,
+  type LinkTarget,
+} from './components/AppLink'
+export {
   Avatar,
   type AvatarProps,
   type AvatarSize,

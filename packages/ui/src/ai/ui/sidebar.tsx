@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useState } from 'react'
+import { AppLink, isPlainClick } from '../../components/AppLink'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import type { OpenMenu } from '../../components/ContextMenu'
 import { fieldBox } from '../../components/fieldBox'
@@ -156,10 +157,12 @@ export function SidebarRow({
 }
 
 /** One entry in the collapsed rail: a square the size of the toggle, with the
- *  same highlight as a row, holding whatever stands in for the item. */
+ *  same highlight as a row, holding whatever stands in for the item. With
+ *  `href` it is a link to the item, and `onSelect` runs only for a plain click. */
 export function SidebarRailItem({
   selected,
   label,
+  href,
   onSelect,
   testId,
   children,
@@ -167,27 +170,41 @@ export function SidebarRailItem({
   selected: boolean
   /** Names the icon-only button, and shows beside it on hover. */
   label: string
-  onSelect: () => void
+  href?: string | undefined
+  onSelect?: (() => void) | undefined
   testId?: string
   children: ReactNode
 }) {
+  const props = {
+    'data-testid': testId,
+    'aria-label': label,
+    'aria-current': selected ? ('page' as const) : undefined,
+    className: cx(
+      'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+      HIGHLIGHT_HOVER,
+      selected && HIGHLIGHT_SELECTED,
+    ),
+  }
   return (
     <li>
       <Tooltip content={label} side="right">
-        <button
-          type="button"
-          data-testid={testId}
-          aria-label={label}
-          aria-current={selected ? 'page' : undefined}
-          onClick={onSelect}
-          className={cx(
-            'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
-            HIGHLIGHT_HOVER,
-            selected && HIGHLIGHT_SELECTED,
-          )}
-        >
-          {children}
-        </button>
+        {href ? (
+          <AppLink
+            href={href}
+            onClick={(e) => {
+              if (isPlainClick(e)) {
+                onSelect?.()
+              }
+            }}
+            {...props}
+          >
+            {children}
+          </AppLink>
+        ) : (
+          <button type="button" onClick={onSelect} {...props}>
+            {children}
+          </button>
+        )}
       </Tooltip>
     </li>
   )

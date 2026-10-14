@@ -1,7 +1,7 @@
 import { Tabs as BaseTabs } from '@base-ui/react/tabs'
 import { type ReactNode, useState } from 'react'
 import { cx } from '../cx'
-import { useLink } from './Provider'
+import { AppLink } from './AppLink'
 import {
   SegmentContent,
   type SegmentLayout,
@@ -70,7 +70,6 @@ export function Tabs<Value extends string>({
   testId,
   children,
 }: TabsProps<Value>) {
-  const Link = useLink()
   const segmented = variant === 'segmented'
   const layout = { fill, iconOnly: segmented && iconOnly }
   // Held here as well as in Base UI, since a segmented tab's look follows it.
@@ -85,7 +84,7 @@ export function Tabs<Value extends string>({
         value={item.value}
         disabled={item.disabled}
         data-testid={item.testId}
-        {...(item.href ? { nativeButton: false, render: <Link href={item.href} /> } : {})}
+        {...(item.href ? { nativeButton: false, render: <AppLink href={item.href} /> } : {})}
         className={
           segmented
             ? segmentClassName(item.value === current, layout)

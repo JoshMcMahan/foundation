@@ -747,6 +747,8 @@ function storyChatLink(onNavigate?: (id: string | null) => void) {
           onClick?.(e)
           if (target.kind === 'conversation') {
             onNavigate?.(target.id)
+          } else if (target.kind === 'newChat') {
+            onNavigate?.(null)
           }
         }}
       >

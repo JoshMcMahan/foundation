@@ -2,11 +2,11 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cx } from '../cx'
 import { ChevronRightIcon } from '../icons'
+import { AppLink, type AppLinkProps, type LinkTarget } from './AppLink'
 import { type ButtonStyle, buttonClasses } from './buttonClasses'
 import { Loader } from './Loader'
-import { useLink } from './Provider'
 
-export interface ButtonProps extends Omit<BaseButton.Props, 'className'>, ButtonStyle {
+interface ButtonOwnProps extends ButtonStyle {
   className?: string | undefined
   /** Before the label. */
   icon?: ReactNode
@@ -15,29 +15,54 @@ export interface ButtonProps extends Omit<BaseButton.Props, 'className'>, Button
   loading?: boolean | undefined
 }
 
+/** A button, or with `href` a link that looks like one: navigation stays a
+ *  link, so it opens in a new tab and shows its URL like any other. */
+export type ButtonProps = ButtonOwnProps &
+  (
+    | (Omit<BaseButton.Props, 'className'> & { href?: undefined })
+    | (Omit<AppLinkProps, 'className'> & LinkTarget & { href: string })
+  )
+
 /** A button in the package's one look (see `buttonClasses`).
- *  `focusableWhenDisabled` keeps a disabled button's tooltip reachable. A link
- *  that looks like a button stays a link: give it `buttonClasses()`. */
+ *  `focusableWhenDisabled` keeps a disabled button's tooltip reachable; a
+ *  disabled link stays focusable on its own. */
 export function Button({
   variant,
   size = 'md',
   iconOnly,
   icon,
   loading = false,
-  disabled,
   className,
   children,
   ...props
 }: ButtonProps) {
+  const classes = cx(buttonClasses({ variant, size, iconOnly }), className)
+  const content = (
+    <>
+      {loading ? <Loader inline decorative size="1em" /> : icon}
+      {children}
+    </>
+  )
+  if (props.href !== undefined) {
+    return (
+      <AppLink
+        {...props}
+        disabled={props.disabled || loading}
+        aria-busy={loading || undefined}
+        className={classes}
+      >
+        {content}
+      </AppLink>
+    )
+  }
   return (
     <BaseButton
       {...props}
-      disabled={disabled || loading}
+      disabled={props.disabled || loading}
       aria-busy={loading || undefined}
-      className={cx(buttonClasses({ variant, size, iconOnly }), className)}
+      className={classes}
     >
-      {loading ? <Loader inline decorative size="1em" /> : icon}
-      {children}
+      {content}
     </BaseButton>
   )
 }
@@ -60,7 +85,6 @@ export function MethodButton({
   className = '',
   ...props
 }: MethodButtonProps) {
-  const Link = useLink()
   const baseClasses =
     'flex items-center w-full p-4 bg-[var(--theme-muted-panel-bg)] border border-[var(--theme-border)] rounded-xl text-[var(--theme-app)] text-[0.9375rem] font-medium cursor-pointer transition-all duration-200 no-underline mb-3 last:mb-0 hover:not-disabled:bg-(--theme-border) hover:not-disabled:border-(--theme-muted-text-color) hover:not-disabled:-translate-y-0.5 active:translate-y-0'
 
@@ -93,18 +117,15 @@ export function MethodButton({
   )
 
   if (href) {
-    // Use a plain anchor for API/external URLs that aren't client-side routes
-    if (href.startsWith('/api/') || href.startsWith('http')) {
-      return (
-        <a href={href} className={cx('group', baseClasses, className)}>
-          {content}
-        </a>
-      )
-    }
+    // API paths are files the router doesn't serve, so they load the page.
     return (
-      <Link href={href} className={cx('group', baseClasses, className)}>
+      <AppLink
+        href={href}
+        reloadDocument={href.startsWith('/api/')}
+        className={cx('group', baseClasses, className)}
+      >
         {content}
-      </Link>
+      </AppLink>
     )
   }
 

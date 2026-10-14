@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
+import { AppLink } from '../components/AppLink'
 import { Checkbox } from '../components/Checkbox'
 import { positionKeys } from '../components/keys'
-import { useLink, useStrings } from '../components/Provider'
+import { useStrings } from '../components/Provider'
 import { LoadingRegion, Skeleton } from '../components/Skeleton'
 import { Table } from '../components/Table'
 import { cx } from '../cx'
@@ -28,6 +29,17 @@ export const listTableFixedProps = {
   className: listTableProps.className.replace('table-auto', 'table-fixed'),
 } as const
 
+/** True inside a `ListRow` whose name link should take the whole row's
+ *  clicks: it navigates, and no selection claims plain clicks. */
+export const StretchRowLinkContext = createContext(false)
+
+// The link's box covers the row (the `ListRow`'s `<tr>` is its containing
+// block), so the whole row is the link: it opens in a new tab, shows its URL
+// and reads as a link, where a row click handler could do none of these. Its
+// focus ring follows, drawn around the row.
+const STRETCHED_LINK =
+  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-link)"
+
 export function NameCell({
   icon,
   name,
@@ -40,6 +52,8 @@ export function NameCell({
   icon: ReactNode
   name: string
   subtitle?: string | undefined
+  /** The name's link. Inside a `ListRow` with an `href`, the whole row is
+   *  this link, so give both the same URL. */
   href: string | null
   badge?: ReactNode
   title?: string | undefined
@@ -47,7 +61,7 @@ export function NameCell({
    * narrow container (see `ColumnDef.stack`). */
   children?: ReactNode
 }) {
-  const Link = useLink()
+  const stretch = useContext(StretchRowLinkContext)
   const inner = (
     <>
       {icon}
@@ -68,12 +82,16 @@ export function NameCell({
   return (
     <Table.Item className="py-2.5">
       {href ? (
-        <Link
+        <AppLink
           href={href}
-          className="group/namecell flex items-center gap-2.5 min-w-0 cursor-pointer"
+          data-row-link={stretch || undefined}
+          className={cx(
+            'group/namecell flex items-center gap-2.5 min-w-0 cursor-pointer',
+            stretch && STRETCHED_LINK,
+          )}
         >
           {inner}
-        </Link>
+        </AppLink>
       ) : (
         <div className="flex items-center gap-2.5 min-w-0">{inner}</div>
       )}

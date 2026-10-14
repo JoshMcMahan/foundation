@@ -1,11 +1,12 @@
 import { Menu } from '@base-ui/react/menu'
 import { Toggle } from '@base-ui/react/toggle'
 import { createContext, Fragment, useContext, useLayoutEffect, useRef, useState } from 'react'
+import { AppLink } from '../components/AppLink'
 import { Button } from '../components/Button'
 import { buttonClasses } from '../components/buttonClasses'
 import { MenuPopup } from '../components/Menu'
 import { MenuEntries, useRunAction, warnIfInert } from '../components/MenuEntries'
-import { useLink, useStrings } from '../components/Provider'
+import { useStrings } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { MoreIcon } from '../icons'
@@ -44,7 +45,6 @@ function ToolbarItemView({ item }: { item: ToolbarItem }) {
 /** A toolbar action as a button: a link with `href`, a toggle with `checked`. */
 export function ToolbarButton({ action }: { action: ToolbarAction }) {
   const inOverflowMenu = useContext(OverflowMenuContext)
-  const Link = useLink()
   const runAction = useRunAction()
   if (inOverflowMenu) {
     return <MenuEntries entries={[action]} />
@@ -62,11 +62,17 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
   warnIfInert(action, 'ActionToolbar')
   const run = () => runAction(action)
   let control: React.ReactElement
-  if (action.href && !action.disabled) {
+  if (action.href) {
     control = (
-      <Link href={action.href} className={className}>
+      <AppLink
+        href={action.href}
+        reloadDocument={action.reloadDocument}
+        target={action.target}
+        disabled={action.disabled}
+        className={className}
+      >
         {content}
-      </Link>
+      </AppLink>
     )
   } else if (action.checked !== undefined) {
     control = (

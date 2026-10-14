@@ -357,7 +357,7 @@ describe('PageHeaderAction', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
-  it('turns a disabled link into an inert button', () => {
+  it('keeps a disabled link a link that goes nowhere', () => {
     render(
       <PageHeaderAction
         icon={Icon}
@@ -367,11 +367,9 @@ describe('PageHeaderAction', () => {
         disabledReason="Read only"
       />,
     )
-    expect(screen.queryByRole('link')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Edit. Read only' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    )
+    const link = screen.getByRole('link', { name: 'Edit. Read only' })
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).not.toHaveAttribute('href')
   })
 
   it('reports a toggle’s state', () => {

@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons'
-import { buttonClasses } from './buttonClasses'
 import { IconButton } from './IconButton'
-import { useLink, useStrings } from './Provider'
+import { useStrings } from './Provider'
 import { Select } from './Select'
-import { Tooltip } from './Tooltip'
 
 /** Page sizes a list offers; the first is the default. */
 export const PAGE_SIZES: readonly [number, ...number[]] = [50, 100, 200]
@@ -120,19 +118,8 @@ function PageStep({
   onPageChange: ((page: number) => void) | undefined
   pageHref: ((page: number) => string) | undefined
 }) {
-  const Link = useLink()
   if (pageHref && enabled) {
-    return (
-      <Tooltip content={label}>
-        <Link
-          href={pageHref(to)}
-          aria-label={label}
-          className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
-        >
-          {icon}
-        </Link>
-      </Tooltip>
-    )
+    return <IconButton variant="outline" icon={icon} label={label} href={pageHref(to)} />
   }
   return (
     <IconButton

@@ -1,10 +1,11 @@
-import { type ComponentPropsWithRef, type ReactNode, useCallback, useRef } from 'react'
+import { type ComponentPropsWithRef, type ReactNode, type Ref, useCallback, useRef } from 'react'
 import { cx } from '../cx'
+import { AppLink, type AppLinkProps } from './AppLink'
 import { type ButtonSize, type ButtonVariant, buttonClasses } from './buttonClasses'
 import { useShortcutKey } from './shortcutKey'
 import { Tooltip } from './Tooltip'
 
-export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
+interface IconButtonOwnProps {
   icon: ReactNode
   /** The accessible name, also shown as the tooltip. */
   label: string
@@ -19,9 +20,16 @@ export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
   shortcut?: string | undefined
 }
 
-/** A button that shows only an icon, named by its tooltip. It can be a popup's
- *  trigger: it passes the trigger's props and ref on, and hides its tooltip while
- *  the popup is open. */
+/** With `href` it is a link that looks like the button, for navigation. */
+export type IconButtonProps = IconButtonOwnProps &
+  (
+    | (ComponentPropsWithRef<'button'> & { href?: undefined })
+    | (Omit<AppLinkProps, 'href'> & { href: string })
+  )
+
+/** A button that shows only an icon, named by its tooltip, or with `href` a
+ *  link that looks like one. It can be a popup's trigger: it passes the
+ *  trigger's props and ref on, and hides its tooltip while the popup is open. */
 export function IconButton({
   icon,
   label,
@@ -34,17 +42,30 @@ export function IconButton({
   ref,
   ...props
 }: IconButtonProps) {
-  const button = useRef<HTMLButtonElement | null>(null)
+  const button = useRef<HTMLElement | null>(null)
   const setButton = useCallback(
-    (node: HTMLButtonElement | null) => {
+    (node: HTMLButtonElement & HTMLAnchorElement) => {
       button.current = node
-      if (typeof ref === 'function') {
-        ref(node)
-      } else if (ref) {
-        ref.current = node
+      const forward = ref as Ref<HTMLElement> | undefined
+      if (typeof forward === 'function') {
+        forward(node)
+      } else if (forward) {
+        forward.current = node
       }
     },
     [ref],
+  )
+  const shared = {
+    'aria-label': label,
+    className: cx(buttonClasses({ variant, size, iconOnly: true }), className),
+  }
+  const content = (
+    <>
+      {icon}
+      {dot && (
+        <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-(--theme-link)" />
+      )}
+    </>
   )
   useShortcutKey(shortcut, () => button.current?.click())
   return (
@@ -55,19 +76,15 @@ export function IconButton({
       // disclosure, such as a sidebar toggle, keeps its tooltip.
       disabled={props['aria-expanded'] === true && !!props['aria-haspopup']}
     >
-      <button
-        type="button"
-        aria-label={label}
-        aria-pressed={pressed}
-        ref={setButton}
-        className={cx(buttonClasses({ variant, size, iconOnly: true }), className)}
-        {...props}
-      >
-        {icon}
-        {dot && (
-          <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-(--theme-link)" />
-        )}
-      </button>
+      {props.href !== undefined ? (
+        <AppLink {...shared} ref={setButton} {...props}>
+          {content}
+        </AppLink>
+      ) : (
+        <button type="button" aria-pressed={pressed} {...shared} ref={setButton} {...props}>
+          {content}
+        </button>
+      )}
     </Tooltip>
   )
 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { AddIcon } from '../icons'
 import { Button, MethodButton } from './Button'
-import { type ButtonSize, type ButtonVariant, buttonClasses } from './buttonClasses'
+import type { ButtonSize, ButtonVariant } from './buttonClasses'
 import { Card, CardHeader } from './Card'
 import { IconButton } from './IconButton'
 import { Input, Textarea } from './Input'
@@ -80,9 +80,9 @@ export const Buttons: StoryObj = {
             >
               Delete
             </Button>
-            <a href="#docs" className={buttonClasses({ variant: 'ghost', size: 'sm' })}>
+            <Button variant="ghost" size="sm" href="#docs">
               Read the docs
-            </a>
+            </Button>
           </div>
           <div className="max-w-sm">
             <MethodButton
@@ -109,6 +109,66 @@ export const Buttons: StoryObj = {
     await expect(canvas.getByRole('link', { name: 'Read the docs' })).toBeInTheDocument()
     await expect(canvas.getAllByRole('button', { name: 'Add' })).toHaveLength(15)
   },
+}
+
+interface ButtonLinkArgs {
+  href: string
+  variant: ButtonVariant
+  disabled: boolean
+  reloadDocument: boolean
+  target: '' | '_blank'
+}
+
+/** `href` makes a Button or an IconButton a link in the same look: a plain click routes through
+ *  the host's link, a modified or middle click opens a tab, and hovering shows the URL. Disabled,
+ *  it is a link with no href, still focusable for its tooltip. */
+export const ButtonLinks: StoryObj<ButtonLinkArgs> = {
+  args: {
+    href: '/runs/42?tab=logs#step-3',
+    variant: 'primary',
+    disabled: false,
+    reloadDocument: false,
+    target: '',
+  },
+  argTypes: {
+    href: { control: 'text', description: 'Where it goes, search and hash included.' },
+    variant: { control: 'inline-radio', options: VARIANTS },
+    reloadDocument: {
+      control: 'boolean',
+      description: 'Loads the page instead of routing, for a path the router does not serve.',
+    },
+    target: { control: 'inline-radio', options: ['', '_blank'] },
+  },
+  render: ({ href, variant, disabled, reloadDocument, target }) => {
+    const link = { href, disabled, reloadDocument, target: target || undefined }
+    return (
+      <div className="flex items-center gap-3 p-8">
+        <Button variant={variant} icon={<AddIcon />} {...link}>
+          Open run
+        </Button>
+        <IconButton variant={variant} label="Open run" icon={<AddIcon />} {...link} />
+      </div>
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const links = canvas.getAllByRole('link', { name: 'Open run' })
+    await expect(links).toHaveLength(2)
+    for (const link of links) {
+      if (args.disabled) {
+        await expect(link).toHaveAttribute('aria-disabled', 'true')
+        await expect(link).not.toHaveAttribute('href')
+      } else {
+        await expect(link).toHaveAttribute('href', args.href)
+      }
+    }
+  },
+}
+
+/** A disabled link button: no href, `aria-disabled`, dimmed like a disabled button. */
+export const ButtonLinksDisabled: StoryObj<ButtonLinkArgs> = {
+  ...ButtonLinks,
+  args: { ...ButtonLinks.args, disabled: true },
 }
 
 export const Inputs: StoryObj = {
@@ -143,11 +203,11 @@ export const Cards: StoryObj<{ size: 'sm' | 'md' | 'lg'; elevated: boolean }> = 
   ),
 }
 
-/** Rendered as a link or button, the whole card presses: it lifts on hover and shows focus. */
+/** With `href` a link, or rendered as a button, the whole card presses: it lifts on hover and shows focus. */
 export const CardsPressable: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-4">
-      <Card size="sm" render={<a href="#cloud" />}>
+      <Card size="sm" href="#cloud">
         <CardHeader align="left" title="In the cloud" description="Start new machines for it" />
       </Card>
       <Card size="sm" render={<button type="button" />}>

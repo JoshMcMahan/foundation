@@ -1,7 +1,7 @@
 import { Menu } from '@base-ui/react/menu'
 import { type ReactNode, useCallback, useState } from 'react'
 import { cx } from '../cx'
-import { safeUrl } from '../safeUrl'
+import { AppLink } from './AppLink'
 import { EmptyState } from './EmptyState'
 import { keyedByContent } from './keys'
 import {
@@ -12,7 +12,6 @@ import {
   MenuSeparator,
   MenuSubmenuTrigger,
 } from './Menu'
-import { useLink } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
 import { useCopy } from './useCopy'
@@ -35,6 +34,7 @@ interface MenuClickAction extends MenuActionBase {
   checked?: boolean | undefined
   href?: never
   reloadDocument?: never
+  target?: never
   copy?: never
 }
 
@@ -43,6 +43,8 @@ interface MenuLinkAction extends MenuActionBase {
   href: string
   /** Loads the page instead of routing, for paths the host's router doesn't serve. */
   reloadDocument?: boolean | undefined
+  /** `_blank` opens it in a new tab, such as a page outside the app. */
+  target?: '_blank' | undefined
   onClick?: never
   checked?: never
   copy?: never
@@ -55,6 +57,7 @@ interface MenuCopyAction extends MenuActionBase {
   checked?: never
   href?: never
   reloadDocument?: never
+  target?: never
 }
 
 /** Something a menu row does: runs `onClick`, navigates to `href`, or copies
@@ -229,7 +232,6 @@ export function useRunAction(): (action: MenuAction) => void {
 
 function ActionRow({ action }: { action: MenuAction }) {
   warnIfInert(action, 'MenuEntries')
-  const Link = useLink()
   const runAction = useRunAction()
   const className = cx(action.destructive && destructiveClassName)
   const content = (
@@ -239,12 +241,17 @@ function ActionRow({ action }: { action: MenuAction }) {
     </>
   )
   if (action.href && !action.disabled) {
-    return action.reloadDocument ? (
-      <MenuLinkItem href={safeUrl(action.href)} className={className}>
-        {content}
-      </MenuLinkItem>
-    ) : (
-      <MenuLinkItem render={<Link href={action.href} />} className={className}>
+    return (
+      <MenuLinkItem
+        render={
+          <AppLink
+            href={action.href}
+            reloadDocument={action.reloadDocument}
+            target={action.target}
+          />
+        }
+        className={className}
+      >
         {content}
       </MenuLinkItem>
     )

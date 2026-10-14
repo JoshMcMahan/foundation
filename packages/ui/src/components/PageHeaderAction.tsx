@@ -2,15 +2,23 @@ import type { ComponentType, ReactNode } from 'react'
 import { cx } from '../cx'
 import { AddIcon, MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
+import { AppLink } from './AppLink'
 import { buttonClasses } from './buttonClasses'
 import type { MenuEntry } from './MenuEntries'
-import { useLink, useStrings } from './Provider'
+import { useStrings } from './Provider'
 import { Tooltip } from './Tooltip'
 
 type Target =
-  | { href: string; external?: boolean | undefined; onClick?: never; menu?: never }
-  | { onClick: () => void; href?: never; external?: never; menu?: never }
-  | { menu: MenuEntry[]; href?: never; external?: never; onClick?: never }
+  | {
+      href: string
+      external?: boolean | undefined
+      /** Loads the page instead of routing, for paths the host's router doesn't serve. */
+      reloadDocument?: boolean | undefined
+      onClick?: never
+      menu?: never
+    }
+  | { onClick: () => void; href?: never; external?: never; reloadDocument?: never; menu?: never }
+  | { menu: MenuEntry[]; href?: never; external?: never; reloadDocument?: never; onClick?: never }
 
 interface ControlProps {
   /** The accessible name. */
@@ -41,10 +49,10 @@ function HeaderControl({
   children,
   href,
   external,
+  reloadDocument,
   onClick,
   menu,
 }: ControlProps & Partial<Target>) {
-  const Link = useLink()
   const { common } = useStrings()
   if (menu && !disabled) {
     return (
@@ -53,28 +61,26 @@ function HeaderControl({
       </ActionMenu>
     )
   }
-  if (href && !disabled) {
+  const reason = disabled ? disabledReason : undefined
+  if (href) {
+    // A disabled link stays a link, with no href, so its reason is still reachable.
     return (
-      <Tooltip content={tooltip}>
-        {external ? (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${name} ${common.opensInNewTab}`}
-            className={className}
-          >
-            {children}
-          </a>
-        ) : (
-          <Link href={href} aria-label={name} className={className}>
-            {children}
-          </Link>
-        )}
+      <Tooltip content={disabled ? (disabledReason ?? tooltip) : tooltip}>
+        <AppLink
+          href={href}
+          reloadDocument={reloadDocument}
+          target={external ? '_blank' : undefined}
+          disabled={disabled}
+          aria-label={
+            reason ? `${name}. ${reason}` : external ? `${name} ${common.opensInNewTab}` : name
+          }
+          className={className}
+        >
+          {children}
+        </AppLink>
       </Tooltip>
     )
   }
-  const reason = disabled ? disabledReason : undefined
   return (
     <Tooltip content={disabled ? (disabledReason ?? tooltip) : tooltip}>
       <button
@@ -112,7 +118,8 @@ export type PageHeaderActionProps = Target & {
 }
 
 /**
- * An action in the page header: a link (`href`, `external` for a new tab), a
+ * An action in the page header: a link (`href`, `external` for a new tab,
+ * `reloadDocument` for a path the router doesn't serve), a
  * button (`onClick`) or a menu (`menu`). Labeled actions read in the link
  * color, so the page's commands stand apart from the trail.
  */

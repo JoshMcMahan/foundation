@@ -542,3 +542,64 @@ export const Standalone: Story = {
     await expect(canvas.getByRole('link', { name: 'Add object' })).toBeVisible()
   },
 }
+
+interface ActionLinkArgs {
+  href: string
+  reloadDocument: boolean
+  external: boolean
+  disabled: boolean
+}
+
+/** Header actions that navigate are links: each opens in a new tab, shows its URL on hover and
+ *  routes through the host's link on a plain click. Disabled, each stays a focusable link that
+ *  goes nowhere, its reason in the tooltip. */
+export const ActionLinks: StoryObj<ActionLinkArgs> = {
+  args: {
+    href: '/storage/buckets/training-data?tab=objects#upload',
+    reloadDocument: false,
+    external: false,
+    disabled: false,
+  },
+  argTypes: {
+    href: { control: 'text', description: 'Where every action goes, search and hash included.' },
+    reloadDocument: {
+      control: 'boolean',
+      description: 'Loads the page instead of routing, for a path the router does not serve.',
+    },
+    external: { control: 'boolean', description: 'Opens in a new tab.' },
+  },
+  render: ({ href, reloadDocument, external, disabled }) => {
+    const link = { href, reloadDocument, external, disabled, disabledReason: 'Needs write access' }
+    return (
+      <PageHeader
+        breadcrumbs={[{ label: 'Storage', href: '/storage' }, { label: 'training-data' }]}
+        titleActions={<PageHeaderAction icon={EditIcon} iconOnly label="Edit" {...link} />}
+        actions={
+          <>
+            <PageHeaderAction icon={ExternalLinkIcon} label="Open console" {...link} />
+            <PageHeaderAddButton label="Add object" {...link} />
+          </>
+        }
+      />
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('link', { name: 'Storage' })).toHaveAttribute('href', '/storage')
+    for (const name of [/^Edit/, /^Open console/, /^Add object/]) {
+      const link = canvas.getByRole('link', { name })
+      if (args.disabled) {
+        await expect(link).toHaveAttribute('aria-disabled', 'true')
+        await expect(link).not.toHaveAttribute('href')
+      } else {
+        await expect(link).toHaveAttribute('href', args.href)
+      }
+    }
+  },
+}
+
+/** The same actions, disabled: links that go nowhere, still reachable for the tooltip saying why. */
+export const ActionLinksDisabled: StoryObj<ActionLinkArgs> = {
+  ...ActionLinks,
+  args: { ...ActionLinks.args, disabled: true },
+}

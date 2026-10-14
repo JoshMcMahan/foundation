@@ -328,5 +328,7 @@ export interface ShareGroup {
 
 export type ChatLinkTarget =
   | { kind: 'conversation'; id: string }
+  /** Where `ChatNavigation.toNewChat` goes, for the sidebar's new chat link. */
+  | { kind: 'newChat' }
   | { kind: 'attachments' }
   | { kind: 'external'; href: string }
