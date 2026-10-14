@@ -1,7 +1,13 @@
 import type { ReactElement, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { Children, cloneElement, createContext, isValidElement, useContext, useMemo } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
-import { isMenuDivider, isMenuSubmenu, type MenuEntry } from '../components/MenuEntries'
+import {
+  isMenuDivider,
+  isMenuSubmenu,
+  type MenuEntry,
+  useRunAction,
+  warnIfInert,
+} from '../components/MenuEntries'
 import { PageHeader, type PageHeaderBreadcrumb } from '../components/PageHeader'
 import { useLink, useNavigation } from '../components/Provider'
 import { Table } from '../components/Table'
@@ -272,7 +278,9 @@ export function ListRow({
 }
 
 function PinnedActionButton({ action, visible }: { action: RowAction; visible: boolean }) {
+  warnIfInert(action, 'ListPage pinned action')
   const Link = useLink()
+  const runAction = useRunAction()
   const reason = action.disabled ? action.disabledReason : undefined
   const props = {
     'aria-label': reason ? `${action.label}. ${reason}` : action.label,
@@ -294,7 +302,7 @@ function PinnedActionButton({ action, visible }: { action: RowAction; visible: b
           onClick={(e) => {
             e.stopPropagation()
             if (!action.disabled) {
-              action.onClick?.()
+              runAction(action)
             }
           }}
           {...props}

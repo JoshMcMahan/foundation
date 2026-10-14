@@ -102,6 +102,30 @@ Some pairs look alike and are split on purpose:
   A `Combobox` filters as you type, for a list long enough to search, and is the
   one that takes several values, new ones, or free text (`Autocomplete`).
 
+## Menu and row actions
+
+A `MenuAction`, and the `RowAction` and `ToolbarAction` built on it, does
+exactly one thing: runs `onClick`, navigates to `href`, or copies `copy`. An
+action with none of them, or with two, doesn't compile, so a row that silently
+does nothing when chosen can't ship. `checked` makes an `onClick` row an on/off
+choice, and `reloadDocument` belongs to an `href`. A disabled action keeps its
+behavior. In development, a menu row, pinned row button or toolbar button warns
+in the console when it gets an action with no behavior anyway, from JavaScript
+or a cast.
+
+Moving to it:
+
+- Rename a handler kept under another name, such as `onSelect`, to `onClick`.
+  An action built apart from its array, typed loosely or by another interface,
+  slipped past the old type; it now fails where it joins the array.
+- Leave out an action that can't run, rather than passing
+  `onClick: cond ? run : undefined` or `href: url ?? undefined`:
+  `...(cond ? [{ key, label, onClick: run }] : [])`.
+- Drop `onClick` from a `copy` or `href` action, and `checked` from an `href`
+  or `copy` one. To copy and also do something, call `useCopy` in an `onClick`.
+- Write `RowAction` and `ToolbarAction` as types, not interfaces to extend:
+  `type MyAction = RowAction & { … }`.
+
 ## Themes
 
 Every color a component may use is one of the closed set of `--theme-*` CSS

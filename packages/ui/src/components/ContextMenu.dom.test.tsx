@@ -7,7 +7,9 @@ import type { MenuAction, MenuEntry, MenuSearch } from './MenuEntries'
 
 const SEARCH: MenuSearch = { placeholder: 'Search types', empty: 'No type matches' }
 
-const action = (label: string, extra: Partial<MenuAction> = {}): MenuAction => ({
+type ClickAction = Extract<MenuAction, { onClick: unknown }>
+
+const action = (label: string, extra: Partial<ClickAction> = {}): ClickAction => ({
   label,
   onClick: () => {},
   ...extra,
@@ -92,7 +94,7 @@ describe('the context menu', () => {
   it('copies an item’s text and confirms it', async () => {
     const writeText = vi.fn(() => Promise.resolve())
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
-    render(<Menu items={[action('Copy ID', { copy: { text: 'abc-123', label: 'ID' } })]} />)
+    render(<Menu items={[{ label: 'Copy ID', copy: { text: 'abc-123', label: 'ID' } }]} />)
     open()
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy ID' }))
     expect(writeText).toHaveBeenCalledWith('abc-123')

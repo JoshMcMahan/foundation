@@ -32,6 +32,7 @@ function useItems(): MenuEntry[] {
       label: 'Archive',
       disabled: true,
       disabledReason: 'Stop the cluster before archiving it',
+      onClick: () => {},
     },
     menuDivider,
     { label: 'Delete', icon: <TrashIcon />, destructive: true, onClick: () => {} },

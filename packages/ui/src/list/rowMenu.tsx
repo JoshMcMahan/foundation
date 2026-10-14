@@ -8,9 +8,7 @@ import { cx } from '../cx'
 import { CopyIcon, IdCardIcon, KeyIcon, LinkIcon, MailIcon, MoreIcon, UserIcon } from '../icons'
 
 /** An action on a row, which its menu lists and its pinned buttons show, named by `key`. */
-export interface RowAction extends MenuAction {
-  key: string
-}
+export type RowAction = MenuAction & { key: string }
 
 /** Assembles a row's context menu in the shared order: leading link(s) → middle
  * actions → extra items → Copy submenu → trailing (destructive) actions last. */

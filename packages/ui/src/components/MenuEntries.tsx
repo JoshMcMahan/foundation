@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 import { cx } from '../cx'
 import { safeUrl } from '../safeUrl'
 import { EmptyState } from './EmptyState'
@@ -17,26 +17,50 @@ import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
 import { useCopy } from './useCopy'
 
-/** Something a menu row does: navigates with `href`, or runs `onClick`. */
-export interface MenuAction {
+interface MenuActionBase {
   label: string
   icon?: ReactNode
-  /** Navigates instead of calling onClick. */
-  href?: string | undefined
-  /** Loads the page instead of routing, for paths the host's router doesn't serve. */
-  reloadDocument?: boolean | undefined
-  onClick?: (() => void) | undefined
   disabled?: boolean | undefined
   /** Why the action is disabled, shown on hover and read with its name. */
   disabledReason?: string | undefined
   destructive?: boolean | undefined
-  /** Makes the row an on/off choice, checked while true. */
-  checked?: boolean | undefined
-  /** Text the row copies to the clipboard, confirmed with a toast naming `label`. */
-  copy?: { text: string; label: string } | undefined
   /** More text a menu's search matches, beside the label. */
   keywords?: string | undefined
 }
+
+/** Runs `onClick`. */
+interface MenuClickAction extends MenuActionBase {
+  onClick: () => void
+  /** Makes the row an on/off choice, checked while true. */
+  checked?: boolean | undefined
+  href?: never
+  reloadDocument?: never
+  copy?: never
+}
+
+/** Navigates to `href`. */
+interface MenuLinkAction extends MenuActionBase {
+  href: string
+  /** Loads the page instead of routing, for paths the host's router doesn't serve. */
+  reloadDocument?: boolean | undefined
+  onClick?: never
+  checked?: never
+  copy?: never
+}
+
+/** Copies `copy.text` to the clipboard, confirmed with a toast naming `copy.label`. */
+interface MenuCopyAction extends MenuActionBase {
+  copy: { text: string; label: string }
+  onClick?: never
+  checked?: never
+  href?: never
+  reloadDocument?: never
+}
+
+/** Something a menu row does: runs `onClick`, navigates to `href`, or copies
+ *  `copy`. Exactly one, so a row that does nothing when chosen doesn't compile.
+ *  A disabled action keeps its behavior; one that has none belongs out of the menu. */
+export type MenuAction = MenuClickAction | MenuLinkAction | MenuCopyAction
 
 /** A row that opens a menu of its own. */
 export interface MenuSubmenu {
@@ -169,9 +193,44 @@ function SubmenuRow({ submenu }: { submenu: MenuSubmenu }) {
 
 const destructiveClassName = 'text-(--theme-error-text) data-highlighted:text-(--theme-error-text)'
 
-function ActionRow({ action }: { action: MenuAction }) {
-  const Link = useLink()
+const warnedInert = new Set<string>()
+
+/** Warns in development when an action has no behavior. The types rule that
+ *  out, but a JavaScript caller or a cast still can, and its row renders fine
+ *  and silently does nothing. */
+export function warnIfInert(action: MenuAction, where: string) {
+  // Checked first and on its own, so a production build drops the rest.
+  if (process.env.NODE_ENV === 'production') {
+    return
+  }
+  if (action.onClick || action.href || action.copy || warnedInert.has(action.label)) {
+    return
+  }
+  warnedInert.add(action.label)
+  console.warn(
+    `${where}: the action "${action.label}" has no onClick, href or copy, so choosing it does nothing.`,
+  )
+}
+
+/** Runs an action that isn't a link: copies its text or calls its onClick. */
+export function useRunAction(): (action: MenuAction) => void {
   const { copy } = useCopy()
+  return useCallback(
+    (action: MenuAction) => {
+      if (action.copy) {
+        void copy(action.copy.text, { label: action.copy.label })
+      } else {
+        action.onClick?.()
+      }
+    },
+    [copy],
+  )
+}
+
+function ActionRow({ action }: { action: MenuAction }) {
+  warnIfInert(action, 'MenuEntries')
+  const Link = useLink()
+  const runAction = useRunAction()
   const className = cx(action.destructive && destructiveClassName)
   const content = (
     <>
@@ -190,12 +249,7 @@ function ActionRow({ action }: { action: MenuAction }) {
       </MenuLinkItem>
     )
   }
-  const run = () => {
-    if (action.copy) {
-      void copy(action.copy.text, { label: action.copy.label })
-    }
-    action.onClick?.()
-  }
+  const run = () => runAction(action)
   const reason = action.disabled ? action.disabledReason : undefined
   const label = (
     <>

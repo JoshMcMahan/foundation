@@ -6,8 +6,19 @@ import { openTooltip } from '../test/tooltip'
 import { ListRow, ListRowActionsProvider } from './ListPage'
 import { NameCell } from './ListTable'
 import type { ListViewChrome } from './listView'
+import type { RowAction } from './rowMenu'
 
 function renderRow(disabled: boolean, onSelect: () => void) {
+  return renderPinned({
+    key: 'stop',
+    label: 'Stop',
+    icon: <span data-testid="stop-icon" />,
+    onClick: onSelect,
+    disabled,
+  })
+}
+
+function renderPinned(action: RowAction) {
   return render(
     <table>
       <tbody>
@@ -16,15 +27,7 @@ function renderRow(disabled: boolean, onSelect: () => void) {
           items={[]}
           goTo={() => {}}
           openMenu={() => {}}
-          pinnedActions={[
-            {
-              key: 'stop',
-              label: 'Stop',
-              icon: <span data-testid="stop-icon" />,
-              onClick: onSelect,
-              disabled,
-            },
-          ]}
+          pinnedActions={[action]}
         >
           <Table.Item>row</Table.Item>
         </ListRow>
@@ -57,6 +60,23 @@ describe('ListRow pinned actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(onSelect).toHaveBeenCalledOnce()
+  })
+
+  it('copies a copy action’s text', () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    renderPinned({ key: 'copy-id', label: 'Copy ID', copy: { text: 'c-1', label: 'ID' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy ID' }))
+    expect(writeText).toHaveBeenCalledWith('c-1')
+  })
+
+  it('warns about an action with no behavior', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // A cast stands in for a JavaScript caller, which the types don't reach.
+    renderPinned({ key: 'restart', label: 'Restart' } as RowAction)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"Restart" has no onClick'))
+    warn.mockRestore()
   })
 })
 

@@ -2,5 +2,6 @@
   "extends": "../tsconfig.json",
   // The runner is run by Node as it is, so it names the modules it imports by their own files.
   "compilerOptions": { "allowImportingTsExtensions": true },
-  "include": ["*.ts", "*.tsx"]
+  // The components it renders read process.env.NODE_ENV, typed in src/env.d.ts.
+  "include": ["*.ts", "*.tsx", "../src/env.d.ts"]
 }

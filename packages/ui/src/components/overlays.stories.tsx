@@ -327,7 +327,10 @@ const sizes = [
 function PopupsInDialogs() {
   const [modal, setModal] = useState(false)
   const [drawer, setDrawer] = useState(false)
-  const menu = [{ label: 'Duplicate' }, { label: 'Archive' }]
+  const menu = [
+    { label: 'Duplicate', onClick: () => {} },
+    { label: 'Archive', onClick: () => {} },
+  ]
   return (
     <div className="flex gap-2 p-8">
       <Button onClick={() => setModal(true)}>Open modal</Button>
