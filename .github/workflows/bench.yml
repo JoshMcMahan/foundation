@@ -3,6 +3,8 @@ name: Benchmark
 # Measures the dependency graph on large workflows in headless Chrome and
 # reports it on the PR against its base. It never fails a PR: shared runners
 # are too noisy to gate on, so what must not regress is held by tests instead.
+# The paths skip PRs that leave the UI alone; of the rest, only those that
+# change a file the benchmark page is built from are measured.
 on:
   pull_request:
     paths:
@@ -26,9 +28,11 @@ jobs:
     outputs:
       report: ${{ steps.report.outputs.report }}
     steps:
+      # The merge commit and its first parent, the base it merges onto.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -38,10 +42,19 @@ jobs:
       - name: Build the head
         working-directory: packages/ui
         run: pnpm bench:build
+      - name: Check the change reaches the page
+        id: affected
+        run: |
+          affected=$(git diff --name-only HEAD^1 HEAD | node packages/ui/bench/affected.ts packages/ui/bench/dist/sources.json)
+          echo "affected=$affected" >> "$GITHUB_OUTPUT"
+          if [ "$affected" != true ]; then
+            echo "This change reaches no file the benchmark page is built from, so it was not measured." >> "$GITHUB_STEP_SUMMARY"
+          fi
       # The base is built with the head's benchmark page, so both draw the same
       # graphs; a base without what that page needs is left out of the report.
       - name: Build the base
         id: base
+        if: steps.affected.outputs.affected == 'true'
         continue-on-error: true
         working-directory: base/packages
         env:
@@ -55,6 +68,7 @@ jobs:
           pnpm build:css
           pnpm exec vite build --config bench/vite.config.ts --logLevel warn
       - name: Measure
+        if: steps.affected.outputs.affected == 'true'
         working-directory: packages/ui
         env:
           BASE_BUILT: ${{ steps.base.outcome }}
@@ -66,6 +80,7 @@ jobs:
           node bench/run.ts --out "$RUNNER_TEMP/bench.md" "${builds[@]}"
       - name: Report
         id: report
+        if: steps.affected.outputs.affected == 'true'
         run: |
           cat "$RUNNER_TEMP/bench.md" >> "$GITHUB_STEP_SUMMARY"
           delimiter="EOF_$(openssl rand -hex 16)"
@@ -80,7 +95,7 @@ jobs:
   # is only in the run's summary.
   comment:
     needs: measure
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository && needs.measure.outputs.report != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
