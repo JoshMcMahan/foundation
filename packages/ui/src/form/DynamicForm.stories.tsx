@@ -206,7 +206,29 @@ export const CompactLabels: StoryObj<typeof DynamicForm> = {
   },
 }
 
+/** Text, a secret that keeps its saved value behind dots until it's typed over, and notes. */
+export const TextAndSecret: StoryObj<typeof DynamicForm> = {
+  args: {
+    formJSONs: {
+      host: { type: 'string', label: 'Host', placeholder: 'db.internal' },
+      token: { type: 'password', label: 'Token', default: 'saved-token' },
+      notes: { type: 'textarea', label: 'Notes', optional: true },
+    },
+    initialValues: { token: 'saved-token' },
+    skipValueParse: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const token = await canvas.findByLabelText('Token')
+    await expect(token).toHaveAttribute('type', 'password')
+    await userEvent.click(canvas.getByRole('button', { name: 'Show value' }))
+    await expect(token).toHaveAttribute('type', 'text')
+    await expect(canvas.getByRole('textbox', { name: 'Notes' })).toBeInTheDocument()
+  },
+}
+
 const CHOICE_JSONS = {
+  heading: { type: 'label', text: 'Training run' },
   precision: {
     type: 'radio',
     label: 'Precision',
@@ -226,13 +248,18 @@ const CHOICE_JSONS = {
   },
 }
 
-/** Options with labels of their own or numeric values, each picked by its default. */
+/** Options with labels of their own or numeric values, each picked by its default, under a label
+ *  field's heading. An option's description is read after its name. */
 export const Choices: StoryObj<typeof DynamicForm> = {
   args: {
     formJSONs: CHOICE_JSONS,
     initialValues: { precision: 'bf16', workers: 2, features: ['log'] },
     skipValueParse: true,
     workflowForm: true,
+  },
+  play: async ({ canvasElement }) => {
+    const metrics = await within(canvasElement).findByRole('checkbox', { name: 'Metrics' })
+    await expect(metrics).toHaveAccessibleDescription('Sends usage numbers')
   },
 }
 
@@ -321,8 +348,8 @@ export const RepeatedPageMany: StoryObj<typeof DynamicForm> = {
     const canvas = within(canvasElement)
     const steps = await canvas.findByRole('navigation', { name: 'Steps' }, { timeout: 5000 })
     await expect(steps).toHaveTextContent('Step 1 of 25')
-    await userEvent.click(canvas.getByRole('button', { name: 'Go to next step' }))
-    await userEvent.click(canvas.getByRole('button', { name: 'Go to next step' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(steps).toHaveTextContent('Step 3 of 25'))
     await userEvent.click(within(steps).getByRole('button', { name: 'All steps' }))
     const list = within(await screen.findByRole('dialog', { name: 'Steps' }))

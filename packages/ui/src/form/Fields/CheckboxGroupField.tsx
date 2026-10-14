@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Checkbox } from '../../components/Checkbox'
 import { Field, FieldOption } from '../../components/Field'
 import { cx } from '../../cx'
@@ -41,6 +41,7 @@ export default function CheckboxGroupField(props: FieldComponentProps<ICheckboxG
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<Array<string | number> | undefined>(field.name ?? '')
   const implies = field.implies
+  const uid = useId()
   const rawOf = new Map(
     (field.options ?? []).map((choice) => {
       const option = fieldOption(choice)
@@ -75,11 +76,15 @@ export default function CheckboxGroupField(props: FieldComponentProps<ICheckboxG
 
   return (
     <Field {...fieldFrame(props, { group: true })}>
-      <div className="flex min-w-0 max-w-lg flex-col gap-1">
-        {field.options?.map((raw) => {
+      <div className="flex min-w-0 max-w-lg flex-col">
+        {field.options?.map((raw, index) => {
           const option = fieldOption(raw)
           const locked = forced.has(option.value)
           const optionDisabled = disabled || locked
+          // An option is named by its label, and its description is read after the name rather
+          // than as part of it.
+          const labelId = `${uid}label${index}`
+          const descriptionId = option.description && `${uid}description${index}`
           return (
             <FieldOption
               key={field.name + option.value}
@@ -87,7 +92,7 @@ export default function CheckboxGroupField(props: FieldComponentProps<ICheckboxG
               className={cx(
                 // Negative inset so the row's hover fill bleeds past the
                 // text while the checkbox stays flush with the field label.
-                '-mx-2 flex items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors',
+                '-mx-2 flex items-start gap-2.5 rounded-md px-2 py-2 transition-colors',
                 !optionDisabled &&
                   'hover:bg-(--theme-hover) has-[:focus-visible]:bg-(--theme-hover)',
               )}
@@ -97,13 +102,17 @@ export default function CheckboxGroupField(props: FieldComponentProps<ICheckboxG
                 disabled={optionDisabled}
                 onCheckedChange={() => handleToggle(option.value)}
                 aria-invalid={error !== undefined || undefined}
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId || undefined}
                 // Down to the first line of a label that may wrap.
                 className="mt-0.5"
               />
               <div className="flex min-w-0 flex-col">
-                <span className="font-medium leading-tight theme-text">{option.label}</span>
+                <span id={labelId} className="font-medium leading-5 theme-text">
+                  {option.label}
+                </span>
                 {option.description && (
-                  <span className="mt-0.5 text-xs leading-snug theme-muted-text">
+                  <span id={descriptionId} className="mt-0.5 text-xs leading-snug theme-muted-text">
                     {option.description}
                   </span>
                 )}

@@ -1,6 +1,5 @@
 import { Field } from '../../components/Field'
-import { fieldBox } from '../../components/fieldBox'
-import { cx } from '../../cx'
+import { Textarea } from '../../components/Input'
 import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
@@ -21,9 +20,9 @@ export default function TextAreaField(props: FieldComponentProps<ITextAreaField>
   return (
     <Field {...fieldFrame(props)}>
       {(control) => (
-        <textarea
+        <Textarea
           {...control}
-          className={cx(fieldBox({ multiline: true }), 'h-20 resize-y')}
+          className="h-20 min-h-20"
           name={field.name}
           value={value ?? ''}
           placeholder={getPlaceholder(field.placeholder, field.default)}

@@ -339,7 +339,7 @@ describe('InputsFormEditor', () => {
     expect(
       document.querySelector(`[data-input-path='${JSON.stringify(['first', 'a'])}']`),
     ).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Go to previous step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
     expect(row(['first', 'a'])).toBeInTheDocument()
     expect(screen.getByLabelText('Page shown')).toHaveValue('1')
   })

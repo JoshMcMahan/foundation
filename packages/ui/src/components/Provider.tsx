@@ -496,8 +496,6 @@ export interface UIStrings {
     stepDone: string
     /** A step with a value to fix. */
     stepNeedsAttention: string
-    previousStep: string
-    nextStep: string
     /** A wizard's last button, unless its config names its own. */
     runWizard: string
     fixErrorsToContinue: string
@@ -1200,8 +1198,6 @@ const DEFAULTS: UIProviderValue = {
       allSteps: 'All steps',
       stepDone: 'Done',
       stepNeedsAttention: 'Needs a fix',
-      previousStep: 'Go to previous step',
-      nextStep: 'Go to next step',
       runWizard: 'Execute',
       fixErrorsToContinue: 'Please fix errors before proceeding',
       stepFailed: 'An error occurred',

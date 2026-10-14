@@ -20,3 +20,23 @@ describe('CheckboxGroupField', () => {
     expect(form.getValues('sizes')).toEqual([2, 4])
   })
 })
+
+describe('CheckboxGroupField options', () => {
+  it('names an option by its label and describes it by its description', () => {
+    renderInForm(
+      <CheckboxGroupField
+        labelPosition="top"
+        disabled={false}
+        field={{
+          type: 'checkbox-group',
+          name: 'features',
+          options: [{ value: 'metrics', label: 'Metrics', description: 'Sends usage numbers' }],
+        }}
+        label="Features"
+      />,
+    )
+    expect(screen.getByRole('checkbox', { name: 'Metrics' })).toHaveAccessibleDescription(
+      'Sends usage numbers',
+    )
+  })
+})

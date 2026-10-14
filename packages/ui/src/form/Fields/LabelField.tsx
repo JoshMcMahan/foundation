@@ -16,7 +16,7 @@ export default function LabelField(props: FieldComponentProps<ILabelField>) {
     <div className="flex items-center w-full">
       <h3
         style={{ whiteSpace: 'pre-wrap', ...(field.size ? { fontSize: `${field.size}px` } : {}) }}
-        className={cx('relative', 'text-md', field.bold !== false ? 'font-bold' : '')}
+        className={cx('text-base', field.bold !== false && 'font-bold')}
       >
         {field.text?.toString().replace(/(\r)/g, '').replace(/(\\n)/g, '\n') || label}
       </h3>

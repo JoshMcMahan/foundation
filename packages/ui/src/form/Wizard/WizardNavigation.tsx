@@ -59,12 +59,7 @@ export function WizardNavigation({
         </p>
       )}
       <div className="flex justify-between gap-3 pt-4">
-        <Button
-          variant="secondary"
-          onClick={onPrevious}
-          disabled={!canGoBack || isLoading}
-          aria-label={t.previousStep}
-        >
+        <Button variant="secondary" onClick={onPrevious} disabled={!canGoBack || isLoading}>
           {prevLabel || common.previous}
         </Button>
         {isLastStep && !onSubmit ? null : isLastStep ? (
@@ -73,17 +68,11 @@ export function WizardNavigation({
             onClick={handleSubmit}
             disabled={!isCurrentStepValid}
             loading={isLoading}
-            aria-label={submitLabel}
           >
             {submitLabel}
           </Button>
         ) : (
-          <Button
-            variant="primary"
-            onClick={handleNext}
-            loading={isLoading}
-            aria-label={t.nextStep}
-          >
+          <Button variant="primary" onClick={handleNext} loading={isLoading}>
             {nextLabel || common.next}
           </Button>
         )}

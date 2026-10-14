@@ -381,10 +381,10 @@ describe('a wizard inside a group', () => {
     await screen.findByTestId('field-a')
     expect(screen.getByTestId('field-before')).toBeInTheDocument()
     expect(screen.queryByTestId('field-b')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     await screen.findByTestId('field-b')
     expect(screen.queryByTestId('field-a')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Go to previous step' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
     expect(screen.getAllByRole('button').some((b) => b.textContent === 'Execute')).toBe(false)
   })
 
@@ -420,7 +420,7 @@ describe('a wizard inside a group', () => {
         expect.objectContaining({ setup: expect.objectContaining({ hosts: [{ cpus: 2 }] }) }),
       ),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     await screen.findByTestId('field-setup.label')
   })
 })
@@ -595,7 +595,7 @@ describe('a repeated wizard page’s copies', () => {
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'Steps' }), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Steps' })).toBeNull())
     expect(screen.queryByRole('button', { name: 'Remove Host' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     fireEvent.click(await screen.findByRole('button', { name: '+ Add Host' }))
     await screen.findByRole('heading', { name: 'Host 3' })
     expect(screen.queryByRole('button', { name: '+ Add Host' })).toBeNull()
@@ -622,7 +622,7 @@ describe('a repeated wizard page’s buttons', () => {
     )
     await screen.findByRole('heading', { name: 'GPU workers' })
     expect(screen.getByRole('button', { name: 'Remove GPU workers' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     await screen.findByRole('heading', { name: 'CPU workers' })
     expect(screen.getByRole('button', { name: 'Remove CPU workers' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+ Add GPU workers 3' })).toBeInTheDocument()
@@ -744,7 +744,7 @@ describe('a repeated wizard page’s copies as its bounds change', () => {
       expect(seen).toHaveBeenLastCalledWith({ hosts: [{ cpus: 1 }, { cpus: 2 }] }),
     )
     rerender(form(4))
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     fireEvent.click(await screen.findByRole('button', { name: '+ Add Host' }))
     await screen.findByRole('heading', { name: 'Host 3' })
     fireEvent.click(screen.getByRole('button', { name: '+ Add Host' }))
@@ -783,7 +783,7 @@ describe('a repeated wizard page’s copies as its bounds change', () => {
       form.reset({ hosts: [{ cpus: 7 }, { cpus: 8 }] })
     })
     rerender(wizard(3))
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     fireEvent.click(await screen.findByRole('button', { name: '+ Add Host' }))
     await waitFor(() =>
       expect(seen).toHaveBeenLastCalledWith({ hosts: [{ cpus: 7 }, { cpus: 8 }, { cpus: 2 }] }),
@@ -811,8 +811,8 @@ describe('a repeated wizard page’s copies as its bounds change', () => {
     )
     const { rerender } = render(form(2))
     await screen.findByRole('heading', { name: 'Start' })
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
     await screen.findByRole('heading', { name: 'Host 2' })
     rerender(form(0))
     // The page after the step's, not the one now where Host 2 was.
@@ -845,8 +845,8 @@ describe('a repeated wizard page’s copies as its bounds change', () => {
     )
     const { form, rerender } = renderDynamicForm(wizard(2))
     await screen.findByRole('heading', { name: 'Start' })
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Go to next step' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
     await screen.findByRole('heading', { name: 'Host 2' })
     act(() => {
       rerender(wizard(0))

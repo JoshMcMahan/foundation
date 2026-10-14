@@ -17,7 +17,7 @@ global.ResizeObserver = class {
 const textbox = (name: string) => screen.findByRole('textbox', { name: new RegExp(name) })
 const type = async (name: string, value: string) =>
   fireEvent.change(await textbox(name), { target: { value } })
-const next = () => fireEvent.click(screen.getByRole('button', { name: 'Go to next step' }))
+const next = () => fireEvent.click(screen.getByRole('button', { name: 'Next' }))
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
 
 function renderForm(props: Partial<DynamicFormProps> & Pick<DynamicFormProps, 'formJSONs'>) {

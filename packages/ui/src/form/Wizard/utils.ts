@@ -29,7 +29,9 @@ export function parseWizardConfig(options: Record<string, unknown>): ParsedWizar
 
   // Must have at least one step
   if (stepOrder.length === 0) {
-    console.warn('Wizard mode enabled but no steps found')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Wizard mode enabled but no steps found')
+    }
     return null
   }
 

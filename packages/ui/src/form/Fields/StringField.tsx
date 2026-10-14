@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react'
-import { Field, RevealToggle } from '../../components/Field'
-import { fieldBox } from '../../components/fieldBox'
-import { cx } from '../../cx'
+import { useMemo } from 'react'
+import { Field } from '../../components/Field'
+import { Input } from '../../components/Input'
 import { fieldFrame } from '../fieldFrame'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField } from '../types/fieldTypes'
@@ -26,7 +25,6 @@ export default function StringField(props: FieldComponentProps<IStringField>) {
   const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
-  const [revealed, setRevealed] = useState(false)
   const password = field.type === 'password'
   const fallback = field.default ?? ''
 
@@ -55,35 +53,25 @@ export default function StringField(props: FieldComponentProps<IStringField>) {
 
   return (
     <Field {...fieldFrame(props)}>
-      {(control) => {
-        const input = (
-          <input
-            {...control}
-            data-1p-ignore
-            className={cx(fieldBox(), password && 'pr-9')}
-            name={field.name}
-            value={password && value === fallback ? '' : (value ?? '')}
-            type={password && !revealed ? 'password' : 'text'}
-            disabled={disabled}
-            placeholder={
-              password && field.placeholder === undefined
-                ? '•'.repeat(fallback.toString().length > 0 ? 16 : 0)
-                : getPlaceholder(field.placeholder, field.default)
-            }
-            minLength={field.minLength}
-            maxLength={field.maxLength}
-            onChange={handleChange}
-          />
-        )
-        return password ? (
-          <div className="relative w-full">
-            {input}
-            <RevealToggle revealed={revealed} onRevealedChange={setRevealed} disabled={disabled} />
-          </div>
-        ) : (
-          input
-        )
-      }}
+      {/* Input shows a password's eye button itself. */}
+      {(control) => (
+        <Input
+          {...control}
+          data-1p-ignore
+          name={field.name}
+          value={password && value === fallback ? '' : (value ?? '')}
+          type={password ? 'password' : 'text'}
+          disabled={disabled}
+          placeholder={
+            password && field.placeholder === undefined
+              ? '•'.repeat(fallback.toString().length > 0 ? 16 : 0)
+              : getPlaceholder(field.placeholder, field.default)
+          }
+          minLength={field.minLength}
+          maxLength={field.maxLength}
+          onChange={handleChange}
+        />
+      )}
     </Field>
   )
 }
