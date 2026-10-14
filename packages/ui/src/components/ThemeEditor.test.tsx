@@ -148,4 +148,11 @@ describe('ThemeEditor', () => {
     expect(preview.style.getPropertyValue('--theme-app-bg')).toBe('#ffffff')
     expect(within(preview).getByText('Run again')).toBeInTheDocument()
   })
+
+  it('adds no landmark or heading of its own to the page', () => {
+    render(<Harness />)
+    const preview = screen.getByRole('region', { name: 'Preview' })
+    expect(within(preview).queryByRole('navigation')).not.toBeInTheDocument()
+    expect(within(preview).queryByRole('heading')).not.toBeInTheDocument()
+  })
 })

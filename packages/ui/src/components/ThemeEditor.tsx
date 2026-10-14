@@ -74,7 +74,10 @@ export function ThemeEditor({
     setOwnMode(next)
     onModeChange?.(next)
   }
-  const scheme = schemeFor(value, editing)
+  // A mode the theme has no scheme for is derived from the other one, as a new object each time;
+  // kept, the contrast solving below runs only when the theme or the mode changes.
+  const scheme = useMemo(() => schemeFor(value, editing), [value, editing])
+  const serialized = useMemo(() => serializeTheme(value), [value])
   const seed = scheme.interface
   const update = (next: Scheme) => onChange({ ...value, [editing]: next })
   const setSeed = (patch: Partial<Scheme['interface']>) =>
@@ -113,7 +116,7 @@ export function ThemeEditor({
                   ? 'light'
                   : 'dark'
               const own = schemeFor(preset.theme, native).interface
-              const current = serializeTheme(preset.theme) === serializeTheme(value)
+              const current = presetKey(preset.theme) === serialized
               return (
                 <Button
                   key={preset.name}
@@ -216,6 +219,16 @@ export function ThemeEditor({
   )
 }
 
+const presetKeys = new WeakMap<Theme, string>()
+const presetKey = (theme: Theme) => {
+  let key = presetKeys.get(theme)
+  if (key === undefined) {
+    key = serializeTheme(theme)
+    presetKeys.set(theme, key)
+  }
+  return key
+}
+
 function Swatch({ colors }: { colors: string[] }) {
   return (
     <span aria-hidden="true" className="flex -space-x-1">
@@ -223,7 +236,7 @@ function Swatch({ colors }: { colors: string[] }) {
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: a fixed pair of swatches
           key={i}
-          className="size-3 rounded-full border border-black/10"
+          className="size-3 rounded-full border border-(--theme-border-strong)"
           style={{ backgroundColor: toHex(parseColor(c) ?? { l: 0, c: 0, h: 0 }) }}
         />
       ))}
@@ -300,7 +313,7 @@ const CODE_SAMPLE: [string, string][][] = [
 /** The theme on a small page: a sidebar, a panel of text, a control, statuses and code. */
 export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
   const { theme: t } = useStrings()
-  const scheme = schemeFor(theme, mode)
+  const scheme = useMemo(() => schemeFor(theme, mode), [theme, mode])
   const style = useMemo(() => {
     const generated = generateTheme(scheme, theme.code ? { code: theme.code } : {})
     return {
@@ -316,7 +329,8 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
       style={style}
       className="flex min-h-80 overflow-hidden rounded-xl border border-(--theme-border) bg-(--theme-app-bg) text-sm text-(--theme-app) shadow-(--theme-shadow)"
     >
-      <nav className="flex w-32 shrink-0 flex-col gap-0.5 bg-(--theme-sidebar-bg) p-2">
+      {/* A picture of a sidebar, not one: no landmark or heading of the preview joins the page's. */}
+      <div className="flex w-32 shrink-0 flex-col gap-0.5 bg-(--theme-sidebar-bg) p-2">
         {t.previewNav.map((item, i) => (
           <span
             key={item}
@@ -330,10 +344,10 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
             {item}
           </span>
         ))}
-      </nav>
+      </div>
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="flex flex-col gap-2 rounded-lg border border-(--theme-border) bg-(--theme-panel-bg) p-3 shadow-(--theme-shadow-sm)">
-          <h3 className="font-semibold">{t.previewHeading}</h3>
+          <p className="font-semibold">{t.previewHeading}</p>
           <p>{t.previewBody}</p>
           <p className="text-xs text-(--theme-muted-text-color)">{t.previewMuted}</p>
           <div className="flex flex-wrap items-center gap-2">
@@ -354,7 +368,7 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
           <span
             className={cx(
               fieldBox({ size: 'sm' }),
-              'flex-1 cursor-default text-(--theme-placeholder) border-(--theme-border-strong)',
+              'flex flex-1 cursor-default items-center text-(--theme-placeholder) border-(--theme-border-strong)',
             )}
           >
             {t.previewSearch}
