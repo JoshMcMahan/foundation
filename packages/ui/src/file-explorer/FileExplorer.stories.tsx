@@ -26,6 +26,8 @@ const OBJECTS: Record<string, string> = {
   'results/run-001/metrics.json': '{ "loss": 0.021, "epochs": 12 }\n',
   'results/run-001/stdout.log': 'epoch 1/12 ... done\nepoch 12/12 ... done\n',
   'results/run-002/metrics.json': '{ "loss": 0.018, "epochs": 14 }\n',
+  'results/run-002/checkpoints/epoch-14-validation-loss-0.018-summary.json':
+    '{ "epoch": 14, "loss": 0.018 }\n',
   'results/run-002/report.ipynb': JSON.stringify({
     cells: [{ cell_type: 'markdown', metadata: {}, source: ['# Run 002 report'] }],
     metadata: {},
@@ -161,10 +163,18 @@ const COMPUTE_STORAGE: TStorage = {
   previewLimits: { codeLines: 1, notebookBytes: 64 },
 }
 
-function ExplorerDemo({ storages = STORAGES }: { storages?: TStorage[] }) {
-  const [path, setPath] = useState('')
+function ExplorerDemo({
+  storages = STORAGES,
+  initialPath = '',
+  width,
+}: {
+  storages?: TStorage[]
+  initialPath?: string
+  width?: number
+}) {
+  const [path, setPath] = useState(initialPath)
   return (
-    <div style={{ height: 560 }}>
+    <div style={{ height: 560, width }}>
       <FileExplorerProvider>
         <FileExplorer
           storages={storages}
@@ -183,6 +193,12 @@ function ExplorerDemo({ storages = STORAGES }: { storages?: TStorage[] }) {
 
 export const Default: StoryObj = {
   render: () => <ExplorerDemo />,
+}
+
+export const NarrowPane: StoryObj = {
+  render: () => (
+    <ExplorerDemo width={960} initialPath="storybook/demo-bucket/results/run-002/checkpoints" />
+  ),
 }
 
 function ComputeRootDemo() {

@@ -1176,7 +1176,7 @@ export default function FileExplorer({
                 <button
                   type="button"
                   onClick={() => handleSelectTreeItem(node.path, node)}
-                  className="max-w-[16rem] shrink-0 cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
+                  className="max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
                 >
                   {label}
                 </button>
@@ -1617,7 +1617,7 @@ export default function FileExplorer({
               <NoFileSelectedPreview />
             ) : (
               <>
-                <div className="flex items-center justify-between gap-3 px-4 h-12 shrink-0 border-b theme-border">
+                <div className="@container flex items-center justify-between gap-3 px-4 h-12 shrink-0 border-b theme-border">
                   {renderBreadcrumb()}
                   {/* Action Buttons */}
                   <div className="flex shrink-0 items-center gap-2">
@@ -1671,7 +1671,7 @@ export default function FileExplorer({
                         disabled={selectedNode.type === 'file' || !selectedNode.storageId}
                         onClick={() => setCreateFolderTarget(selectedNode)}
                       >
-                        <span className="hidden md:inline">{t.createFolder.action}</span>
+                        <span className="hidden @4xl:inline">{t.createFolder.action}</span>
                       </Button>
                     )}
 
@@ -1683,7 +1683,7 @@ export default function FileExplorer({
                           disabled={selectedNode.type === 'file' || !selectedNode.storageId}
                         >
                           <UploadIcon />
-                          <span className="hidden md:inline">{t.chrome.upload}</span>
+                          <span className="hidden @4xl:inline">{t.chrome.upload}</span>
                           <ChevronDownIcon />
                         </Menu.Trigger>
                         <MenuPopup align="end" className="w-36">
@@ -1708,7 +1708,7 @@ export default function FileExplorer({
                         }
                       >
                         <DownloadIcon />
-                        <span className="hidden md:inline">{common.download}</span>
+                        <span className="hidden @4xl:inline">{common.download}</span>
                         <ChevronDownIcon />
                       </Menu.Trigger>
                       <MenuPopup align="end" className="w-72">
@@ -1745,7 +1745,7 @@ export default function FileExplorer({
                         disabled={!selectedNode.storageId}
                         onClick={() => setAccessDrawerOpen(true)}
                       >
-                        <span className="hidden md:inline">{t.chrome.manageAccess}</span>
+                        <span className="hidden @4xl:inline">{t.chrome.manageAccess}</span>
                       </Button>
                     )}
 
@@ -1761,7 +1761,7 @@ export default function FileExplorer({
                         }
                         onClick={onDeleteClick}
                       >
-                        <span className="hidden md:inline">{common.delete}</span>
+                        <span className="hidden @4xl:inline">{common.delete}</span>
                       </Button>
                     )}
                   </div>
