@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { type FocusEvent, memo, type ReactNode } from 'react'
 import { BoxGrip } from './editorRows'
 import { emptyRowsStyle } from './gridSpacing'
 import { type JobHandlers, Joblist } from './JobSummary'
@@ -21,6 +21,7 @@ export function DimRules({ depth }: { depth: number }) {
   return (
     <style href={`dependency-graph-dim-${depth}`} precedence="default">
       {`.${level} .${node}{opacity:.5}.${level} .${edge}{opacity:.3}`}
+      {'@media (prefers-reduced-motion:reduce){.dag-fade{transition:none!important}}'}
     </style>
   )
 }
@@ -54,6 +55,12 @@ export function GraphNode({
   const highlight = useLineage((l) => l.node(job), 0)
   const enter = () => lineage?.hover(job)
   const leave = () => lineage?.hover(null)
+  // Focus moving between a node's own buttons stays in the node, and its lineage stays shown.
+  const blur = (e: FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      leave()
+    }
+  }
   return (
     <div
       id={id}
@@ -63,11 +70,11 @@ export function GraphNode({
       onMouseEnter={enter}
       onMouseLeave={leave}
       onFocus={enter}
-      onBlur={leave}
+      onBlur={blur}
     >
       <div className="absolute inset-0 rounded-2xl bg-(--theme-panel-bg)" />
       <div
-        className={`${dimClasses(lineage?.depth ?? 0).node} relative border-solid shadow py-4 px-8 rounded-xl border-4 whitespace-nowrap bg-(--theme-panel-bg) text-2xl`}
+        className={`${dimClasses(lineage?.depth ?? 0).node} dag-fade relative border-solid shadow py-4 px-8 rounded-xl border-4 whitespace-nowrap bg-(--theme-panel-bg) text-2xl`}
         style={{
           ...(highlight === 2 && { opacity: 1 }),
           ...(lineage?.fade && { transition: `opacity ${lineage.animT}s` }),

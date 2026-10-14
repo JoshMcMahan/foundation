@@ -75,7 +75,7 @@ import {
 } from './graphEditorState'
 import { COLUMN_PITCH, SLOT_PITCH } from './gridSpacing'
 import { refusalText } from './refusalText'
-import { MOD_KEY, type ShortcutGroup } from './ShortcutsButton'
+import { IS_MAC, modifierKeys, type ShortcutGroup } from './ShortcutsButton'
 import type { WorkflowJob } from './types'
 import { jobLabel } from './util'
 
@@ -1532,7 +1532,7 @@ function useGraphEditorState({
       return
     }
     // Cmd on a Mac and Ctrl elsewhere make the browser copy and paste; the other one is handled here.
-    const mac = /Mac|iPhone|iPad/.test(navigator.platform)
+    const mac = IS_MAC
     let pointer: Point | null = null
     let pending: number | undefined
     const pasteCopied = () => {
@@ -1682,6 +1682,7 @@ function useGraphEditorState({
 
 function graphShortcuts(t: GraphEditorStrings): ShortcutGroup[] {
   const key = t.shortcutKeys
+  const { mod } = modifierKeys(key)
   const does = t.shortcutDoes
   return [
     {
@@ -1690,10 +1691,10 @@ function graphShortcuts(t: GraphEditorStrings): ShortcutGroup[] {
         { combos: [[key.shift, key.click]], does: does.select },
         { combos: [[key.shift, key.drag]], does: does.box },
         { combos: [[key.click]], does: does.dependency },
-        { combos: [['Tab']], does: does.focus },
+        { combos: [[key.tab]], does: does.focus },
         { combos: [[key.shift, key.enter]], does: does.pickJob },
         { combos: [[key.enter]], does: does.pickDependency },
-        { combos: [['Esc']], does: does.escape },
+        { combos: [[key.escape]], does: does.escape },
       ],
     },
     {
@@ -1708,15 +1709,15 @@ function graphShortcuts(t: GraphEditorStrings): ShortcutGroup[] {
         { combos: [[key.rightClick]], does: does.menu },
         {
           combos: [
-            [MOD_KEY, 'C'],
-            [MOD_KEY, 'V'],
+            [mod, 'C'],
+            [mod, 'V'],
           ],
           does: does.copy,
         },
         {
           combos: [
-            [MOD_KEY, 'Z'],
-            [key.shift, MOD_KEY, 'Z'],
+            [mod, 'Z'],
+            [key.shift, mod, 'Z'],
           ],
           does: does.undo,
         },

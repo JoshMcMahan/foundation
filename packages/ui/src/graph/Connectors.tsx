@@ -16,6 +16,8 @@ const KEYFRAMES = [
   '@keyframes dag-draw-out{from{stroke-dashoffset:0}to{stroke-dashoffset:1}}',
   `@keyframes dag-light{from{fill:${CONNECTOR_COLOR}}to{fill:${HIGHLIGHT_COLOR}}}`,
   `@keyframes dag-unlight{from{fill:${HIGHLIGHT_COLOR}}to{fill:${CONNECTOR_COLOR}}}`,
+  // Without motion the lineage lights at once; the inline animation names its end state.
+  '@media (prefers-reduced-motion:reduce){.dag-lit{animation-duration:0s!important;animation-delay:0s!important}}',
 ].join('')
 
 /** Plays the named keyframes once `delay` seconds pass, holding the first until then and the last after. */
@@ -46,6 +48,7 @@ const LitEdge = memo(function LitEdge({
       strokeWidth={STROKE}
       strokeDasharray="1 1"
       strokeDashoffset={lit ? 0 : 1}
+      className="dag-lit"
       style={play(lit ? 'dag-draw-in' : 'dag-draw-out', animT, delay)}
     />
   )
@@ -70,6 +73,7 @@ const LitDot = memo(function LitDot({
       cy={y}
       r={8}
       fill={lit ? HIGHLIGHT_COLOR : CONNECTOR_COLOR}
+      className="dag-lit"
       style={play(lit ? 'dag-light' : 'dag-unlight', animT, delay)}
     />
   )

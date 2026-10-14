@@ -33,6 +33,7 @@ import * as editorDialogs from './graph/GraphEditorDialogs.stories'
 import * as inputDialog from './graph/InputDialog.stories'
 import * as inputsEditor from './graph/InputsEditor.stories'
 import * as problemsButton from './graph/ProblemsButton.stories'
+import * as runViews from './graph/runViews.stories'
 import * as settingsDialog from './graph/WorkflowSettingsDialog.stories'
 import * as icons from './icons.stories'
 import * as appShell from './list/appShell.stories'
@@ -88,6 +89,7 @@ const SUITES = {
   inputsEditor,
   problemsButton,
   settingsDialog,
+  runViews,
   fileExplorer,
   themeEditor,
   themeGenerator,

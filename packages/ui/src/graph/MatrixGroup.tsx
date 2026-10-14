@@ -94,8 +94,16 @@ export const MatrixGroupNode = memo(function MatrixGroupNode({
       className="cursor-pointer w-full text-left"
       onClick={() => toggleMatrix(idPrefix + matrixName)}
     >
-      <div className="font-semibold text-md p-0.5">
-        {t.matrixOf(matrixName.length > 20 ? `${matrixName.slice(0, 20)}...` : matrixName)}
+      <div className="font-semibold p-0.5">
+        {matrixName.length > 20 ? (
+          <>
+            {/* Shortened to keep the node narrow; read aloud in full. */}
+            <span aria-hidden>{t.matrixOf(`${matrixName.slice(0, 20)}…`)}</span>
+            <span className="sr-only">{t.matrixOf(matrixName)}</span>
+          </>
+        ) : (
+          t.matrixOf(matrixName)
+        )}
       </div>
       {!isExpanded && (
         <div className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1">

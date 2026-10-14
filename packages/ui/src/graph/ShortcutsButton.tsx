@@ -16,12 +16,14 @@ export interface ShortcutGroup {
   shortcuts: Shortcut[]
 }
 
-// Copy, paste and undo take Command on a Mac and Control elsewhere, as the handlers do.
-export const MOD_KEY =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+/** Whether the keyboard is an Apple one, whose Command key does what Control does elsewhere. */
+export const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
-export const ALT_KEY =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌥' : 'Alt'
+/** Copy, paste and undo take Command on a Mac and Control elsewhere, as the handlers do. A Mac
+ *  shows its symbols; elsewhere the keys go by the names their keycaps carry in the strings. */
+export function modifierKeys(key: { ctrl: string; alt: string }): { mod: string; alt: string } {
+  return IS_MAC ? { mod: '⌘', alt: '⌥' } : { mod: key.ctrl, alt: key.alt }
+}
 
 /** A toolbar button that opens the list of gestures and keys a pane takes. */
 export function ShortcutsButton({ groups }: { groups: ShortcutGroup[] }) {

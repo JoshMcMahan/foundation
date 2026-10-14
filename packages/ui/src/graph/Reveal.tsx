@@ -1,4 +1,5 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
+import { useReducedMotion } from '../reducedMotion'
 
 // Height (and optionally width) reveal that grows a box with its content. Height
 // animates via a grid row (0fr → 1fr, natively interpolated). Both are plain CSS
@@ -41,6 +42,7 @@ export function Reveal({
   const [clipped, setClipped] = useState(!open)
   const [toggling, setToggling] = useState(false)
   const [renderChildren, setRenderChildren] = useState(open)
+  const still = useReducedMotion()
 
   // Adjust state during render the frame `open` flips: render children (so they
   // reveal immediately) and arm the transition + clip on the same commit that
@@ -53,6 +55,22 @@ export function Reveal({
     setToggling(true)
     setClipped(true)
   }
+
+  const settle = () => {
+    setToggling(false)
+    setClipped(!open)
+    if (!open) {
+      setRenderChildren(false)
+    }
+    onSettled?.()
+  }
+  // Without motion nothing transitions, so no transitionend comes to settle on: settle at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: settles each time `open` flips.
+  useLayoutEffect(() => {
+    if (still && toggling) {
+      settle()
+    }
+  }, [still, toggling, open])
 
   useLayoutEffect(() => {
     if (!growWidth || !renderChildren) {
@@ -75,21 +93,12 @@ export function Reveal({
       style={{
         gridTemplateRows: open ? '1fr' : '0fr',
         overflow: clipped ? 'hidden' : 'visible',
-        ...(growWidth
-          ? {
-              width: open ? width : 0,
-              transition: toggling ? FULL_TRANSITION : ROWS_TRANSITION,
-            }
-          : { transition: ROWS_TRANSITION }),
+        ...(growWidth ? { width: open ? width : 0 } : {}),
+        transition: still ? 'none' : growWidth && toggling ? FULL_TRANSITION : ROWS_TRANSITION,
       }}
       onTransitionEnd={(e) => {
         if (e.target === e.currentTarget && e.propertyName === 'grid-template-rows') {
-          setToggling(false)
-          setClipped(!open)
-          if (!open) {
-            setRenderChildren(false)
-          }
-          onSettled?.()
+          settle()
         }
       }}
     >

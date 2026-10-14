@@ -34,6 +34,7 @@ import {
   TrashIcon,
   WarningIcon,
 } from '../icons'
+import { prefersReducedMotion } from '../reducedMotion'
 import { type DependencyGraphEditor, type EditorProblem, overlaps, typing } from './editorApi'
 import { AddChip, BarDivider, DragLabel, EditorBar } from './editorChrome'
 import { asRecord, type Json, openOnAddOf, text } from './editorFields'
@@ -82,7 +83,7 @@ import {
   rowsOf,
   snapSplit,
 } from './inputRows'
-import { ALT_KEY, MOD_KEY, type ShortcutGroup } from './ShortcutsButton'
+import { modifierKeys, type ShortcutGroup } from './ShortcutsButton'
 
 /** A new input's keys from where it's dropped, and the edits that make room for it there. */
 interface Placement {
@@ -359,7 +360,10 @@ function InputRow({
     <>
       <button
         type="button"
-        aria-label={t.inputActions}
+        // The drag handle opens the same menu as the actions button beside it, which is the one
+        // keyboard and screen reader reach, so it isn't a second stop with the same name.
+        tabIndex={-1}
+        aria-hidden
         data-drag-handle
         className="flex h-5 w-5 cursor-grab items-center justify-center rounded hover:bg-(--theme-muted-panel-bg)"
         onPointerDown={(e) => api.startDrag(e, path, name)}
@@ -458,7 +462,7 @@ function InputRow({
         // Opens above the field instead of over it, so it never covers the field's own buttons.
         <div
           className={cx(
-            'flex justify-end overflow-hidden transition-[height] duration-150 focus-within:h-7',
+            'flex justify-end overflow-hidden transition-[height] duration-150 focus-within:h-7 motion-reduce:transition-none',
             active ? 'h-7' : 'h-0',
           )}
         >
@@ -610,7 +614,7 @@ function PageNumber({
           }
         }}
       />
-      <span>/ {count}</span>
+      <span>{t.pageTotal(count)}</span>
     </div>
   )
 }
@@ -1098,6 +1102,7 @@ function undoKeys(e: KeyboardEvent, editor: DependencyGraphEditor) {
 
 function formShortcuts(g: GraphEditorStrings): ShortcutGroup[] {
   const key = g.shortcutKeys
+  const { mod, alt } = modifierKeys(key)
   const does = g.shortcutDoes
   return [
     {
@@ -1113,7 +1118,7 @@ function formShortcuts(g: GraphEditorStrings): ShortcutGroup[] {
           ],
           does: does.extendInputs,
         },
-        { combos: [['Esc']], does: does.escape },
+        { combos: [[key.escape]], does: does.escape },
       ],
     },
     {
@@ -1123,8 +1128,8 @@ function formShortcuts(g: GraphEditorStrings): ShortcutGroup[] {
         { combos: [[key.dragEdge]], does: does.resizeInputs },
         {
           combos: [
-            [ALT_KEY, '↑'],
-            [ALT_KEY, '↓'],
+            [alt, '↑'],
+            [alt, '↓'],
           ],
           does: does.reorderInputs,
         },
@@ -1134,8 +1139,8 @@ function formShortcuts(g: GraphEditorStrings): ShortcutGroup[] {
         { combos: [[key.rightClick]], does: does.inputMenu },
         {
           combos: [
-            [MOD_KEY, 'Z'],
-            [key.shift, MOD_KEY, 'Z'],
+            [mod, 'Z'],
+            [key.shift, mod, 'Z'],
           ],
           does: does.undo,
         },
@@ -1841,9 +1846,7 @@ export function InputsFormEditor({
       if (!row) {
         return false
       }
-      const still =
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const still = prefersReducedMotion()
       row.scrollIntoView?.({
         block: 'center',
         behavior: still ? 'auto' : 'smooth',

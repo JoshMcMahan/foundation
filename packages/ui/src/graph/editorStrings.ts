@@ -56,6 +56,11 @@ export const GRAPH_EDITOR_STRINGS = {
     shift: 'Shift',
     enter: 'Enter',
     delete: 'Delete',
+    tab: 'Tab',
+    escape: 'Esc',
+    /** Control and Alt off a Mac; a Mac shows ⌘ and ⌥. */
+    ctrl: 'Ctrl',
+    alt: 'Alt',
   },
   shortcutDoes: {
     select: 'Add a job, step or dependency to the selection, one kind at a time',
@@ -440,6 +445,8 @@ export const INPUTS_EDITOR_STRINGS = {
   addPage: 'Add a page after the last',
   page: 'Page',
   pageNumber: 'Page shown',
+  /** After the page number field: how many pages there are. */
+  pageTotal: (count: number) => `/ ${count}`,
   /** The title of a wizard's `count`th page when the editor adds it. */
   stepTitle: (count: number) => `Step ${count}`,
   /** The submit button label of a form the editor splits into pages. */
