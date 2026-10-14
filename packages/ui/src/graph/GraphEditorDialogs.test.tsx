@@ -14,7 +14,7 @@ import type { Json } from './records'
 vi.mock('../components/Provider', async (importOriginal) =>
   (await import('../test/engine')).mockEngineHooks(importOriginal),
 )
-// Monaco can't run in jsdom; a textarea stands in, labelled by the model path.
+// Monaco can't run in jsdom; a textarea stands in, labeled by the model path.
 vi.mock('../editor/Monaco', () => ({
   default: ({
     value,

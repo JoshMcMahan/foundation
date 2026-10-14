@@ -34,7 +34,7 @@ vi.mock('@parallelworks/workflow-parser', async () => ({
   initializeParseStringsOfObj: vi.fn(() => Promise.resolve()),
 }))
 
-// Monaco can't run in jsdom; a textarea stands in, labelled by the model path.
+// Monaco can't run in jsdom; a textarea stands in, labeled by the model path.
 vi.mock('../editor/Monaco', () => ({
   default: ({
     value,

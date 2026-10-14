@@ -1,4 +1,4 @@
-/** How a status reads: its colours come from the theme's tone tokens, so every
+/** How a status reads: its colors come from the theme's tone tokens, so every
  *  theme, dark ones included, sets them once. */
 export type Tone = 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted'
 

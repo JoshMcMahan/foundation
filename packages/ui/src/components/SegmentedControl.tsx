@@ -53,7 +53,7 @@ export function SegmentedControl<T extends string>({
       }}
     >
       {options.map((option) => (
-        // A labelled segment shows its name already; only an icon needs the tooltip.
+        // A labeled segment shows its name already; only an icon needs the tooltip.
         <Tooltip key={option.value} content={option.label} side="right" disabled={!iconOnly}>
           <Toggle
             value={option.value}

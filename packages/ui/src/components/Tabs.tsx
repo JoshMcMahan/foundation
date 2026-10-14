@@ -95,7 +95,7 @@ export function Tabs<Value extends string>({
         <SegmentContent {...item} iconOnly={layout.iconOnly} />
       </BaseTabs.Tab>
     )
-    // A labelled tab shows its name already; only an icon needs the tooltip.
+    // A labeled tab shows its name already; only an icon needs the tooltip.
     return layout.iconOnly ? (
       <Tooltip key={item.value} content={item.label} side="right">
         {tab}

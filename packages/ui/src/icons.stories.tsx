@@ -44,7 +44,7 @@ function Gallery({ entries, size, strokeWidth }: GalleryArgs & { entries: [strin
   )
 }
 
-/** Every interface icon at the text's size and colour. `strokeWidth` is fixed
+/** Every interface icon at the text's size and color. `strokeWidth` is fixed
  *  for the app; the control is here to compare weights. */
 export const Interface: StoryObj<GalleryArgs> = {
   render: (args) => <Gallery entries={named(icons)} {...args} />,

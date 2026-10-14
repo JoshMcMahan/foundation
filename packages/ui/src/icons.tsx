@@ -239,7 +239,7 @@ export type IconType = (props: IconProps) => ReactNode
 // another and the weight of the text beside them.
 const STROKE_WIDTH = 2
 
-/** The text's size and colour by default, so a class such as `size-4` or a
+/** The text's size and color by default, so a class such as `size-4` or a
  *  parent's font size sets it. */
 function icon(Glyph: LucideIcon, defaults?: LucideProps): IconType {
   function Icon({ title, children, ...props }: IconProps) {

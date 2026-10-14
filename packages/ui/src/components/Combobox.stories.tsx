@@ -228,7 +228,7 @@ function UnlistedDemo(args: FieldArgs) {
   )
 }
 
-/** A saved value the list no longer offers still shows, labelled by itemToStringLabel. */
+/** A saved value the list no longer offers still shows, labeled by itemToStringLabel. */
 export const UnlistedValue: StoryObj<FieldArgs> = {
   render: (args) => <UnlistedDemo {...args} />,
 }

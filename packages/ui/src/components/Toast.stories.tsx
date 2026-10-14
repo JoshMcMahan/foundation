@@ -251,7 +251,7 @@ function HostChrome() {
   )
 }
 
-/** Beside a host's fixed sidebar and below its top bar, a toast centres over the
+/** Beside a host's fixed sidebar and below its top bar, a toast centers over the
  *  page content, not the whole window, once the host sets `--app-inset-start` and
  *  `--app-inset-top`. */
 export const BesideHostChrome: StoryObj = {
@@ -262,12 +262,12 @@ export const BesideHostChrome: StoryObj = {
     const shown = await shownToast('Your changes are saved.')
     const content = canvas.getByTestId('content').getBoundingClientRect()
     const bar = canvas.getByTestId('top-bar').getBoundingClientRect()
-    const centre = (r: DOMRect) => r.left + r.width / 2
+    const center = (r: DOMRect) => r.left + r.width / 2
     // It slides in from above, so its place is checked once it has landed.
     await waitFor(() =>
       expect(shown.getBoundingClientRect().top).toBeGreaterThanOrEqual(bar.bottom),
     )
-    await expect(Math.abs(centre(shown.getBoundingClientRect()) - centre(content))).toBeLessThan(2)
+    await expect(Math.abs(center(shown.getBoundingClientRect()) - center(content))).toBeLessThan(2)
     toast.dismiss()
   },
 }

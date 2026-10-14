@@ -232,7 +232,7 @@ export function FileTable({
     // virtualizer at scrollTop 0 forever.
     <div ref={setScrollEl} className="h-full overflow-auto">
       {/* tabIndex and onKeyDown sit on the <table>, not on the scroll container:
-          aria-activedescendant is only honoured on the element that actually holds
+          aria-activedescendant is only honored on the element that actually holds
           focus, so the grid, the cursor attribute and the focus have to be one
           element or assistive tech never hears the cursor move.
           aria-rowcount pairs with each row's aria-rowindex to report the true

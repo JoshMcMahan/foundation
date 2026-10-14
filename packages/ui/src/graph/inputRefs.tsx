@@ -320,7 +320,7 @@ export function FlagField({
 const CONDITIONS = [
   ['always', 'always'],
   ['failure()', 'failure'],
-  ['cancelled()', 'cancelled'],
+  ['canceled()', 'canceled'],
   ['success()', 'success'],
 ] as const
 

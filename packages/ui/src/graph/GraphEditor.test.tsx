@@ -34,7 +34,7 @@ vi.mock('react-zoom-pan-pinch', () => ({
   ),
 }))
 vi.mock('../logviewer', () => ({ LogViewer: () => null }))
-// Monaco can't run in jsdom; a textarea stands in, labelled by the model path.
+// Monaco can't run in jsdom; a textarea stands in, labeled by the model path.
 // What the last YAML editor was handed, for the completions that reach past its own text.
 const editorProps = vi.hoisted(() => ({}) as { nested?: NestedWorkflowText | undefined })
 vi.mock('../editor/Monaco', () => ({
@@ -694,10 +694,10 @@ describe('DependencyGraphPreview editor', () => {
       selector: 'input, textarea',
     })
     expect(condition).toHaveValue('')
-    // A labelled suggestion shows the value it writes beneath its label.
+    // A labeled suggestion shows the value it writes beneath its label.
     expect(
       (await optionsOf(condition)).map((option) => option.description ?? option.label),
-    ).toEqual(expect.arrayContaining(['always', 'failure()', 'cancelled()', 'success()', 'false']))
+    ).toEqual(expect.arrayContaining(['always', 'failure()', 'canceled()', 'success()', 'false']))
     fireEvent.change(condition, { target: { value: 'failure()' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(e.onEdit).toHaveBeenCalledWith({

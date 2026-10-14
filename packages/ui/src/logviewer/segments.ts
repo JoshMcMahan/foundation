@@ -31,7 +31,7 @@ export function plainSegments(text: string): LogSegment[] {
 
 /**
  * Matches are located on the concatenated line text so a term straddling an
- * ANSI colour boundary still highlights, then sliced back onto the segments it
+ * ANSI color boundary still highlights, then sliced back onto the segments it
  * covers.
  */
 export function highlightSegments(segments: LogSegment[], searchTerm: string): LogSegment[] {

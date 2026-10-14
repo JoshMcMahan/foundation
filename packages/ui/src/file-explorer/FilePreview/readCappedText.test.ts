@@ -11,7 +11,7 @@ import {
 function makeStreamResponse(chunks: string[]) {
   const encoder = new TextEncoder()
   const queue = [...chunks]
-  const state = { pulled: 0, cancelled: false }
+  const state = { pulled: 0, canceled: false }
   const stream = new ReadableStream<Uint8Array>({
     pull(controller) {
       const next = queue.shift()
@@ -23,7 +23,7 @@ function makeStreamResponse(chunks: string[]) {
       controller.enqueue(encoder.encode(next))
     },
     cancel() {
-      state.cancelled = true
+      state.canceled = true
     },
   })
   return { response: new Response(stream), state }
@@ -35,7 +35,7 @@ describe('readCappedText', () => {
     const { text, tooLarge } = await readCappedText(response, 1_000, 3)
     expect(text).toBe('a\nb\nc\n')
     expect(tooLarge).toBe(false)
-    expect(state.cancelled).toBe(true)
+    expect(state.canceled).toBe(true)
     expect(state.pulled).toBe(2)
   })
 
@@ -58,7 +58,7 @@ describe('readCappedText', () => {
     const { text, tooLarge } = await readCappedText(response, 3, 100)
     expect(tooLarge).toBe(true)
     expect(text).toBe('')
-    expect(state.cancelled).toBe(true)
+    expect(state.canceled).toBe(true)
   })
 
   it('keeps the complete lines already read when maxBytes trips before maxLines', async () => {
@@ -67,7 +67,7 @@ describe('readCappedText', () => {
     expect(text).toBe('a\nb\n')
     expect(tooLarge).toBe(false)
     expect(truncated).toBe(true)
-    expect(state.cancelled).toBe(true)
+    expect(state.canceled).toBe(true)
   })
 
   it('drops the incomplete trailing line when maxBytes trips', async () => {

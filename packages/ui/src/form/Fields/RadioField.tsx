@@ -38,7 +38,7 @@ export default function RadioField(props: FieldComponentProps<IRadioField>) {
             change(picked)
           }}
           className={cx(
-            // py-1.5 centres the first row on the 34px field label beside it.
+            // py-1.5 centers the first row on the 34px field label beside it.
             'flex py-1.5',
             field.optionLabelPosition === 'top'
               ? 'flex-col gap-2'

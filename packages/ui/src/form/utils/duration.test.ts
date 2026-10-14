@@ -164,7 +164,7 @@ describe('collectPartitionDurationIssues', () => {
     ).toEqual([])
   })
 
-  // The group toggle is honoured in any mode, but only flex has a wait budget to validate.
+  // The group toggle is honored in any mode, but only flex has a wait budget to validate.
   it('does not demand a flex wait from a standard partition on the group path', () => {
     expect(
       collectPartitionDurationIssues(

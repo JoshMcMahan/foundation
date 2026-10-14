@@ -104,7 +104,7 @@ interface DragOptions {
   onMove?: (client: Point) => void
   /** The release; `dragged` tells a drag from a click. */
   onEnd?: (client: Point, dragged: boolean) => void
-  /** A cancelled pointer, or Escape when `escape` is on. */
+  /** A canceled pointer, or Escape when `escape` is on. */
   onCancel?: (dragged: boolean) => void
   /** Escape cancels the press, and goes no further. */
   escape?: boolean
@@ -114,7 +114,7 @@ interface DragOptions {
   swallowClick?: 'always' | 'drag' | 'never'
 }
 
-/** Follows a press from `start` until it's released or cancelled. */
+/** Follows a press from `start` until it's released or canceled. */
 export function trackDrag(
   start: Point,
   {

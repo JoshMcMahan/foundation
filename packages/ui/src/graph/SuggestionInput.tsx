@@ -6,7 +6,7 @@ export interface Suggestion {
   label?: string | undefined
 }
 
-/** A labelled suggestion shows its meaning, with the value it writes beneath. */
+/** A labeled suggestion shows its meaning, with the value it writes beneath. */
 export function suggestionItems(suggestions: Suggestion[]): ComboboxItem[] {
   return suggestions.map(({ value, label }) =>
     label ? { value, label, description: value } : { value, label: value },

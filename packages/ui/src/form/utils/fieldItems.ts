@@ -26,7 +26,7 @@ export interface FieldOptionGroup<Value = string> {
   options: readonly (FieldOptionItem<Value> | string)[]
 }
 
-/** A dropdown option: a bare string is a choice labelled by its value. */
+/** A dropdown option: a bare string is a choice labeled by its value. */
 export type FieldOption<Value = string> = string | FieldOptionItem<Value> | FieldOptionGroup<Value>
 
 /** A picker item that also sets other fields when chosen, through `secondaryField`. */

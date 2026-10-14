@@ -6,7 +6,7 @@ describe('cx', () => {
     expect(cx('bg-(--theme-input-bg)', 'bg-(--theme-panel-bg)')).toBe('bg-(--theme-panel-bg)')
   })
 
-  it('keeps a theme colour beside a size or width of the same kind', () => {
+  it('keeps a theme color beside a size or width of the same kind', () => {
     expect(cx('text-xs', 'text-(--theme-muted-text-color)')).toBe(
       'text-xs text-(--theme-muted-text-color)',
     )

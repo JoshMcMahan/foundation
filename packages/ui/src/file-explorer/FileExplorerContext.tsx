@@ -200,7 +200,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
       fileProgress.abortController.abort()
 
       updateFileProgressInUploadSession(session, relativePath, {
-        status: 'cancelled',
+        status: 'canceled',
       })
     }
   }
@@ -215,13 +215,13 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
           fileProgress.abortController.abort()
           session.progress?.allFiles?.set(relativePath, {
             ...fileProgress,
-            status: 'cancelled',
+            status: 'canceled',
           })
         }
       })
     }
     session.abortController?.abort()
-    session.status = 'cancelled'
+    session.status = 'canceled'
   }
 
   const startUploadSession = async (sessionId: string): Promise<void> => {
@@ -271,10 +271,10 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
             return
           }
           // Throwing, not returning, is what makes the settled results count the file
-          // as not uploaded; the summary then tells cancelled from failed by
+          // as not uploaded; the summary then tells canceled from failed by
           // the message.
-          if (fileProgress.status === 'cancelled') {
-            throw new Error('Upload cancelled by user')
+          if (fileProgress.status === 'canceled') {
+            throw new Error('Upload canceled by user')
           }
 
           updateFileProgressInUploadSession(session, node.relativePath, {
@@ -301,7 +301,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
             totalBytes: number
             percentage: number
           }) => {
-            if (session.status === 'cancelled' || !session.progress?.allFiles) {
+            if (session.status === 'canceled' || !session.progress?.allFiles) {
               return
             }
             const currentFileProgress = session.progress.allFiles.get(node.relativePath)
@@ -309,7 +309,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
             // counted twice.
             if (
               !currentFileProgress ||
-              ['failed', 'cancelled', 'completed'].includes(currentFileProgress.status ?? '')
+              ['failed', 'canceled', 'completed'].includes(currentFileProgress.status ?? '')
             ) {
               return
             }
@@ -358,12 +358,12 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
             })
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error ?? '')
-            const isCancelled =
+            const isCanceled =
               errorMessage.toLowerCase().includes('abort') ||
               errorMessage.toLowerCase().includes('cancel')
 
             updateFileProgressInUploadSession(session, node.relativePath, {
-              status: isCancelled ? 'cancelled' : 'failed',
+              status: isCanceled ? 'canceled' : 'failed',
             })
 
             toast.update(sessionId, {
@@ -377,7 +377,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
                 },
               }),
               icon: false,
-              dismissible: session.status === 'failed' || session.status === 'cancelled',
+              dismissible: session.status === 'failed' || session.status === 'canceled',
               timeout: false,
             })
 
@@ -446,14 +446,14 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
           message: (
             <div className="w-full flex flex-col gap-1">
               <div>{t.upload.someUploaded(successfulCount)}</div>
-              <div>{t.upload.someCancelled(abortedCount)}</div>
+              <div>{t.upload.someCanceled(abortedCount)}</div>
             </div>
           ),
           tone: 'success',
         })
       } else if (abortedCount > 0 && successfulCount === 0) {
         toast.update(sessionId, {
-          message: t.upload.allCancelled(abortedCount),
+          message: t.upload.allCanceled(abortedCount),
           tone: 'info',
         })
       } else {

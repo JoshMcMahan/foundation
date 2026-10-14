@@ -23,7 +23,7 @@ interface StoredConversation {
 
 export interface MemoryConversationStore {
   conversations: ConversationsAdapter
-  // Wraps a transport so completed (and cancelled-partial) turns are recorded
+  // Wraps a transport so completed (and canceled-partial) turns are recorded
   // into the store; assigns the assistant message ID when the backend doesn't.
   recordingStream(inner: StreamCompletion): StreamCompletion
 }

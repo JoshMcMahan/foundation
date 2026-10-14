@@ -18,7 +18,7 @@ describe('parseAnsiSegments', () => {
     expect(text(segments)).toBe('&lt;b&gt;bold&lt;/b&gt;')
   })
 
-  it('turns ANSI colour codes into anser class names', () => {
+  it('turns ANSI color codes into anser class names', () => {
     const segments = parseAnsiSegments('plain \u001b[31mred\u001b[0m done')
 
     expect(text(segments)).toBe('plain red done')
@@ -93,7 +93,7 @@ describe('highlightSegments', () => {
     expect(result.filter((segment) => segment.highlighted).map((s) => s.content)).toEqual(['error'])
   })
 
-  it('highlights a term spanning an ANSI colour boundary', () => {
+  it('highlights a term spanning an ANSI color boundary', () => {
     const result = highlightSegments(
       parseAnsiSegments('\u001b[31mer\u001b[32mror\u001b[0m'),
       'error',

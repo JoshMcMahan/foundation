@@ -38,7 +38,7 @@ const LEGACY_PERMISSION_MODES: readonly string[] = [
 
 /** The daemon clamps a remote request to its owner's remoteMaxPermissionMode
  *  and refuses a mode it does not know, so a menu offers only what that
- *  machine will honour. */
+ *  machine will honor. */
 export function permissionModesUpTo(
   ceiling: string | undefined,
   accepted: readonly string[] | undefined = undefined,

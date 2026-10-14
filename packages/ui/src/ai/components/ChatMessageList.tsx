@@ -290,7 +290,7 @@ export default function ChatMessageList({
 
   // If no messages and no streaming, just return empty scrollable container
   // The parent page handles the welcome/empty state UI. Queued messages still
-  // render — a cancelled first turn must keep them visible.
+  // render — a canceled first turn must keep them visible.
   if (messages.length === 0 && !streamingMessage && !hasQueuedMessages) {
     return (
       <div className="chat-thread flex-1 overflow-y-auto flex flex-col bg-(--theme-panel-bg)">

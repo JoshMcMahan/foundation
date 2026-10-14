@@ -15,7 +15,7 @@ export const SIDEBAR_DEFAULT_WIDTH_PX = 256
 
 // Tints rather than the theme's hover, which is a shade off this surface and
 // would not read as a highlight on it: the accent for the open row, so the
-// conversation on screen is marked in the chat's own colour, and the ink for
+// conversation on screen is marked in the chat's own color, and the ink for
 // a passing pointer.
 const HIGHLIGHT_SELECTED = 'bg-[color-mix(in_oklab,var(--theme-accent)_12%,transparent)]'
 const HIGHLIGHT_HOVER = 'hover:bg-[color-mix(in_oklab,var(--theme-app)_5%,transparent)]'

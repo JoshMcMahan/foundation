@@ -42,7 +42,7 @@ export function optionsOf(input: HTMLElement): Promise<ShownOption[]> {
   return withOptions(input, (options) => options.map(shown))
 }
 
-/** Picks the option labelled `label` the way a user does in a long list: types to
+/** Picks the option labeled `label` the way a user does in a long list: types to
  *  find it, then clicks it. */
 export function chooseOption(input: HTMLElement, label: string): Promise<void> {
   fireEvent.change(input, { target: { value: label } })

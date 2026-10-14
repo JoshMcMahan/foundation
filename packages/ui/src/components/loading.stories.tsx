@@ -58,7 +58,7 @@ export const RefreshButtons: StoryObj<Pick<RefreshButtonProps, 'size' | 'refresh
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // The labelled button; the icon-only one beside it shares the name.
+    // The labeled button; the icon-only one beside it shares the name.
     const [refresh] = canvas.getAllByRole('button', { name: 'Refresh' })
     if (!refresh) {
       throw new Error('no refresh button')

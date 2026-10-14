@@ -27,7 +27,7 @@
 // system something belongs to. Interface icons are in './icons'.
 import type { IconProps, IconType } from './icons'
 
-/** A one-colour logo in the text's colour, at the text's size. */
+/** A one-color logo in the text's color, at the text's size. */
 function brand(viewBox: string, ...paths: string[]): IconType {
   function Icon({
     title,

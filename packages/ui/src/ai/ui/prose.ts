@@ -5,7 +5,7 @@ export const chatProseClasses = [
   'chat-ink prose max-w-none leading-relaxed wrap-break-word',
   'prose-p:my-3 prose-p:leading-relaxed',
   'prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-1',
-  // text-[1rem], not text-base: this project's --color-base makes text-base a colour.
+  // text-[1rem], not text-base: this project's --color-base makes text-base a color.
   'prose-h1:text-xl prose-h2:text-lg prose-h3:text-[1rem] prose-h4:text-[1rem]',
   'prose-ul:my-3 prose-ol:my-3 prose-li:my-0.5 prose-li:leading-relaxed',
   // A loose list wraps each item in a paragraph; the paragraph margin would

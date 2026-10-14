@@ -187,7 +187,7 @@ export type YamlSegment = string | number
 
 type UnknownRecord = Record<string, unknown>
 
-/** One input a built-in action takes in its step's `with`, labelled in the reader's language. */
+/** One input a built-in action takes in its step's `with`, labeled in the reader's language. */
 export interface WorkflowActionInput {
   key: string
   kind: 'text' | 'textarea' | 'number' | 'any' | 'list' | 'bool' | 'choice' | 'flags' | 'target'

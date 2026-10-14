@@ -55,7 +55,7 @@
   padding: 0.125em 0.375em;
   background-color: color-mix(in oklab, var(--theme-app, #000) 8%, transparent);
   border-radius: 0.25rem;
-  /* Identifiers carry a colour of their own so they read as code at a glance
+  /* Identifiers carry a color of their own so they read as code at a glance
    * without the weight the plugin gives them: the theme's link blue, which
    * every palette already keeps legible on its surfaces. */
   color: var(--theme-link, #2f6fa8);
@@ -248,7 +248,7 @@
    explicitly to ensure correct colors in all modes.
    See: https://shiki.style/guide/dual-themes#class-based-dark-mode */
 
-/* Light mode: the primary Shiki theme's colours (--sdm-c) on the block's own
+/* Light mode: the primary Shiki theme's colors (--sdm-c) on the block's own
    surface, which stands in for the theme's background. */
 .markdown [data-streamdown="code-block-body"] pre {
   /* biome-ignore lint/complexity/noImportantStyles: the highlighter sets the background as an inline style */
@@ -259,7 +259,7 @@
   color: var(--sdm-c, inherit);
 }
 
-/* Dark mode: the --shiki-dark colours, again on the block's surface. */
+/* Dark mode: the --shiki-dark colors, again on the block's surface. */
 .dark .markdown [data-streamdown="code-block-body"] pre {
   /* biome-ignore lint/complexity/noImportantStyles: the highlighter sets the background as an inline style */
   background-color: transparent !important;
@@ -369,7 +369,7 @@
 
 /* The composer is one surface lifted off the page: a hairline of the ink for
  * its edge, and a short, soft shadow that deepens while it has focus. The
- * shadow is black on every scheme; an ink-coloured one would glow on dark. */
+ * shadow is black on every scheme; an ink-colored one would glow on dark. */
 .chat-composer {
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--theme-app, #000) 12%, transparent),

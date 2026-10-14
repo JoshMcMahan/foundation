@@ -217,7 +217,7 @@ describe('FileTable keyboard cursor', () => {
     expect(scroller.contains(document.activeElement)).toBe(true)
   })
 
-  // aria-activedescendant is only honoured on the element holding DOM focus, so the
+  // aria-activedescendant is only honored on the element holding DOM focus, so the
   // grid, the cursor and the focus have to be one element.
   it('carries the cursor attribute on the element that holds focus', () => {
     const { grid, focusGrid } = renderTable()

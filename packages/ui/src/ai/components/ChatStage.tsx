@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 /** Where a new conversation starts: the heading and the composer together, a
- *  little above centre, with what the surface offers next under the box. The
+ *  little above center, with what the surface offers next under the box. The
  *  composer keeps its place however much is under it, so surfaces that share
  *  the stage put it in the same spot; a long list scrolls instead. */
 export default function ChatStage({

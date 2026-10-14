@@ -301,7 +301,7 @@ root:
 | Variable            | Meaning                                                                 |
 | ------------------- | ----------------------------------------------------------------------- |
 | `--app-inset-top`   | The height of a fixed top bar. Drawers and toasts start below it.       |
-| `--app-inset-start` | The width of a fixed sidebar on the start side. Toasts centre over the page beside it, and a drawer at its widest leaves that strip, and never less than 2.5rem. Update it when the sidebar collapses. |
+| `--app-inset-start` | The width of a fixed sidebar on the start side. Toasts center over the page beside it, and a drawer at its widest leaves that strip, and never less than 2.5rem. Update it when the sidebar collapses. |
 
 ```ts
 document.documentElement.style.setProperty('--app-inset-top', '56px')
@@ -340,7 +340,7 @@ name is a meaning, such as `RetryIcon` or `WarningIcon`, drawn from
 stroke. Don't import `lucide-react` directly: a name here keeps one glyph per
 meaning across the apps.
 
-- **Size and colour:** an icon is `1em` square in `currentColor`, so it follows
+- **Size and color:** an icon is `1em` square in `currentColor`, so it follows
   the text around it. A class such as `size-4` or `h-3 w-3` sets another size,
   and `size` takes pixels.
 - **Accessibility:** an icon is decoration, hidden from assistive technology,
@@ -362,7 +362,7 @@ meaning across the apps.
 
 Logos of other companies' products, such as `GitHubIcon` or `UbuntuIcon`, are
 in `@parallelworks/ui/brand-icons`. They take the same props, are filled in the
-text's colour, and are only for naming the product. They come from Simple Icons
+text's color, and are only for naming the product. They come from Simple Icons
 (CC0) and Bootstrap Icons (MIT), and the file carries their notices.
 
 The `UI/Icons` story shows every icon and logo by name.

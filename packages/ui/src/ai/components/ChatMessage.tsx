@@ -159,7 +159,7 @@ function ChatMessage({
     }
   }, [isEditing])
 
-  // Reset edit content when message changes or edit mode is cancelled
+  // Reset edit content when message changes or edit mode is canceled
   useEffect(() => {
     if (!isEditing) {
       setEditContent(message.content || '')

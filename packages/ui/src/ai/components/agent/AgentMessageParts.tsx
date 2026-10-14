@@ -756,7 +756,7 @@ type RunMember = { part: ToolCallPart | ReasoningPart; index: number }
 
 type RenderItem =
   | { kind: 'single'; part: MessagePart; index: number }
-  // Adjacent thoughts drawn as one line, labelled by the first.
+  // Adjacent thoughts drawn as one line, labeled by the first.
   | { kind: 'reasoning'; parts: ReasoningPart[]; index: number }
   | { kind: 'rollup'; members: RunMember[] }
 

@@ -61,17 +61,17 @@ function getSessionStatusInfo(session: UploadSession, queueLength: number, strin
 
 function barTone({
   isCompleted,
-  isCancelled,
+  isCanceled,
   isFailed,
 }: {
   isCompleted: boolean
-  isCancelled: boolean
+  isCanceled: boolean
   isFailed: boolean
 }): BarTone {
   if (isCompleted) {
     return 'success'
   }
-  if (isCancelled) {
+  if (isCanceled) {
     return 'muted'
   }
   return isFailed ? 'error' : 'accent'
@@ -93,9 +93,9 @@ function FileProgressBar({ fileProgress, fileName, onCancelFile }: FileProgressB
   const totalBytes = fileProgress.fileSizeBytes || fileProgress.totalBytes || 0
 
   const isCompleted = percentage === 100 || fileProgress.status === 'completed'
-  const isCancelled = fileProgress.status === 'cancelled'
+  const isCanceled = fileProgress.status === 'canceled'
   const isFailed = fileProgress.status === 'failed'
-  const isSettled = isCompleted || isCancelled || isFailed
+  const isSettled = isCompleted || isCanceled || isFailed
   const canCancel = !!fileProgress.abortController && !isSettled
 
   const stop = (e: React.MouseEvent, then: () => void) => {
@@ -108,11 +108,11 @@ function FileProgressBar({ fileProgress, fileName, onCancelFile }: FileProgressB
       <ProgressBar
         className="flex-1"
         value={percentage}
-        tone={barTone({ isCompleted, isCancelled, isFailed })}
+        tone={barTone({ isCompleted, isCanceled, isFailed })}
         label={fileName}
         status={
-          isCancelled
-            ? strings.cancelled
+          isCanceled
+            ? strings.canceled
             : isCompleted
               ? strings.completed
               : isFailed
@@ -191,15 +191,15 @@ export function UploadSessionToast({
   const targetPath = `${session.targetPath}/`
 
   const isCompleted = session.status === 'completed'
-  const isCancelled = session.status === 'cancelled'
+  const isCanceled = session.status === 'canceled'
   const isFailed = session.status === 'failed'
   // Includes `queued`: a queued session shows the same progress and cancel controls.
-  const isUploading = !isCompleted && !isCancelled && !isFailed
+  const isUploading = !isCompleted && !isCanceled && !isFailed
 
   const totalProgress = session.progress?.overallProgress || 0
   const totalSize = session.progress?.totalSizeBytes || 0
 
-  const sessionTone = barTone({ isCompleted, isCancelled, isFailed })
+  const sessionTone = barTone({ isCompleted, isCanceled, isFailed })
 
   const allFiles = session.progress?.allFiles ? Array.from(session.progress.allFiles.values()) : []
   const singleFile = allFiles[0]

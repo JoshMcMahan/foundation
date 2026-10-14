@@ -813,7 +813,7 @@ const PROGRESS: { label: string; value: number | null; tone: BarTone; status?: s
   { label: 'results.csv', value: 42, tone: 'accent' },
   { label: 'model.bin', value: 100, tone: 'success', status: 'Completed' },
   { label: 'archive.tar', value: 64, tone: 'error', status: 'Failed' },
-  { label: 'notes.txt', value: 18, tone: 'muted', status: 'Cancelled' },
+  { label: 'notes.txt', value: 18, tone: 'muted', status: 'Canceled' },
   { label: 'Preparing', value: null, tone: 'accent' },
 ]
 

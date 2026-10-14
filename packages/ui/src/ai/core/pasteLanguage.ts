@@ -1,6 +1,6 @@
 // A paste arrives as bare text, with no fence to say what it is. These rules
-// recognise the formats people paste into a chat about their systems often
-// enough to be worth colouring; anything else stays plain text rather than
+// recognize the formats people paste into a chat about their systems often
+// enough to be worth coloring; anything else stays plain text rather than
 // risk a confident wrong guess.
 
 function meaningfulLines(text: string): string[] {
@@ -27,7 +27,7 @@ const YAML_LINE = /^\s*(-\s+)?["']?[\w./-]+["']?\s*:(\s|$)|^\s*-(\s|$)|^---\s*$/
 const TOML_LINE = /^\s*\[{1,2}[\w."-]+\]{1,2}\s*$|^\s*[\w."-]+\s*=\s*\S/
 
 /** The highlighter's name for the language a paste is written in, or ''
- *  when it is not recognisably one. */
+ *  when it is not recognizably one. */
 export function guessPasteLanguage(text: string): string {
   const trimmed = text.trim()
   if (!trimmed) {

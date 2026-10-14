@@ -76,7 +76,7 @@ describe('fitSeed', () => {
     const fit = fitSeed({
       '--theme-app-bg': '#ffffff',
       '--theme-accent': '#0d6efd',
-      // Grey on white at 2.3:1: the generator raises it on purpose.
+      // Gray on white at 2.3:1: the generator raises it on purpose.
       '--theme-muted-text-color': '#a0a0a0',
       '--theme-app': '#222222',
     })

@@ -37,7 +37,7 @@ describe('icons', () => {
 })
 
 describe('brand icons', () => {
-  it('fill with the text colour at the text size, hidden by default', () => {
+  it('fill with the text color at the text size, hidden by default', () => {
     const { container } = render(<GitHubIcon strokeWidth={3} />)
     const svg = container.querySelector('svg')
     expect(svg).toHaveAttribute('width', '1em')

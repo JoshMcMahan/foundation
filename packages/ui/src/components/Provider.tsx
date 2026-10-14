@@ -408,7 +408,7 @@ export interface UIStrings {
       failedTitle: string
       unknownTitle: string
       unknownShort: string
-      cancelled: string
+      canceled: string
       completed: string
       failed: string
       totalSize: string
@@ -419,9 +419,9 @@ export interface UIStrings {
       expandDetails: string
       minimizeDetails: string
       sessionNotQueued: (id: string, status: string) => string
-      allCancelled: (count: number) => string
+      allCanceled: (count: number) => string
       someUploaded: (count: number) => string
-      someCancelled: (count: number) => string
+      someCanceled: (count: number) => string
       allUploaded: string
       failedSummary: (failed: number, total: number) => string
       failReasonGeneric: string
@@ -1052,7 +1052,7 @@ const DEFAULTS: UIProviderValue = {
         failedTitle: 'Upload Failed',
         unknownTitle: 'Unknown Status',
         unknownShort: 'Unknown',
-        cancelled: 'Cancelled',
+        canceled: 'Canceled',
         completed: 'Completed',
         failed: 'Failed',
         totalSize: 'Total size:',
@@ -1063,9 +1063,9 @@ const DEFAULTS: UIProviderValue = {
         minimizeDetails: 'Minimize details',
         sessionNotQueued: (id: string, status: string) =>
           `Upload session with ID ${id} is not queued, current status is ${status}`,
-        allCancelled: (count: number) => `All ${count} file(s) were cancelled by user.`,
+        allCanceled: (count: number) => `All ${count} file(s) were canceled by user.`,
         someUploaded: (count: number) => `${count} file(s) uploaded successfully!`,
-        someCancelled: (count: number) => `${count} file(s) cancelled by user.`,
+        someCanceled: (count: number) => `${count} file(s) canceled by user.`,
         allUploaded: 'Upload file(s) successfully!',
         failedSummary: (failed: number, total: number) =>
           `${failed}/${total} files failed to upload:`,

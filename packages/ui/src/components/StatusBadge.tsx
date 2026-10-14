@@ -12,7 +12,7 @@ interface StatusBadgeProps {
   variant?: BadgeVariant
   /** Show animated pulse indicator */
   pulse?: boolean
-  /** Show a still indicator in the variant's colour */
+  /** Show a still indicator in the variant's color */
   dot?: boolean
   /** Size */
   size?: 'sm' | 'md'
@@ -20,7 +20,7 @@ interface StatusBadgeProps {
   className?: string
 }
 
-/** A line of text in a variant's colour, for a status that stands beside a
+/** A line of text in a variant's color, for a status that stands beside a
  *  dot rather than inside a badge. */
 export function statusTextClass(variant: BadgeVariant): string {
   return toneText[variant]

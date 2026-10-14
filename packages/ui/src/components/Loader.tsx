@@ -18,7 +18,7 @@ export interface LoaderProps {
    *  loader is named with the provider's `loading` string. */
   label?: string | undefined
   variant?: 'spinner' | 'logo'
-  /** Sits in a line of text or a button instead of centring in its own row. */
+  /** Sits in a line of text or a button instead of centering in its own row. */
   inline?: boolean
   /** The spinner's color, such as `currentColor` inside a button. */
   color?: string | undefined

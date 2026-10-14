@@ -57,7 +57,7 @@ export function useObjectBlobUrl(
       return
     }
 
-    let cancelled = false
+    let canceled = false
     const record = loadPreviewContent<BlobResult>(
       cacheKey,
       async (signal) => {
@@ -76,7 +76,7 @@ export function useObjectBlobUrl(
     setState(record.value ? toState(record.value) : { ...IDLE, loading: true })
     record.promise
       .then((result) => {
-        if (!cancelled) {
+        if (!canceled) {
           setState(toState(result))
         }
       })
@@ -84,7 +84,7 @@ export function useObjectBlobUrl(
         if (err instanceof DOMException && err.name === 'AbortError') {
           return
         }
-        if (!cancelled) {
+        if (!canceled) {
           setState({
             ...IDLE,
             error: err instanceof Error ? err.message : 'Failed to load file',
@@ -94,7 +94,7 @@ export function useObjectBlobUrl(
       })
 
     return () => {
-      cancelled = true
+      canceled = true
     }
   }, [url, cacheKey, maxBytes, mimeType, tooLarge])
 

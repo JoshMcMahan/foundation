@@ -311,7 +311,7 @@ export const IconButtonTriggers: StoryObj<{ dot: boolean }> = {
   },
 }
 
-/** Whether the element drawn at an element's centre is that element or inside it, so nothing covers it. */
+/** Whether the element drawn at an element's center is that element or inside it, so nothing covers it. */
 const onTop = (el: Element) => {
   const box = el.getBoundingClientRect()
   const drawn = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)

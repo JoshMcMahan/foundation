@@ -18,7 +18,7 @@ export interface ComboboxGroup<Value = string> {
   items: readonly ComboboxLeaf<Value>[]
 }
 
-/** One item: an option, or a bare string labelled by its value. */
+/** One item: an option, or a bare string labeled by its value. */
 export type ComboboxLeaf<Value = string> = ComboboxItem<Value> | (Value & string)
 
 /** Items, groups under headings, or both: items between groups list where they sit, without a heading. */

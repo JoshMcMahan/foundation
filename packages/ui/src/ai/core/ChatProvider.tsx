@@ -507,7 +507,7 @@ export function ChatProvider({
 
       isSendingRef.current = true
 
-      // A queue held across a cancelled or failed turn drains ahead of this
+      // A queue held across a canceled or failed turn drains ahead of this
       // send, so nothing the user typed is lost or reordered.
       if (pendingQueueRef.current.length > 0) {
         const held = pendingQueueRef.current

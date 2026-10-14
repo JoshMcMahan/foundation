@@ -169,7 +169,7 @@ describe('LogViewer search highlighting', () => {
     expect(container.querySelector('mark.search-highlight')?.textContent).toBe('[ERROR]')
   })
 
-  it('keeps ANSI colouring while highlighting a match', () => {
+  it('keeps ANSI coloring while highlighting a match', () => {
     const { container } = renderLog('\u001b[31mred error\u001b[0m')
 
     filterFor('error')

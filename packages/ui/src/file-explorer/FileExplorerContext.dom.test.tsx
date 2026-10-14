@@ -29,7 +29,7 @@ const provider = { uploadFileInput: () => ({}) } as unknown as IFileExplorerProv
 const refresh = async () => {}
 
 describe('upload summary', () => {
-  it('reports a file cancelled before its upload starts as cancelled', async () => {
+  it('reports a file canceled before its upload starts as canceled', async () => {
     const { explorer, summaryFor } = setup()
     let finishFirst = () => {}
     const blocked = new Promise<void>((resolve) => {
@@ -68,13 +68,13 @@ describe('upload summary', () => {
     const progress = queued?.get('/b.txt')
     expect(progress?.status).toBe('pending')
     if (queued && progress) {
-      queued.set('/b.txt', { ...progress, status: 'cancelled' })
+      queued.set('/b.txt', { ...progress, status: 'canceled' })
     }
 
     await act(async () => finishFirst())
     await waitFor(() => expect(summaryFor(first)?.tone).toBe('success'))
     await waitFor(() => expect(summaryFor(second)?.tone).toBe('info'), { timeout: 3000 })
-    expect(summaryFor(second)?.message).toBe('All 1 file(s) were cancelled by user.')
+    expect(summaryFor(second)?.message).toBe('All 1 file(s) were canceled by user.')
     expect(uploadFile).toHaveBeenCalledTimes(1)
   })
 

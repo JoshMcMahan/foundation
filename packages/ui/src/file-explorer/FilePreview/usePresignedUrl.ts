@@ -59,7 +59,7 @@ export function usePresignedUrl(
       setState({ url: null, loading: false, error: null })
       return
     }
-    let cancelled = false
+    let canceled = false
     const record = loadPreviewUrl(path, () => getUrlRef.current(node))
     setState(
       record.value
@@ -68,12 +68,12 @@ export function usePresignedUrl(
     )
     record.promise
       .then((result) => {
-        if (!cancelled) {
+        if (!canceled) {
           setState(toState(result, linkErrorRef.current))
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
+        if (!canceled) {
           setState({
             url: null,
             loading: false,
@@ -82,7 +82,7 @@ export function usePresignedUrl(
         }
       })
     return () => {
-      cancelled = true
+      canceled = true
     }
   }, [path])
 
