@@ -51,27 +51,57 @@ describe('Table child hoisting', () => {
 })
 
 describe('sortable Table.Header', () => {
-  it('renders a button and exposes the sort direction', () => {
-    const onClick = vi.fn()
+  it('is a button that says the sort direction, and sorts on press', () => {
+    const onSort = vi.fn()
     render(
       <Table>
-        <Table.Header onClick={onClick} sort="descending">
+        <Table.Header onSort={onSort} sort="descending">
           Name
         </Table.Header>
-        <Table.Header onClick={onClick} sort="unsorted">
-          Size
-        </Table.Header>
+        <Table.Header onSort={onSort}>Size</Table.Header>
         <Table.Header>Static</Table.Header>
       </Table>,
     )
 
     const name = screen.getByRole('columnheader', { name: 'Name' })
     expect(name).toHaveAttribute('aria-sort', 'descending')
+    // A sortable column that isn't the sorted one says so.
     expect(screen.getByRole('columnheader', { name: 'Size' })).toHaveAttribute('aria-sort', 'none')
     expect(screen.getByRole('columnheader', { name: 'Static' })).not.toHaveAttribute('aria-sort')
 
     fireEvent.click(screen.getByRole('button', { name: 'Name' }))
-    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onSort).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Static' })).toBeNull()
+  })
+})
+
+describe('Table layout', () => {
+  it('pads a header and the cells under it alike, so the column lines up', () => {
+    render(
+      <Table>
+        <Table.Header>Name</Table.Header>
+        <tr>
+          <Table.Item>ada</Table.Item>
+        </tr>
+      </Table>,
+    )
+    const padding = (el: HTMLElement) => [...el.classList].filter((c) => /^p[xlr]-/.test(c))
+    expect(padding(screen.getByRole('columnheader'))).toEqual(padding(screen.getByRole('cell')))
+  })
+
+  it('lets a caller pad a cell its own way, and spans columns', () => {
+    render(
+      <Table density="compact">
+        <tr>
+          <Table.Item className="py-2.5 px-6" colSpan={2}>
+            ada
+          </Table.Item>
+        </tr>
+      </Table>,
+    )
+    const cell = screen.getByRole('cell')
+    expect(cell).toHaveClass('py-2.5', 'px-6')
+    expect(cell).not.toHaveClass('py-1.5', 'px-3')
+    expect(cell).toHaveAttribute('colspan', '2')
   })
 })

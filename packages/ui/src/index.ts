@@ -191,7 +191,6 @@ export {
 } from './components/SettingsCard'
 export { LoadingRegion, Skeleton, type SkeletonProps } from './components/Skeleton'
 export { Slider, type SliderProps } from './components/Slider'
-export { default as Sort, type TDirection } from './components/Sort'
 export {
   type BadgeVariant,
   StatusBadge,
@@ -200,7 +199,7 @@ export {
 } from './components/StatusBadge'
 export { Switch, type SwitchProps } from './components/Switch'
 export { isTextEntryContext, useShortcutKey } from './components/shortcutKey'
-export { CompactTable, Table } from './components/Table'
+export { type SortDirection, Table, type TableDensity } from './components/Table'
 export { type TabItem, TabPanel, Tabs, type TabsProps } from './components/Tabs'
 export { ThemeEditor, type ThemeEditorProps, ThemePreview } from './components/ThemeEditor'
 export {

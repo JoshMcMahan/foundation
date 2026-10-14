@@ -187,7 +187,6 @@ try {
       '}',
       "need(root, 'root', 'deriveTheme')",
       "need(root, 'root', 'Table')",
-      "need(root, 'root', 'CompactTable')",
       "need(root, 'root', 'Loader')",
       "need(root, 'root', 'Modal')",
       "need(root, 'root', 'ConfirmModal')",

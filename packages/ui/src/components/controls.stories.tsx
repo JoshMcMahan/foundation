@@ -14,7 +14,6 @@ import { SearchInput } from './SearchInput'
 import { SegmentedControl } from './SegmentedControl'
 import { SettingModeOption } from './SettingModeOption'
 import { SettingRow, SettingsCard, SettingsHeading } from './SettingsCard'
-import Sort, { type TDirection } from './Sort'
 import { Switch } from './Switch'
 
 const meta: Meta = {
@@ -233,8 +232,6 @@ type RunFilter = 'all' | 'running' | 'failed'
 function SearchSortDemo({ size }: { size: 'sm' | 'md' }) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<RunFilter>('all')
-  const [sorted, setSorted] = useState<'name' | ''>('name')
-  const [direction, setDirection] = useState<TDirection>('ascending')
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -255,16 +252,6 @@ function SearchSortDemo({ size }: { size: 'sm' | 'md' }) {
           value={status}
           onValueChange={setStatus}
         />
-        <span className="text-sm">
-          Name
-          <Sort
-            currentlySorted={sorted || null}
-            name="name"
-            currentDirection={direction}
-            setCurrentDirection={setDirection}
-            setCurrentlySorted={setSorted}
-          />
-        </span>
       </div>
       <span data-testid="shown" className="text-xs text-(--theme-muted-text-color)">
         {query ? `Matching “${query}”` : 'Every run'}, {status}
@@ -273,7 +260,8 @@ function SearchSortDemo({ size }: { size: 'sm' | 'md' }) {
   )
 }
 
-/** A search box narrows the rows, a segmented control picks a status, and a column sorts. */
+/** A search box narrows the rows, and a segmented control picks a status. Columns sort
+ *  from their headers: see `UI/Primitives/Tables`. */
 export const SearchAndSort: StoryObj<{ size: 'sm' | 'md' }> = {
   args: { size: 'md' },
   argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },

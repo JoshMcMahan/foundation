@@ -24,7 +24,7 @@ import { SegmentedControl } from './SegmentedControl'
 import { Select } from './Select'
 import { StatusBadge, StatusDot } from './StatusBadge'
 import { Switch } from './Switch'
-import { CompactTable, Table } from './Table'
+import { type SortDirection, Table, type TableDensity } from './Table'
 import { Tooltip } from './Tooltip'
 
 const meta: Meta = {
@@ -277,33 +277,88 @@ export const CreateModalStory: StoryObj = {
   },
 }
 
-export const Tables: StoryObj = {
-  render: () => (
+const clusters = [
+  { name: 'alpha', status: 'ready', region: 'us-east-1', nodes: 4 },
+  { name: 'gamma', status: 'ready', region: 'eu-west-2', nodes: 12 },
+  { name: 'beta', status: 'ready', region: 'us-west-2', nodes: 2 },
+]
+
+function TablesDemo({ density }: { density: TableDensity }) {
+  const [sort, setSort] = useState<{ key: 'name' | 'nodes'; direction: SortDirection }>({
+    key: 'name',
+    direction: 'ascending',
+  })
+  const sorted = [...clusters].sort((a, b) => {
+    const order = a[sort.key] < b[sort.key] ? -1 : a[sort.key] > b[sort.key] ? 1 : 0
+    return sort.direction === 'descending' ? -order : order
+  })
+  const sortBy = (key: 'name' | 'nodes') => () =>
+    setSort((now) => ({
+      key,
+      direction: now.key === key && now.direction === 'ascending' ? 'descending' : 'ascending',
+    }))
+  const directionOf = (key: 'name' | 'nodes'): SortDirection =>
+    sort.key === key ? sort.direction : 'none'
+  return (
     <div className="flex flex-col gap-6">
-      <Table roundedTop>
-        <Table.Header>Name</Table.Header>
+      <Table roundedTop density={density}>
+        <Table.Header sort={directionOf('name')} onSort={sortBy('name')}>
+          Name
+        </Table.Header>
         <Table.Header>Status</Table.Header>
         <Table.Header>Region</Table.Header>
-        {['alpha', 'beta'].map((name) => (
-          <tr key={name}>
-            <Table.Item>{name}</Table.Item>
+        <Table.Header sort={directionOf('nodes')} onSort={sortBy('nodes')} className="text-right">
+          Nodes
+        </Table.Header>
+        {sorted.map((cluster) => (
+          <tr key={cluster.name}>
+            <Table.Item>{cluster.name}</Table.Item>
             <Table.Item>
-              <StatusBadge variant="success">ready</StatusBadge>
+              <StatusBadge variant="success">{cluster.status}</StatusBadge>
             </Table.Item>
-            <Table.Item>us-east-1</Table.Item>
+            <Table.Item>{cluster.region}</Table.Item>
+            <Table.Item className="text-right tabular-nums">{cluster.nodes}</Table.Item>
           </tr>
         ))}
       </Table>
-      <CompactTable>
-        <CompactTable.Header>Key</CompactTable.Header>
-        <CompactTable.Header>Value</CompactTable.Header>
+      <Table density="compact" rounded>
+        <Table.Header>Key</Table.Header>
+        <Table.Header>Value</Table.Header>
         <tr>
-          <CompactTable.Item>version</CompactTable.Item>
-          <CompactTable.Item>0.3.0</CompactTable.Item>
+          <Table.Item>version</Table.Item>
+          <Table.Item>0.3.0</Table.Item>
         </tr>
-      </CompactTable>
+        <tr>
+          <Table.Item>channel</Table.Item>
+          <Table.Item>stable</Table.Item>
+        </tr>
+      </Table>
     </div>
-  ),
+  )
+}
+
+/** Column titles line up with the values under them. A sortable column's title is a
+ *  button that says its direction; an unsorted one shows its mark on hover and focus.
+ *  `compact` fits a short list of keys and values. */
+export const Tables: StoryObj<{ density: TableDensity }> = {
+  args: { density: 'comfortable' },
+  argTypes: { density: { control: 'inline-radio', options: ['comfortable', 'compact'] } },
+  render: (args) => <TablesDemo {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = canvas.getByRole('columnheader', { name: 'Name' })
+    await expect(name).toHaveAttribute('aria-sort', 'ascending')
+    await expect(canvas.getByRole('columnheader', { name: 'Nodes' })).toHaveAttribute(
+      'aria-sort',
+      'none',
+    )
+    await expect(canvas.getByRole('columnheader', { name: 'Status' })).not.toHaveAttribute(
+      'aria-sort',
+    )
+    await userEvent.click(within(name).getByRole('button'))
+    await expect(name).toHaveAttribute('aria-sort', 'descending')
+    await expect(canvas.getAllByRole('row')[1]).toHaveTextContent('gamma')
+  },
 }
 
 function InputsDemo() {
