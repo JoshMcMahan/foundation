@@ -365,7 +365,11 @@ meaning across the apps.
   instance. `RemoveIcon` takes an item out of a list, while `CloseIcon` closes,
   dismisses or clears; they share the X glyph, the convention for both.
   `DestroyIcon` tears down what was provisioned, while `TrashIcon` deletes a
-  record.
+  record. `RemoveUserIcon` takes someone out of a group or project, while
+  `DisableUserIcon` turns off their account. `ChangesRequestedIcon` asks for
+  changes to something sent, while `FlaggedIcon` marks an item for attention.
+  `PendingIcon` is a requirement not met yet and `NotRunningIcon` a run not
+  started; they share the empty circle, so keep them out of the same list.
 - **Adding an icon:** pick the [Lucide glyph](https://lucide.dev/icons) and add
   `export const NameIcon = /* @__PURE__ */ icon(Glyph)` to `src/icons.tsx`,
   named for what it means rather than what it shows. Reuse an existing name
