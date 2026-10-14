@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as combobox from './components/Combobox.stories'
 import * as controls from './components/controls.stories'
+import * as descriptionList from './components/DescriptionList.stories'
 import * as fields from './components/fields.stories'
 import * as loading from './components/loading.stories'
 import * as menus from './components/Menu.stories'
@@ -58,6 +59,7 @@ const SUITES = {
   primitives,
   icons,
   sections,
+  descriptionList,
   loading,
   combobox,
   controls,

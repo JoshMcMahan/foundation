@@ -34,7 +34,8 @@ Each need has one component. Reach for it before styling markup by hand.
 | A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
 | A number, a date, a color | `NumberInput`, `DatePicker`, `ColorInput` |
 | A one-time code, such as a sign-in check | `OneTimeCodeInput` |
-| A labeled value nobody edits, among fields | `FieldValue` in a `Field`; `DescriptionList` for a set of them alone |
+| A labeled value nobody edits, among fields | `FieldValue` in a `Field` |
+| A record's details, such as in a drawer or a card: names and values on their own | `DescriptionList` of `DescriptionListItem`s; `copy` on an ID, `mono` on a path, `variant="card"` to frame them |
 | An error beside a control outside a `Field` | `ErrorText` |
 | A dense field in a toolbar or a table cell | any field control with `size="sm"`; a width in `className` wins, and `cx` merges classes the same way |
 | On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on |
