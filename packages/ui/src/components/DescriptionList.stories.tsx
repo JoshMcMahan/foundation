@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 import DescriptionList, {
+  DescriptionListGroup,
   DescriptionListItem,
   type DescriptionListVariant,
 } from './DescriptionList'
@@ -214,4 +215,66 @@ export const Narrow: StoryObj = {
 export const Wide: StoryObj = {
   name: 'Wide page',
   render: () => frame(1100, <SessionDetails variant="plain" stacked={false} />),
+}
+
+type EventArgs = { grouped: boolean; variant: DescriptionListVariant; width: number }
+
+// An audit event's details as a drawer shows them: three titled lists, each with
+// labels of different lengths.
+function EventLists({ variant }: { variant: DescriptionListVariant }) {
+  return (
+    <>
+      <DescriptionList title="Overview" variant={variant}>
+        <DescriptionListItem label="Event">session.create</DescriptionListItem>
+        <DescriptionListItem label="Time">Oct 14, 2026, 9:41:07 AM</DescriptionListItem>
+        <DescriptionListItem label="Result">Allowed</DescriptionListItem>
+      </DescriptionList>
+      <DescriptionList title="Actor" variant={variant}>
+        <DescriptionListItem label="User">ada</DescriptionListItem>
+        <DescriptionListItem label="IP">203.0.113.7</DescriptionListItem>
+      </DescriptionList>
+      <DescriptionList title="Target" variant={variant}>
+        <DescriptionListItem label="Resource type">Session</DescriptionListItem>
+        <DescriptionListItem label="Resource ID" mono copy>
+          {SESSION_ID}
+        </DescriptionListItem>
+      </DescriptionList>
+    </>
+  )
+}
+
+/** Titled lists side by side in one panel share one label column in a
+ *  `DescriptionListGroup`, so every value starts at the same edge. Ungrouped, each list
+ *  sizes its column to its own labels. */
+export const Grouped: StoryObj<EventArgs> = {
+  args: { grouped: true, variant: 'divided', width: 520 },
+  argTypes: {
+    grouped: { description: 'In a DescriptionListGroup, sharing one label column.' },
+    variant: { control: 'inline-radio', options: ['plain', 'divided', 'card'] },
+    width: { control: { type: 'range', min: 240, max: 1200, step: 10 } },
+  },
+  render: ({ grouped, variant, width }) =>
+    frame(
+      width,
+      grouped ? (
+        <DescriptionListGroup>
+          <EventLists variant={variant} />
+        </DescriptionListGroup>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <EventLists variant={variant} />
+        </div>
+      ),
+    ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    // Each list is named by its title.
+    await expect(canvas.getByRole('group', { name: 'Actor' })).toHaveTextContent('ada')
+    const starts = ['session.create', 'ada', 'Session'].map(
+      (text) => (canvas.getByText(text).closest('dd') as HTMLElement).getBoundingClientRect().left,
+    )
+    if (args.grouped) {
+      await expect(new Set(starts).size).toBe(1)
+    }
+  },
 }

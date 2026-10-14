@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import DescriptionList, { DescriptionListItem } from './DescriptionList'
+import DescriptionList, { DescriptionListGroup, DescriptionListItem } from './DescriptionList'
 import { toast } from './Toast'
 
 const notifySuccess = vi.spyOn(toast, 'success')
@@ -128,5 +128,43 @@ describe('DescriptionList', () => {
     expect(screen.getByRole('link')).toHaveAccessibleName('https://example.com/u/ada')
     fireEvent.click(screen.getByRole('button', { name: 'Copy Path' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('/mnt/shared/runs'))
+  })
+
+  it('names a titled list by its title', () => {
+    render(
+      <DescriptionList title="Actor" headingLevel={4}>
+        <DescriptionListItem label="User">ada</DescriptionListItem>
+      </DescriptionList>,
+    )
+    expect(screen.getByRole('heading', { name: 'Actor', level: 4 })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Actor' })).toHaveTextContent('Userada')
+  })
+})
+
+describe('DescriptionListGroup', () => {
+  it('lays every list and row out on its one pair of columns', () => {
+    const { container } = render(
+      <DescriptionListGroup>
+        <DescriptionList title="Overview">
+          <DescriptionListItem label="Event">session.create</DescriptionListItem>
+        </DescriptionList>
+        <DescriptionList title="Target" variant="card">
+          <DescriptionListItem label="Resource type">Session</DescriptionListItem>
+        </DescriptionList>
+      </DescriptionListGroup>,
+    )
+    const grid = container.querySelector('.\\@container\\/dl > div') as HTMLElement
+    expect(grid).toHaveClass('@sm/dl:grid-cols-[fit-content(40%)_minmax(0,1fr)]')
+    // Lists, and their rows, take the group's columns rather than sizing their own,
+    // so the longest label anywhere sets the one label column.
+    const lists = [...container.querySelectorAll('dl')]
+    expect(lists).toHaveLength(2)
+    for (const list of lists) {
+      expect(list).toHaveClass('grid-cols-subgrid')
+      expect(list.parentElement).toHaveClass('grid-cols-subgrid')
+      expect(list.parentElement?.parentElement).toBe(grid)
+    }
+    expect(container.querySelectorAll('.\\@container\\/dl')).toHaveLength(1)
+    expect(screen.getByRole('group', { name: 'Target' })).toHaveTextContent('Session')
   })
 })

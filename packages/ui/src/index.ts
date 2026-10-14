@@ -46,6 +46,7 @@ export {
 } from './components/CreateModal'
 export { DatePicker, type DatePickerProps } from './components/DatePicker'
 export {
+  DescriptionListGroup,
   DescriptionListItem,
   type DescriptionListItemProps,
   type DescriptionListProps,
