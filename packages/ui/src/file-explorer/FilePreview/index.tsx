@@ -21,7 +21,9 @@ import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
 import { FilePreviewViewer } from './Viewer'
 
-type PreviewStyle = 'quicklook' | 'overlay'
+// A stored value from before `compact` was named reads as compact too: only
+// 'overlay' opens the full window.
+type PreviewStyle = 'compact' | 'overlay'
 
 /** Document views run their own chrome and text to the edge of the stage, which
  * full-window bars would float on top of; they get the bars in flow instead. */
@@ -54,10 +56,7 @@ export function FilePreview({
 }: FilePreviewProps) {
   const t = useStrings().fileExplorer
   const { common } = useStrings()
-  const [style, setStyle] = usePersistedState<PreviewStyle>(
-    'fileExplorer.previewStyle',
-    'quicklook',
-  )
+  const [style, setStyle] = usePersistedState<PreviewStyle>('fileExplorer.previewStyle', 'compact')
   const [zoom, setZoom] = useState(100)
   const {
     url,
@@ -123,7 +122,7 @@ export function FilePreview({
             value={style}
             onValueChange={setStyle}
             options={[
-              { value: 'quicklook', label: t.preview.quickLook },
+              { value: 'compact', label: t.preview.compact },
               { value: 'overlay', label: t.preview.fullWindow },
             ]}
           />

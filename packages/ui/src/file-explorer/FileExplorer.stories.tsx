@@ -1,9 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { userEvent, within } from 'storybook/test'
 import FileExplorer from './FileExplorer'
 import { FileExplorerProvider } from './FileExplorerContext'
+import { CorsPropagatingPreview, NoDataAvailablePreview } from './helpers'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
-import type { TStorage, TStorageObject } from './lib/types'
+import type { TStorage, TStorageObject, UploadSession } from './lib/types'
+import { UploadSessionToast } from './toasts'
 
 const meta: Meta = {
   title: 'UI/FileExplorer',
@@ -215,4 +218,107 @@ function ComputeRootDemo() {
 
 export const ComputeRoot: StoryObj = {
   render: () => <ComputeRootDemo />,
+}
+
+const uploadSession = (
+  status: UploadSession['status'],
+  overallProgress: number,
+  completedFiles: number,
+): UploadSession =>
+  ({
+    id: status,
+    storageName: 'demo-bucket',
+    targetPath: 'results/run-002',
+    uploadNodes: [
+      { name: 'metrics.json', file: new Blob(['{}']), relativePath: 'metrics.json' },
+      { name: 'stdout.log', file: new Blob(['ok']), relativePath: 'stdout.log' },
+    ],
+    status,
+    queueIndex: 1,
+    progress: {
+      completedFiles,
+      totalFiles: 2,
+      totalSizeBytes: 48_000_000,
+      overallProgress,
+      estimatedSecondsLeft: status === 'uploading' ? 42 : undefined,
+      allFiles: new Map([
+        [
+          'metrics.json',
+          { fileKey: 'metrics.json', fileSizeBytes: 16_000_000, percentage: overallProgress },
+        ],
+        [
+          'stdout.log',
+          { fileKey: 'stdout.log', fileSizeBytes: 32_000_000, percentage: overallProgress },
+        ],
+      ]),
+    },
+    toastId: status,
+  }) as unknown as UploadSession
+
+/** An upload's toast in each state; the first shows its details open. */
+export const UploadToasts: StoryObj = {
+  render: () => (
+    <div className="flex w-96 flex-col gap-3">
+      {(
+        [
+          ['uploading', 45, 0],
+          ['queued', 0, 0],
+          ['completed', 100, 2],
+          ['failed', 60, 1],
+          ['canceled', 30, 0],
+        ] as const
+      ).map(([status, progress, done]) => (
+        <div key={status} className="panel rounded-lg p-3 shadow">
+          <UploadSessionToast session={uploadSession(status, progress, done)} queueLength={3} />
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [expand] = within(canvasElement).getAllByRole('button', { name: 'Expand details' })
+    if (expand) {
+      await userEvent.click(expand)
+    }
+  },
+}
+
+/** A folder whose listing failed. */
+export const ConnectionIssue: StoryObj = {
+  render: () => (
+    <div style={{ height: 360 }} className="flex">
+      <NoDataAvailablePreview
+        selectedStorage={STORAGE}
+        connectionIssueMessage="Failed to load contents for results: request timed out"
+        onRefresh={async () => {}}
+      />
+    </div>
+  ),
+}
+
+/** New CORS rules spreading through the storage; motion stops under reduced motion. */
+export const CorsPropagating: StoryObj = {
+  render: () => (
+    <div style={{ height: 420 }} className="flex items-center">
+      <CorsPropagatingPreview />
+    </div>
+  ),
+}
+
+/** A file's details, with Details and Preview tabs. */
+export const FileDetails: StoryObj = {
+  render: () => <ExplorerDemo initialPath="storybook/demo-bucket/results/run-001/metrics.json" />,
+}
+
+/** Checked rows take the theme's selection tint. */
+export const CheckedRows: StoryObj = {
+  render: () => <ExplorerDemo initialPath="storybook/demo-bucket/results/run-002" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(
+      await canvas.findByLabelText('Select metrics.json', {}, { timeout: 10000 }),
+    )
+    await userEvent.click(
+      await canvas.findByLabelText('Select report.ipynb', {}, { timeout: 10000 }),
+    )
+  },
 }

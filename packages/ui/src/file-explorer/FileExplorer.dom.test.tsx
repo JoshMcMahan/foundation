@@ -480,7 +480,7 @@ describe('FileExplorer listing failures', () => {
       <UIProvider data={{ provisionCorsRules: provision }}>{explorer(ROOT, script)}</UIProvider>,
     )
     const addRules = await screen.findByRole('button', {
-      name: 'Add CORS Rules',
+      name: 'Add CORS rules',
     })
 
     script.recover('')
@@ -508,7 +508,7 @@ describe('FileExplorer mutations', () => {
     await screen.findByLabelText('Select one.txt')
     check('one.txt')
     fireEvent.click(deleteButton())
-    await screen.findByText('Confirm Delete')
+    await screen.findByText('Confirm delete')
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' }).at(-1)!)
 
     await waitFor(() => expect(screen.queryByLabelText('Select one.txt')).not.toBeInTheDocument())
@@ -650,7 +650,7 @@ describe('FileExplorer selection across navigation', () => {
     check('three.txt')
     fireEvent.click(deleteButton())
 
-    const confirm = await screen.findByText(/Confirm Delete/)
+    const confirm = await screen.findByText(/Confirm delete/)
     expect(confirm).toBeInTheDocument()
     expect(screen.getByText(`${FOLDER_B}/three.txt`)).toBeInTheDocument()
     expect(screen.queryByText(`${FOLDER_A}/one.txt`)).not.toBeInTheDocument()
@@ -720,5 +720,21 @@ describe('FileExplorer write without delete', () => {
     fireEvent.contextMenu(await findTreeItem('b'))
     expect(await screen.findByRole('menuitem', { name: 'New folder' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument()
+  })
+})
+
+describe('FileExplorer landmarks and names', () => {
+  it("names the folder's trail and marks the open folder", async () => {
+    await renderExplorer(FOLDER_A)
+    const trail = await screen.findByRole('navigation', { name: 'Location' })
+    const current = within(trail).getByText('a')
+    expect(current).toHaveAttribute('aria-current', 'location')
+    expect(within(trail).getAllByRole('listitem').length).toBeGreaterThan(1)
+  })
+
+  it('names the file grid and the folder tree from the provider', async () => {
+    await renderExplorer(FOLDER_A)
+    expect(await screen.findByRole('grid', { name: 'Files' })).toBeInTheDocument()
+    expect(screen.getByRole('tree', { name: 'Folders' })).toBeInTheDocument()
   })
 })

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Button } from '../components/Button'
+import Callout from '../components/Callout'
 import { IconButton } from '../components/IconButton'
 import { type BarTone, ProgressBar } from '../components/Meter'
 import { type UIStrings, useStrings } from '../components/Provider'
+import { toneIcon } from '../components/tone'
 import { cx } from '../cx'
 import { formatBytes, formatTimeLeft } from '../format'
 import {
@@ -19,35 +21,43 @@ import type { UploadFileProgress, UploadSession } from './lib/types'
 
 type UploadStrings = UIStrings['fileExplorer']['upload']
 
+// The badge is a graphic, so the icon takes the status's vivid shade over its tint.
 function getSessionStatusInfo(session: UploadSession, queueLength: number, strings: UploadStrings) {
   switch (session.status) {
     case 'queued':
       return {
-        icon: <UploadIcon className="w-5 h-5 text-blue-600" />,
+        icon: <UploadIcon className={cx('w-5 h-5', toneIcon.info)} />,
         title: strings.inQueue(session.queueIndex + 1, queueLength),
         shortTitle: strings.queuedShort(session.queueIndex + 1, queueLength),
-        bgColor: 'bg-blue-100',
+        bgColor: 'bg-(--theme-info-muted)',
       }
     case 'uploading':
       return {
-        icon: <UploadIcon className="w-5 h-5 text-blue-600" />,
+        icon: <UploadIcon className={cx('w-5 h-5', toneIcon.info)} />,
         title: strings.uploading,
         shortTitle: strings.uploading,
-        bgColor: 'bg-blue-100',
+        bgColor: 'bg-(--theme-info-muted)',
       }
     case 'completed':
       return {
-        icon: <SuccessIcon className="w-5 h-5 text-green-600" />,
+        icon: <SuccessIcon className={cx('w-5 h-5', toneIcon.success)} />,
         title: strings.completeTitle,
         shortTitle: strings.completed,
-        bgColor: 'bg-green-100',
+        bgColor: 'bg-(--theme-success-muted)',
       }
     case 'failed':
       return {
-        icon: <WarningIcon className="w-5 h-5 text-red-600" />,
+        icon: <WarningIcon className={cx('w-5 h-5', toneIcon.error)} />,
         title: strings.failedTitle,
         shortTitle: strings.failed,
-        bgColor: 'bg-red-100',
+        bgColor: 'bg-(--theme-error-muted)',
+      }
+    case 'canceled':
+      return {
+        icon: <CloseIcon className="w-5 h-5 theme-muted-text" />,
+        title: strings.canceled,
+        shortTitle: strings.canceled,
+        bgColor: 'bg-(--theme-muted-panel-bg)',
       }
     default:
       return {
@@ -256,6 +266,7 @@ export function UploadSessionToast({
                   <button
                     type="button"
                     aria-label={strings.expandDetails}
+                    aria-expanded={false}
                     className="flex items-center justify-between text-xs theme-muted-text hover:theme-text cursor-pointer"
                     onClick={handleExpandClick}
                     title={strings.expandDetails}
@@ -316,6 +327,7 @@ export function UploadSessionToast({
               <button
                 type="button"
                 aria-label={strings.minimizeDetails}
+                aria-expanded
                 className="flex items-center justify-between text-xs theme-muted-text hover:theme-text cursor-pointer mr-2"
                 onClick={handleExpandClick}
                 title={strings.minimizeDetails}
@@ -346,15 +358,12 @@ export function UploadSessionToast({
 
             {/* Warning for active uploads */}
             {isUploading && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex gap-2">
-                  <WarningIcon className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-800">{strings.keepPageOpen}</p>
-                </div>
-              </div>
+              <Callout type="warning" className="my-0 mb-4 px-3 py-2 text-xs">
+                {strings.keepPageOpen}
+              </Callout>
             )}
 
-            {/* Overall Progress Bar */}
+            {/* Overall progress bar */}
             {session.uploadNodes.length > 1 && isUploading && (
               <ProgressBar
                 value={totalProgress}
@@ -370,6 +379,7 @@ export function UploadSessionToast({
                 <button
                   type="button"
                   className="flex items-center justify-between text-xs theme-muted-text hover:theme-text cursor-pointer"
+                  aria-expanded={isFileListExpanded}
                   onClick={() => setIsExpanded(!isFileListExpanded)}
                 >
                   <span>{strings.fileCount(session.uploadNodes.length)}</span>
@@ -416,8 +426,14 @@ export function UploadSessionToast({
             {/* Action Buttons */}
             <div className="flex items-center justify-end">
               {shouldShowSessionCancelButton && (
-                <Button variant="danger" size="xs" onClick={handleCancelClick}>
-                  {common.cancel}
+                // Quiet until confirmed: the Yes that follows is the solid danger button.
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="*:text-(--theme-error-text)"
+                  onClick={handleCancelClick}
+                >
+                  <span>{common.cancel}</span>
                 </Button>
               )}
 

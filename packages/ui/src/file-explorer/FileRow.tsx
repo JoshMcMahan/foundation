@@ -140,7 +140,11 @@ export function FileRow({
       aria-selected={checked}
       className={cx(
         'group',
-        checked ? 'bg-blue-500/5' : menuActive ? 'theme-hover' : 'hover:theme-hover',
+        checked
+          ? 'bg-(--theme-accent-subtle)/60'
+          : menuActive
+            ? 'theme-hover'
+            : 'hover:theme-hover',
         // Only while the grid has keyboard focus: clicking a row sets the cursor
         // so a following arrow key continues from there, but a mouse click should
         // not draw a focus ring. :focus-visible is the browser's own distinction.

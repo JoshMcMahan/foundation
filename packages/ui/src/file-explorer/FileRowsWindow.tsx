@@ -139,7 +139,7 @@ function Spacer({ height }: { height: number }) {
  *  scrollTop 0 forever, rendering only the first window. */
 function useNestedScrollerWarning(scrollEl: HTMLElement | null, count: number) {
   useEffect(() => {
-    if (!import.meta.env.DEV || !scrollEl || count <= 100) {
+    if (process.env.NODE_ENV === 'production' || !scrollEl || count <= 100) {
       return
     }
     if (scrollEl.scrollHeight <= scrollEl.clientHeight) {
@@ -174,7 +174,7 @@ function useRowPitchAudit(
   items: readonly { index: number }[],
 ) {
   useEffect(() => {
-    if (!import.meta.env.DEV || !scrollEl || items.length < 3) {
+    if (process.env.NODE_ENV === 'production' || !scrollEl || items.length < 3) {
       return
     }
     const rows = [...scrollEl.querySelectorAll('tbody tr')]

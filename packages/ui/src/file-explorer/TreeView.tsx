@@ -9,7 +9,16 @@ import { canPreview } from './FilePreview/previewType'
 import { getNodeIcon } from './helpers'
 import type { TreeNode } from './lib/types'
 import { getParentPath } from './lib/utils'
-import { findRowIndex, flattenTreeRows, nextFileLimit, stepRow, type TreeRow } from './treeRows'
+import {
+  edgeRow,
+  findRowIndex,
+  firstChildRow,
+  flattenTreeRows,
+  nextFileLimit,
+  parentRow,
+  stepRow,
+  type TreeRow,
+} from './treeRows'
 
 /** 9px margin + 12px padding, per level. */
 const INDENT_PER_LEVEL = 21
@@ -64,6 +73,7 @@ export function TreeView({
   paging,
 }: TreeViewProps) {
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null)
+  const treeLabel = useStrings().fileExplorer.chrome.folders
   // Purely how much of an already-loaded folder to show, so it lives here rather
   // than beside the listing state.
   const [fileLimits, setFileLimits] = useState<ReadonlyMap<string, number>>(() => new Map())
@@ -139,7 +149,7 @@ export function TreeView({
   })
 
   const move = useCallback(
-    (from: TreeNode, direction: 1 | -1) => {
+    (from: TreeNode, pick: (index: number) => TreeRow | undefined) => {
       // The cursor can name a row that is gone — Collapse All, a refresh, or the
       // '' multi-storage root — so fall back to the row that got the keypress.
       const cursorIndex = findRowIndex(rows, cursorRef.current ?? '')
@@ -147,7 +157,7 @@ export function TreeView({
       if (index === -1) {
         return
       }
-      const target = stepRow(rows, index, direction)
+      const target = pick(index)
       if (!target) {
         return
       }
@@ -190,15 +200,24 @@ export function TreeView({
         onPreviewFile(node)
         return
       }
-      if (e.key === 'ArrowDown') {
+      // The tree view pattern's keys: Up and Down step, Right enters an open
+      // folder, Left goes to the parent, Home and End jump to the ends. Rows
+      // toggle open and closed in dispatchRowKey before anything lands here.
+      const pick: Partial<Record<string, (index: number) => TreeRow | undefined>> = {
+        ArrowDown: (i) => stepRow(rows, i, 1),
+        ArrowUp: (i) => stepRow(rows, i, -1),
+        ArrowRight: (i) => firstChildRow(rows, i),
+        ArrowLeft: (i) => parentRow(rows, i),
+        Home: () => edgeRow(rows, 'first'),
+        End: () => edgeRow(rows, 'last'),
+      }
+      const target = pick[e.key]
+      if (target) {
         e.preventDefault()
-        move(node, 1)
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        move(node, -1)
+        move(node, target)
       }
     },
-    [move, onPreviewFile],
+    [move, onPreviewFile, rows],
   )
 
   const items = virtualizer.getVirtualItems()
@@ -265,6 +284,7 @@ export function TreeView({
       ref={setScrollEl}
       className="overflow-auto flex-1 px-2 py-2"
       role="tree"
+      aria-label={treeLabel}
       // Nothing else in the sidebar cancels dragover, so a file dropped on the
       // padding falls through to the browser, which navigates and unloads the app.
       onDragOver={(e) => e.preventDefault()}
@@ -376,7 +396,10 @@ function TreeMoreRow({
         ) : (
           <button
             type="button"
-            className={cx('cursor-pointer underline', failed ? 'text-red-500' : 'theme-link')}
+            className={cx(
+              'cursor-pointer underline',
+              failed ? 'text-(--theme-error-text)' : 'theme-link',
+            )}
             onClick={onReveal}
           >
             {label()}
@@ -421,7 +444,7 @@ function useSpringLoadedDrop({
   onDropToFolder: (folderPath: string, files: FileList | DataTransferItemList) => void
 }) {
   const hoverCount = useRef(0)
-  const timer = useRef<NodeJS.Timeout | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dragActive, setDragActive] = useState(false)
 
   const clear = () => {
@@ -486,9 +509,9 @@ function useSpringLoadedDrop({
   }
 }
 
-/** Keys a row handles itself; the arrows that move between rows delegate upward,
- *  where the flat array is. The set is deliberately narrow:
- *  no Home/End, no typeahead, and ArrowLeft/Right only toggle a directory. */
+/** Keys a row handles itself: Enter, Space, and Right or Left on a folder that
+ *  can open or close. The keys that move between rows delegate upward, where
+ *  the flat array is. There is no typeahead. */
 function dispatchRowKey(
   e: React.KeyboardEvent,
   {
@@ -514,7 +537,7 @@ function dispatchRowKey(
   }
   if (e.key === ' ') {
     e.preventDefault()
-    // A previewable file delegates Space upward for Quick Look; everything else
+    // A previewable file delegates Space upward to open its preview; everything else
     // falls back to select/toggle.
     if (!isDirectory && canPreview(node)) {
       onDelegate(e, node)
@@ -637,7 +660,7 @@ function useTreePitchAudit(
   items: readonly { index: number }[],
 ) {
   useEffect(() => {
-    if (!import.meta.env.DEV || !scrollEl || items.length < 2) {
+    if (process.env.NODE_ENV === 'production' || !scrollEl || items.length < 2) {
       return
     }
     for (const item of items) {

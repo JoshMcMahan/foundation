@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
+import { useStrings } from '../components/Provider'
 import { Table } from '../components/Table'
 import { cx } from '../cx'
 import { listTableFixedProps } from '../list/index'
@@ -51,6 +52,7 @@ export function FileTable({
   // Rows start below the <thead>, not at scrollTop 0.
   const [theadHeight, setTheadHeight] = useState(0)
   const rowIdPrefix = useId()
+  const t = useStrings().fileExplorer
 
   useLayoutEffect(() => {
     const thead = scrollEl?.querySelector('thead')
@@ -245,7 +247,7 @@ export function FileTable({
         wrapperClassName="overflow-x-auto"
         tableProps={{
           role: 'grid',
-          'aria-label': 'Files',
+          'aria-label': t.chrome.files,
           'aria-rowcount': loadMore ? -1 : nodes.length + 1,
           'aria-multiselectable': true,
           tabIndex: 0,

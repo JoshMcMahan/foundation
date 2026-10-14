@@ -594,7 +594,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
 
   if (output.output_type === 'error') {
     return (
-      <pre className="mt-2 overflow-auto rounded-lg bg-red-500/15 px-3 py-2 font-mono text-[11px] text-red-500">
+      <pre className="mt-2 overflow-auto rounded-lg bg-(--theme-error-muted) px-3 py-2 font-mono text-[11px] text-(--theme-error-text)">
         {stripAnsi((output.traceback ?? []).join('\n'))}
       </pre>
     )

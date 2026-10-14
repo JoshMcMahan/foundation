@@ -1,16 +1,13 @@
-import { type RefObject, useEffect, useRef } from 'react'
+import { type RefObject, useEffect, useEffectEvent } from 'react'
 
 /** Fires once the element comes within 100px of the bottom of `root`. */
 export function useNearEnd(
   ref: RefObject<Element | null>,
   { active, root, onNear }: { active: boolean; root: HTMLElement | null; onNear: () => void },
 ) {
-  // Through a ref, not a dependency: the parent re-renders every scroll tick, and a
-  // fresh callback identity would rebuild the observer each frame.
-  const latestOnNear = useRef(onNear)
-  useEffect(() => {
-    latestOnNear.current = onNear
-  }, [onNear])
+  // An effect event, not a dependency: the parent re-renders every scroll tick,
+  // and a fresh callback identity would rebuild the observer each frame.
+  const near = useEffectEvent(onNear)
 
   useEffect(() => {
     const el = ref.current
@@ -20,7 +17,7 @@ export function useNearEnd(
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          latestOnNear.current()
+          near()
         }
       },
       { root, rootMargin: '100px' },

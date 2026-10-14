@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeNode } from './lib/types'
-import { findRowIndex, flattenTreeRows, nextFileLimit, stepRow, TREE_FILE_CAP } from './treeRows'
+import {
+  edgeRow,
+  findRowIndex,
+  firstChildRow,
+  flattenTreeRows,
+  nextFileLimit,
+  parentRow,
+  stepRow,
+  TREE_FILE_CAP,
+} from './treeRows'
 
 const dir = (path: string): TreeNode => ({ name: path, path, type: 'directory' }) as TreeNode
 const file = (path: string): TreeNode => ({ name: path, path, type: 'file' }) as TreeNode
@@ -294,5 +303,27 @@ describe('findRowIndex / stepRow', () => {
     expect(incomplete[i + 1]?.kind).toBe('more')
     expect(stepRow(incomplete, i, 1)?.key).toBe('root/f0')
     expect(findRowIndex(incomplete, 'root/f0')).toBe(i + 2)
+  })
+})
+
+describe('tree navigation targets', () => {
+  // root/, root/a/, root/a/b/, root/a/f1, root/f0
+  const rows = flattenTreeRows(roots, map, new Set(['root/', 'root/a/']))
+  const at = (path: string) => findRowIndex(rows, path)
+
+  it("finds a row's parent one level up, past its siblings' children", () => {
+    expect(parentRow(rows, at('root/f0'))?.node.path).toBe('root/')
+    expect(parentRow(rows, at('root/a/f1'))?.node.path).toBe('root/a/')
+    expect(parentRow(rows, at('root/'))).toBeUndefined()
+  })
+
+  it("finds an open folder's first child, and nothing for a closed one", () => {
+    expect(firstChildRow(rows, at('root/a/'))?.node.path).toBe('root/a/b/')
+    expect(firstChildRow(rows, at('root/a/b/'))).toBeUndefined()
+  })
+
+  it('finds the first and last rows', () => {
+    expect(edgeRow(rows, 'first')?.node.path).toBe('root/')
+    expect(edgeRow(rows, 'last')?.node.path).toBe('root/f0')
   })
 })

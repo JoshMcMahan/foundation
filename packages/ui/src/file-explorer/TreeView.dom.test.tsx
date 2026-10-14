@@ -126,3 +126,22 @@ describe('TreeView keyboard cursor', () => {
     expect(selected).toEqual(['d1/', 'd6/'])
   })
 })
+
+describe('TreeView keys from the tree view pattern', () => {
+  it('jumps to the first and last rows on Home and End', () => {
+    const selected: string[] = []
+    const { rowAt, commit } = renderTree('d3/', (p) => selected.push(p))
+
+    fireEvent.keyDown(rowAt(3), { key: 'End' })
+    expect(selected).toEqual([`d${TOTAL - 1}/`])
+    commit(`d${TOTAL - 1}/`)
+
+    fireEvent.keyDown(rowAt(TOTAL - 1), { key: 'Home' })
+    expect(selected).toEqual([`d${TOTAL - 1}/`, 'd0/'])
+  })
+
+  it('is named, so a screen reader says what the tree holds', () => {
+    const { getByRole } = renderTree('d0/', () => {})
+    expect(getByRole('tree', { name: 'Folders' })).toBeInTheDocument()
+  })
+})

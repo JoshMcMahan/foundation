@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { Button } from '../components/Button'
 import { buttonClasses } from '../components/buttonClasses'
+import Callout from '../components/Callout'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useContextMenu } from '../components/ContextMenu'
 import CopyToClipboard, { CopyCodeBlock } from '../components/CopyToClipboard'
@@ -27,6 +28,7 @@ import { RelativeTime } from '../components/relativeTime'
 import { StatusBadge } from '../components/StatusBadge'
 import { useSplitter } from '../components/splitter'
 import { Table } from '../components/Table'
+import { Tabs } from '../components/Tabs'
 import { toast } from '../components/Toast'
 import { Tooltip } from '../components/Tooltip'
 import { useCopy } from '../components/useCopy'
@@ -47,7 +49,6 @@ import {
   ShareIcon,
   TrashIcon,
   UploadIcon,
-  WarningIcon,
 } from '../icons'
 import {
   assembleRowMenu,
@@ -595,11 +596,7 @@ export default function FileExplorer({
         return { corsError: false }
       } catch (error) {
         const isCorsError = error instanceof CorsError
-        const errorMessage = isCorsError
-          ? error.message || 'CORS error'
-          : error instanceof Error
-            ? error.message
-            : 'Unknown error'
+        const errorMessage = (error instanceof Error && error.message) || t.messages.unknownError
         // Every owned failure, not just a page: the storage-level banner only
         // renders on an empty folder, and this is what re-runs the hydration walk.
         // A failed re-list drops the old rows so the banner has that empty folder.
@@ -614,7 +611,7 @@ export default function FileExplorer({
           updateConnectionIssuesMessage((prev) =>
             new Map(prev).set(
               nodeStorageId,
-              `Failed to load contents for ${node.displayName || node.name}: ${errorMessage}`,
+              t.messages.loadFailed(node.displayName || node.name, errorMessage),
             ),
           )
           if (isCorsError) {
@@ -1161,29 +1158,42 @@ export default function FileExplorer({
       return null
     }
     return (
-      <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[13px]">
-        {chain.map((node, i) => {
-          const isLast = i === chain.length - 1
-          const label = node.displayName || node.name
-          return (
-            <span key={node.path} className="flex min-w-0 items-center gap-1">
-              {i > 0 && (
-                <ChevronRightIcon className="h-3 w-3 shrink-0 text-(--theme-muted-text-color)" />
-              )}
-              {isLast ? (
-                <span className="truncate font-semibold text-(--theme-app)">{label}</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleSelectTreeItem(node.path, node)}
-                  className="max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
-                >
-                  {label}
-                </button>
-              )}
-            </span>
-          )
-        })}
+      <nav
+        aria-label={t.chrome.location}
+        className="flex min-w-0 flex-1 overflow-hidden text-[13px]"
+      >
+        <ol className="flex min-w-0 items-center gap-1">
+          {chain.map((node, i) => {
+            const isLast = i === chain.length - 1
+            const label = node.displayName || node.name
+            return (
+              <li key={node.path} className="flex min-w-0 items-center gap-1">
+                {i > 0 && (
+                  <ChevronRightIcon
+                    aria-hidden="true"
+                    className="h-3 w-3 shrink-0 text-(--theme-muted-text-color) rtl:rotate-180"
+                  />
+                )}
+                {isLast ? (
+                  <span
+                    aria-current="location"
+                    className="truncate font-semibold text-(--theme-app)"
+                  >
+                    {label}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTreeItem(node.path, node)}
+                    className="max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
+                  >
+                    {label}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ol>
       </nav>
     )
   }
@@ -1662,30 +1672,40 @@ export default function FileExplorer({
                       }}
                     />
 
+                    {/* Outlined, like the rest of a toolbar, but for the one thing the
+                        view is for: Upload into a folder, Download of a file. Labels
+                        fold into tooltips below @4xl. */}
                     {selectedNodeCanWrite && selectedNodeCanUpload && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        aria-label={t.createFolder.action}
-                        icon={<FolderIcon />}
-                        disabled={selectedNode.type === 'file' || !selectedNode.storageId}
-                        onClick={() => setCreateFolderTarget(selectedNode)}
-                      >
-                        <span className="hidden @4xl:inline">{t.createFolder.action}</span>
-                      </Button>
+                      <Tooltip content={t.createFolder.action} side="bottom">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={t.createFolder.action}
+                          icon={<FolderIcon />}
+                          disabled={selectedNode.type === 'file' || !selectedNode.storageId}
+                          onClick={() => setCreateFolderTarget(selectedNode)}
+                        >
+                          <span className="hidden @4xl:inline">{t.createFolder.action}</span>
+                        </Button>
+                      </Tooltip>
                     )}
 
                     {selectedNodeCanWrite && selectedNodeCanUpload && (
                       <Menu.Root>
-                        <Menu.Trigger
-                          aria-label={t.chrome.upload}
-                          className={buttonClasses({ variant: 'primary', size: 'sm' })}
-                          disabled={selectedNode.type === 'file' || !selectedNode.storageId}
-                        >
-                          <UploadIcon />
-                          <span className="hidden @4xl:inline">{t.chrome.upload}</span>
-                          <ChevronDownIcon />
-                        </Menu.Trigger>
+                        <Tooltip content={t.chrome.upload} side="bottom">
+                          <Menu.Trigger
+                            aria-label={t.chrome.upload}
+                            className={buttonClasses({
+                              variant: selectedNode.type === 'directory' ? 'primary' : 'outline',
+                              size: 'sm',
+                            })}
+                            disabled={selectedNode.type === 'file' || !selectedNode.storageId}
+                          >
+                            <UploadIcon />
+                            <span className="hidden @4xl:inline">{t.chrome.upload}</span>
+                            <ChevronDownIcon />
+                          </Menu.Trigger>
+                        </Tooltip>
                         <MenuPopup align="end" className="w-36">
                           <MenuItem onClick={() => fileInputRef.current?.click()}>
                             {t.chrome.selectFiles}
@@ -1698,19 +1718,24 @@ export default function FileExplorer({
                     )}
 
                     <Menu.Root>
-                      <Menu.Trigger
-                        aria-label={common.download}
-                        className={buttonClasses({ variant: 'primary', size: 'sm' })}
-                        disabled={
-                          (checkedItems.size === 0 && selectedNode.type !== 'file') ||
-                          hasFolderSelected() ||
-                          !selectedNode.storageId
-                        }
-                      >
-                        <DownloadIcon />
-                        <span className="hidden @4xl:inline">{common.download}</span>
-                        <ChevronDownIcon />
-                      </Menu.Trigger>
+                      <Tooltip content={common.download} side="bottom">
+                        <Menu.Trigger
+                          aria-label={common.download}
+                          className={buttonClasses({
+                            variant: selectedNode.type === 'file' ? 'primary' : 'outline',
+                            size: 'sm',
+                          })}
+                          disabled={
+                            (checkedItems.size === 0 && selectedNode.type !== 'file') ||
+                            hasFolderSelected() ||
+                            !selectedNode.storageId
+                          }
+                        >
+                          <DownloadIcon />
+                          <span className="hidden @4xl:inline">{common.download}</span>
+                          <ChevronDownIcon />
+                        </Menu.Trigger>
+                      </Tooltip>
                       <MenuPopup align="end" className="w-72">
                         <MenuItem onClick={handleDownload}>{t.chrome.downloadFromBrowser}</MenuItem>
                         {downloadCommand && downloadCommandText && (
@@ -1737,32 +1762,41 @@ export default function FileExplorer({
                     </Menu.Root>
 
                     {groups.length > 0 && selectedNodeCanManageAccess && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        aria-label={t.chrome.access}
-                        icon={<AccessIcon />}
-                        disabled={!selectedNode.storageId}
-                        onClick={() => setAccessDrawerOpen(true)}
-                      >
-                        <span className="hidden @4xl:inline">{t.chrome.manageAccess}</span>
-                      </Button>
+                      <Tooltip content={t.chrome.manageAccess} side="bottom">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={t.chrome.access}
+                          icon={<AccessIcon />}
+                          disabled={!selectedNode.storageId}
+                          onClick={() => setAccessDrawerOpen(true)}
+                        >
+                          <span className="hidden @4xl:inline">{t.chrome.manageAccess}</span>
+                        </Button>
+                      </Tooltip>
                     )}
 
                     {selectedNodeCanDelete && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        aria-label={common.delete}
-                        icon={<TrashIcon />}
-                        disabled={
-                          (checkedItems.size === 0 && selectedNode.type !== 'file') ||
-                          !selectedNode.storageId
-                        }
-                        onClick={onDeleteClick}
-                      >
-                        <span className="hidden @4xl:inline">{common.delete}</span>
-                      </Button>
+                      <Tooltip content={common.delete} side="bottom">
+                        {/* Destructive by its text, not a red fill: the confirmation
+                            that follows carries the solid danger button. The tone
+                            colors the children so it can't lose to the recipe's
+                            own text color by stylesheet order. */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={common.delete}
+                          icon={<TrashIcon />}
+                          className="*:text-(--theme-error-text)"
+                          disabled={
+                            (checkedItems.size === 0 && selectedNode.type !== 'file') ||
+                            !selectedNode.storageId
+                          }
+                          onClick={onDeleteClick}
+                        >
+                          <span className="hidden @4xl:inline">{common.delete}</span>
+                        </Button>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
@@ -1843,33 +1877,21 @@ export default function FileExplorer({
                       : null
                     const previewable = canPreview(selectedNode)
                     const effectiveTab = previewable ? detailTab : 'details'
-                    const tabClass = (active: boolean) =>
-                      cx(
-                        'mx-2.5 border-b-2 px-1 py-2.5 text-[13px] font-medium cursor-pointer transition-colors',
-                        active
-                          ? 'theme-text border-(--theme-accent)'
-                          : 'theme-muted-text border-transparent hover:theme-text',
-                      )
                     return (
                       <div className="flex h-full min-h-0 flex-col">
-                        <div className="flex shrink-0 items-center border-b theme-border px-3">
-                          <button
-                            type="button"
-                            className={tabClass(effectiveTab === 'details')}
-                            onClick={() => setDetailTab('details')}
-                          >
-                            {t.preview.detailsTab}
-                          </button>
-                          {previewable && (
-                            <button
-                              type="button"
-                              className={tabClass(effectiveTab === 'preview')}
-                              onClick={() => setDetailTab('preview')}
-                            >
-                              {t.preview.previewTab}
-                            </button>
-                          )}
-                        </div>
+                        {/* The row hides for a file that has only Details. */}
+                        <Tabs
+                          label={selectedNode.name}
+                          items={[
+                            { value: 'details' as const, label: t.preview.detailsTab },
+                            ...(previewable
+                              ? [{ value: 'preview' as const, label: t.preview.previewTab }]
+                              : []),
+                          ]}
+                          value={effectiveTab}
+                          onValueChange={setDetailTab}
+                          className="shrink-0 px-3"
+                        />
                         {effectiveTab === 'preview' && previewable ? (
                           <FilePreviewInline
                             node={selectedNode}
@@ -1929,15 +1951,19 @@ export default function FileExplorer({
                                   node={selectedNode}
                                   onShare={onShareFileButtonClick}
                                 />
-                                <InfoTip
-                                  text="This will generate a pre-signed URL for this file. Anyone with this link can temporarily access and download the file, even if they don't have an account. The link will automatically expire after 12 hours."
-                                  side="right"
-                                />
+                                <InfoTip text={t.chrome.shareHelp} side="right" />
                               </div>
                             )}
 
                             {/* Details */}
-                            <div className="px-6 py-5 mt-5 border-t theme-border">
+                            {/* Ruled off only from the links above it; the hero already ends in a rule. */}
+                            <div
+                              className={cx(
+                                'px-6 py-5',
+                                (uris.length > 0 || selectedNodeCanShare) &&
+                                  'mt-5 border-t theme-border',
+                              )}
+                            >
                               <h3 className="text-[11px] font-semibold uppercase tracking-widest theme-muted-text mb-3">
                                 {t.chrome.details}
                               </h3>
@@ -2055,9 +2081,10 @@ export default function FileExplorer({
         confirmDisabled={pendingUpload ? isUploadSizeExceeded(pendingUpload.totalSize) : false}
       >
         <div className="text-sm flex flex-col gap-2 mt-2 text-left">
-          <ul className="list-disc pl-5 max-h-40 overflow-auto theme-muted-panel py-1">
+          {/* An indented tree of folders and files, not a flat list. */}
+          <div className="max-h-40 overflow-auto theme-muted-panel py-1 pl-3">
             {pendingUpload?.uploadNodes && renderUploadNodes(pendingUpload.uploadNodes)}
-          </ul>
+          </div>
           <div>
             <span className="font-semibold">{t.confirmUpload.target}</span>{' '}
             {pendingUpload?.targetPath || t.confirmUpload.noPath}
@@ -2067,30 +2094,23 @@ export default function FileExplorer({
             <span
               className={cx(
                 isUploadSizeExceeded(pendingUpload?.totalSize ?? 0) &&
-                  'text-amber-800 font-semibold',
+                  'text-(--theme-warning-text) font-semibold',
               )}
             >
               {formatBytes(pendingUpload?.totalSize ?? 0)}
             </span>
           </div>
           {isUploadSizeExceeded(pendingUpload?.totalSize ?? 0) && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <WarningIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-amber-800">
-                  <div className="font-semibold mb-1">{t.confirmUpload.sizeLimitTitle}</div>
-                  <div className="text-sm">
-                    <p>
-                      {t.confirmUpload.sizeLimitBody(
-                        formatBytes(pendingUpload?.totalSize ?? 0),
-                        formatBytes(MAX_UPLOAD_SIZE),
-                      )}
-                    </p>
-                    <p>{t.confirmUpload.sizeLimitHint}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Callout type="warning" className="my-0 mt-3">
+              <div className="font-semibold mb-1">{t.confirmUpload.sizeLimitTitle}</div>
+              <p>
+                {t.confirmUpload.sizeLimitBody(
+                  formatBytes(pendingUpload?.totalSize ?? 0),
+                  formatBytes(MAX_UPLOAD_SIZE),
+                )}
+              </p>
+              <p>{t.confirmUpload.sizeLimitHint}</p>
+            </Callout>
           )}
         </div>
       </ConfirmModal>

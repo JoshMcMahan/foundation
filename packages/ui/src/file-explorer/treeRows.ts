@@ -137,3 +137,27 @@ export function stepRow(
   }
   return undefined
 }
+
+/** The row's parent: the nearest row above it one level up, or undefined at a root. */
+export function parentRow(rows: readonly TreeRow[], index: number): TreeRow | undefined {
+  const depth = rows[index]?.depth ?? 0
+  for (let i = index - 1; i >= 0; i--) {
+    const row = rows[i]
+    if (row?.kind === 'node' && row.depth < depth) {
+      return row.depth === depth - 1 ? row : undefined
+    }
+  }
+  return undefined
+}
+
+/** An open folder's first child row, or undefined when it shows none yet. */
+export function firstChildRow(rows: readonly TreeRow[], index: number): TreeRow | undefined {
+  const depth = rows[index]?.depth ?? 0
+  const next = rows[index + 1]
+  return next?.kind === 'node' && next.depth === depth + 1 ? next : undefined
+}
+
+/** The first or last selectable row, for Home and End. */
+export function edgeRow(rows: readonly TreeRow[], edge: 'first' | 'last'): TreeRow | undefined {
+  return edge === 'first' ? stepRow(rows, -1, 1) : stepRow(rows, rows.length, -1)
+}

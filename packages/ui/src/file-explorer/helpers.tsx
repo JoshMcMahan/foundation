@@ -332,23 +332,25 @@ function CorsPropagatingPreview() {
     <div
       role="status"
       aria-live="polite"
-      className="flex flex-col items-center justify-center max-w-md mx-auto px-6 py-8 animate-[fadeInUp_400ms_ease-out]"
+      className="flex flex-col items-center justify-center max-w-md mx-auto px-6 py-8 motion-safe:animate-[fadeInUp_400ms_ease-out]"
     >
-      <div className="relative w-28 h-28 mb-6 flex items-center justify-center">
+      {/* The rings are decoration: with reduced motion they hold still, and
+          the stages and the progress bar below still say how far along it is. */}
+      <div aria-hidden="true" className="relative w-28 h-28 mb-6 flex items-center justify-center">
         <span
-          className="absolute inline-flex h-full w-full rounded-full bg-blue-400/30 animate-ping"
+          className="absolute inline-flex h-full w-full rounded-full bg-(--theme-info)/30 motion-safe:animate-ping"
           style={{ animationDuration: '2.4s' }}
         />
         <span
-          className="absolute inline-flex h-2/3 w-2/3 rounded-full bg-blue-500/40 animate-ping"
+          className="absolute inline-flex h-2/3 w-2/3 rounded-full bg-(--theme-info)/40 motion-safe:animate-ping"
           style={{ animationDuration: '2.4s', animationDelay: '0.6s' }}
         />
         <span
-          className="absolute inline-flex h-1/3 w-1/3 rounded-full bg-blue-500/60 animate-ping"
+          className="absolute inline-flex h-1/3 w-1/3 rounded-full bg-(--theme-info)/60 motion-safe:animate-ping"
           style={{ animationDuration: '2.4s', animationDelay: '1.2s' }}
         />
-        <span className="relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 shadow-[0_0_24px_rgba(59,130,246,0.55)]">
-          <span className="absolute inline-flex h-2 w-2 rounded-full bg-white animate-pulse" />
+        <span className="relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-(--theme-info) shadow-[0_0_24px_color-mix(in_oklab,var(--theme-info)_55%,transparent)]">
+          <span className="absolute inline-flex h-2 w-2 rounded-full bg-(--theme-panel-bg) motion-safe:animate-pulse" />
         </span>
       </div>
 
@@ -395,8 +397,9 @@ function PropagationStage({
       <span
         className={cx(
           'relative flex items-center justify-center w-6 h-6 rounded-full border transition-colors',
-          status === 'done' && 'bg-green-500 border-green-500 text-white',
-          status === 'active' && 'border-blue-500',
+          status === 'done' &&
+            'bg-(--theme-success-solid) border-(--theme-success-solid) text-white',
+          status === 'active' && 'border-(--theme-info)',
           status === 'pending' && 'theme-border',
         )}
       >
@@ -416,8 +419,8 @@ function PropagationStage({
         )}
         {status === 'active' && (
           <>
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400/60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+            <span className="absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full bg-(--theme-info)/60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-(--theme-info)" />
           </>
         )}
         {status === 'pending' && (
@@ -442,7 +445,7 @@ function PropagationConnector({ active }: { active: boolean }) {
       aria-hidden="true"
       className={cx(
         'h-px w-8 -mt-5 transition-colors',
-        active ? 'bg-blue-500' : 'theme-border border-t',
+        active ? 'bg-(--theme-info)' : 'theme-border border-t',
       )}
     />
   )
@@ -487,8 +490,8 @@ function NoDataAvailablePreview({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center max-w-md p-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-500/10 mb-4">
-            <WarningIcon className="h-6 w-6 text-amber-500" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-(--theme-warning-muted) mb-4">
+            <WarningIcon aria-hidden="true" className="h-6 w-6 text-(--theme-warning)" />
           </div>
           <h2 className="text-base font-semibold mb-1">{t.empty.connectionIssue}</h2>
           <p className="text-sm theme-muted-text mb-4">{connectionIssueMessage}</p>
@@ -653,6 +656,7 @@ async function addCorsRules({
 
 export {
   CorsIssuePreview,
+  CorsPropagatingPreview,
   DragDropZone,
   getNodeIcon,
   NoDataAvailablePreview,
