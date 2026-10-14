@@ -1,5 +1,6 @@
 import { Radio as BaseRadio } from '@base-ui/react/radio'
 import { cx } from '../cx'
+import { focusOutline } from './fieldBox'
 
 export { RadioGroup } from '@base-ui/react/radio-group'
 
@@ -14,9 +15,10 @@ export function Radio<Value>({ className, ...props }: RadioProps<Value>) {
     <BaseRadio.Root
       {...props}
       className={cx(
-        'flex size-4 shrink-0 items-center justify-center rounded-full border border-(--theme-border) bg-(--theme-input-bg) cursor-pointer outline-none transition-colors',
+        'flex size-4 shrink-0 items-center justify-center rounded-full border border-(--theme-border-strong) bg-(--theme-input-bg) cursor-pointer transition-colors motion-reduce:transition-none',
+        focusOutline,
         'data-checked:border-(--theme-accent) data-checked:bg-(--theme-accent)',
-        'focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) aria-invalid:border-(--theme-error)',
+        'aria-invalid:border-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         className,
       )}

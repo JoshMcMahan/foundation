@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { cx } from '../cx'
 import { Radio } from './Radio'
 
@@ -12,20 +13,32 @@ export function SettingModeOption({
   value: string
   label: string
   description: string
-  disabled?: boolean
+  disabled?: boolean | undefined
 }) {
+  const id = useId()
   return (
     <label
       className={cx(
         'flex items-start gap-3 px-5 py-4',
-        disabled ? 'cursor-default opacity-60' : 'cursor-pointer',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         'border-t border-(--theme-border) first:border-t-0',
       )}
     >
-      <Radio value={value} disabled={disabled} className="mt-0.5" />
+      {/* Named by the label alone, with the description read after it, rather than both as one name. */}
+      <Radio
+        value={value}
+        disabled={disabled}
+        aria-labelledby={`${id}label`}
+        aria-describedby={`${id}description`}
+        className="mt-0.5"
+      />
       <div className="min-w-0">
-        <div className="font-semibold theme-text leading-tight">{label}</div>
-        <div className="theme-muted-text text-xs leading-snug mt-0.5">{description}</div>
+        <div id={`${id}label`} className="font-semibold theme-text leading-tight">
+          {label}
+        </div>
+        <div id={`${id}description`} className="theme-muted-text text-xs leading-snug mt-0.5">
+          {description}
+        </div>
       </div>
     </label>
   )

@@ -441,11 +441,13 @@ export const Switches: StoryObj<{
   disabled: boolean
   invalid: boolean
   stateNames: boolean
+  rightToLeft: boolean
 }> = {
-  args: { size: 'md', disabled: false, invalid: false, stateNames: true },
+  args: { size: 'md', disabled: false, invalid: false, stateNames: true, rightToLeft: false },
   argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
-  render: ({ size, disabled, invalid, stateNames }) => (
-    <div className="flex flex-col gap-3 text-sm">
+  render: ({ size, disabled, invalid, stateNames, rightToLeft }) => (
+    // In a right-to-left page an on switch's thumb sits at the left, the end of the line.
+    <div dir={rightToLeft ? 'rtl' : undefined} className="flex flex-col gap-3 text-sm">
       <label className="flex items-center gap-2">
         <Switch size={size} disabled={disabled} aria-invalid={invalid || undefined} />
         Email notifications
@@ -485,6 +487,12 @@ export const Switches: StoryObj<{
       await expect(canvas.getByText('Private')).not.toBeVisible()
     }
   },
+}
+
+/** Switches in a right-to-left page, whose thumbs slide to the left when on. */
+export const SwitchesRightToLeft: typeof Switches = {
+  ...Switches,
+  args: { ...Switches.args, rightToLeft: true },
 }
 
 const SIZES = [

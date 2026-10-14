@@ -1,6 +1,7 @@
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
 import { cx } from '../cx'
 import { CheckIcon, MinusIcon } from '../icons'
+import { focusOutline } from './fieldBox'
 
 export { CheckboxGroup } from '@base-ui/react/checkbox-group'
 
@@ -16,10 +17,12 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
     <BaseCheckbox.Root
       {...props}
       className={cx(
-        'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-accent-text) cursor-pointer outline-none transition-colors',
+        // The strong border holds a control's 3:1 against the page, so an empty box still shows.
+        'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border-strong) bg-(--theme-input-bg) text-(--theme-accent-text) cursor-pointer transition-colors motion-reduce:transition-none',
+        focusOutline,
         'data-checked:border-(--theme-accent) data-checked:bg-(--theme-accent)',
         'data-indeterminate:border-(--theme-accent) data-indeterminate:bg-(--theme-accent)',
-        'focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) aria-invalid:border-(--theme-error)',
+        'aria-invalid:border-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         className,
       )}

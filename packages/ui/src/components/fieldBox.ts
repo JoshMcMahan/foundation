@@ -18,18 +18,26 @@ const sizes = {
   md: { height: 'h-9', minHeight: 'min-h-9', px: 'px-3', py: 'py-2', text: 'text-sm' },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 
+/** The keyboard focus ring of a control that isn't a box, such as a checkbox, switch or slider
+ *  thumb: an outline in the theme's focus color, which is solved for 3:1 on every surface a
+ *  control sits on, so it shows on a checked control as well as an empty one. */
+export const focusOutline =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)'
+
 const base =
   'w-full min-w-0 rounded-md border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder)'
 
-// One look for every state, on the control itself, or on the box around it with `within`.
+// One look for every state, on the control itself, or on the box around it with `within`. Focus
+// takes the focus color rather than the accent, which is the color picked for buttons' fill and
+// may be too light to show on the box.
 const own = cx(
-  'focus-visible:border-(--theme-accent) focus-visible:ring-1 focus-visible:ring-(--theme-accent)',
+  'focus-visible:border-(--theme-focus) focus-visible:ring-1 focus-visible:ring-(--theme-focus)',
   'aria-invalid:border-(--theme-error) aria-invalid:focus-visible:ring-(--theme-error)',
   'disabled:cursor-not-allowed disabled:bg-(--theme-input-disabled-bg) disabled:text-(--theme-placeholder)',
   'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
 )
 const inside = cx(
-  'has-[:focus-visible]:border-(--theme-accent) has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-(--theme-accent)',
+  'has-[:focus-visible]:border-(--theme-focus) has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-(--theme-focus)',
   'has-[[aria-invalid=true]]:border-(--theme-error) has-[[aria-invalid=true]:focus-visible]:ring-(--theme-error)',
   // The input, not a stepper or clear button that disables itself at a limit.
   'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-placeholder)',

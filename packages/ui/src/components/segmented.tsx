@@ -24,7 +24,7 @@ export function segmentGroupClassName({ fill, iconOnly }: SegmentLayout) {
 
 export function segmentClassName(current: boolean, { fill, iconOnly }: SegmentLayout) {
   return cx(
-    'relative flex min-w-0 cursor-pointer items-center justify-center rounded-md font-medium transition-colors duration-150 outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-link) data-disabled:cursor-not-allowed data-disabled:opacity-50',
+    'relative flex min-w-0 cursor-pointer items-center justify-center rounded-md font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-focus) data-disabled:cursor-not-allowed data-disabled:opacity-50',
     current
       ? 'bg-(--theme-panel-bg) theme-text shadow-sm ring-1 ring-(--theme-border)'
       : 'theme-muted-text hover:theme-text hover:bg-(--theme-hover)',

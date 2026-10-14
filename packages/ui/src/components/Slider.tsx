@@ -44,7 +44,8 @@ export function Slider({
           <BaseSlider.Indicator className="rounded-full bg-(--theme-accent)" />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
-            className="size-4 rounded-full border-2 border-(--theme-accent) bg-(--theme-panel-bg) shadow-sm outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-(--theme-focus-ring)"
+            // The thumb holds the range input, so focus shows on it when the input has it.
+            className="size-4 rounded-full border-2 border-(--theme-accent) bg-(--theme-panel-bg) shadow-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--theme-focus)"
           />
         </BaseSlider.Track>
       </BaseSlider.Control>

@@ -1,9 +1,17 @@
 import { Switch as BaseSwitch } from '@base-ui/react/switch'
 import { cx } from '../cx'
+import { focusOutline } from './fieldBox'
 
 const sizes = {
-  sm: { root: 'h-5 w-9', thumb: 'size-4 data-checked:translate-x-4' },
-  md: { root: 'h-6 w-11', thumb: 'size-5 data-checked:translate-x-5' },
+  // The thumb slides toward the end of the line, which is the left in a right-to-left page.
+  sm: {
+    root: 'h-5 w-9',
+    thumb: 'size-4 data-checked:translate-x-4 rtl:data-checked:-translate-x-4',
+  },
+  md: {
+    root: 'h-6 w-11',
+    thumb: 'size-5 data-checked:translate-x-5 rtl:data-checked:-translate-x-5',
+  },
 }
 
 export interface SwitchProps extends Omit<BaseSwitch.Root.Props, 'className' | 'children'> {
@@ -25,9 +33,11 @@ export function Switch({ size = 'md', className, onLabel, offLabel, ...props }: 
     <BaseSwitch.Root
       {...props}
       className={cx(
-        'peer inline-flex shrink-0 items-center rounded-full p-0.5 bg-(--theme-border) transition-colors duration-200 cursor-pointer outline-none',
+        // The off track takes the strong border, so the white thumb shows against it.
+        'peer inline-flex shrink-0 items-center rounded-full p-0.5 bg-(--theme-border-strong) transition-colors duration-200 cursor-pointer motion-reduce:transition-none',
         'data-checked:bg-(--theme-accent)',
-        'focus-visible:ring-2 focus-visible:ring-(--theme-focus-ring) aria-invalid:ring-2 aria-invalid:ring-(--theme-error)',
+        focusOutline,
+        'aria-invalid:ring-2 aria-invalid:ring-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         sizes[size].root,
         className,
@@ -35,7 +45,7 @@ export function Switch({ size = 'md', className, onLabel, offLabel, ...props }: 
     >
       <BaseSwitch.Thumb
         className={cx(
-          'rounded-full bg-white shadow-sm transition-transform duration-200',
+          'rounded-full bg-white shadow-sm transition-transform duration-200 motion-reduce:transition-none',
           sizes[size].thumb,
         )}
       />

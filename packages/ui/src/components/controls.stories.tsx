@@ -377,7 +377,9 @@ export const Settings: StoryObj = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByText('Daily'))
-    await expect(canvas.getByRole('radio', { name: /Daily/ })).toBeChecked()
+    const daily = canvas.getByRole('radio', { name: 'Daily' })
+    await expect(daily).toBeChecked()
+    await expect(daily).toHaveAccessibleDescription('One digest every morning')
   },
 }
 
