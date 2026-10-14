@@ -58,7 +58,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "typescript": "^7.0.2",
-    "use-intl": "^4.14.8",
+    "use-intl": "^4.14.9",
     "vitest": "^5.0.3"
   }
 }
