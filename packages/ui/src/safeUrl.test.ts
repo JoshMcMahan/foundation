@@ -11,6 +11,9 @@ describe('safeUrl', () => {
     'https://example.com/a',
     'http://example.com/a',
     'blob:https://example.com/0b8f',
+    'mailto:help@example.com',
+    'mailto:help@example.com?subject=Access',
+    'tel:+15555550123',
   ])('keeps %s', (url) => {
     expect(safeUrl(url)).toBe(url)
   })

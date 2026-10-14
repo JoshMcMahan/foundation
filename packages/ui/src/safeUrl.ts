@@ -1,8 +1,9 @@
-const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'blob:'])
+// mailto: and tel: hand the address to the mail or phone app and run nothing in the page.
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'blob:', 'mailto:', 'tel:'])
 
 /**
  * Returns url when following it cannot run script in the app's origin: a
- * relative path or an http, https or blob URL. Hosts and servers supply these
+ * relative path, an http, https or blob URL, or a mailto: or tel: link. Hosts and servers supply these
  * URLs, so a javascript: URL from either would otherwise run when clicked.
  */
 export function safeUrl(url: string | null | undefined): string | undefined {

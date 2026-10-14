@@ -253,6 +253,16 @@ describe('Toast link action', () => {
 })
 
 describe('AppLink', () => {
+  it.each([
+    ['mailto:help@example.com', 'Email us'],
+    ['tel:+15555550123', 'Call us'],
+  ])('hands %s to the browser, not the router', (href, name) => {
+    renderWithRouter(<AppLink href={href}>{name}</AppLink>)
+    const link = screen.getByRole('link', { name })
+    expect(link).toHaveAttribute('href', href)
+    expect(link).not.toHaveAttribute('data-router-link')
+  })
+
   it('loads the page with a plain anchor for reloadDocument', () => {
     renderWithRouter(
       <AppLink href="/api/export?format=csv" reloadDocument>
