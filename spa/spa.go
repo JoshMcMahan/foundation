@@ -55,11 +55,12 @@ type Options struct {
 
 // Handler serves the Vite build in dist. For a request path it serves, in
 // order: the file at that path, preferring a precompressed .br or .gz sibling
-// the client accepts; a prerendered <path>/index.html; for a path with no
-// file extension, index.html, so client-side routes work on reload; and
-// otherwise a 404. Files under BuildDir are cached for a year; everything
-// else carries an ETag to revalidate with, and index.html is gzipped for
-// clients that accept it.
+// the client accepts; a prerendered <path>/index.html; a 404 for a missing
+// file, a path with a file extension in a directory dist holds; and otherwise
+// index.html, so client-side routes work on reload, even those that end in a
+// file name. Files under BuildDir are cached for a year; everything else
+// carries an ETag to revalidate with, and index.html is gzipped for clients
+// that accept it.
 //
 // With opts.DevServer set, Handler instead proxies every request to it,
 // including Vite's HMR WebSocket. Without one, it returns an error if dist
@@ -133,18 +134,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 
+	ext := path.Ext(name)
 	// Precompressed siblings are served in place of their original, never by name.
-	if ext := path.Ext(name); ext == ".br" || ext == ".gz" {
-		http.NotFound(w, r)
-		return
-	}
-	if name != "" && h.serveFile(w, r, name) {
+	if name != "" && ext != ".br" && ext != ".gz" && h.serveFile(w, r, name) {
 		return
 	}
 	if page := path.Join(name, "index.html"); name != "" && h.serveFile(w, r, page) {
 		return
 	}
-	if path.Ext(name) != "" {
+	if ext != "" && isDir(h.dist, path.Dir(name)) {
 		http.NotFound(w, r)
 		return
 	}
@@ -300,6 +298,11 @@ func (h *handler) fileETag(name string, info fs.FileInfo) (string, error) {
 func isFile(fsys fs.FS, name string) bool {
 	info, err := fs.Stat(fsys, name)
 	return err == nil && !info.IsDir()
+}
+
+func isDir(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.IsDir()
 }
 
 // accepts reports whether an Accept-Encoding header allows enc.

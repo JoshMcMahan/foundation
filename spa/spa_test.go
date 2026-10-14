@@ -186,7 +186,7 @@ func TestPrefersPrecompressedSiblings(t *testing.T) {
 
 func TestFallsBackToShellForClientRoutes(t *testing.T) {
 	h := newHandler(t, spa.Options{})
-	for _, p := range []string{"/", "/issues/TAN-1", "/settings/", "/../../etc/passwd"} {
+	for _, p := range []string{"/", "/issues/TAN-1", "/settings/", "/../../etc/passwd", "/files/home/issue.json", "/files/home/logs.tar.gz"} {
 		rec := get(t, h, p)
 		if rec.Code != http.StatusOK || rec.Body.String() != shell {
 			t.Errorf("%s = %d %q", p, rec.Code, rec.Body)
@@ -195,8 +195,10 @@ func TestFallsBackToShellForClientRoutes(t *testing.T) {
 			t.Errorf("%s: Cache-Control %q", p, rec.Header().Get("Cache-Control"))
 		}
 	}
-	if rec := get(t, h, "/assets/missing.js"); rec.Code != http.StatusNotFound {
-		t.Errorf("missing asset = %d, want 404", rec.Code)
+	for _, p := range []string{"/assets/missing.js", "/_build/app-old999.js", "/missing.txt"} {
+		if rec := get(t, h, p); rec.Code != http.StatusNotFound {
+			t.Errorf("missing file %s = %d, want 404", p, rec.Code)
+		}
 	}
 }
 
