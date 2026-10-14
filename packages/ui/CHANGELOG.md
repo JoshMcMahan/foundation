@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.1](https://github.com/parallelworks/foundation/compare/ui-v0.48.0...ui-v0.48.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **ui:** explorer breadcrumb segments overlap when the header runs out of room ([#250](https://github.com/parallelworks/foundation/issues/250)) ([d728684](https://github.com/parallelworks/foundation/commit/d72868452db9e00274552140f5620c50de163f28))
+
 ## [0.48.0](https://github.com/parallelworks/foundation/compare/ui-v0.47.0...ui-v0.48.0) (2026-10-14)
 
 
