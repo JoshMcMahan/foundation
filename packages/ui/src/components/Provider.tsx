@@ -201,6 +201,8 @@ export interface UIStrings {
     endInFuture: string
     follow: string
     following: string
+    /** A line number's name: it selects the line for copying. */
+    selectLine: (line: number) => string
   }
   dag: {
     workflow: string
@@ -865,6 +867,7 @@ const DEFAULTS: UIProviderValue = {
       endInFuture: 'End time cannot be in the future.',
       follow: 'Follow',
       following: 'Following',
+      selectLine: (line) => `Select line ${line}`,
     },
     dag: {
       workflow: 'Workflow',

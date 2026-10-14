@@ -252,3 +252,58 @@ describe('LogViewer selection copy', () => {
     getSelection.mockRestore()
   })
 })
+
+describe('LogViewer controls', () => {
+  it('names each line number and says whether its line is selected', () => {
+    renderLog('one\ntwo')
+    const line = screen.getByRole('button', { name: 'Select line 2' })
+    expect(line).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(line)
+
+    expect(line).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it("toggles a group from its chevron's button, which says whether it is open", () => {
+    const { container } = renderLog(GROUP_LOG, true)
+    const toggle = screen.getByRole('button', { name: 'Install dependencies' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(container.textContent).not.toContain('pnpm install --frozen-lockfile')
+  })
+
+  it('indents a grouped line past the gutter, so line numbers stay in one column', () => {
+    const { container } = renderLog(GROUP_LOG, true)
+    const row = container.querySelector('[data-line-number="2"]') as HTMLElement
+
+    expect(row.style.paddingLeft).toBe('')
+    expect(row.querySelector('pre')?.getAttribute('style')).toContain('16px')
+  })
+
+  it('builds the download only when asked', () => {
+    vi.mocked(URL.createObjectURL).mockClear()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { rerender } = renderLog('one')
+    rerender(<LogViewer log={'one\ntwo'} width="100%" inline />)
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }))
+
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+    expect(click).toHaveBeenCalledTimes(1)
+    click.mockRestore()
+  })
+
+  it('leaves fullscreen on Escape', () => {
+    render(<LogViewer log="one" width="100%" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }))
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument()
+  })
+})

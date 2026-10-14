@@ -127,3 +127,40 @@ export const SelectionCopy: StoryObj<typeof LogViewer> = {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull())
   },
 }
+
+/** A filter keeps the matching lines and marks each match. */
+export const Filtered: StoryObj<typeof LogViewer> = {
+  args: {
+    log: COMMAND_LOG,
+    width: 720,
+    height: 320,
+    enableWorkflowCommands: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByPlaceholderText('Filter logs'), 'test')
+    await expect(canvasElement.querySelectorAll('mark.search-highlight').length).toBeGreaterThan(0)
+  },
+}
+
+/** Line numbers select lines for copying; Shift extends the range. */
+export const SelectedLines: StoryObj<typeof LogViewer> = {
+  args: {
+    log: COMMAND_LOG,
+    width: 720,
+    height: 320,
+    enableWorkflowCommands: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const user = userEvent.setup()
+    await user.click(canvas.getByRole('button', { name: 'Select line 6' }))
+    await user.keyboard('{Shift>}')
+    await user.click(canvas.getByRole('button', { name: 'Select line 8' }))
+    await user.keyboard('{/Shift}')
+    await expect(canvas.getByRole('button', { name: 'Select line 7' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  },
+}

@@ -61,6 +61,28 @@ function LogSegments({ segments }: { segments: LogSegment[] }) {
   )
 }
 
+type AnnotationType = 'error' | 'warning' | 'notice'
+
+// The label is words, so it takes the status's text shade; the edge and the
+// tint are graphics, which take its vivid shade.
+const ANNOTATION_TONES: Record<AnnotationType, { label: string; row: string; edge: string }> = {
+  error: {
+    label: 'text-(--theme-error-text)',
+    row: 'bg-(--theme-error-muted)',
+    edge: 'border-l-2 border-l-(color:--theme-error)',
+  },
+  warning: {
+    label: 'text-(--theme-warning-text)',
+    row: 'bg-(--theme-warning-muted)',
+    edge: 'border-l-2 border-l-(color:--theme-warning)',
+  },
+  notice: {
+    label: 'text-(--theme-info-text)',
+    row: 'bg-(--theme-info-muted)',
+    edge: 'border-l-2 border-l-(color:--theme-info)',
+  },
+}
+
 // Memoized log line component for performance
 const LogLine = memo(function LogLine({
   index,
@@ -75,6 +97,7 @@ const LogLine = memo(function LogLine({
   isGroupCollapsed,
   onGroupToggle,
   annotationLabels,
+  selectLineLabel,
 }: {
   index: number
   segments: LogSegment[]
@@ -87,26 +110,21 @@ const LogLine = memo(function LogLine({
   groupDepth?: number
   isGroupCollapsed?: boolean | undefined
   onGroupToggle?: ((lineIndex: number) => void) | undefined
-  annotationLabels: { error: string; warning: string; notice: string }
+  annotationLabels: Record<AnnotationType, string>
+  selectLineLabel: (line: number) => string
 }) {
+  const annotation = command?.type ? ANNOTATION_TONES[command.type as AnnotationType] : undefined
   const displaySegments = useMemo(
     () =>
       highlightSegments(command?.message ? plainSegments(command.message) : segments, searchTerm),
     [segments, searchTerm, command],
   )
 
-  const annotationLabel = useMemo(() => {
-    if (command?.type === 'error') {
-      return <span className="text-red-500 font-semibold mr-1">{annotationLabels.error}</span>
-    }
-    if (command?.type === 'warning') {
-      return <span className="text-yellow-500 font-semibold mr-1">{annotationLabels.warning}</span>
-    }
-    if (command?.type === 'notice') {
-      return <span className="text-blue-500 font-semibold mr-1">{annotationLabels.notice}</span>
-    }
-    return null
-  }, [command?.type, annotationLabels])
+  const annotationLabel = annotation && command && (
+    <span className={cx('mr-1 font-semibold', annotation.label)}>
+      {annotationLabels[command.type as AnnotationType]}
+    </span>
+  )
 
   const groupToggle =
     command?.type === 'group' && onGroupToggle
@@ -119,47 +137,33 @@ const LogLine = memo(function LogLine({
         }
       : null
 
-  const groupToggleProps = groupToggle
-    ? {
-        role: 'button' as const,
-        tabIndex: 0,
-        'aria-expanded': !isGroupCollapsed,
-        onClick: groupToggle,
-        onKeyDown: (e: React.KeyboardEvent) => {
-          if (e.target !== e.currentTarget) {
-            return
-          }
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            groupToggle()
-          }
-        },
-      }
-    : undefined
+  const titleId = useId()
 
+  // The pointer can toggle a group anywhere on its header; the keyboard and
+  // assistive tech use the chevron's button, since the row also holds the line
+  // number's button and one button can't hold another.
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut for the chevron's button
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the chevron's button takes the keys
     <div
       data-line-number={index + 1}
-      {...groupToggleProps}
+      onClick={groupToggle ?? undefined}
       className={cx(
         'flex items-start text-sm font-mono group',
         isSelected ? 'bg-(--theme-link)/15' : 'hover:bg-(--theme-hover)',
         'text-(--theme-app)',
-        command?.type === 'error' && 'bg-red-500/10',
-        command?.type === 'warning' && 'bg-yellow-500/10',
-        command?.type === 'notice' && 'bg-blue-500/10',
+        // A selected line shows its selection over its annotation's tint.
+        !isSelected && annotation?.row,
         command?.type === 'debug' && 'opacity-60',
         command?.type === 'group' && 'bg-(--theme-hover) cursor-pointer',
       )}
-      style={{
-        minHeight: `${lineHeight}px`,
-        lineHeight: `${lineHeight}px`,
-        paddingLeft: groupDepth > 0 ? `${groupDepth * 16}px` : undefined,
-      }}
+      style={{ minHeight: `${lineHeight}px`, lineHeight: `${lineHeight}px` }}
     >
       {lineNumbers && (
         <button
           type="button"
+          aria-label={selectLineLabel(index + 1)}
+          aria-pressed={isSelected}
           onClick={(e) => {
             e.stopPropagation()
             onLineClick(index + 1, e)
@@ -177,24 +181,42 @@ const LogLine = memo(function LogLine({
       <pre
         className={cx(
           'grow text-left whitespace-pre m-0 py-0.5 pr-2 flex items-center',
-          lineNumbers && 'pl-2 border-l border-(--theme-border)',
-          command?.type === 'error' && 'border-l-red-500 border-l-2',
-          command?.type === 'warning' && 'border-l-yellow-500 border-l-2',
-          command?.type === 'notice' && 'border-l-blue-500 border-l-2',
+          lineNumbers && 'pl-2 border-l border-l-(color:--theme-border)',
+          annotation?.edge,
           command?.type === 'group' && 'font-bold',
         )}
+        // A group's lines indent their text, never the gutter, so line numbers stay in one column.
+        style={
+          groupDepth > 0
+            ? { paddingInlineStart: `calc(${lineNumbers ? '0.5rem + ' : ''}${groupDepth * 16}px)` }
+            : undefined
+        }
       >
-        {command?.type === 'group' && (
-          <span className="mr-1 shrink-0 inline-flex items-center">
-            {isGroupCollapsed ? (
-              <ChevronRightIcon className="w-3 h-3" />
-            ) : (
+        {command?.type === 'group' &&
+          (onGroupToggle ? (
+            <button
+              type="button"
+              aria-expanded={!isGroupCollapsed}
+              aria-labelledby={titleId}
+              onClick={(e) => {
+                e.stopPropagation()
+                onGroupToggle(index)
+              }}
+              className="mr-1 inline-flex shrink-0 cursor-pointer items-center rounded focus-visible:outline-2 focus-visible:outline-(--theme-focus)"
+            >
+              {isGroupCollapsed ? (
+                <ChevronRightIcon className="w-3 h-3 rtl:rotate-180" />
+              ) : (
+                <ChevronDownIcon className="w-3 h-3" />
+              )}
+            </button>
+          ) : (
+            <span className="mr-1 shrink-0 inline-flex items-center">
               <ChevronDownIcon className="w-3 h-3" />
-            )}
-          </span>
-        )}
+            </span>
+          ))}
         {annotationLabel}
-        <span>
+        <span id={titleId}>
           <LogSegments segments={displaySegments} />
         </span>
       </pre>
@@ -277,6 +299,7 @@ export function LogViewer({
   log,
   height = 'unset',
   width,
+  downloadName = 'log.txt',
   roundedBottom = false,
   lineNumbers = true,
   additionalLeftBarComponents = null,
@@ -298,7 +321,9 @@ export function LogViewer({
 }: {
   log: string
   height?: string | number
-  width: string | number
+  width?: string | number | undefined
+  /** The file name Download saves the log under. */
+  downloadName?: string | undefined
   roundedBottom?: boolean
   lineNumbers?: boolean
   additionalLeftBarComponents?: React.ReactNode
@@ -338,7 +363,6 @@ export function LogViewer({
     followRef.current = value
     _setFollow(value)
   }, [])
-  const [logUrl, setLogUrl] = useState('')
   const [fullParsedLog, setFullParsedLog] = useState<{ index: number; segments: LogSegment[] }[]>(
     [],
   )
@@ -609,11 +633,6 @@ export function LogViewer({
       // After the new rows render.
       requestAnimationFrame(scrollToEnd)
     }
-
-    const file = new Blob([log], { type: 'text/plaintext' })
-    const url = URL.createObjectURL(file)
-    setLogUrl(url)
-    return () => URL.revokeObjectURL(url)
   }, [log, scrollToEnd, enableWorkflowCommands, engine])
 
   // A resize, such as going fullscreen, keeps a followed log at its end.
@@ -660,6 +679,33 @@ export function LogViewer({
       prevScrollHeightRef.current = logContainerRef.current.scrollHeight
     }
   })
+
+  // Built on demand, not on every update: a followed log changes many times a
+  // second, and each blob would copy the whole log.
+  const downloadLog = () => {
+    const url = URL.createObjectURL(new Blob([log], { type: 'text/plain' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = downloadName
+    a.click()
+    // After the click has handed the URL to the download.
+    setTimeout(() => URL.revokeObjectURL(url))
+  }
+
+  // Escape leaves fullscreen, as it does a video's; an open popover inside
+  // claims its own Escape first.
+  useEffect(() => {
+    if (!fullscreen) {
+      return
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        setFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen])
 
   const handleFilterChange = (newFilter: string): void => {
     setFilter(newFilter)
@@ -740,30 +786,28 @@ export function LogViewer({
             )}
             {/* Copy selected lines button */}
             {selectedLines.size > 0 ? (
-              <div className="relative flex items-center h-full">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="secondary"
                   size="sm"
-                  icon={copied ? <CheckIcon className="text-green-500" /> : <CopyIcon />}
+                  icon={copied ? <CheckIcon className="text-(--theme-success)" /> : <CopyIcon />}
                   onClick={copySelectedLines}
                 >
                   {copied ? common.copied : t.copyLines(selectedLines.size)}
                 </Button>
-                <span className="absolute -top-2 -right-2 z-10 rounded-md shadow-sm">
-                  <IconButton
-                    variant="secondary"
-                    size="xs"
-                    label={t.clearSelection}
-                    icon={<CloseIcon />}
-                    onClick={() => setSelectedLines(new Set())}
-                  />
-                </span>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t.clearSelection}
+                  icon={<CloseIcon />}
+                  onClick={() => setSelectedLines(new Set())}
+                />
               </div>
             ) : (
               <Button
                 variant="secondary"
                 size="sm"
-                icon={copied ? <CheckIcon className="text-green-500" /> : <CopyIcon />}
+                icon={copied ? <CheckIcon className="text-(--theme-success)" /> : <CopyIcon />}
                 onClick={copyAllLogs}
               >
                 {copied ? common.copied : t.copyAll}
@@ -840,7 +884,9 @@ export function LogViewer({
                   />
                 </div>
                 {timeRangeError !== '' && (
-                  <span className="text-[11px] text-red-500">{t[timeRangeError]}</span>
+                  <span role="alert" className="text-[11px] text-(--theme-error-text)">
+                    {t[timeRangeError]}
+                  </span>
                 )}
                 <div className="flex gap-x-2">
                   <Button
@@ -880,15 +926,15 @@ export function LogViewer({
             onValueChange={handleFilterChange}
             className="w-48"
           />
-          <a
-            href={logUrl || undefined}
-            aria-disabled={!logUrl || undefined}
-            className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-            download
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<DownloadIcon />}
+            disabled={!log}
+            onClick={downloadLog}
           >
-            <DownloadIcon />
             {common.download}
-          </a>
+          </Button>
           {!hideExpand && (
             <Button
               variant="secondary"
@@ -966,6 +1012,7 @@ export function LogViewer({
                   }
                   onGroupToggle={enableWorkflowCommands ? handleGroupToggle : undefined}
                   annotationLabels={annotationLabels}
+                  selectLineLabel={t.selectLine}
                 />
               </div>
             ))}

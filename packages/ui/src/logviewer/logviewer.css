@@ -1,6 +1,7 @@
-/* Log viewer search highlighting */
+/* A match the filter found: the theme's warning shade, the usual find-in-page
+ * yellow, mixed toward the surface so the text keeps its own color. */
 mark.search-highlight {
-  background-color: rgba(251, 191, 36, 0.4);
+  background-color: color-mix(in oklab, var(--theme-warning) 35%, transparent);
   color: inherit;
   padding: 0 2px;
   border-radius: 2px;
