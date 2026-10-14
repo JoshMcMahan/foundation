@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/parallelworks/foundation/compare/problem-v0.3.0...problem-v0.4.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** one component per job across overlays, buttons, fields, structure and live times ([#231](https://github.com/parallelworks/foundation/issues/231))
+
+### Features
+
+* **ui:** one component per job across overlays, buttons, fields, structure and live times ([#231](https://github.com/parallelworks/foundation/issues/231)) ([956cd5e](https://github.com/parallelworks/foundation/commit/956cd5e1f8e8a025220149c8fab387d4f0e4f0c9))
+
 ## [0.3.0](https://github.com/parallelworks/foundation/compare/problem-v0.2.0...problem-v0.3.0) (2026-10-03)
 
 
