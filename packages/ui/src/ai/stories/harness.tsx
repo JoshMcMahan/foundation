@@ -13,6 +13,7 @@ import type {
   Allocation,
   ApprovalPart,
   ApprovalSubject,
+  AttachmentRef,
   ChatMessage,
   ChatUser,
   Conversation,
@@ -253,7 +254,10 @@ export function makeStaticAdapter(options?: {
   /** False for an adapter that returns models only, so owners come from
    *  each model's provider_owner. */
   listProviders?: boolean
-  attachments?: boolean
+  /** True for an empty attachment store, or the files it holds. */
+  attachments?: boolean | AttachmentRef[]
+  /** The host previews attachments itself rather than downloading them. */
+  previewAttachments?: boolean
   /** Sessions whose service did not answer, as the picker lists them. */
   unreachableSessions?: { name: string; owner: string }[]
   /** Offered for an organization model ("org:" providers). */
@@ -405,15 +409,17 @@ export function makeStaticAdapter(options?: {
   }
 
   if (options?.attachments) {
+    const stored = Array.isArray(options.attachments) ? options.attachments : []
     adapter.attachments = {
       async list() {
-        return { attachments: [], total: 0, hasMore: false }
+        return { attachments: stored, total: stored.length, hasMore: false }
       },
       async upload() {
         throw new Error('uploads are not stubbed in the workshop')
       },
       async remove() {},
-      downloadUrl: () => '#',
+      downloadUrl: attachmentUrl,
+      ...(options.previewAttachments ? { onOpen: () => {} } : {}),
     }
   }
 
@@ -430,6 +436,63 @@ export function makeStaticAdapter(options?: {
     adapter.allocations = { list: async () => allocations }
   }
   return adapter
+}
+
+// ---- Attachments -----------------------------------------------------------
+
+const PICTURE = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+<rect width="320" height="200" fill="#5b7fa6"/><circle cx="250" cy="55" r="28" fill="#f2d16b"/>
+<path d="M0 200 L110 80 L190 160 L240 110 L320 200 Z" fill="#2f4a68"/></svg>`
+
+const pictureUrls = new Map<string, string>()
+
+/** A workshop download URL: a picture for an image, a page anchor otherwise.
+ *  jsdom has no object URLs, so the smoke test gets the anchor. */
+function attachmentUrl(id: string): string {
+  if (!id.startsWith('img') || typeof URL.createObjectURL !== 'function') {
+    return `#${id}`
+  }
+  let url = pictureUrls.get(id)
+  if (!url) {
+    url = URL.createObjectURL(new Blob([PICTURE], { type: 'image/svg+xml' }))
+    pictureUrls.set(id, url)
+  }
+  return url
+}
+
+/** Files as a store lists them: two pictures, a document and a log; ids that
+ *  start with "img" download as a picture. */
+export function makeAttachments(): AttachmentRef[] {
+  return [
+    {
+      id: 'img-1',
+      filename: 'cluster-dashboard.png',
+      contentType: 'image/png',
+      size: 284_310,
+      uploadedAt: '2026-08-16T10:12:00Z',
+    },
+    {
+      id: 'doc-1',
+      filename: 'quarterly-capacity-report.pdf',
+      contentType: 'application/pdf',
+      size: 1_482_004,
+      uploadedAt: '2026-08-15T16:40:00Z',
+    },
+    {
+      id: 'img-2',
+      filename: '',
+      contentType: 'image/png',
+      size: 98_120,
+      uploadedAt: '2026-08-14T09:05:00Z',
+    },
+    {
+      id: 'log-1',
+      filename: 'build.log',
+      contentType: 'text/plain',
+      size: 12_870,
+      uploadedAt: '2026-08-12T13:30:00Z',
+    },
+  ]
 }
 
 // ---- Agent transcript part factories ---------------------------------------

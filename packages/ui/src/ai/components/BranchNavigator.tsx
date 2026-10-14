@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { IconButton } from '../../components/IconButton'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import type { ChatMessage as Message } from '../types'
@@ -53,29 +54,25 @@ export default function BranchNavigator({
 
   return (
     <div className="inline-flex items-center text-xs theme-muted-text">
-      <button
-        type="button"
+      <IconButton
+        label={t.previous}
         onClick={handlePrev}
         disabled={!hasPrev}
-        className="p-1.5 rounded-md transition-colors enabled:hover:chat-tint enabled:hover:theme-text disabled:opacity-30 disabled:cursor-not-allowed"
-        title={t.previous}
-        aria-label={t.previous}
-      >
-        <ChevronLeftIcon className="w-3.5 h-3.5" />
-      </button>
+        size="md"
+        className="size-7 hover:not-disabled:not-aria-disabled:chat-tint disabled:opacity-30"
+        icon={<ChevronLeftIcon />}
+      />
       <span className="min-w-[3ch] text-center tabular-nums">
         {currentIndex + 1}/{siblings.length}
       </span>
-      <button
-        type="button"
+      <IconButton
+        label={t.next}
         onClick={handleNext}
         disabled={!hasNext}
-        className="p-1.5 rounded-md transition-colors enabled:hover:chat-tint enabled:hover:theme-text disabled:opacity-30 disabled:cursor-not-allowed"
-        title={t.next}
-        aria-label={t.next}
-      >
-        <ChevronRightIcon className="w-3.5 h-3.5" />
-      </button>
+        size="md"
+        className="size-7 hover:not-disabled:not-aria-disabled:chat-tint disabled:opacity-30"
+        icon={<ChevronRightIcon />}
+      />
     </div>
   )
 }

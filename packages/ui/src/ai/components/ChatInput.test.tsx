@@ -402,3 +402,38 @@ describe('ChatInput large pastes', () => {
     expect(upload).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('ChatInput height', () => {
+  it('fits its text again when its width changes', () => {
+    let notify: (() => void) | undefined
+    const original = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      constructor(cb: () => void) {
+        notify = cb
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    try {
+      render(<ChatInput onSend={vi.fn()} />)
+      const box = textarea()
+      let width = 120
+      let scrollHeight = 180
+      Object.defineProperty(box, 'clientWidth', { configurable: true, get: () => width })
+      Object.defineProperty(box, 'scrollHeight', { configurable: true, get: () => scrollHeight })
+      // The first measurement happened at jsdom's zero width; a wider box
+      // wraps less, so it is measured again.
+      width = 600
+      scrollHeight = 26
+      act(() => notify?.())
+      expect(box.style.height).toBe('26px')
+      // A change of height alone, such as its own resize, measures nothing.
+      scrollHeight = 999
+      act(() => notify?.())
+      expect(box.style.height).toBe('26px')
+    } finally {
+      globalThis.ResizeObserver = original
+    }
+  })
+})

@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest'
+import { render } from '@testing-library/react'
 import { defaultChatStrings } from '../strings'
 import { resolveChatConfig } from './config'
 
@@ -37,6 +40,14 @@ describe('resolveChatConfig strings', () => {
     expect(resolved.strings.input.filesAttached(3)).toBe('3 files attached')
     expect(resolved.strings.thinking.thoughtFor('4s')).toBe('Thought for 4s')
     expect(resolved.strings.attachmentUpload.maxFilesAllowed(10)).toBe('Maximum 10 files allowed')
+  })
+
+  it('links a new chat to the chat root by default', () => {
+    const { LinkComponent } = resolveChatConfig()
+    const { getByRole } = render(
+      <LinkComponent target={{ kind: 'newChat' }}>New chat</LinkComponent>,
+    )
+    expect(getByRole('link', { name: 'New chat' })).toHaveAttribute('href', '/chat')
   })
 
   it('passes markdownComponents through and defaults to absent', () => {

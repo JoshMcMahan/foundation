@@ -320,6 +320,25 @@ describe('ChatMessageList queued messages', () => {
   })
 })
 
+describe('ChatMessageList as a log', () => {
+  it('is a labeled live log, busy while a reply streams', () => {
+    const { getByRole, rerender } = render(
+      <ChatMessageList messages={[createMockMessage({ id: 'm1' })]} allMessages={[]} />,
+    )
+    const log = getByRole('log', { name: 'Conversation' })
+    expect(log).toHaveAttribute('aria-busy', 'true')
+    rerender(
+      <ChatMessageList
+        messages={[createMockMessage({ id: 'm1' })]}
+        allMessages={[]}
+        isStreaming={false}
+        label="Agent session"
+      />,
+    )
+    expect(getByRole('log', { name: 'Agent session' })).not.toHaveAttribute('aria-busy')
+  })
+})
+
 describe('ChatMessageList while a reply streams', () => {
   afterEach(() => {
     mockChat.streamingContent = ''

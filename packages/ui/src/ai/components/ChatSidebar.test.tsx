@@ -115,6 +115,7 @@ beforeEach(() => {
   chatState.setDrawerOpen.mockClear()
   chatState.toggleSidebar.mockClear()
   chatState.navigation.toConversation.mockClear()
+  chatState.clearCurrentConversation.mockClear()
   conversationsGet.mockReset()
   chatState.adapter.sharing = undefined
   downloadTextMock.mockClear()
@@ -284,6 +285,16 @@ describe('ChatSidebar hidden and in a drawer', () => {
     chatState.setDrawerOpen.mockClear()
     fireEvent.click(screen.getByText('New chat'))
     expect(chatState.setDrawerOpen).toHaveBeenLastCalledWith(false)
+  })
+
+  it('starts a new chat through a link, leaving this tab alone on a modified click', () => {
+    render(<ChatSidebar />)
+    const link = screen.getByRole('link', { name: 'New chat' })
+    fireEvent.click(link, { metaKey: true })
+    expect(chatState.clearCurrentConversation).not.toHaveBeenCalled()
+    fireEvent.click(link)
+    expect(chatState.clearCurrentConversation).toHaveBeenCalledTimes(1)
+    expect(chatState.navigation.toNewChat).not.toHaveBeenCalled()
   })
 
   it('closes on Escape and on a tap outside', () => {

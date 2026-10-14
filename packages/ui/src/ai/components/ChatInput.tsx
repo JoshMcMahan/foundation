@@ -1,11 +1,12 @@
 import {
   type ClipboardEvent,
-  forwardRef,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react'
@@ -65,6 +66,7 @@ interface ChatInputProps {
    *  drives the Stop button in place of the provider's stream and queue. */
   turn?: { running: boolean; onStop: () => void; stopping?: boolean }
   pastes?: ComposerPastes | undefined
+  ref?: Ref<ChatInputHandle> | undefined
 }
 
 export interface ChatInputHandle {
@@ -88,10 +90,10 @@ function sendability({
   disabled: boolean
   modelReady: boolean
   pendingCount: number
-}): { canSend: boolean; emphasised: boolean } {
+}): { canSend: boolean; emphasized: boolean } {
   const canSend =
     (hasText || canFlushQueue || allowEmpty) && !disabled && modelReady && pendingCount === 0
-  return { canSend, emphasised: canSend && (hasText || !allowEmpty) }
+  return { canSend, emphasized: canSend && (hasText || !allowEmpty) }
 }
 
 function keyAction(
@@ -141,13 +143,13 @@ function AttachButton({
 function SendButton({
   onClick,
   enabled,
-  emphasised,
+  emphasized,
   label,
   testId,
 }: {
   onClick: () => void
   enabled: boolean
-  emphasised: boolean
+  emphasized: boolean
   label: string
   testId: string | undefined
 }) {
@@ -159,7 +161,7 @@ function SendButton({
       data-testid={testId}
       className={cx(
         'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 active:scale-95',
-        emphasised ? 'theme-accent hover:opacity-90' : 'chat-send-idle',
+        emphasized ? 'theme-accent hover:opacity-90' : 'chat-send-idle',
         !enabled && 'cursor-not-allowed active:scale-100',
       )}
       aria-label={label}
@@ -186,34 +188,37 @@ function streamControls(chat: ReturnType<typeof useChat>, turn: ChatInputProps['
   }
 }
 
+function fitToContent(el: HTMLTextAreaElement) {
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
 let draftsSwept = false
 
-const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput(
-  {
-    onSend,
-    disabled = false,
-    placeholder,
-    conversationId,
-    onEditLastMessage,
-    allowEmpty = false,
-    attachments: attachmentsWanted = true,
-    requireModel = true,
-    inputLabel,
-    sendLabel,
-    sendTestId,
-    slash,
-    notices,
-    activity,
-    context,
-    reserveContext = false,
-    settingsLeft,
-    settingsRight = <ComposerControls />,
-    hint,
-    turn,
-    pastes,
-  },
+export default function ChatInput({
+  onSend,
+  disabled = false,
+  placeholder,
+  conversationId,
+  onEditLastMessage,
+  allowEmpty = false,
+  attachments: attachmentsWanted = true,
+  requireModel = true,
+  inputLabel,
+  sendLabel,
+  sendTestId,
+  slash,
+  notices,
+  activity,
+  context,
+  reserveContext = false,
+  settingsLeft,
+  settingsRight = <ComposerControls />,
+  hint,
+  turn,
+  pastes,
   ref,
-) {
+}: ChatInputProps) {
   const [input, setInput] = useState(() => readDraft(conversationId))
   useEffect(() => {
     if (!draftsSwept) {
@@ -259,14 +264,32 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
     [],
   )
 
-  // Auto-resize textarea based on content
+  // The box grows with its text. Measured before paint so a new line never
+  // flashes a scrollbar.
   // biome-ignore lint/correctness/useExhaustiveDependencies: input is needed to trigger resize
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      fitToContent(textareaRef.current)
     }
   }, [input])
+  // A change of width rewraps the text, so the height is measured again: a box
+  // first laid out narrow, or in a column that then widens, would otherwise
+  // keep the height of lines it no longer has.
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    let width = el.clientWidth
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth !== width) {
+        width = el.clientWidth
+        fitToContent(el)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Restore the draft when switching conversations; the initial mount is
   // covered by the useState initializer.
@@ -288,7 +311,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
   const pendingCount = attachments.length - uploadedCount
   // A queue held across a canceled or failed turn can be sent on its own.
   const canFlushQueue = !isStreaming && queuedCount > 0 && !disabled
-  const { canSend, emphasised } = sendability({
+  const { canSend, emphasized } = sendability({
     hasText: input.trim().length > 0 || cards.length > 0,
     canFlushQueue,
     allowEmpty,
@@ -393,7 +416,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
       <SendButton
         onClick={handleSubmit}
         enabled={canSend}
-        emphasised={emphasised}
+        emphasized={emphasized}
         label={sendLabel ?? t.sendMessage}
         testId={sendTestId}
       />
@@ -528,6 +551,4 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput
       </div>
     </div>
   )
-})
-
-export default ChatInput
+}

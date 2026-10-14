@@ -453,3 +453,79 @@ describe('disclosure accessibility', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
   })
 })
+
+describe('approval forms', () => {
+  it('names the question and submits feedback with Enter from a focused, labeled field', () => {
+    const onAnswer = vi.fn()
+    renderParts(
+      [
+        {
+          kind: 'approval',
+          id: 'a1',
+          approvalKind: 'confirm',
+          toolName: 'Bash',
+          command: 'rm -rf build',
+        },
+      ],
+      { onApprovalAnswer: onAnswer },
+    )
+    expect(screen.getByRole('group', { name: 'Bash' })).toBeInTheDocument()
+    fireEvent.click(screen.getByText('No, and provide feedback to the agent'))
+    const field = screen.getByRole('textbox', { name: 'Feedback for the agent' })
+    expect(field).toHaveFocus()
+    fireEvent.change(field, { target: { value: 'keep the cache' } })
+    fireEvent.submit(field)
+    expect(onAnswer).toHaveBeenCalledWith('a1', {
+      kind: 'confirm',
+      allowed: false,
+      denyMessage: 'keep the cache',
+    })
+  })
+
+  it('labels the own-answer field, focuses it, and ignores an empty submit', () => {
+    const onAnswer = vi.fn()
+    renderParts(
+      [
+        {
+          kind: 'approval',
+          id: 'q1',
+          approvalKind: 'ask',
+          question: 'Which region?',
+          options: [{ label: 'East' }],
+        },
+      ],
+      { onApprovalAnswer: onAnswer },
+    )
+    expect(screen.getByRole('group', { name: 'Waiting for your answer' })).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Write my own answer…'))
+    const field = screen.getByRole('textbox', { name: 'Your answer' })
+    expect(field).toHaveFocus()
+    fireEvent.submit(field)
+    expect(onAnswer).not.toHaveBeenCalled()
+    fireEvent.change(field, { target: { value: 'West' } })
+    fireEvent.submit(field)
+    expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', text: 'West' })
+  })
+})
+
+describe('status in words', () => {
+  it('says what each tool and subagent dot and each task glyph means', () => {
+    renderParts([
+      { kind: 'tool_call', id: 't1', name: 'Bash', args: '{}', status: 'running' },
+      { kind: 'tool_call', id: 't2', name: 'Bash', args: '{}', status: 'error', result: 'x' },
+      { kind: 'subagent', id: 's1', status: 'done', description: 'look' },
+      {
+        kind: 'todo_snapshot',
+        todos: [
+          { content: 'a', status: 'completed' },
+          { content: 'b', status: 'in_progress' },
+          { content: 'c', status: 'pending' },
+        ],
+      },
+    ])
+    const hidden = Array.from(document.querySelectorAll('.sr-only')).map((n) => n.textContent)
+    expect(hidden).toEqual(
+      expect.arrayContaining(['Running…', 'Failed', 'Done', 'In progress', 'To do']),
+    )
+  })
+})

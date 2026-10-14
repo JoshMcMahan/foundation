@@ -338,6 +338,18 @@
   color: transparent;
 }
 
+/* The shimmer sweeps forever, so under reduced motion it holds still: the
+ * text drawn plainly in the accent, the color the sweep passes through. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer {
+    animation: none;
+  }
+  .text-shimmer {
+    background-image: none;
+    color: var(--theme-accent, #06354f);
+  }
+}
+
 /* Entrance animation for chat messages (CSS replacement for a JS motion lib).
  * Only `from` is defined so elements settle at their natural styles (queued
  * messages render at reduced opacity). */

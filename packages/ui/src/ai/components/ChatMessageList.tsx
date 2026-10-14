@@ -54,7 +54,8 @@ interface ChatMessageListProps {
   isStreaming?: boolean
   /** Rows without their own side padding, for a host that pads the column. */
   flush?: boolean
-  /** Names the list as a live log for assistive technology. */
+  /** Names the list, a live log, for assistive technology. Defaults to the
+   *  chat strings' `thread.label`. */
   label?: string
   /** Rendered after the last message, inside the scrolling column. */
   footer?: ReactNode
@@ -291,7 +292,7 @@ export default function ChatMessageList({
     ) {
       return
     }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [messageCount, isStreaming])
 
   // If no messages and no streaming, just return empty scrollable container
@@ -314,13 +315,12 @@ export default function ChatMessageList({
   return (
     <div
       ref={containerRef}
-      {...(label
-        ? {
-            role: 'log',
-            'aria-relevant': 'additions' as const,
-            'aria-label': label,
-          }
-        : {})}
+      // A live log: each new message is announced as it is added. Busy while a
+      // reply streams, so a screen reader reads it once rather than word by word.
+      role="log"
+      aria-relevant="additions"
+      aria-label={label ?? strings.thread.label}
+      aria-busy={isStreaming || undefined}
       className="chat-thread flex-1 overflow-y-auto theme-scrollbar flex flex-col bg-(--theme-panel-bg)"
     >
       <div className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 flex-1 px-4">
@@ -468,6 +468,10 @@ export default function ChatMessageList({
       {inputElement && <div className="sticky bottom-0 z-10">{inputElement}</div>}
     </div>
   )
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /** "Thinking (12s)" while it thinks, then how long it took. Its own component,

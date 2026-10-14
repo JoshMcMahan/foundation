@@ -1,27 +1,20 @@
 import { DateTime } from 'luxon'
 import { type KeyboardEvent, memo, useEffect, useRef, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
+import { CopyButton } from '../../components/CopyButton'
+import { IconButton } from '../../components/IconButton'
 import { useStrings } from '../../components/Provider'
 import { RelativeTime } from '../../components/relativeTime'
-import { useCopy } from '../../components/useCopy'
 import { cx } from '../../cx'
-import { formatBytes, formatDuration } from '../../format'
-import {
-  CheckIcon,
-  CopyIcon,
-  DownloadIcon,
-  EditIcon,
-  ErrorIcon,
-  FileIcon,
-  RetryIcon,
-} from '../../icons'
-import { safeUrl } from '../../safeUrl'
+import { formatDuration } from '../../format'
+import { EditIcon, ErrorIcon, RetryIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
 import { chatProseClasses } from '../ui/prose'
 import AgentMessageParts from './agent/AgentMessageParts'
 import BranchNavigator from './BranchNavigator'
+import MessageAttachments from './MessageAttachments'
 import { UserMessageText } from './PastedText'
 import { Reasoning } from './Reasoning'
 
@@ -50,6 +43,9 @@ interface ChatMessageProps {
   flush?: boolean | undefined
 }
 
+/** A message action: the chat's square, tinted from the ink on hover. */
+const actionClasses = 'size-7 hover:not-disabled:not-aria-disabled:chat-tint'
+
 // Threshold sits above the CSS clamp height (600px) so borderline messages
 // don't grow a "Show more" for a few hidden pixels.
 const COLLAPSE_THRESHOLD = 680
@@ -60,19 +56,6 @@ function parseTimestamp(iso: string | undefined): DateTime | null {
   }
   const dt = DateTime.fromISO(iso)
   return dt.isValid ? dt : null
-}
-
-function triggerDownload(url: string, filename: string) {
-  const href = safeUrl(url)
-  if (!href) {
-    return
-  }
-  const a = document.createElement('a')
-  a.href = href
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
 }
 
 function ChatMessage({
@@ -119,8 +102,6 @@ function ChatMessage({
 
   const { messageMeta: t, thinking: tThinking } = useChatConfig().strings
   const { common } = useStrings()
-  const { copy, copied } = useCopy()
-  const [showActions, setShowActions] = useState(false)
   const [editContent, setEditContent] = useState(message.content || '')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -222,22 +203,12 @@ function ChatMessage({
   const totalTokens = message.tokensUsed?.total_tokens
   const collapsed = !isUser && collapsible && !expanded && !isStreaming && !latest
 
-  const copyToClipboard = async () => {
-    if (message.content) {
-      await copy(message.content, { quiet: true })
-    }
-  }
-
   return (
     <div
       role="none"
       // A question opens a new turn, so it takes the larger space above it;
       // the room below it holds its hover actions clear of the reply.
       className={cx('group w-full', isUser ? 'pt-8 pb-5' : 'py-3', !flush && 'px-4')}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-      onFocus={() => setShowActions(true)}
-      onBlur={() => setShowActions(false)}
     >
       {/* Editing mode - full width container */}
       {isEditing ? (
@@ -249,6 +220,7 @@ function ChatMessage({
             onKeyDown={handleKeyDown}
             className="chat-composer block w-full min-h-[100px] max-h-[200px] overflow-y-auto px-4 py-3.5 rounded-[1.25rem] bg-(--theme-panel-bg) theme-text text-[1rem] leading-relaxed resize-none focus:outline-none"
             placeholder={t.editPlaceholder}
+            aria-label={t.edit}
           />
           <div className="flex items-center justify-end gap-2 mt-2.5">
             <button
@@ -401,80 +373,13 @@ function ChatMessage({
               </div>
             )}
 
-            {/* Attachments */}
             {message.attachments && message.attachments.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {message.attachments.map((att) => {
-                  const isImage = att.contentType?.startsWith('image/')
-                  const downloadUrl =
-                    att.id && attachmentDownloadUrl ? attachmentDownloadUrl(att.id) : undefined
-
-                  if (isImage && downloadUrl) {
-                    return (
-                      <div
-                        key={att.id}
-                        className="block rounded-lg overflow-hidden border theme-border"
-                        {...(onOpenAttachment
-                          ? {
-                              onClick: () => onOpenAttachment(att),
-                              role: 'button' as const,
-                              style: { cursor: 'pointer' },
-                            }
-                          : {})}
-                      >
-                        <img
-                          src={downloadUrl}
-                          alt={att.filename || 'Image attachment'}
-                          className="max-w-[200px] max-h-[200px] object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                    )
-                  }
-
-                  if (downloadUrl) {
-                    return (
-                      <button
-                        key={att.id}
-                        type="button"
-                        onClick={() =>
-                          onOpenAttachment
-                            ? onOpenAttachment(att)
-                            : triggerDownload(downloadUrl, att.filename || 'File')
-                        }
-                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-(--theme-muted-panel-bg) hover:theme-hover transition-colors cursor-pointer"
-                      >
-                        <FileIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="truncate max-w-[150px]">{att.filename || 'File'}</span>
-                        {att.size ? (
-                          <span className="theme-muted-text">({formatBytes(att.size)})</span>
-                        ) : null}
-                        <DownloadIcon className="w-3 h-3 flex-shrink-0" />
-                      </button>
-                    )
-                  }
-
-                  return (
-                    <div
-                      key={att.id}
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-(--theme-muted-panel-bg) theme-muted-text"
-                      {...(onOpenAttachment
-                        ? {
-                            onClick: () => onOpenAttachment(att),
-                            role: 'button' as const,
-                            style: { cursor: 'pointer' },
-                          }
-                        : {})}
-                    >
-                      <FileIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="truncate max-w-[150px]">{att.filename || 'File'}</span>
-                      {att.size ? (
-                        <span className="theme-muted-text">({formatBytes(att.size)})</span>
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
+              <MessageAttachments
+                attachments={message.attachments}
+                downloadUrl={attachmentDownloadUrl}
+                onOpen={onOpenAttachment}
+                className={isRightAligned ? 'justify-end' : undefined}
+              />
             )}
 
             {/* Actions */}
@@ -483,45 +388,43 @@ function ChatMessage({
                 className={cx(
                   'chat-actions flex items-center gap-0.5 transition-opacity duration-150',
                   isRightAligned ? 'absolute right-0 top-full -mr-1.5 mt-0.5' : '-ml-1.5 mt-2',
-                  isRightAligned && (showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'),
+                  // Shown while the pointer or focus is in the message, in CSS
+                  // so a passing pointer re-renders nothing.
+                  isRightAligned &&
+                    'pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
                 )}
               >
                 {/* Copy */}
-                <button
-                  type="button"
-                  onClick={copyToClipboard}
-                  className="p-1.5 rounded-md hover:chat-tint theme-muted-text hover:theme-text transition-colors"
-                  title={t.copy}
-                >
-                  {copied ? (
-                    <CheckIcon className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <CopyIcon className="w-4 h-4" />
-                  )}
-                </button>
+                {message.content && (
+                  <CopyButton
+                    text={message.content ?? ''}
+                    label={t.copyLabel}
+                    quiet
+                    size="md"
+                    className={actionClasses}
+                  />
+                )}
 
                 {/* Edit (current user's messages only) */}
                 {isUser && !isOtherUser && onEdit && (
-                  <button
-                    type="button"
+                  <IconButton
+                    label={t.edit}
                     onClick={() => onEdit(message.id)}
-                    className="p-1.5 rounded-md hover:chat-tint theme-muted-text hover:theme-text transition-colors"
-                    title={t.edit}
-                  >
-                    <EditIcon className="w-4 h-4" />
-                  </button>
+                    size="md"
+                    className={actionClasses}
+                    icon={<EditIcon />}
+                  />
                 )}
 
                 {/* Regenerate (assistant messages only) */}
                 {!isUser && onRegenerate && (
-                  <button
-                    type="button"
+                  <IconButton
+                    label={t.regenerate}
                     onClick={() => onRegenerate(message.id)}
-                    className="p-1.5 rounded-md hover:chat-tint theme-muted-text hover:theme-text transition-colors"
-                    title={t.regenerate}
-                  >
-                    <RetryIcon className="w-4 h-4" />
-                  </button>
+                    size="md"
+                    className={actionClasses}
+                    icon={<RetryIcon />}
+                  />
                 )}
 
                 {/* Branch Navigator (assistant messages only) */}
@@ -538,7 +441,7 @@ function ChatMessage({
                   <span
                     className={cx(
                       'chat-meta flex items-center gap-2 ml-2 text-xs tabular-nums theme-muted-text transition-opacity duration-150 select-none',
-                      showActions ? 'opacity-100' : 'opacity-0',
+                      'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
                     )}
                   >
                     <RelativeTime value={timestamp} />

@@ -1,6 +1,7 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import { Disclosure } from '../../../components/Disclosure'
 import { fieldBox } from '../../../components/fieldBox'
+import { focusOnMount } from '../../../components/focus'
 import { Loader } from '../../../components/Loader'
 import { useStrings } from '../../../components/Provider'
 import { cx } from '../../../cx'
@@ -232,14 +233,40 @@ function ResultBody({ part }: { part: ToolCallPart }) {
   )
 }
 
+/** A status mark, which color alone tells apart, with its status in words for
+ *  a screen reader. */
+function StatusMark({ status, children }: { status: string; children: ReactNode }) {
+  return (
+    <>
+      <span aria-hidden="true" className="contents">
+        {children}
+      </span>
+      <span className="sr-only">{status}</span>
+    </>
+  )
+}
+
 function ToolStatusDot({ part }: { part: ToolCallPart }) {
+  const t = useChatConfig().strings.agentTranscript
   if (part.status === 'running') {
-    return <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />
+    return (
+      <StatusMark status={t.running}>
+        <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />
+      </StatusMark>
+    )
   }
   if (part.status === 'error') {
-    return <span className="text-red-500 leading-none">●</span>
+    return (
+      <StatusMark status={t.failed}>
+        <span className="text-red-500 leading-none">●</span>
+      </StatusMark>
+    )
   }
-  return <span className="text-green-600 leading-none">●</span>
+  return (
+    <StatusMark status={t.done}>
+      <span className="text-green-600 leading-none">●</span>
+    </StatusMark>
+  )
 }
 
 /** A part's toggle row: its status mark and name, across the transcript's width. */
@@ -328,21 +355,27 @@ function SubagentCard({ part }: { part: SubagentPart }) {
         summaryClassName={rowSummaryClasses}
         summary={
           <>
-            {part.status === 'running' ? (
-              <span className="mt-[3px]">
-                <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />
-              </span>
-            ) : (
-              <span
-                className={cx(
-                  'leading-none',
-                  part.status === 'failed' ? 'text-(--theme-error)' : 'text-(--theme-success)',
-                )}
-                style={color && part.status !== 'failed' ? { color } : undefined}
-              >
-                ●
-              </span>
-            )}
+            <StatusMark
+              status={
+                part.status === 'running' ? t.running : part.status === 'failed' ? t.failed : t.done
+              }
+            >
+              {part.status === 'running' ? (
+                <span className="mt-[3px]">
+                  <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />
+                </span>
+              ) : (
+                <span
+                  className={cx(
+                    'leading-none',
+                    part.status === 'failed' ? 'text-(--theme-error)' : 'text-(--theme-success)',
+                  )}
+                  style={color && part.status !== 'failed' ? { color } : undefined}
+                >
+                  ●
+                </span>
+              )}
+            </StatusMark>
             <span className="font-mono text-[13px] leading-5 min-w-0 truncate">
               <span className="font-semibold">{label}</span>
               {part.description && <span className="theme-muted-text">({part.description})</span>}
@@ -445,28 +478,31 @@ function ConfirmApproval({
           </button>
         </div>
       ) : (
-        <div className="flex gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (feedback.trim()) {
+              answer({ kind: 'confirm', allowed: false, denyMessage: feedback.trim() })
+            }
+          }}
+        >
           <input
+            ref={focusOnMount}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
+            aria-label={t.feedbackLabel}
             placeholder={t.feedbackPlaceholder}
             className={cx(fieldBox({ size: 'sm' }), 'flex-1')}
           />
           <button
-            type="button"
+            type="submit"
             disabled={!feedback.trim()}
-            onClick={() =>
-              answer({
-                kind: 'confirm',
-                allowed: false,
-                denyMessage: feedback.trim(),
-              })
-            }
             className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text) disabled:opacity-50"
           >
             {common.send}
           </button>
-        </div>
+        </form>
       )}
     </>
   )
@@ -523,21 +559,31 @@ function AskApproval({
           </button>
         </div>
       ) : (
-        <div className="flex gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (own.trim()) {
+              answer(own.trim())
+            }
+          }}
+        >
           <input
+            ref={focusOnMount}
             value={own}
             onChange={(e) => setOwn(e.target.value)}
+            aria-label={t.ownAnswerLabel}
+            placeholder={t.ownAnswerLabel}
             className={cx(fieldBox({ size: 'sm' }), 'flex-1')}
           />
           <button
-            type="button"
+            type="submit"
             disabled={!own.trim()}
-            onClick={() => answer(own.trim())}
             className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text) disabled:opacity-50"
           >
             {common.send}
           </button>
-        </div>
+        </form>
       )}
     </>
   )
@@ -552,6 +598,8 @@ export function ApprovalBlock({
 }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
+  const headingId = useId()
+  const heading = part.header ?? part.toolName
   if (part.resolved) {
     return (
       <div
@@ -570,12 +618,18 @@ export function ApprovalBlock({
     )
   }
   return (
-    <div
-      className="my-1.5 rounded-lg border border-(--theme-accent) p-3 space-y-2"
+    // A question the turn waits on: one named group, so a screen reader hears
+    // what is being asked before the answers.
+    <fieldset
+      aria-labelledby={heading ? headingId : undefined}
+      aria-label={heading ? undefined : t.approvalLabel}
+      className="my-1.5 min-w-0 rounded-lg border border-(--theme-accent) p-3 space-y-2"
       data-testid="approval-part"
     >
-      {(part.header || part.toolName) && (
-        <div className="text-xs font-semibold">{part.header ?? part.toolName}</div>
+      {heading && (
+        <div id={headingId} className="text-xs font-semibold">
+          {heading}
+        </div>
       )}
       {part.approvalKind === 'confirm' ? (
         <ConfirmApproval part={part} onAnswer={onApprovalAnswer} />
@@ -584,7 +638,7 @@ export function ApprovalBlock({
       ) : (
         <AskApproval part={part} onAnswer={onApprovalAnswer} />
       )}
-    </div>
+    </fieldset>
   )
 }
 
@@ -620,8 +674,15 @@ function TodoSnapshotBlock({ part }: { part: TodoSnapshotPart }) {
               todo.status === 'in_progress' && 'font-semibold',
             )}
           >
-            <span className="select-none font-mono">
+            <span aria-hidden="true" className="select-none font-mono">
               {todo.status === 'completed' ? '✔' : todo.status === 'in_progress' ? '■' : '□'}
+            </span>
+            <span className="sr-only">
+              {todo.status === 'completed'
+                ? t.todoCompleted
+                : todo.status === 'in_progress'
+                  ? t.todoInProgress
+                  : t.todoPending}
             </span>
             <span>
               {todo.status === 'in_progress' && todo.activeForm ? todo.activeForm : todo.content}

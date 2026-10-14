@@ -9,7 +9,7 @@ import { composeStories } from '@storybook/react-vite'
 import { cleanup, render } from '@testing-library/react'
 import type React from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
-
+import * as attachments from './components/AttachmentManager.stories'
 import * as agentParts from './components/agent/AgentMessageParts.stories'
 import * as emptyState from './components/ChatEmptyState.stories'
 import * as composer from './components/ChatInput.stories'
@@ -25,6 +25,7 @@ import * as notices from './ui/Notice.stories'
 
 const SUITES = {
   agentParts,
+  attachments,
   thread,
   messageList,
   sidebar,

@@ -329,6 +329,12 @@ describe('ChatMessage', () => {
       })
     })
 
+    it('offers no copy for a failed reply with nothing to copy', () => {
+      const message = createMockMessage({ role: 'assistant', content: '', error: 'Rate limited' })
+      render(<ChatMessage {...defaultProps} message={message} />)
+      expect(screen.queryByRole('button', { name: 'Copy message' })).not.toBeInTheDocument()
+    })
+
     it('shows regenerate button for assistant messages', () => {
       const message = createMockMessage({
         role: 'assistant',

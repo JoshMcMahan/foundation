@@ -1,5 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { makeMessage, makePaste, makePasteText, StoryChat, StoryViewport } from '../stories/harness'
+import { useMemo } from 'react'
+import {
+  makeAttachments,
+  makeMessage,
+  makePaste,
+  makePasteText,
+  makeStaticAdapter,
+  StoryChat,
+  StoryViewport,
+} from '../stories/harness'
 import type { ChatMessage } from '../types'
 import ChatMessageList from './ChatMessageList'
 
@@ -149,5 +158,44 @@ export const ReasoningOpened: StoryObj<{ open: boolean }> = {
     if (args.open) {
       canvasElement.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click()
     }
+  },
+}
+
+// Files sent with a message: pictures as thumbnails and the rest as chips, each
+// a link to its download. With `preview` the host takes a plain click and opens
+// the file in its own viewer; a modified click still opens the link.
+export const Attachments: StoryObj<{ preview: boolean }> = {
+  args: { preview: false },
+  argTypes: {
+    preview: { control: 'boolean', description: 'The host previews attachments (onOpen)' },
+  },
+  render: ({ preview }) => {
+    const Story = () => {
+      const adapter = useMemo(
+        () => makeStaticAdapter({ attachments: true, previewAttachments: preview }),
+        [],
+      )
+      const messages = [
+        makeMessage({
+          role: 'user',
+          content: 'Here is the dashboard and the report. What stands out?',
+          attachments: makeAttachments(),
+        }),
+        makeMessage({
+          role: 'assistant',
+          content: 'The gpu partition sat idle for most of the quarter while compute queued.',
+        }),
+      ]
+      return (
+        <StoryChat adapter={adapter}>
+          <StoryViewport>
+            <div className="flex h-full flex-col bg-(--theme-panel-bg)">
+              <ChatMessageList messages={messages} allMessages={messages} />
+            </div>
+          </StoryViewport>
+        </StoryChat>
+      )
+    }
+    return <Story key={String(preview)} />
   },
 }

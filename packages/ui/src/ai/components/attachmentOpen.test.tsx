@@ -62,3 +62,34 @@ describe('attachment onOpen wiring', () => {
     expect(image.closest('[role="button"]')).toBeNull()
   })
 })
+
+describe('attachments as links', () => {
+  it('links each downloadable attachment to its file, for saving or a new tab', () => {
+    const onOpen = vi.fn()
+    render(
+      <ChatMessage
+        message={message}
+        allMessages={[message]}
+        attachmentDownloadUrl={(id) => `/dl/${id}`}
+        onOpenAttachment={onOpen}
+      />,
+    )
+    const image = screen.getByRole('link', { name: 'photo.png' })
+    expect(image).toHaveAttribute('href', '/dl/att-1')
+    expect(image).toHaveAttribute('download', 'photo.png')
+    const file = screen.getByRole('link', { name: /notes\.txt/ })
+    expect(file).toHaveAttribute('href', '/dl/att-2')
+    // A modified click is the browser's: no preview, the link opens.
+    fireEvent.click(file, { metaKey: true })
+    expect(onOpen).not.toHaveBeenCalled()
+  })
+
+  it('opens an attachment with no download through a button, named for an unnamed file', () => {
+    const onOpen = vi.fn()
+    const unnamed: AttachmentRef = { ...fileAttachment, filename: '' }
+    const m: Message = { ...message, attachments: [unnamed] }
+    render(<ChatMessage message={m} allMessages={[m]} onOpenAttachment={onOpen} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open File' }))
+    expect(onOpen).toHaveBeenCalledWith(unnamed)
+  })
+})

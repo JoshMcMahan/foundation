@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
+import { SidebarRailItem } from './sidebar'
 
 const storage = new Map<string, string>()
 Object.defineProperty(window, 'localStorage', {
@@ -133,5 +134,26 @@ describe('ConversationSidebar', () => {
     rerender(<Sidebar />)
     keyDown('ArrowDown')
     expect(onSelect).not.toHaveBeenCalled()
+  })
+})
+
+describe('SidebarRailItem', () => {
+  it('is a link to the item when given an href, and a button otherwise', () => {
+    const onSelect = vi.fn()
+    render(
+      <ul>
+        <SidebarRailItem selected label="Deploy" href="/tasks/1" onSelect={onSelect}>
+          D
+        </SidebarRailItem>
+        <SidebarRailItem selected={false} label="Build" onSelect={onSelect}>
+          B
+        </SidebarRailItem>
+      </ul>,
+    )
+    const link = screen.getByRole('link', { name: 'Deploy' })
+    expect(link).toHaveAttribute('href', '/tasks/1')
+    expect(link).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Build' }))
+    expect(onSelect).toHaveBeenCalledTimes(1)
   })
 })

@@ -5,6 +5,7 @@ import { Loader } from '../../components/Loader'
 import { useStrings } from '../../components/Provider'
 import { RelativeTime } from '../../components/relativeTime'
 import { toast } from '../../components/Toast'
+import { Tooltip } from '../../components/Tooltip'
 import { cx } from '../../cx'
 import { formatBytes } from '../../format'
 import { DownloadIcon, FileIcon, TrashIcon } from '../../icons'
@@ -12,19 +13,6 @@ import { safeUrl } from '../../safeUrl'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { ATTACHMENTS_PAGE_SIZE, attachmentsPageKey } from './attachmentKeys'
-
-function triggerDownload(url: string, filename: string) {
-  const href = safeUrl(url)
-  if (!href) {
-    return
-  }
-  const a = document.createElement('a')
-  a.href = href
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-}
 
 export default function AttachmentManager() {
   const { adapter } = useChat()
@@ -103,18 +91,34 @@ export default function AttachmentManager() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {attachments.map((att) => {
-                    const downloadUrl = attachmentsAdapter.downloadUrl(att.id)
+                    const downloadUrl = safeUrl(attachmentsAdapter.downloadUrl(att.id))
+                    const name = att.filename || t.unnamedFile
                     const isDeleting = deleting === att.id
                     const thumbnail = thumbnails[att.id]
                     const showThumbnail =
                       att.contentType?.startsWith('image/') && thumbnail !== 'broken'
-                    const openProps = attachmentsAdapter.onOpen
-                      ? {
-                          onClick: () => attachmentsAdapter.onOpen?.(att),
-                          role: 'button' as const,
-                          style: { cursor: 'pointer' },
-                        }
-                      : {}
+                    const preview = (
+                      <>
+                        <FileIcon aria-hidden="true" className="w-8 h-8 theme-muted-text" />
+                        {showThumbnail && (
+                          // Kept transparent until it decodes so a slow or missing
+                          // file shows the placeholder, never a broken-image glyph.
+                          <img
+                            src={downloadUrl}
+                            alt=""
+                            className={cx(
+                              'absolute inset-0 w-full h-full object-cover',
+                              thumbnail !== 'loaded' && 'opacity-0',
+                            )}
+                            loading="lazy"
+                            onLoad={() => markThumbnail(att.id, 'loaded')}
+                            onError={() => markThumbnail(att.id, 'broken')}
+                          />
+                        )}
+                      </>
+                    )
+                    const previewClasses =
+                      'relative aspect-square w-full bg-(--theme-muted-panel-bg) flex items-center justify-center'
 
                     return (
                       <div
@@ -124,32 +128,21 @@ export default function AttachmentManager() {
                           isDeleting && 'opacity-50 pointer-events-none',
                         )}
                       >
-                        <div
-                          className="relative aspect-square bg-(--theme-muted-panel-bg) flex items-center justify-center"
-                          {...openProps}
-                        >
-                          <FileIcon className="w-8 h-8 theme-muted-text" />
-                          {showThumbnail && (
-                            // Kept transparent until it decodes so a slow or missing
-                            // file shows the placeholder, never a broken-image glyph.
-                            <img
-                              src={downloadUrl}
-                              alt={att.filename || 'Image'}
-                              className={cx(
-                                'absolute inset-0 w-full h-full object-cover',
-                                thumbnail !== 'loaded' && 'opacity-0',
-                              )}
-                              loading="lazy"
-                              onLoad={() => markThumbnail(att.id, 'loaded')}
-                              onError={() => markThumbnail(att.id, 'broken')}
-                            />
-                          )}
-                        </div>
+                        {attachmentsAdapter.onOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => attachmentsAdapter.onOpen?.(att)}
+                            aria-label={t.open(name)}
+                            className={cx(previewClasses, 'cursor-pointer')}
+                          >
+                            {preview}
+                          </button>
+                        ) : (
+                          <div className={previewClasses}>{preview}</div>
+                        )}
                         <div className="p-3 text-xs bg-(--theme-panel-bg) flex items-center justify-between gap-1">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-(--theme-app)">
-                              {att.filename || 'File'}
-                            </p>
+                            <p className="truncate font-medium text-(--theme-app)">{name}</p>
                             <p className="truncate theme-muted-text">
                               {att.size ? formatBytes(att.size) : ''}
                               {att.uploadedAt && (
@@ -161,23 +154,27 @@ export default function AttachmentManager() {
                             </p>
                           </div>
                           <div className="flex items-center gap-0.5 flex-shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => triggerDownload(downloadUrl, att.filename || 'File')}
-                              className="p-1.5 rounded-lg hover:theme-hover theme-muted-text transition-colors"
-                              title={common.download}
-                            >
-                              <DownloadIcon className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(att.id)}
-                              disabled={isDeleting}
-                              className="p-1.5 rounded-lg hover:bg-red-500/15 theme-muted-text hover:text-red-600 transition-colors"
-                              title={common.delete}
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
+                            <Tooltip content={common.download}>
+                              <a
+                                href={downloadUrl}
+                                download={att.filename || true}
+                                aria-label={t.download(name)}
+                                className="p-1.5 rounded-lg hover:theme-hover theme-muted-text transition-colors"
+                              >
+                                <DownloadIcon aria-hidden="true" className="w-4 h-4" />
+                              </a>
+                            </Tooltip>
+                            <Tooltip content={common.delete}>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(att.id)}
+                                disabled={isDeleting}
+                                aria-label={t.remove(name)}
+                                className="p-1.5 rounded-lg hover:bg-red-500/15 theme-muted-text hover:text-red-600 transition-colors"
+                              >
+                                <TrashIcon aria-hidden="true" className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
                           </div>
                         </div>
                       </div>
