@@ -6,65 +6,23 @@ import { formatCount, formatDuration } from '../../../format'
 import { StopIcon } from '../../../icons'
 import { useChatConfig } from '../../core/config'
 
-/** The agent status words: one is picked per turn and held until it ends. */
-export const activityWords = [
-  'Thinking',
-  'Cogitating',
-  'Pondering',
-  'Percolating',
-  'Ruminating',
-  'Noodling',
-  'Conjuring',
-  'Simmering',
-  'Marinating',
-  'Tinkering',
-  'Scheming',
-  'Brewing',
-  'Wrangling',
-  'Finagling',
-  'Spelunking',
-  'Puttering',
-  'Composing',
-  'Synthesizing',
-  'Deliberating',
-  'Mulling',
-  'Contemplating',
-  'Vibing',
-  'Whittling',
-  'Concocting',
-  'Formulating',
-  'Hatching',
-  'Herding',
-  'Ideating',
-  'Manifesting',
-  'Moseying',
-  'Musing',
-  'Percussing',
-  'Reticulating',
-  'Schlepping',
-  'Stewing',
-  'Transmuting',
-  'Wibbling',
-  'Crunching',
-  'Forging',
-  'Cooking',
-] as const
-
-function randomActivityWord(): string {
-  return activityWords[Math.floor(Math.random() * activityWords.length)] ?? activityWords[0]
+// An index rather than the word, so a host's own list (or a change of
+// language mid-turn) still reads from the strings in force.
+function randomIndex(): number {
+  return Math.floor(Math.random() * 1_000_000)
 }
 
 /** A status word held for the whole turn and re-rolled when a new one starts. */
-function useTurnWord(startedAt: string | null | undefined): string {
-  const [word, setWord] = useState(randomActivityWord)
+function useTurnWord(startedAt: string | null | undefined, words: readonly string[]): string {
+  const [pick, setPick] = useState(randomIndex)
   const turn = useRef(startedAt)
   useEffect(() => {
     if (turn.current !== startedAt) {
       turn.current = startedAt
-      setWord(randomActivityWord())
+      setPick(randomIndex())
     }
   }, [startedAt])
-  return word
+  return words.length > 0 ? (words[pick % words.length] ?? '') : ''
 }
 
 /** The terminal's "it's working" line for a running turn: spinner, status
@@ -90,7 +48,7 @@ export default function ActivityLine({
 }) {
   const { strings } = useChatConfig()
   const elapsed = useElapsed(startedAt)
-  const turnWord = useTurnWord(startedAt)
+  const turnWord = useTurnWord(startedAt, strings.activity.words)
   const meta: string[] = []
   if (elapsed !== null) {
     meta.push(formatDuration(elapsed))

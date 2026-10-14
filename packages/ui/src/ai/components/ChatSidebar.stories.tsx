@@ -47,7 +47,7 @@ export const Empty: StoryObj = {
   ),
 }
 
-// Attachments sit under New chat; the footer strip appears only when the host wires Manage Providers.
+// Attachments sit under New chat; the footer strip appears only when the host wires Manage providers.
 export const FooterLinks: StoryObj = {
   render: () => (
     <StoryChat

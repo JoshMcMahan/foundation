@@ -22,7 +22,7 @@ export default function BlockedGroupBanner() {
       <WarningIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-amber-700">
-          {strings.blockedGroup.title.replace('{group}', provider.group)}
+          {strings.blockedGroup.title(provider.group)}
         </p>
         <p className="text-xs text-amber-600/80 mt-0.5">{strings.blockedGroup.message}</p>
       </div>

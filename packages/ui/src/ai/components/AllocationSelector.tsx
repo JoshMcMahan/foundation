@@ -7,7 +7,9 @@ import { useChatConfig } from '../core/config'
 import { chipClassName } from '../ui/chip'
 import { isOrgModel } from '../utils'
 
-const money = (amount: number) => `$${amount.toFixed(2)}`
+// Allocations are billed in US dollars; the amount reads in the reader's locale.
+const dollars = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' })
+const money = (amount: number) => dollars.format(amount)
 
 /** Which allocation an organization model bills, with its spend so far. Shows
  *  only for an organization model, and picks the first allocation for it. */

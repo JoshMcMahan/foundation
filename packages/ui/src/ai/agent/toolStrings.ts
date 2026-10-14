@@ -39,50 +39,55 @@ export interface ToolStrings {
   }
 }
 
-const count = (n: number, one: string, many: string) =>
-  `${n.toLocaleString()} ${n === 1 ? one : many}`
+// English has two forms, chosen by the rules a translation would use, with
+// the number in the reader's own digits.
+const englishPlural = new Intl.PluralRules('en')
+
+/** A count and its noun in English: "1 file", "1,024 files". */
+export const countOf = (n: number, one: string, other: string) =>
+  `${n.toLocaleString()} ${englishPlural.select(n) === 'one' ? one : other}`
 
 export const defaultToolStrings: ToolStrings = {
   noOutput: '(no output)',
   firstLine: (line, moreLines) =>
-    moreLines > 0 ? `${line}  (+${count(moreLines, 'line', 'lines')})` : line,
+    moreLines > 0 ? `${line}  (+${countOf(moreLines, 'line', 'lines')})` : line,
   emptyFile: 'Empty file',
   readImage: 'Read image',
   readLines: (lines, more) =>
     more > 0
-      ? `Read ${count(lines, 'line', 'lines')} (${more.toLocaleString()} more)`
-      : `Read ${count(lines, 'line', 'lines')}`,
+      ? `Read ${countOf(lines, 'line', 'lines')} (${more.toLocaleString()} more)`
+      : `Read ${countOf(lines, 'line', 'lines')}`,
   noMatches: 'No matches',
   foundMatches: (matches, files) =>
-    `Found ${count(matches, 'match', 'matches')} in ${count(files, 'file', 'files')}`,
-  foundFiles: (files) => `Found ${count(files, 'file', 'files')}`,
+    `Found ${countOf(matches, 'match', 'matches')} in ${countOf(files, 'file', 'files')}`,
+  foundFiles: (files) => `Found ${countOf(files, 'file', 'files')}`,
   noFilesMatched: 'No files matched',
   truncated: (summary) => `${summary} (truncated)`,
   exitCode: (code, lines) =>
-    lines > 0 ? `Exit ${code} · ${count(lines, 'line', 'lines')}` : `Exit ${code}`,
-  httpStatus: (status, lines) => `HTTP ${status} · ${count(lines, 'line', 'lines')}`,
+    lines > 0 ? `Exit ${code} · ${countOf(lines, 'line', 'lines')}` : `Exit ${code}`,
+  httpStatus: (status, lines) => `HTTP ${status} · ${countOf(lines, 'line', 'lines')}`,
   outputTruncated: (summary) => `${summary} (output truncated)`,
   edited: (added, removed) =>
     added > 0 && removed > 0
-      ? `Added ${count(added, 'line', 'lines')}, removed ${count(removed, 'line', 'lines')}`
+      ? `Added ${countOf(added, 'line', 'lines')}, removed ${countOf(removed, 'line', 'lines')}`
       : added > 0
-        ? `Added ${count(added, 'line', 'lines')}`
+        ? `Added ${countOf(added, 'line', 'lines')}`
         : removed > 0
-          ? `Removed ${count(removed, 'line', 'lines')}`
+          ? `Removed ${countOf(removed, 'line', 'lines')}`
           : '',
   wrote: (lines, path) =>
     path
-      ? `Wrote ${count(lines, 'line', 'lines')} to ${path}`
-      : `Wrote ${count(lines, 'line', 'lines')}`,
+      ? `Wrote ${countOf(lines, 'line', 'lines')} to ${path}`
+      : `Wrote ${countOf(lines, 'line', 'lines')}`,
   rollup: {
-    searched: (n) => `searched for ${count(n, 'pattern', 'patterns')}`,
-    read: (n) => `read ${count(n, 'file', 'files')}`,
-    ranCommands: (n) => `ran ${count(n, 'shell command', 'shell commands')}`,
-    fetched: (n) => `fetched ${count(n, 'URL', 'URLs')}`,
-    loadedSkills: (n) => `loaded ${count(n, 'skill', 'skills')}`,
-    sentMessages: (n) => `sent ${count(n, 'message', 'messages')}`,
-    calledMcpTools: (n) => `called ${count(n, 'MCP tool', 'MCP tools')}`,
-    ranTools: (n) => `ran ${count(n, 'tool', 'tools')}`,
+    searched: (n) => `searched for ${countOf(n, 'pattern', 'patterns')}`,
+    read: (n) => `read ${countOf(n, 'file', 'files')}`,
+    ranCommands: (n) => `ran ${countOf(n, 'shell command', 'shell commands')}`,
+    fetched: (n) => `fetched ${countOf(n, 'URL', 'URLs')}`,
+    loadedSkills: (n) => `loaded ${countOf(n, 'skill', 'skills')}`,
+    sentMessages: (n) => `sent ${countOf(n, 'message', 'messages')}`,
+    calledMcpTools: (n) => `called ${countOf(n, 'MCP tool', 'MCP tools')}`,
+    ranTools: (n) => `ran ${countOf(n, 'tool', 'tools')}`,
     sentence: (clauses) => {
       const s = clauses.join(', ')
       return s.charAt(0).toUpperCase() + s.slice(1)

@@ -216,7 +216,7 @@ function ResultBody({ part }: { part: ToolCallPart }) {
           onClick={() => setShowAll(true)}
           className="text-xs text-(--theme-link) hover:underline"
         >
-          {t.moreLines.replace('{count}', String(hidden))}
+          {t.moreLines(hidden)}
         </button>
       )}
       {showAll && lines.length > COLLAPSED_RESULT_LINES && (

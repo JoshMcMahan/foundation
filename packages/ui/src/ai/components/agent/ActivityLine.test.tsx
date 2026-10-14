@@ -2,7 +2,9 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import ActivityLine, { activityWords } from './ActivityLine'
+import { ChatConfigProvider, resolveChatConfig } from '../../core/config'
+import { defaultChatStrings } from '../../strings'
+import ActivityLine from './ActivityLine'
 
 describe('ActivityLine', () => {
   beforeEach(() => {
@@ -34,13 +36,24 @@ describe('ActivityLine', () => {
       <ActivityLine testId="activity" startedAt="2026-09-22T10:00:00.000Z" />,
     )
     const word = () => screen.getByTestId('activity-word').textContent?.replace(/…$/, '') ?? ''
-    expect(activityWords).toContain(word())
+    expect(defaultChatStrings.activity.words).toContain(word())
     const first = word()
     rerender(
       <ActivityLine testId="activity" startedAt="2026-09-22T10:00:00.000Z" inputTokens={12} />,
     )
     expect(word()).toBe(first)
     expect(screen.getByTestId('activity-word')).toHaveTextContent(/…$/)
+  })
+
+  it('picks from the host’s own words, for a reader in another language', () => {
+    render(
+      <ChatConfigProvider
+        value={resolveChatConfig({ strings: { activity: { words: ['Réflexion'] } } })}
+      >
+        <ActivityLine testId="activity" startedAt="2026-09-22T10:00:00.000Z" />
+      </ChatConfigProvider>,
+    )
+    expect(screen.getByTestId('activity-word')).toHaveTextContent('Réflexion…')
   })
 
   it('lets the host name the activity, the way a running hook does', () => {

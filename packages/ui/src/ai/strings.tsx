@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { defaultToolStrings, type ToolStrings } from './agent/toolStrings'
+import { countOf, defaultToolStrings, type ToolStrings } from './agent/toolStrings'
 
 // English defaults for the package's user-facing strings. Hosts localize by
 // passing overrides through ChatUIConfig.strings.
@@ -21,8 +21,7 @@ export interface ChatStrings {
     shareButton: string
   }
   blockedGroup: {
-    // {group} is replaced with the billing group name.
-    title: string
+    title: (group: string) => string
     message: string
   }
   providerIssue: {
@@ -69,6 +68,8 @@ export interface ChatStrings {
   activity: {
     tokens: (input: string, output: string) => string
     stop: string
+    /** The status words an agent's working line picks from, one per turn. */
+    words: readonly string[]
   }
   emptyState: {
     // null renders the built-in time-of-day greeting.
@@ -189,8 +190,8 @@ export interface ChatStrings {
     interrupted: string
     noOutput: string
     diffTruncated: string
-    // {count} is replaced with the hidden line count.
-    moreLines: string
+    /** Under a long tool result, how many of its lines are folded away. */
+    moreLines: (count: number) => string
     allowOnce: string
     allowDirectory: string
     deny: string
@@ -214,15 +215,59 @@ export interface ChatStrings {
   tools: ToolStrings
 }
 
+// The agent status words: one is picked per turn and held until it ends.
+const activityWords: readonly string[] = [
+  'Thinking',
+  'Cogitating',
+  'Pondering',
+  'Percolating',
+  'Ruminating',
+  'Noodling',
+  'Conjuring',
+  'Simmering',
+  'Marinating',
+  'Tinkering',
+  'Scheming',
+  'Brewing',
+  'Wrangling',
+  'Finagling',
+  'Spelunking',
+  'Puttering',
+  'Composing',
+  'Synthesizing',
+  'Deliberating',
+  'Mulling',
+  'Contemplating',
+  'Vibing',
+  'Whittling',
+  'Concocting',
+  'Formulating',
+  'Hatching',
+  'Herding',
+  'Ideating',
+  'Manifesting',
+  'Moseying',
+  'Musing',
+  'Percussing',
+  'Reticulating',
+  'Schlepping',
+  'Stewing',
+  'Transmuting',
+  'Wibbling',
+  'Crunching',
+  'Forging',
+  'Cooking',
+]
+
 export const defaultChatStrings: ChatStrings = {
   shareConversation: {
-    title: 'Share Conversation',
+    title: 'Share conversation',
     loadError: 'Failed to load sharing settings',
     saveSuccess: 'Sharing settings saved',
-    orgAccess: 'Organization Access',
+    orgAccess: 'Organization access',
     orgCanView: 'Anyone in the organization can view',
     allowCollaboration: 'Allow collaboration (edit messages)',
-    groupAccess: 'Group Access',
+    groupAccess: 'Group access',
     noGroups: 'No groups have access yet',
     viewOnly: 'View only',
     canCollaborate: 'Can collaborate',
@@ -237,7 +282,7 @@ export const defaultChatStrings: ChatStrings = {
     shareButton: 'Share conversation',
   },
   blockedGroup: {
-    title: 'Billing group "{group}" is over its allocation',
+    title: (group) => `Billing group \u201c${group}\u201d is over its allocation`,
     message:
       'It has reached its allocation limit. Messages to this provider are paused until your administrator increases the allocation.',
   },
@@ -278,6 +323,7 @@ export const defaultChatStrings: ChatStrings = {
   activity: {
     tokens: (input, output) => `↑${input} ↓${output} tokens`,
     stop: 'Stop',
+    words: activityWords,
   },
   emptyState: {
     greeting: null,
@@ -291,28 +337,26 @@ export const defaultChatStrings: ChatStrings = {
   },
   input: {
     placeholder: 'Ask anything',
-    placeholderLoading: 'Loading models...',
+    placeholderLoading: 'Loading models\u2026',
     placeholderNoProviders: 'Add an AI provider to start chatting',
     attachFiles: 'Attach files',
     stopGenerating: 'Stop generating (Escape)',
     sendMessage: 'Send message (Enter)',
-    filesAttached: (count) =>
-      count === 1 ? '1 file attached' : `${count.toLocaleString()} files attached`,
+    filesAttached: (count) => `${countOf(count, 'file', 'files')} attached`,
   },
   paste: {
     title: 'Pasted text',
-    lines: (count) => (count === 1 ? '1 line' : `${count.toLocaleString()} lines`),
+    lines: (count) => countOf(count, 'line', 'lines'),
     saving: 'Saving…',
     remove: 'Remove paste',
   },
   thinking: {
     label: 'Thinking',
-    ellipsis: 'Thinking...',
+    ellipsis: 'Thinking\u2026',
     thoughtFor: (duration) => `Thought for ${duration}`,
     thoughtProcess: 'Thought process',
     activity: 'Activity',
-    ranToolCalls: (count) =>
-      count === 1 ? 'Ran 1 tool call' : `Ran ${count.toLocaleString()} tool calls`,
+    ranToolCalls: (count) => `Ran ${countOf(count, 'tool call', 'tool calls')}`,
   },
   thread: {
     viewOnly: 'You have view only access',
@@ -320,8 +364,8 @@ export const defaultChatStrings: ChatStrings = {
   sidebar: {
     groupToday: 'Today',
     groupYesterday: 'Yesterday',
-    groupThisWeek: 'This Week',
-    groupThisMonth: 'This Month',
+    groupThisWeek: 'This week',
+    groupThisMonth: 'This month',
     groupOlder: 'Older',
     untitled: 'Untitled',
     sharedWithYou: 'Shared with you',
@@ -332,18 +376,18 @@ export const defaultChatStrings: ChatStrings = {
     resizeHint: 'Drag to resize; double-click to reset',
     newChat: 'New chat',
     attachments: 'Attachments',
-    connectTools: 'Connect Tools',
-    manageProviders: 'Manage Providers',
+    connectTools: 'Connect tools',
+    manageProviders: 'Manage providers',
     noConversations: 'No conversations yet',
-    deleteTitle: 'Delete Conversation',
+    deleteTitle: 'Delete conversation',
     deleteBody: 'Are you sure you want to delete this conversation? This action cannot be undone.',
-    renameTitle: 'Rename Conversation',
+    renameTitle: 'Rename conversation',
     renameLabel: 'Conversation title',
     renamePlaceholder: 'Enter a new title',
   },
   attachmentUpload: {
     fileTooLarge: (maxSize) => `File too large. Maximum size is ${maxSize}`,
-    maxFilesAllowed: (max) => `Maximum ${max} files allowed`,
+    maxFilesAllowed: (max) => `Maximum ${countOf(max, 'file', 'files')} allowed`,
     dropFilesHere: 'Drop files here',
     releaseToUpload: 'Release to upload',
     addFiles: 'Add files (drag or click)',
@@ -368,13 +412,13 @@ export const defaultChatStrings: ChatStrings = {
   },
   messageMeta: {
     stopped: 'Stopped',
-    tokens: (total) => `${total.toLocaleString()} tokens`,
+    tokens: (total) => countOf(total, 'token', 'tokens'),
     tokensBreakdown: (prompt, completion) =>
       `${prompt.toLocaleString()} in · ${completion.toLocaleString()} out`,
     copy: 'Copy message',
     edit: 'Edit message',
     regenerate: 'Regenerate response',
-    editPlaceholder: 'Edit your message...',
+    editPlaceholder: 'Edit your message\u2026',
   },
   permissions: {
     choose: 'Choose what the agent may do',
@@ -399,7 +443,7 @@ export const defaultChatStrings: ChatStrings = {
     interrupted: 'Interrupted',
     noOutput: '(no output)',
     diffTruncated: 'Diff truncated',
-    moreLines: '+{count} more lines',
+    moreLines: (count) => `+${countOf(count, 'more line', 'more lines')}`,
     allowOnce: 'Yes, allow this command',
     allowDirectory: 'Yes, and allow this directory for the session',
     deny: 'No, deny this command',

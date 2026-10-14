@@ -203,7 +203,7 @@ describe('ChatMessage', () => {
       render(<ChatMessage {...defaultProps} message={message} isEditing />)
 
       expect(screen.getByRole('textbox')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('Edit your message...')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Edit your message…')).toBeInTheDocument()
     })
 
     it('pre-fills textarea with message content', () => {
