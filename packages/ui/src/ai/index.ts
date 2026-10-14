@@ -69,7 +69,9 @@ export type {
 export {
   ChatProvider,
   type ChatProviderProps,
+  type ChatStream,
   useChat,
+  useChatStream,
 } from './core/ChatProvider'
 export {
   type ChatAction,

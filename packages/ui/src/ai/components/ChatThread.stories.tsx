@@ -5,6 +5,7 @@ import {
   makeAgentTurn,
   makeConversation,
   makeHybridTurn,
+  makeLongConversation,
   makeStaticAdapter,
   StoryChat,
   StoryViewport,
@@ -92,6 +93,49 @@ export const StreamingSimulation: StoryObj<{
   },
   play: async ({ canvasElement }) => {
     sendFromComposer(canvasElement, 'Stream me a reply, slowly.')
+  },
+}
+
+// A reply streamed at the end of a long conversation, beside the list: a
+// token should cost the reply it extends, not the turns above it, the
+// composer or the list.
+export const LongConversation: StoryObj<{
+  turns: number
+  wordDelayMs: number
+  replyWords: number
+}> = {
+  args: { turns: 100, wordDelayMs: 40, replyWords: 200 },
+  argTypes: {
+    turns: { control: { type: 'range', min: 1, max: 500 } },
+    wordDelayMs: { control: { type: 'range', min: 10, max: 500 } },
+    replyWords: { control: { type: 'range', min: 5, max: 400 } },
+  },
+  render: (args) => {
+    const Adapterized = () => {
+      const { turns, wordDelayMs, replyWords } = args
+      const adapter = useMemo(
+        () =>
+          makeStaticAdapter({
+            conversations: [makeLongConversation(turns)],
+            streaming: { wordDelayMs, reasoningMs: 0, replyWords },
+          }),
+        // Adapterized is rebuilt whenever the story's args change.
+        [],
+      )
+      return (
+        <StoryChat adapter={adapter}>
+          <StoryViewport>
+            <ChatLayout>
+              <ChatThread conversationId="conv-1" />
+            </ChatLayout>
+          </StoryViewport>
+        </StoryChat>
+      )
+    }
+    return <Adapterized />
+  },
+  play: async ({ canvasElement }) => {
+    sendFromComposer(canvasElement, 'One more, at length.')
   },
 }
 

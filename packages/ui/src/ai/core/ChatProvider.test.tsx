@@ -4,7 +4,7 @@ import { act } from 'react'
 import type { ChatAdapter, StreamResult } from '../adapter/types'
 import ChatMessageList from '../components/ChatMessageList'
 import type { ChatModel, ChatNavigation, Conversation } from '../types'
-import { ChatProvider, useChat } from './ChatProvider'
+import { ChatProvider, useChat, useChatStream } from './ChatProvider'
 
 const SELECTED_MODEL_KEY = 'aiChat.model'
 const MODEL_B = JSON.stringify('org:acme/model-b')
@@ -97,10 +97,10 @@ const navigation: ChatNavigation = {
   toNewChat: vi.fn(),
 }
 
-let chat: ReturnType<typeof useChat>
+let chat: ReturnType<typeof useChat> & ReturnType<typeof useChatStream>
 
 function Probe() {
-  chat = useChat()
+  chat = { ...useChat(), ...useChatStream() }
   return null
 }
 

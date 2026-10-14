@@ -145,6 +145,32 @@ export function makeConversation(overrides?: {
   }
 }
 
+/** A conversation of `turns` questions and answers, for how the thread holds
+ *  up when it is long: every answer carries markdown to render. */
+export function makeLongConversation(turns: number, id = 'conv-1'): Conversation {
+  const messages: ChatMessage[] = []
+  let parentId: string | null = null
+  for (let i = 0; i < turns; i++) {
+    const question: ChatMessage = makeMessage({
+      role: 'user',
+      content: `Question ${i + 1}: ${words(8 + (i % 7))}?`,
+      author: storyUser,
+      conversationId: id,
+      parentId,
+    })
+    const answer: ChatMessage = makeMessage({
+      role: 'assistant',
+      content: MARKDOWN_TOUR[i % MARKDOWN_TOUR.length] ?? '',
+      model: 'mock:local/canned-small',
+      conversationId: id,
+      parentId: question.id,
+    })
+    messages.push(question, answer)
+    parentId = answer.id
+  }
+  return makeConversation({ id, title: 'A long conversation', messages })
+}
+
 export interface StreamingKnobs {
   wordDelayMs?: number
   reasoningMs?: number

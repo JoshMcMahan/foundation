@@ -1,28 +1,35 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render } from '@testing-library/react'
-import type { useChat } from '../core/ChatProvider'
+import type { useChat, useChatStream } from '../core/ChatProvider'
 import type { ApprovalPart, ChatMessage as Message, ToolCallPart } from '../types'
 import ChatMessageList from './ChatMessageList'
 
-type ChatState = ReturnType<typeof useChat>
+type ChatState = ReturnType<typeof useChat> & ReturnType<typeof useChatStream>
 
 const mockChat = {
   adapter: { attachments: undefined },
   isStreaming: true,
   isThinking: false,
+  streamingContent: '',
   streamingReasoning: '',
   streamingParts: [],
   thinkingStartTime: null,
 } as unknown as ChatState
 
+const messageRenders: string[] = []
+
 vi.mock('../core/ChatProvider', () => ({
   useChat: () => mockChat,
+  useChatStream: () => mockChat,
 }))
 
 vi.mock('./ChatMessage', () => ({
   __esModule: true,
-  default: () => <div data-testid="chat-message" />,
+  default: (props: { message: Message }) => {
+    messageRenders.push(props.message.id)
+    return <div data-testid="chat-message" />
+  },
 }))
 
 vi.mock('../ui/Markdown', () => ({
@@ -310,5 +317,34 @@ describe('ChatMessageList queued messages', () => {
       'Queued · sends when this reply finishes',
       'Queued · sends when this reply finishes',
     ])
+  })
+})
+
+describe('ChatMessageList while a reply streams', () => {
+  afterEach(() => {
+    mockChat.streamingContent = ''
+    mockChat.isStreaming = true
+  })
+
+  it("shows the provider's reply without re-rendering the conversation per token", () => {
+    const messages = [
+      createMockMessage({ id: 'q', role: 'user' }),
+      createMockMessage({ id: 'a', role: 'assistant' }),
+    ]
+    mockChat.streamingContent = 'One'
+    const { rerender } = render(<ChatMessageList messages={messages} allMessages={messages} />)
+    expect(messageRenders.filter((id) => id === 'streaming')).toHaveLength(1)
+    messageRenders.length = 0
+    mockChat.streamingContent = 'One two'
+    rerender(<ChatMessageList messages={messages} allMessages={messages} />)
+    expect(messageRenders).toEqual(['streaming'])
+  })
+
+  it("takes the host's reply over the provider's, null included", () => {
+    const messages = [createMockMessage({ id: 'q', role: 'user' })]
+    mockChat.streamingContent = 'provider text'
+    messageRenders.length = 0
+    render(<ChatMessageList messages={messages} allMessages={messages} streamingMessage={null} />)
+    expect(messageRenders).toEqual(['q'])
   })
 })

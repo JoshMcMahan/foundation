@@ -581,21 +581,23 @@ Without them, those views still edit, but check nothing against the schema.
 `@parallelworks/ui/ai` is a chat interface (thread, composer, streaming,
 sidebar, model selector, attachments, sharing, branching) decoupled from any
 backend through a `ChatAdapter`. State lives in `ChatProvider` and is read
-with `useChat`:
+with `useChat`; the reply being streamed is read with `useChatStream`, apart
+from the rest, so only what draws the reply re-renders for each token:
 
 ```tsx
-import { ChatProvider, ChatLayout, ChatThread } from '@parallelworks/ui/ai'
+import { ChatEmptyState, ChatLayout, ChatProvider, ChatThread } from '@parallelworks/ui/ai'
 import { createMockChatAdapter } from '@parallelworks/ui/ai/mock'
 
-export function Chat() {
+export function Chat({ conversationId }: { conversationId: string | null }) {
   return (
     <ChatProvider
       adapter={createMockChatAdapter()}
       currentUser={{ id: 'u1', username: 'you', name: 'You' }}
-      navigation={{ toConversation: id => {}, toNewChat: () => {}, toAttachments: () => {} }}
+      navigation={{ toConversation: id => {}, toNewChat: () => {} }}
+      activeConversationId={conversationId}
     >
       <ChatLayout>
-        <ChatThread />
+        {conversationId ? <ChatThread conversationId={conversationId} /> : <ChatEmptyState />}
       </ChatLayout>
     </ChatProvider>
   )
@@ -610,7 +612,7 @@ these links, so `navigation` handles only the moves that aren't clicks, such as
 keyboard shortcuts.
 
 `ChatLayout sidebarMode="auto"` shows the conversation list as a drawer over
-the thread when the chat is narrower than `drawerBelowPx` (768 by default),
+the thread when the chat is narrower than `drawerBelowPx` (`DRAWER_BELOW_PX`, 896, by default),
 measured on the chat's own box; `"drawer"` always does, and `"inline"` (the
 default) never does. The reader's toggle drives the list unless the host
 passes `sidebar` (`'expanded' | 'collapsed' | 'hidden'`) and `drawerOpen` to

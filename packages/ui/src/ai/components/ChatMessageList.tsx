@@ -1,4 +1,6 @@
 import {
+  type ComponentProps,
+  memo,
   type ReactNode,
   useCallback,
   useEffect,
@@ -12,7 +14,7 @@ import { useElapsed } from '../../components/relativeTime'
 import { cx } from '../../cx'
 import { formatDuration } from '../../format'
 import { CheckIcon, ClockIcon } from '../../icons'
-import { useChat } from '../core/ChatProvider'
+import { useChat, useChatStream } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import type { ApprovalAnswerValue, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
@@ -23,6 +25,8 @@ import { Reasoning, ReasoningBody } from './Reasoning'
 interface ChatMessageListProps {
   messages: Message[]
   allMessages: Message[]
+  /** The reply being written. Left unset, the list shows the chat provider's
+   *  own stream; a host that streams elsewhere passes its reply, or null. */
   streamingMessage?: Message | null
   queuedMessages?: Message[]
   onRemoveQueued?: (id: string) => void
@@ -62,7 +66,7 @@ interface ChatMessageListProps {
 export default function ChatMessageList({
   messages,
   allMessages,
-  streamingMessage,
+  streamingMessage: streamingMessageProp,
   queuedMessages,
   onRemoveQueued,
   canRemoveQueued,
@@ -85,15 +89,32 @@ export default function ChatMessageList({
   footer,
   workingIndicator = true,
 }: ChatMessageListProps) {
-  const {
-    adapter,
-    isStreaming: providerStreaming,
-    isThinking,
-    streamingReasoning,
-    streamingParts,
-    thinkingStartTime,
-  } = useChat()
+  const { adapter, isStreaming: providerStreaming } = useChat()
+  const { isThinking, streamingContent, streamingReasoning, streamingParts, thinkingStartTime } =
+    useChatStream()
   const isStreaming = isStreamingProp ?? providerStreaming
+  const conversationId = messages[0]?.conversationId
+  // One object per token rather than per render, so the streaming row's memo
+  // holds while something else re-renders the list.
+  const providerStreamingMessage = useMemo<Message | null>(
+    () =>
+      providerStreaming && streamingContent
+        ? {
+            id: 'streaming',
+            role: 'assistant',
+            content: streamingContent,
+            timestamp: '',
+            ...(conversationId ? { conversationId } : {}),
+          }
+        : null,
+    [providerStreaming, streamingContent, conversationId],
+  )
+  const streamingMessage =
+    streamingMessageProp === undefined ? providerStreamingMessage : streamingMessageProp
+  const streamingPartsMessage = useMemo<Message>(
+    () => ({ id: 'streaming-parts', role: 'assistant', parts: streamingParts }),
+    [streamingParts],
+  )
   const { strings } = useChatConfig()
   const { common } = useStrings()
   const tThinking = strings.thinking
@@ -111,20 +132,8 @@ export default function ChatMessageList({
   const containerRef = useRef<HTMLDivElement>(null)
   const reasoningScrollRef = useRef<HTMLDivElement>(null)
 
-  // Track which messages existed on initial load so we don't animate them
-  const knownMessageIdsRef = useRef<Set<string>>(new Set())
-  const prevMessageCountRef = useRef(messages.length)
-  useEffect(() => {
-    const prev = prevMessageCountRef.current
-    if (messages.length > 0 && (prev === 0 || messages.length < prev)) {
-      // Bulk load (0 → many) or conversation switch (count shrank) — mark all as known
-      knownMessageIdsRef.current = new Set(messages.map((m) => m.id))
-    }
-    prevMessageCountRef.current = messages.length
-  }, [messages])
-
   const messageCount = messages.length
-  const streamingContent = streamingMessage?.content
+  const streamingText = streamingMessage?.content
   const streamingMessageParts = streamingMessage?.parts
 
   const [finalThinkingDuration, setFinalThinkingDuration] = useState<number | null>(null)
@@ -263,7 +272,7 @@ export default function ChatMessageList({
     }
     containerRef.current.scrollTop = containerRef.current.scrollHeight
   }, [
-    streamingContent,
+    streamingText,
     streamingParts,
     streamingMessageParts,
     messageCount,
@@ -284,9 +293,6 @@ export default function ChatMessageList({
     }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messageCount, isStreaming])
-
-  // Pseudo messages render nothing, so the latest is the last one that shows.
-  const lastIndex = messages.findLastIndex((m) => !m.pseudo)
 
   // If no messages and no streaming, just return empty scrollable container
   // The parent page handles the welcome/empty state UI. Queued messages still
@@ -318,41 +324,25 @@ export default function ChatMessageList({
       className="chat-thread flex-1 overflow-y-auto theme-scrollbar flex flex-col bg-(--theme-panel-bg)"
     >
       <div className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 flex-1 px-4">
-        {messages.map((message, i) => {
-          // Recorded blocks flagged by an agent adapter are not the human
-          // speaking; unflagged messages are untouched.
-          if (message.pseudo) {
-            return null
-          }
-          const isNew = !knownMessageIdsRef.current.has(message.id)
-          // Mark as known so it won't animate on re-render
-          if (isNew) {
-            knownMessageIdsRef.current.add(message.id)
-          }
-          return (
-            <div key={message.id} className={isNew ? 'animate-chat-enter' : ''}>
-              <ChatMessage
-                message={message}
-                allMessages={allMessages}
-                flush={flush}
-                latest={i === lastIndex && !streamingMessage}
-                isEditing={editingMessageId === message.id}
-                showAuthor={showAuthor}
-                currentUsername={currentUsername}
-                attachmentDownloadUrl={attachmentDownloadUrl}
-                onOpenAttachment={onOpenAttachment}
-                onNavigateBranch={onNavigateBranch}
-                onEdit={onEditMessage}
-                onSaveEdit={onSaveEdit}
-                onCancelEdit={onCancelEdit}
-                onRegenerate={onRegenerateMessage}
-                onRetry={onRetryMessage}
-                onOpenReasoning={onOpenReasoning}
-                onApprovalAnswer={onApprovalAnswer}
-              />
-            </div>
-          )
-        })}
+        <MessageRows
+          messages={messages}
+          allMessages={allMessages}
+          streaming={!!streamingMessage}
+          flush={flush}
+          editingMessageId={editingMessageId}
+          showAuthor={showAuthor}
+          currentUsername={currentUsername}
+          attachmentDownloadUrl={attachmentDownloadUrl}
+          onOpenAttachment={onOpenAttachment}
+          onNavigateBranch={onNavigateBranch}
+          onEditMessage={onEditMessage}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
+          onRegenerateMessage={onRegenerateMessage}
+          onRetryMessage={onRetryMessage}
+          onOpenReasoning={onOpenReasoning}
+          onApprovalAnswer={onApprovalAnswer}
+        />
         {/* Thinking / "Thought for" section — visible during and after thinking */}
         {isStreaming && streamingReasoning && (
           <div key="thinking" className="animate-chat-enter">
@@ -392,14 +382,7 @@ export default function ChatMessageList({
               layout where parts precede content. */}
         {isStreaming && streamingParts.length > 0 && (
           <div key="streaming-parts" className={cx('animate-chat-enter py-1', !flush && 'px-4')}>
-            <AgentMessageParts
-              message={{
-                id: 'streaming-parts',
-                role: 'assistant',
-                parts: streamingParts,
-              }}
-              isStreaming={isStreaming}
-            />
+            <AgentMessageParts message={streamingPartsMessage} isStreaming={isStreaming} />
           </div>
         )}
         {/* Working indicator — until the answer starts streaming */}
@@ -505,3 +488,99 @@ function ThinkingLabel({
   }
   return t.thoughtFor(formatDuration(finalDuration ?? 0))
 }
+
+// The list's optional props arrive here as possibly undefined.
+type Passed<T> = { [K in keyof T]-?: T[K] | undefined }
+
+type MessageRowsProps = Pick<ChatMessageListProps, 'messages' | 'allMessages'> &
+  Passed<
+    Pick<
+      ChatMessageListProps,
+      | 'messages'
+      | 'allMessages'
+      | 'flush'
+      | 'editingMessageId'
+      | 'showAuthor'
+      | 'currentUsername'
+      | 'onNavigateBranch'
+      | 'onEditMessage'
+      | 'onSaveEdit'
+      | 'onCancelEdit'
+      | 'onRegenerateMessage'
+      | 'onRetryMessage'
+      | 'onOpenReasoning'
+      | 'onApprovalAnswer'
+    >
+  > & {
+    /** A reply is being written below these, so none of them is the latest. */
+    streaming: boolean
+    attachmentDownloadUrl: ((id: string) => string) | undefined
+    onOpenAttachment: ComponentProps<typeof ChatMessage>['onOpenAttachment']
+  }
+
+/** The conversation so far. Memoized apart from the list, which re-renders
+ *  for every streamed token, so a long conversation is not walked per token. */
+const MessageRows = memo(function MessageRows({
+  messages,
+  allMessages,
+  streaming,
+  flush,
+  editingMessageId,
+  showAuthor,
+  currentUsername,
+  attachmentDownloadUrl,
+  onOpenAttachment,
+  onNavigateBranch,
+  onEditMessage,
+  onSaveEdit,
+  onCancelEdit,
+  onRegenerateMessage,
+  onRetryMessage,
+  onOpenReasoning,
+  onApprovalAnswer,
+}: MessageRowsProps) {
+  // Rows enter with a short animation only when they are appended to what
+  // was already on screen; a conversation loaded or switched to appears at
+  // once. The ids shown at the last commit decide it, read here and written
+  // after commit, so a render React repeats or discards changes nothing.
+  const shownRef = useRef<ReadonlySet<string>>(new Set())
+  const shown = shownRef.current
+  const appended = shown.size > 0 && messages.some((m) => shown.has(m.id))
+  useLayoutEffect(() => {
+    shownRef.current = new Set(messages.map((m) => m.id))
+  }, [messages])
+
+  // Pseudo messages render nothing, so the latest is the last one that shows.
+  const lastIndex = messages.findLastIndex((m) => !m.pseudo)
+  return messages.map((message, i) => {
+    // Recorded blocks flagged by an agent adapter are not the human
+    // speaking; unflagged messages are untouched.
+    if (message.pseudo) {
+      return null
+    }
+    const isNew = appended && !shown.has(message.id)
+    return (
+      <div key={message.id} className={isNew ? 'animate-chat-enter' : undefined}>
+        <ChatMessage
+          message={message}
+          allMessages={allMessages}
+          flush={flush}
+          latest={i === lastIndex && !streaming}
+          isEditing={editingMessageId === message.id}
+          showAuthor={showAuthor}
+          currentUsername={currentUsername}
+          attachmentDownloadUrl={attachmentDownloadUrl}
+          onOpenAttachment={onOpenAttachment}
+          onNavigateBranch={onNavigateBranch}
+          onEdit={onEditMessage}
+          onSaveEdit={onSaveEdit}
+          onCancelEdit={onCancelEdit}
+          onRegenerate={onRegenerateMessage}
+          onRetry={onRetryMessage}
+          onOpenReasoning={onOpenReasoning}
+          onApprovalAnswer={onApprovalAnswer}
+        />
+      </div>
+    )
+  })
+})

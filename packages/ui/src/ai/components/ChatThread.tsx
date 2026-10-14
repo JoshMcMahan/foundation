@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import useDragDrop from '../core/useDragDrop'
-import type { AttachmentMeta, ChatMessage as Message } from '../types'
+import type { AttachmentMeta } from '../types'
 import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatMessageList from './ChatMessageList'
@@ -29,8 +29,6 @@ export default function ChatThread({ conversationId }: { conversationId: string 
     sendMessage,
     retryMessage,
     isLoadingConversation,
-    isStreaming,
-    streamingContent,
     navigateToBranch,
     queuedMessages,
     removeQueuedMessage,
@@ -146,21 +144,6 @@ export default function ChatThread({ conversationId }: { conversationId: string 
   })
   const attachmentsAvailable = !!adapter.attachments
 
-  // Build streaming message for display (memoized to avoid new object identity each render)
-  const streamingMessage = useMemo<Message | null>(
-    () =>
-      isStreaming && streamingContent
-        ? {
-            id: 'streaming',
-            conversationId,
-            role: 'assistant',
-            content: streamingContent,
-            timestamp: '',
-          }
-        : null,
-    [isStreaming, streamingContent, conversationId],
-  )
-
   // Get messages from current conversation
   const messages = currentConversation?.messages || []
 
@@ -203,7 +186,6 @@ export default function ChatThread({ conversationId }: { conversationId: string 
         <ChatMessageList
           messages={messages}
           allMessages={messages}
-          streamingMessage={streamingMessage}
           queuedMessages={queuedMessages}
           onRemoveQueued={removeQueuedMessage}
           editingMessageId={editingState?.messageId}
