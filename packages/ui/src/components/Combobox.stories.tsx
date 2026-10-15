@@ -294,3 +294,132 @@ export const Tags: StoryObj<TagsArgs> = {
     await expect(await canvas.findByRole('button', { name: 'Remove climate' })).toBeInTheDocument()
   },
 }
+
+interface Region {
+  id: string
+  name: string
+  zone: string
+  nodes: number
+  gpus: string
+}
+
+const areas: Region[] = [
+  { id: 'use1', name: 'us-east-1', zone: 'Virginia', nodes: 48, gpus: 'H100' },
+  { id: 'usw2', name: 'us-west-2', zone: 'Oregon', nodes: 32, gpus: 'A100' },
+  { id: 'euc1', name: 'eu-central-1', zone: 'Frankfurt', nodes: 12, gpus: 'L4' },
+  { id: 'apn1', name: 'ap-northeast-1', zone: 'Tokyo', nodes: 6, gpus: 'None' },
+]
+
+function RegionDetails({ region }: { region: Region | undefined }) {
+  if (!region) {
+    return <p className="m-0 p-4 text-xs">Highlight a region to see its capacity.</p>
+  }
+  return (
+    <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-4 text-xs">
+      <dt className="text-(--theme-muted-text-color)">Zone</dt>
+      <dd className="m-0">{region.zone}</dd>
+      <dt className="text-(--theme-muted-text-color)">Nodes</dt>
+      <dd className="m-0">{region.nodes}</dd>
+      <dt className="text-(--theme-muted-text-color)">GPUs</dt>
+      <dd className="m-0">{region.gpus}</dd>
+    </dl>
+  )
+}
+
+function DetailsDemo({ width, ...args }: FieldArgs & { width: number }) {
+  const [value, setValue] = useState<string[]>([])
+  const byId = (id: string | undefined) => areas.find((region) => region.id === id)
+  return (
+    <div style={{ width }}>
+      <Combobox
+        multiple
+        aria-label="Regions"
+        items={areas.map((region) => ({
+          value: region.id,
+          label: region.name,
+          description: `${region.nodes} nodes`,
+          // The pane is hidden from assistive technology, so the option says what it would.
+          accessibleDescription: `${region.nodes} nodes in ${region.zone}, ${region.gpus} GPUs`,
+          badge:
+            region.gpus === 'H100' ? (
+              <span className="rounded bg-(--theme-muted-panel-bg) px-1 text-[10px]">Fastest</span>
+            ) : undefined,
+        }))}
+        value={value}
+        onValueChange={setValue}
+        disabled={args.disabled}
+        placeholder={args.placeholder}
+        details={(id) => <RegionDetails region={byId(id)} />}
+        detailsSummary={(id) => {
+          const region = byId(id)
+          return region && `${region.zone} · ${region.gpus} GPUs`
+        }}
+      />
+    </div>
+  )
+}
+
+/** A pane beside the list follows the highlighted item, from the keyboard or the pointer. Below
+ *  30rem it gives way to a line under the highlighted item. */
+export const Details: StoryObj<FieldArgs & { width: number }> = {
+  args: { width: 560 },
+  argTypes: { width: { control: { type: 'range', min: 280, max: 720, step: 20 } } },
+  decorators: [(Story) => <div>{Story()}</div>],
+  render: (args) => <DetailsDemo {...args} />,
+  play: async ({ canvasElement }) => {
+    const field = within(canvasElement).getByRole('combobox', { name: 'Regions' })
+    await userEvent.click(field)
+    await userEvent.keyboard('{ArrowDown}')
+    await expect(
+      await screen.findByRole('option', { description: '48 nodes in Virginia, H100 GPUs' }),
+    ).toBeInTheDocument()
+  },
+}
+
+/** The same at a phone's width: the line under the highlighted item stands in for the pane. */
+export const DetailsNarrow: StoryObj<FieldArgs & { width: number }> = {
+  ...Details,
+  args: { width: 340 },
+}
+
+function HostSearchDemo(args: FieldArgs) {
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<{ query: string; items: string[] }>({ query: '', items: [] })
+  const loading = query !== found.query
+  return (
+    <Combobox
+      multiple
+      aria-label="Users"
+      items={found.items}
+      onQueryChange={(next) => {
+        setQuery(next)
+        // Stands in for a request to the server.
+        setTimeout(
+          () =>
+            setFound({
+              query: next,
+              items: ['ada', 'grace', 'katherine', 'margaret']
+                .filter((name) => name.includes(next.toLowerCase()))
+                .map((name) => `${name}@example.com`),
+            }),
+          600,
+        )
+      }}
+      loading={loading}
+      disabled={args.disabled}
+      placeholder="Search users"
+    />
+  )
+}
+
+/** The host filters, such as on a server: `items` show as given, with `loading` while it searches. */
+export const HostSearch: StoryObj<FieldArgs> = {
+  render: (args) => <HostSearchDemo {...args} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.type(within(canvasElement).getByRole('combobox', { name: 'Users' }), 'gr')
+    await expect(await screen.findByRole('status')).toHaveTextContent('Searching…')
+    await expect(
+      await screen.findByRole('option', { name: 'grace@example.com' }, { timeout: 2000 }),
+    ).toBeInTheDocument()
+  },
+}

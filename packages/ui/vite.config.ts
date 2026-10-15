@@ -72,6 +72,7 @@ export default defineConfig({
         'graph/index': 'src/graph/index.ts',
         'editor/index': 'src/editor/index.ts',
         'file-explorer/index': 'src/file-explorer/index.ts',
+        'access/index': 'src/access/index.ts',
         'list/index': 'src/list/index.ts',
         'form/index': 'src/form/index.ts',
         'ai/index': 'src/ai/index.ts',

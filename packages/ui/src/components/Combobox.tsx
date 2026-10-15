@@ -22,10 +22,13 @@ import {
   type ComboboxItems,
   type ComboboxLeaf,
   isComboboxGroup as isGroup,
+  optionNaming,
   pickerItemClassName,
 } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
+import { Loader } from './Loader'
+import { OptionDescription } from './OptionDescription'
 import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
@@ -86,6 +89,25 @@ export type ComboboxProps<Value = string> = FieldProps &
     trigger?: ReactElement | undefined
     /** A hint on the trigger button. */
     triggerTooltip?: ReactNode
+    /** A pane beside the list about the highlighted item, such as who is in a group; it gets
+     *  undefined while nothing is highlighted. It follows the highlight from the keyboard and
+     *  the pointer alike, and is hidden from assistive technology, so each item's
+     *  `accessibleDescription` must say what matters in it. Where the list is narrower than
+     *  30rem the pane has no room, and `detailsSummary` shows under the highlighted item. */
+    details?: ((value: Value | undefined) => ReactNode) | undefined
+    /** Called as the highlight moves, from the keyboard or the pointer, such as to load what
+     *  `details` shows; undefined once nothing is highlighted. */
+    onItemHighlighted?: ((value: Value | undefined) => void) | undefined
+    /** A line about the highlighted item, under it, where the list has no room for `details`. */
+    detailsSummary?: ((value: Value) => ReactNode) | undefined
+    /** Called as the typed text changes. With it, the host does the filtering: the list shows
+     *  `items` as given, such as the results of a search on the server. */
+    onQueryChange?: ((query: string) => void) | undefined
+    /** The host's search is under way. */
+    loading?: boolean | undefined
+    /** The area the open list stays inside, such as a drawer's body above its footer; by
+     *  default, the viewport. With `details`, the list grows to fill it. */
+    collisionBoundary?: Element | null | undefined
   }
 
 export interface AutocompleteProps extends FieldProps {
@@ -211,6 +233,12 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     trigger,
     triggerTooltip,
     size = 'md',
+    details,
+    detailsSummary,
+    onItemHighlighted,
+    onQueryChange,
+    loading = false,
+    collisionBoundary,
   } = props
   const entries = useEntries(items)
   const filter = useEntryFilter()
@@ -218,6 +246,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   const list = useRef<VirtualListHandle>(null)
   const uid = useId()
   const [inputValue, setInputValue] = useState<string | null>(null)
+  const [highlighted, setHighlighted] = useState<Entry<Value> | undefined>(undefined)
 
   // Values the list doesn't have still show, under itemToStringLabel.
   const entryOf = (value: Value): Entry<Value> =>
@@ -284,16 +313,31 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     />
   )
 
+  const isHighlighted = (entry: Entry<Value>) =>
+    highlighted !== undefined &&
+    !entry.created &&
+    !highlighted.created &&
+    isItemEqualToValue(entry.value, highlighted.value)
   const itemRow = (entry: Entry<Value>, rowProps: RowProps) => (
     <BaseCombobox.Item
       key={rowProps.key}
       value={entry}
       disabled={entry.disabled || (full && !isChosen(entry))}
       {...rowProps.props}
-      {...optionNaming(uid, rowProps.props.index, entry)}
+      {...optionNaming(`${uid}${rowProps.props.index}`, entry)}
       className={pickerItemClassName}
     >
-      <ItemContent entry={entry} id={`${uid}${rowProps.props.index}`} />
+      <ItemContent entry={entry} id={`${uid}${rowProps.props.index}`}>
+        {detailsSummary && isHighlighted(entry) && (
+          // The pane's stand-in where it has no room; seen only, as the pane is.
+          <span
+            aria-hidden="true"
+            className="mt-0.5 text-xs leading-snug text-(--theme-muted-text-color) @min-[30rem]/picker:hidden"
+          >
+            {detailsSummary(entry.value)}
+          </span>
+        )}
+      </ItemContent>
       <BaseCombobox.ItemIndicator className="ml-auto flex shrink-0 items-center">
         <CheckIcon aria-hidden="true" className="size-3.5" />
       </BaseCombobox.ItemIndicator>
@@ -319,7 +363,14 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
         statusGroups={entries.statusGroups}
         query={inputValue ?? ''}
         header={<div className="border-b border-(--theme-border) p-1.5">{input}</div>}
-        className="w-max min-w-(--anchor-width) max-w-[min(28rem,var(--available-width))]"
+        className={
+          details
+            ? 'w-[min(36rem,var(--available-width))]'
+            : 'w-max min-w-(--anchor-width) max-w-[min(28rem,var(--available-width))]'
+        }
+        loading={loading ? t.searching : undefined}
+        details={details?.(highlighted?.created ? undefined : highlighted?.value)}
+        collisionBoundary={collisionBoundary}
         renderItem={itemRow}
       />
     </>
@@ -382,18 +433,33 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
         empty={t.noOptionsFound}
         statusGroups={entries.statusGroups}
         query={inputValue ?? ''}
+        loading={loading ? t.searching : undefined}
+        details={details?.(highlighted?.created ? undefined : highlighted?.value)}
+        collisionBoundary={collisionBoundary}
         renderItem={itemRow}
       />
     </>
   )
   const root = {
     items: listItems,
-    filter,
     isItemEqualToValue: (a: Entry<Value>, b: Entry<Value>) => isItemEqualToValue(a.value, b.value),
     itemToStringLabel: entryLabel,
-    onInputValueChange: setInputValue,
-    onItemHighlighted: (_: unknown, { index, reason }: { index: number; reason: string }) =>
-      list.current?.reveal(index, reason),
+    // A host that searches for itself gets the items as it gave them.
+    filter: onQueryChange ? null : filter,
+    onInputValueChange: (next: string) => {
+      setInputValue(next)
+      onQueryChange?.(next)
+    },
+    onItemHighlighted: (
+      entry: Entry<Value> | undefined,
+      { index, reason }: { index: number; reason: string },
+    ) => {
+      if (details || detailsSummary) {
+        setHighlighted(entry)
+      }
+      onItemHighlighted?.(entry && !entry.created ? entry.value : undefined)
+      list.current?.reveal(index, reason)
+    },
     disabled,
     required,
     virtualized: true,
@@ -407,7 +473,14 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       multiple
       value={toEntries(props.value)}
       defaultValue={toEntries(props.defaultValue)}
-      onValueChange={(next) => {
+      onValueChange={(next, details) => {
+        // Escape on a closed list would drop every chip at once, with no way back; it's left
+        // to whatever holds the field instead, such as a form that steps back or a dialog.
+        if (details.reason === 'escape-key') {
+          details.cancel()
+          details.allowPropagation()
+          return
+        }
         setUncontrolledCount(next.length)
         props.onValueChange?.(next.map((entry) => entry.value))
       }}
@@ -493,7 +566,7 @@ export function Autocomplete({
             value={entry}
             disabled={entry.disabled}
             {...rowProps.props}
-            {...optionNaming(uid, rowProps.props.index, entry)}
+            {...optionNaming(`${uid}${rowProps.props.index}`, entry)}
             className={pickerItemClassName}
           >
             <ItemContent entry={entry} id={`${uid}${rowProps.props.index}`} />
@@ -504,33 +577,30 @@ export function Autocomplete({
   )
 }
 
-/** An option is named by its label, with its description read after it rather than as part of
- *  its name. */
-function optionNaming<Value>(uid: string, index: number, entry: Entry<Value>) {
-  return {
-    'aria-labelledby': `${uid}${index}label`,
-    'aria-describedby': entry.description ? `${uid}${index}description` : undefined,
-  }
-}
-
-function ItemContent<Value>({ entry, id }: { entry: Entry<Value>; id: string }) {
+function ItemContent<Value>({
+  entry,
+  id,
+  children,
+}: {
+  entry: Entry<Value>
+  id: string
+  /** Under the description. */
+  children?: ReactNode
+}) {
   return (
     <>
       {entry.icon && <span className="flex shrink-0 items-center">{entry.icon}</span>}
       <span className="flex min-w-0 flex-col">
-        <Tooltip content={entry.label} overflowOnly>
-          <span id={`${id}label`} className="truncate">
-            {entry.label}
-          </span>
-        </Tooltip>
-        {entry.description && (
-          <span
-            id={`${id}description`}
-            className="text-xs leading-snug text-(--theme-muted-text-color)"
-          >
-            {entry.description}
-          </span>
-        )}
+        <span className="flex min-w-0 items-center gap-2">
+          <Tooltip content={entry.label} overflowOnly>
+            <span id={`${id}label`} className="truncate">
+              {entry.label}
+            </span>
+          </Tooltip>
+          {entry.badge}
+        </span>
+        <OptionDescription id={`${id}description`} item={entry} />
+        {children}
       </span>
     </>
   )
@@ -574,6 +644,9 @@ function ListPopup<Value>({
   query = '',
   header,
   className = 'w-(--anchor-width) max-w-(--available-width)',
+  loading,
+  details,
+  collisionBoundary,
   renderItem,
 }: {
   listRef: RefObject<VirtualListHandle | null>
@@ -585,27 +658,79 @@ function ListPopup<Value>({
   header?: ReactNode
   /** Sizes the popup; by default it matches the field. */
   className?: string | undefined
+  /** Says a search is under way. */
+  loading?: string | undefined
+  /** The pane beside the list, for the highlighted item. */
+  details?: ReactNode
+  collisionBoundary?: Element | null | undefined
   renderItem: (entry: Entry<Value>, row: RowProps) => ReactElement
 }) {
+  const withDetails = details !== undefined
+  const list = (
+    <>
+      {loading && (
+        <div
+          role="status"
+          className="flex items-center gap-2 px-3 py-2 text-(--theme-muted-text-color)"
+        >
+          <Loader inline decorative size="1em" />
+          {loading}
+        </div>
+      )}
+      {/* Status headings say why nothing can be picked, so the empty message would repeat them. */}
+      {empty && !loading && statusGroups.length === 0 && (
+        <BaseCombobox.Empty className="px-3 py-2 text-(--theme-muted-text-color) empty:hidden">
+          {empty}
+        </BaseCombobox.Empty>
+      )}
+      <BaseCombobox.List className={cx(withDetails && 'min-h-0 flex-1')}>
+        <VirtualList<Value>
+          ref={listRef}
+          statusGroups={statusGroups}
+          query={query}
+          tall={withDetails}
+          renderItem={renderItem}
+        />
+      </BaseCombobox.List>
+    </>
+  )
   return (
     <BaseCombobox.Portal>
-      <BaseCombobox.Positioner align="start" sideOffset={4} className={positionerClassName}>
-        <BaseCombobox.Popup className={cx('overflow-hidden', className, panelClassName)}>
-          {header}
-          {/* Status headings say why nothing can be picked, so the empty message would repeat them. */}
-          {empty && statusGroups.length === 0 && (
-            <BaseCombobox.Empty className="px-3 py-2 text-(--theme-muted-text-color) empty:hidden">
-              {empty}
-            </BaseCombobox.Empty>
+      <BaseCombobox.Positioner
+        align="start"
+        sideOffset={4}
+        className={positionerClassName}
+        {...(collisionBoundary && { collisionBoundary })}
+      >
+        <BaseCombobox.Popup
+          className={cx(
+            'overflow-hidden',
+            // The popup is the container its narrow layout answers to, wherever the field sits.
+            // With a pane beside the list it takes the room there is, so the pane rarely
+            // scrolls and many rows show, but not past a height that would be all list.
+            withDetails && '@container/picker flex h-[min(40rem,var(--available-height))] flex-col',
+            className,
+            panelClassName,
           )}
-          <BaseCombobox.List>
-            <VirtualList<Value>
-              ref={listRef}
-              statusGroups={statusGroups}
-              query={query}
-              renderItem={renderItem}
-            />
-          </BaseCombobox.List>
+        >
+          {header}
+          {withDetails ? (
+            <div className="flex min-h-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col">{list}</div>
+              <div
+                aria-hidden="true"
+                data-testid="combobox-details"
+                className="hidden w-1/2 shrink-0 overflow-y-auto overscroll-contain border-l border-(--theme-border) bg-(--theme-panel-bg) @min-[30rem]/picker:block"
+              >
+                {details}
+                {/* Fades what runs on below the edge, so a cut line reads as more to scroll to;
+                    the padding above it lets the last line clear it at the end. */}
+                <div className="pointer-events-none sticky bottom-0 -mt-6 h-6 bg-linear-to-t from-(--theme-panel-bg) to-transparent" />
+              </div>
+            </div>
+          ) : (
+            list
+          )}
         </BaseCombobox.Popup>
       </BaseCombobox.Positioner>
     </BaseCombobox.Portal>
@@ -645,11 +770,14 @@ function VirtualList<Value>({
   ref,
   statusGroups,
   query,
+  tall,
   renderItem,
 }: {
   ref: Ref<VirtualListHandle>
   statusGroups: readonly EntryGroup<Value>[]
   query: string
+  /** Room for more rows, beside a details pane as tall. */
+  tall: boolean
   renderItem: (entry: Entry<Value>, row: RowProps) => ReactElement
 }) {
   const filtered = BaseCombobox.useFilteredItems<Entry<Value> | EntryGroup<Value>>()
@@ -704,7 +832,10 @@ function VirtualList<Value>({
     <div
       role="presentation"
       ref={scrollerRef}
-      className="max-h-[min(15rem,var(--available-height))] overflow-auto overscroll-contain"
+      className={cx(
+        'overflow-auto overscroll-contain',
+        tall ? 'max-h-full' : 'max-h-[min(15rem,var(--available-height))]',
+      )}
       style={{ height: total }}
     >
       <div role="presentation" className="relative w-full" style={{ height: total }}>

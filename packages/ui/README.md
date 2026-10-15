@@ -14,6 +14,7 @@ so an application ships only what it imports:
 | `./editor` | Monaco editor (`monaco-editor` is an optional peer), loaded on first mount with the languages it needs; YAML validation, completion and hover run in a bundled worker |
 | `./logviewer` | log viewer with ANSI color and search |
 | `./file-explorer` | object storage explorer over a host-supplied provider |
+| `./access` | `AccessDrawer`: who has access to a resource, and granting roles to groups |
 | `./ai`, `./ai/openai`, `./ai/mock` | chat interface and adapters |
 | `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css` | stylesheets |
 
@@ -63,7 +64,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | One of a few choices, all shown | `RadioGroup` in a form; `SegmentedControl` in a toolbar, or as a field's control in a `Field group` |
 | Narrowing a list by values, such as statuses: several at once, or one or none | `ToggleGroup` |
 | Narrowing what is shown by typing | `SearchInput`; `ListSearchControl` on a list page's toolbar |
-| A value from a list | `Select`, or `Combobox` when the list needs filtering |
+| A value from a list | `Select`, or `Combobox` when the list needs filtering; its `details` pane describes the highlighted item, and `onQueryChange` hands the search to the host |
 | Free text with suggestions, or tags | `Autocomplete`; `Combobox` with `multiple creatable` |
 | A range | `Slider` |
 | A page's breadcrumbs, title and commands | `PageHeader`, shown by the shell's `PageHeaderBar` (see [Page header](#page-header)) |
@@ -76,7 +77,8 @@ Each need has one component. Reach for it before styling markup by hand.
 | A hint for a control | `Tooltip`; a `Field`'s `help` for more about a field, which its control reads and which opens as Tab reaches it; `InfoTip` for help about anything else |
 | A preview of what a link leads to | `HoverCard` |
 | A task that blocks the page | `Modal`, laid out with `title`, `description` and `footer` as a `Drawer` is; `ConfirmModal` to confirm one action; `CreateModal` to name and create one thing |
-| A panel beside the page | `Drawer` |
+| A panel beside the page | `Drawer`; `onBack` for a view it opens over its first, such as a form |
+| Who has access to something, and changing it | `AccessDrawer` from `./access` (see [Access](#access)) |
 | A message set into the page: guidance, a warning, an error | `Callout`; `variant="bar"` across a surface under its header |
 | A passing notice, or the progress of work in the background | `toast` |
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
@@ -469,6 +471,52 @@ Tones are `info`, `success`, `warning` and `error`. A toast closes itself after
 five seconds, eight for a warning or an error, pausing while the pointer or focus
 is on it; `timeout: false` keeps it. `loading` stays until an update settles it
 into a tone. Pass an `id` to replace a toast rather than stack another.
+
+## Access
+
+`AccessDrawer` shows who holds which role on one resource, and grants and takes
+them away. A role is a named set of permissions; groups are granted roles, never
+permissions one by one. Two roles may overlap: the drawer works the overlap out
+from each role's `permissions` and says so as a hint ("Sudo covers this too"),
+and before a role is taken away it lists exactly what the group loses, the
+permissions no role it keeps still gives, and what it keeps.
+
+```tsx
+import { AccessDrawer, type AccessChange } from '@parallelworks/ui/access'
+
+<AccessDrawer
+  open={open}
+  onClose={close}
+  resourceName={cluster.name}
+  roles={[{ id: 'login', name: 'Login', description: 'Sign in.', permissions: ['cluster:login'] }]}
+  permissions={[{ id: 'cluster:login', label: 'Sign in' }]}
+  groups={[{ id: 'org', name: 'Everyone', kind: 'everyone', memberCount: 214 }, ...granted]}
+  grants={grants} // { groupId, roleId }[]
+  onChange={(change: AccessChange) => api.patch(change)} // { grant, revoke }
+  describeGroup={(id, signal) => api.group(id, { signal })}
+  searchGroups={(query, signal) => api.groups({ query, signal })}
+  readOnly={!canManage}
+  readOnlyReason="Only people with the Admin role can change it."
+/>
+```
+
+- `onChange` gets one change at a time, holding only grants that change
+  something. Return a promise: its rows show they are saving until it settles,
+  and when it rejects the drawer says that nothing changed and offers Retry. A
+  saved change offers Undo in a toast. Pass the new grants back through
+  `grants`; the drawer never keeps its own copy.
+- `groups` holds every group that has a role here, and everyone if the resource
+  can be granted to everyone (`kind: 'everyone'`, at most one). Without
+  `searchGroups` it is also the list to grant to; with it, the picker asks the
+  host as the reader types.
+- `describeGroup` fills the pane beside the group picker for the highlighted
+  group: where it comes from, its first members and when it last changed. It is
+  asked once per group while the drawer is mounted, and aborted when the
+  highlight moves on.
+- `highImpact` roles carry a tag, and granting anything to everyone says how
+  many people it reaches and asks to confirm.
+- A development build warns about duplicate ids and grants that name unknown
+  roles or groups.
 
 ## Host chrome
 

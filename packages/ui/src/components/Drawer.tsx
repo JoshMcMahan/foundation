@@ -1,7 +1,7 @@
 import { Drawer as BaseDrawer } from '@base-ui/react/drawer'
 import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
-import { CloseIcon } from '../icons'
+import { ArrowLeftIcon, CloseIcon } from '../icons'
 import { closeHandler, dialogFooterClassName } from './dismiss'
 import { IconButton } from './IconButton'
 import { useStrings } from './Provider'
@@ -15,6 +15,11 @@ export interface DrawerProps
   title?: ReactNode
   /** A line under the title. */
   description?: ReactNode
+  /** Adds a back arrow before the title, for a view the drawer opened over its first, such as
+   *  a form; the drawer stays one drawer rather than another stacking on it. */
+  onBack?: (() => void) | undefined
+  /** Names the back arrow; defaults to the provider's `back`. */
+  backLabel?: string | undefined
   /** Actions along the bottom edge, such as Cancel and Save; they stay in view as the body scrolls. */
   footer?: ReactNode
   /** The edge it slides in from, and the way a swipe dismisses it. */
@@ -58,6 +63,8 @@ export function Drawer({
   onClose,
   title,
   description,
+  onBack,
+  backLabel,
   footer,
   side = 'right',
   width = 480,
@@ -147,6 +154,14 @@ export function Drawer({
             <BaseDrawer.Content className="flex min-h-0 flex-1 flex-col">
               {header && (
                 <div className="flex shrink-0 items-start gap-3 border-b border-(--theme-border) px-4 py-3">
+                  {onBack && (
+                    <IconButton
+                      icon={<ArrowLeftIcon />}
+                      label={backLabel ?? common.back}
+                      onClick={onBack}
+                      className="-my-1 -ms-1.5"
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     {title !== undefined && (
                       // A long name wraps rather than hiding its end, which may be what tells two apart.

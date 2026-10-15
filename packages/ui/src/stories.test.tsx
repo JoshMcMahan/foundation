@@ -9,6 +9,7 @@ import { cleanup, render } from '@testing-library/react'
 import type React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import * as accessDrawer from './access/AccessDrawer.stories'
 import * as callout from './components/Callout.stories'
 import * as combobox from './components/Combobox.stories'
 import * as copy from './components/CopyButton.stories'
@@ -62,6 +63,7 @@ vi.mock('react-zoom-pan-pinch', () => ({
 
 const SUITES = {
   primitives,
+  accessDrawer,
   callout,
   icons,
   sections,

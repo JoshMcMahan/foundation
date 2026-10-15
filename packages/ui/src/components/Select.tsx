@@ -2,9 +2,10 @@ import { Select as BaseSelect } from '@base-ui/react/select'
 import { type ReactElement, type ReactNode, useId } from 'react'
 import { cx } from '../cx'
 import { CheckIcon, ChevronDownIcon } from '../icons'
-import { type ComboboxItem, pickerItemClassName } from './comboboxItems'
+import { type ComboboxItem, optionNaming, pickerItemClassName } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
+import { OptionDescription } from './OptionDescription'
 import { Tooltip } from './Tooltip'
 
 /** An option of a Select: the same shape as a Combobox's, so a list moves between them as is. */
@@ -115,26 +116,20 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
                   key={String(item.value)}
                   value={item.value}
                   disabled={item.disabled}
-                  // Named by its label, with the description read after it.
-                  aria-labelledby={`${uid}${index}label`}
-                  aria-describedby={item.description && `${uid}${index}description`}
+                  {...optionNaming(`${uid}${index}`, item)}
                   // Select highlights an item by focusing it.
                   onFocus={onItemHighlighted && (() => onItemHighlighted(item.value))}
                   className={pickerItemClassName}
                 >
                   {item.icon && <span className="flex shrink-0 items-center">{item.icon}</span>}
                   <span className="flex min-w-0 flex-col">
-                    <BaseSelect.ItemText id={`${uid}${index}label`} className="truncate">
-                      {item.label}
-                    </BaseSelect.ItemText>
-                    {item.description && (
-                      <span
-                        id={`${uid}${index}description`}
-                        className="text-xs leading-snug text-(--theme-muted-text-color)"
-                      >
-                        {item.description}
-                      </span>
-                    )}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <BaseSelect.ItemText id={`${uid}${index}label`} className="truncate">
+                        {item.label}
+                      </BaseSelect.ItemText>
+                      {item.badge}
+                    </span>
+                    <OptionDescription id={`${uid}${index}description`} item={item} />
                   </span>
                   <BaseSelect.ItemIndicator className="ml-auto flex shrink-0 items-center">
                     <CheckIcon aria-hidden="true" className="size-3.5" />

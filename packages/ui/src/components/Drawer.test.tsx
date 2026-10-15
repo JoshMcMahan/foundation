@@ -19,6 +19,14 @@ describe('Drawer', () => {
     expect(dialog).toHaveAccessibleDescription('Limits for the namespace')
   })
 
+  it('leads with a back arrow for a view opened over its first', () => {
+    const onBack = vi.fn()
+    const { onClose } = renderDrawer({ onBack, backLabel: 'Back to the list' })
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the list' }))
+    expect(onBack).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('closes from its close button and on Escape', () => {
     const { onClose, dialog } = renderDrawer()
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))

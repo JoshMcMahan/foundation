@@ -30,6 +30,7 @@
     "./editor": "./src/editor/index.ts",
     "./list": "./src/list/index.ts",
     "./file-explorer": "./src/file-explorer/index.ts",
+    "./access": "./src/access/index.ts",
     "./ai": "./src/ai/index.ts",
     "./ai/openai": "./src/ai/adapter/openai/index.ts",
     "./ai/mock": "./src/ai/adapter/mock/index.ts",
@@ -84,6 +85,10 @@
       "./file-explorer": {
         "types": "./dist/file-explorer/index.d.ts",
         "import": "./dist/file-explorer/index.js"
+      },
+      "./access": {
+        "types": "./dist/access/index.d.ts",
+        "import": "./dist/access/index.js"
       },
       "./ai": {
         "types": "./dist/ai/index.d.ts",

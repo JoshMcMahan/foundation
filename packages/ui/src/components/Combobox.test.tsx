@@ -185,6 +185,21 @@ describe('Combobox', () => {
       expect(onValueChange).toHaveBeenLastCalledWith([])
     })
 
+    it('keeps its values on Escape with the list closed, and lets the key through', () => {
+      const onValueChange = vi.fn()
+      const onKeyDown = vi.fn()
+      render(
+        // biome-ignore lint/a11y/noStaticElementInteractions: listens for the key the field lets through
+        <div onKeyDown={(e) => onKeyDown(e.key)}>
+          <Multiple onValueChange={onValueChange} />
+        </div>,
+      )
+      fireEvent.keyDown(screen.getByRole('combobox', { name: 'Sizes' }), { key: 'Escape' })
+      expect(onValueChange).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: 'Remove Small' })).toBeInTheDocument()
+      expect(onKeyDown).toHaveBeenCalledWith('Escape')
+    })
+
     it('shows a chip for each of two values that share a label, and removes the one pressed', () => {
       const onValueChange = vi.fn()
       render(
@@ -455,5 +470,42 @@ describe('Combobox group headings', () => {
     fireEvent.change(search, { target: { value: 'gpu' } })
     await waitFor(() => expect(headings(list)).toEqual(['gpu-session· Not responding']))
     expect(within(list).queryAllByRole('option')).toHaveLength(0)
+  })
+
+  it('shows a pane for the highlighted item, hidden from assistive technology', async () => {
+    const onItemHighlighted = vi.fn()
+    render(
+      <Combobox
+        multiple
+        aria-label="Size"
+        items={sizes.map((size) => ({ ...size, accessibleDescription: `${size.label}, in stock` }))}
+        details={(value) => <p>Details of {value ?? 'nothing'}</p>}
+        onItemHighlighted={onItemHighlighted}
+      />,
+    )
+    const field = screen.getByRole('combobox', { name: 'Size' })
+    fireEvent.keyDown(field, { key: 'ArrowDown' })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(field, { key: 'ArrowDown' })
+    await waitFor(() => expect(onItemHighlighted).toHaveBeenCalledWith(expect.any(String)))
+    const highlighted = onItemHighlighted.mock.lastCall?.[0]
+    expect(screen.getByTestId('combobox-details')).toHaveAttribute('aria-hidden', 'true')
+    // The pane follows the highlight.
+    expect(screen.getByTestId('combobox-details')).toHaveTextContent(`Details of ${highlighted}`)
+    expect(screen.getByRole('option', { name: 'Small' })).toHaveAccessibleDescription(
+      'Small, in stock',
+    )
+  })
+
+  it('leaves filtering to a host that searches for itself', async () => {
+    const onQueryChange = vi.fn()
+    render(<Combobox aria-label="Size" items={sizes} onQueryChange={onQueryChange} loading />)
+    const list = await open()
+    const field = screen.getByRole('combobox', { name: 'Size' })
+    fireEvent.change(field, { target: { value: 'zzz' } })
+    expect(onQueryChange).toHaveBeenLastCalledWith('zzz')
+    // Nothing matches "zzz", but the host's items show as given.
+    expect(within(list).getAllByRole('option')).toHaveLength(3)
+    expect(screen.getByRole('status')).toHaveTextContent('Searching…')
   })
 })

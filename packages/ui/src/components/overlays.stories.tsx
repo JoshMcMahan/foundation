@@ -20,10 +20,11 @@ export default meta
 type DrawerArgs = Pick<
   DrawerProps,
   'side' | 'resizable' | 'modal' | 'dismissible' | 'closeButton' | 'width'
-> & { footer: boolean }
+> & { footer: boolean; back?: boolean }
 
-function DrawerDemo({ footer, ...props }: DrawerArgs) {
+function DrawerDemo({ footer, back = false, ...props }: DrawerArgs) {
   const [open, setOpen] = useState(false)
+  const [backs, setBacks] = useState(0)
   return (
     <div className="p-8">
       <Button variant="primary" onClick={() => setOpen(true)}>
@@ -35,6 +36,7 @@ function DrawerDemo({ footer, ...props }: DrawerArgs) {
         onClose={() => setOpen(false)}
         title="Edit quota"
         description="Limits for every workload in the namespace."
+        onBack={back ? () => setBacks((n) => n + 1) : undefined}
         footer={
           footer && (
             <>
@@ -56,6 +58,7 @@ function DrawerDemo({ footer, ...props }: DrawerArgs) {
           <p className="text-(--theme-muted-text-color)">
             The body scrolls under the header and footer when its content runs long.
           </p>
+          {backs > 0 && <p>Back pressed: {backs}</p>}
         </div>
       </Drawer>
     </div>
@@ -80,18 +83,31 @@ export const DrawerStory: StoryObj<DrawerArgs> = {
     dismissible: true,
     closeButton: true,
     footer: true,
+    back: false,
   },
   argTypes: {
     side: { control: 'inline-radio', options: ['left', 'right'] },
     width: { control: 'text', description: 'Pixels, or a CSS length such as 100%.' },
     modal: { control: 'inline-radio', options: [true, 'trap-focus', false] },
     dismissible: { control: 'boolean', description: 'False ignores Escape and the backdrop.' },
+    back: { control: 'boolean', description: 'Passes `onBack`, for a view opened over the first.' },
   },
   render: (args) => <DrawerDemo {...args} />,
   play: async ({ canvasElement }) => {
     await openDrawer(canvasElement)
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  },
+}
+
+/** A view the drawer opened over its first, such as a form: a back arrow leads the header. */
+export const DrawerBack: StoryObj = {
+  name: 'Drawer, with a back arrow',
+  render: () => <DrawerDemo back footer />,
+  play: async ({ canvasElement }) => {
+    await openDrawer(canvasElement)
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    await expect(await screen.findByText('Back pressed: 1')).toBeInTheDocument()
   },
 }
 

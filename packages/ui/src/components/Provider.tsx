@@ -1,6 +1,7 @@
 import { dequal } from 'dequal'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { createContext, use, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { AccessText } from '../access/strings'
 import type { WorkflowAction, WorkflowEditing } from '../editing'
 import type { WorkflowEngine } from '../engine'
 import type { GraphEditorText, InputsEditorText } from '../graph/editorStrings'
@@ -21,6 +22,8 @@ export interface UIStrings {
     favoriteHintOff: string
   }
   common: {
+    /** Returns to the view a drawer or panel showed before. */
+    back: string
     cancel: string
     close: string
     save: string
@@ -117,6 +120,8 @@ export interface UIStrings {
   dropdown: {
     select: (type: string) => string
     noOptionsFound: string
+    /** While a search for options is under way. */
+    searching: string
     showOptions: string
     /** The row that adds typed text as a new value. */
     add: (text: string) => string
@@ -258,6 +263,8 @@ export interface UIStrings {
   }
   /** The visual editor's text a host translates; the editor fills in the rest in English. */
   graphEditor: Partial<GraphEditorText>
+  /** The access drawer's text, over its English defaults. */
+  access: Partial<AccessText>
   inputsEditor: Partial<InputsEditorText>
   fileExplorer: {
     preview: {
@@ -752,6 +759,7 @@ const DEFAULTS: UIProviderValue = {
       favoriteHintOff: "Favorite your item when it's created",
     },
     common: {
+      back: 'Back',
       cancel: 'Cancel',
       close: 'Close',
       save: 'Save',
@@ -832,6 +840,7 @@ const DEFAULTS: UIProviderValue = {
     dropdown: {
       select: (type) => `Select ${type}`,
       noOptionsFound: 'No options found',
+      searching: 'Searching…',
       showOptions: 'Show options',
       add: (text) => `Add “${text}”`,
       limitReached: (max) => `Up to ${max}`,
@@ -967,6 +976,7 @@ const DEFAULTS: UIProviderValue = {
       openInNewGraph: 'Open in new graph',
     },
     graphEditor: {},
+    access: {},
     inputsEditor: {},
     fileExplorer: {
       preview: {
