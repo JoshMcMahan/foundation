@@ -617,33 +617,32 @@ when the first editor mounts, so it stays out of the host's first bundle. Its wo
 the package that the host's bundler copies, started with `new Worker(url)`: a CSP needs
 `worker-src 'self'` and no `blob:`. The YAML language server starts with the first YAML model.
 
-The editor colors YAML, JSON, shell, Bash, Python and JavaScript, and validates and formats JSON.
-`addEditorLanguages` adds Monaco's other languages, loaded with the next editor to mount. Call it
-once at startup:
+The editor colors every language Monaco has, Bash among them (as shell), and fetches each
+language's coloring only when an editor shows it. It validates and formats JSON. The TypeScript,
+CSS and HTML language services are left out, as each runs in a worker of megabytes; their text is
+still colored. `addEditorLanguages` adds a language service and its workers, by the label Monaco
+asks for, or a language of the host's own. It loads with the next editor to mount; call it once
+at startup. With Vite:
 
 ```ts
 import { addEditorLanguages } from '@parallelworks/ui/editor'
 
-addEditorLanguages({ load: () => import('monaco-editor/languages/definitions/ruby/register') })
-// Every language Monaco colors, each one fetched only when an editor shows it.
-addEditorLanguages({ load: () => import('monaco-editor/languages/definitions/register.all') })
-```
-
-A language service with a worker of its own, such as TypeScript's, also takes its workers, by the
-label Monaco asks for. Build them as the host's bundler builds workers; with Vite:
-
-```ts
-import TsWorker from 'monaco-editor/language/typescript/ts.worker?worker'
-
+const tsWorker = () =>
+  new Worker(new URL('monaco-editor/language/typescript/ts.worker.js', import.meta.url), {
+    type: 'module',
+  })
+// The TypeScript service checks JavaScript too, and asks for a worker under each label.
 addEditorLanguages({
-  load: () =>
-    Promise.all([
-      import('monaco-editor/languages/definitions/typescript/register'),
-      import('monaco-editor/languages/features/typescript/register'),
-    ]),
-  workers: { typescript: () => new TsWorker(), javascript: () => new TsWorker() },
+  load: () => import('monaco-editor/languages/features/typescript/register'),
+  workers: { typescript: tsWorker, javascript: tsWorker },
 })
 ```
+
+`readOnly` makes it a view of code to read, such as a file's contents: the text stays selectable,
+copyable and reachable by keyboard and is announced read-only, while the cursor, current line and
+quick fixes are hidden, the view ends at the last line, and the wheel scrolls the page once the text
+has scrolled to its end. Any of these can be set otherwise with Monaco's own options. `disabled`
+greys the text out as well, as a disabled field does.
 
 ## AI chat
 

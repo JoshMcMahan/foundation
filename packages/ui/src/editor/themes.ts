@@ -74,8 +74,17 @@ function editorTheme(style: CSSStyleDeclaration | undefined, mode: Mode): ThemeD
       'editor.lineHighlightBackground': c('--theme-hover'),
       'editorLineNumber.foreground': c('--theme-placeholder'),
       'editorLineNumber.activeForeground': c('--theme-muted-text-color'),
-      'editor.selectionBackground': c('--theme-accent-subtle'),
-      'editor.inactiveSelectionBackground': c('--theme-hover'),
+      // A dark scheme's subtle accent sits within a shade of its panel, which leaves a selection
+      // all but invisible; the accent itself, seen through, stands out and keeps the text legible.
+      ...(mode === 'dark'
+        ? {
+            'editor.selectionBackground': `${c('--theme-accent')}66`,
+            'editor.inactiveSelectionBackground': `${c('--theme-accent')}40`,
+          }
+        : {
+            'editor.selectionBackground': c('--theme-accent-subtle'),
+            'editor.inactiveSelectionBackground': c('--theme-hover'),
+          }),
     },
   }
 }

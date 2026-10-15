@@ -91,6 +91,12 @@ export interface EditorProps extends monaco.editor.IStandaloneEditorConstruction
   className?: string
   /** Shows the text greyed out and read-only, as a disabled field does. */
   disabled?: boolean | undefined
+  /**
+   * Shows the text to read rather than edit: it stays selectable, copyable and reachable by
+   * keyboard, announces itself read-only, and shows no cursor, current line or quick fixes. The
+   * view ends at the last line, and the wheel scrolls the page once the text has none left.
+   */
+  readOnly?: boolean
   /** The text as the person edits it, with carriage returns removed. */
   onChange?: (value: string) => void
   /** Every marker on the text, each time they change: the schema's, the lint's and the host's. */
@@ -182,13 +188,27 @@ export default function MonacoEditor({
   const markersRef = useRef(markers)
   markersRef.current = markers
   // Everything Monaco takes as an option, compared by value: hosts pass these inline.
+  // Each is given whether or not the editor is read-only, as Monaco keeps the last value it got.
   const editorOptions: monaco.editor.IEditorOptions = {
     ariaLabel: t.codeEditor,
     readOnlyMessage: { value: t.readOnlyText },
+    // Keeps a touch device's keyboard from opening over text nobody can type into.
+    domReadOnly: readOnly,
+    hideCursorInOverviewRuler: readOnly,
+    lightbulb: {
+      enabled: readOnly
+        ? monaco.editor.ShowLightbulbIconMode.Off
+        : monaco.editor.ShowLightbulbIconMode.OnCode,
+    },
+    scrollBeyondLastLine: !readOnly,
     ...options,
+    // Text to read sits in a page, which should go on scrolling once the text reaches its end.
+    scrollbar: { alwaysConsumeMouseWheel: !readOnly, ...options.scrollbar },
     readOnly,
     // A disabled editor shows no current line, as a disabled field shows no caret.
-    renderLineHighlight: disabled ? 'none' : (options.renderLineHighlight ?? 'line'),
+    renderLineHighlight: disabled
+      ? 'none'
+      : (options.renderLineHighlight ?? (readOnly ? 'none' : 'line')),
   }
   const optionsKey = JSON.stringify(editorOptions)
   const optionsRef = useRef(editorOptions)
@@ -349,6 +369,16 @@ export default function MonacoEditor({
     }
   }, [disabled])
 
+  // Monaco marks its input readonly only for the textarea it falls back to, and never says so to
+  // a screen reader on the EditContext node it focuses where the browser has one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new path makes a new editor to mark.
+  useEffect(() => {
+    monacoRef.current
+      ?.getDomNode()
+      ?.querySelector('textarea.inputarea, .native-edit-context')
+      ?.setAttribute('aria-readonly', String(readOnly))
+  }, [readOnly, path])
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: optionsKey stands for the options by value.
   useEffect(() => {
     monacoRef.current?.updateOptions(optionsRef.current)
@@ -425,10 +455,12 @@ export default function MonacoEditor({
       ref={containerRef}
       style={{ width, height }}
       data-disabled={disabled ? '' : undefined}
+      data-read-only={readOnly ? '' : undefined}
       className={cx(
         'relative rounded border border-(--theme-border)',
         'focus-within:border-(--theme-accent) focus-within:ring-1 focus-within:ring-(--theme-accent)',
-        'data-disabled:[&_.cursors-layer]:hidden data-disabled:[&_.view-lines]:opacity-60',
+        // Monaco has no option to hide the cursor; the selection still shows where the keys are.
+        'data-read-only:[&_.cursors-layer]:hidden data-disabled:[&_.view-lines]:opacity-60',
         className,
       )}
     />

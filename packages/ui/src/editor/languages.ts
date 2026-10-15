@@ -21,9 +21,9 @@ let waiting: EditorLanguages['load'][] = []
 let loading: Promise<unknown> | undefined
 
 /**
- * Adds languages to the editor beyond the YAML, JSON, shell, Bash, Python and JavaScript it
- * carries. Call it once at startup, before the first editor mounts; an editor that mounts
- * while languages load waits for them, so its text is colored from the start.
+ * Adds language services with their workers, such as TypeScript's, or languages of the host's
+ * own, to the coloring the editor has for every Monaco language. Call it once at startup, before
+ * the first editor mounts; an editor that mounts while they load waits for them.
  */
 export function addEditorLanguages({ load, workers: added = {} }: EditorLanguages): void {
   for (const [label, create] of Object.entries(added)) {

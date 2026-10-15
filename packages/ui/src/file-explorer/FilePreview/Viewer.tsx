@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Button } from '../../components/Button'
 import { positionKeys, withPositionKeys } from '../../components/keys'
 import { Loader } from '../../components/Loader'
 import Markdown from '../../components/Markdown'
 import { useStrings } from '../../components/Provider'
 import { cx } from '../../cx'
+import { Editor } from '../../editor/Editor'
 import { formatBytes } from '../../format'
 import { DownloadIcon, FileIcon, LockIcon, MusicIcon, ZipIcon } from '../../icons'
 import { type CorsAwareRefresh, CorsIssuePreview } from '../helpers'
@@ -19,9 +20,6 @@ import {
 import { countLines } from './readCappedBytes'
 import { useObjectBlobUrl } from './useObjectBlobUrl'
 import { useObjectText } from './useObjectText'
-
-// Monaco is heavy; load it only when a code file is actually previewed.
-const CodePreviewEditor = lazy(() => import('./CodePreviewEditor'))
 
 // Streamdown's table/mermaid fullscreen overlays portal to <body> at z-50, which
 // renders behind the preview modal (--layer-modal). Disable them for previews.
@@ -399,9 +397,18 @@ function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProp
               <Markdown controls={PREVIEW_MARKDOWN_CONTROLS}>{text ?? ''}</Markdown>
             </div>
           ) : (
-            <Suspense fallback={<PreviewLoading />}>
-              <CodePreviewEditor value={text ?? ''} language={language} />
-            </Suspense>
+            // Editor loads Monaco on first render, so it stays out of the explorer's bundle.
+            <Editor
+              readOnly
+              value={text ?? ''}
+              language={language}
+              ariaLabel={node.name}
+              className="!rounded-none !border-0"
+              fontSize={12}
+              minimap={{ enabled: false }}
+              overviewRulerLanes={0}
+              wordWrap="off"
+            />
           )}
         </PreviewFetchState>
       </div>

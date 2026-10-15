@@ -15,10 +15,15 @@ const meta: Meta<typeof Editor> = {
           'is a devDependency of this package; consumers must install the ' +
           'optional peer to use `@parallelworks/ui/editor`. YAML models get ' +
           'validation, completion, hover and formatting from a bundled worker. ' +
-          'The editor colors YAML, JSON, shell, Bash, Python and JavaScript; ' +
-          '`addEditorLanguages` adds others.',
+          'The editor colors every language Monaco has; `addEditorLanguages` adds a ' +
+          'language service and its workers, such as TypeScript. ' +
+          '`readOnly` shows code to read: selectable, copyable and focusable, with no cursor.',
       },
     },
+  },
+  argTypes: {
+    readOnly: { control: 'boolean' },
+    disabled: { control: 'boolean' },
   },
 }
 export default meta
@@ -34,6 +39,8 @@ const YAML_VALUE = [
   '',
 ].join('\n')
 
+/** Text to read: it selects and copies, and takes focus from the keyboard, but shows no cursor or
+ * current line, and ends at its last line. */
 export const YamlReadOnly: StoryObj<typeof Editor> = {
   args: {
     language: 'yaml',
@@ -51,6 +58,27 @@ export const YamlEditable: StoryObj<typeof Editor> = {
     readOnly: false,
     height: 320,
     width: 640,
+  },
+}
+
+const SCRIPT = Array.from(
+  { length: 60 },
+  (_, i) => `echo "step ${i + 1}" && ./run.sh --stage ${i + 1} --retries 3`,
+).join('\n')
+
+/** A file to read, as the file explorer previews one: a longer file scrolls inside the view, then
+ * the page scrolls on past it. */
+export const ReadOnlyFile: StoryObj<typeof Editor> = {
+  args: {
+    readOnly: true,
+    language: 'shell',
+    value: SCRIPT,
+    ariaLabel: 'run-all.sh',
+    height: 320,
+    width: 640,
+    fontSize: 12,
+    minimap: { enabled: false },
+    overviewRulerLanes: 0,
   },
 }
 
@@ -77,22 +105,39 @@ export const Bash: StoryObj<typeof Editor> = {
   },
 }
 
-let rubyAdded = false
-
-/** A language the editor doesn't carry, which the host adds with `addEditorLanguages`. */
-export const AddedLanguage: StoryObj<typeof Editor> = {
+/** Go, which the editor colors with no setup: every Monaco language is, each fetched once shown. */
+export const Go: StoryObj<typeof Editor> = {
   args: {
-    language: 'ruby',
-    value: 'def greet(name)\n  puts "Hello, #{name}"\nend\n',
-    height: 120,
+    language: 'go',
+    value: 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("hello")\n}\n',
+    height: 160,
+    width: 640,
+  },
+}
+
+let typeScriptAdded = false
+const tsWorker = () =>
+  new Worker(new URL('monaco-editor/language/typescript/ts.worker.js', import.meta.url), {
+    type: 'module',
+  })
+
+/** TypeScript's language service, which the host adds with `addEditorLanguages` and its worker:
+ * the text is colored without it, and with it the editor finds the type error. */
+export const AddedLanguageService: StoryObj<typeof Editor> = {
+  args: {
+    language: 'typescript',
+    path: 'file:///greet.ts',
+    value: "function greet(name: string): string {\n  return 'Hello, ' + name\n}\n\ngreet(42)\n",
+    height: 160,
     width: 640,
   },
   loaders: [
     () => {
-      if (!rubyAdded) {
-        rubyAdded = true
+      if (!typeScriptAdded) {
+        typeScriptAdded = true
         addEditorLanguages({
-          load: () => import('monaco-editor/languages/definitions/ruby/register'),
+          load: () => import('monaco-editor/languages/features/typescript/register'),
+          workers: { typescript: tsWorker, javascript: tsWorker },
         })
       }
     },

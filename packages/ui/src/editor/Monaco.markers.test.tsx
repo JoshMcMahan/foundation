@@ -77,6 +77,7 @@ vi.mock('monaco-editor/editor/editor.api', () => ({
   },
   MarkerSeverity: { Error: 8 },
   editor: {
+    ShowLightbulbIconMode: { Off: 'off', OnCode: 'onCode', On: 'on' },
     defineTheme: vi.fn(),
     setTheme: vi.fn(),
     getModel: () => null,

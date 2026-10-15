@@ -7,7 +7,7 @@ import type { TreeNode, TStorage } from '../lib/types'
 import type { PreviewKind } from './previewType'
 import { FilePreviewViewer } from './Viewer'
 
-vi.mock('./CodePreviewEditor', () => ({
+vi.mock('../../editor/Monaco', () => ({
   default: ({ value }: { value: string }) => <pre>{value}</pre>,
 }))
 

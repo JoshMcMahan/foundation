@@ -27,6 +27,36 @@ export default meta
 const OBJECTS: Record<string, string> = {
   'README.md': '# Demo storage\n\nThis tree lives in memory.\n',
   'data/input.csv': 'id,value\n1,alpha\n2,beta\n',
+  'scripts/train.go': [
+    'package main',
+    '',
+    'import (',
+    '\t"fmt"',
+    '\t"os"',
+    ')',
+    '',
+    '// Trains for the epochs given, 12 by default.',
+    'func main() {',
+    '\tepochs := 12',
+    '\tif len(os.Args) > 1 {',
+    '\t\tfmt.Sscan(os.Args[1], &epochs)',
+    '\t}',
+    '\tfor epoch := 1; epoch <= epochs; epoch++ {',
+    '\t\tfmt.Printf("epoch %d/%d ... done\\n", epoch, epochs)',
+    '\t}',
+    '}',
+    '',
+  ].join('\n'),
+  'scripts/report.sql': [
+    '-- The best loss of each run, lowest first.',
+    'SELECT run_id, MIN(loss) AS best_loss, COUNT(*) AS epochs',
+    'FROM metrics',
+    "WHERE created_at > NOW() - INTERVAL '7 days'",
+    'GROUP BY run_id',
+    'ORDER BY best_loss ASC',
+    'LIMIT 10;',
+    '',
+  ].join('\n'),
   'results/run-001/metrics.json': '{ "loss": 0.021, "epochs": 12 }\n',
   'results/run-001/stdout.log': 'epoch 1/12 ... done\nepoch 12/12 ... done\n',
   'results/run-002/metrics.json': '{ "loss": 0.018, "epochs": 14 }\n',
@@ -389,6 +419,19 @@ export const CorsPropagating: StoryObj = {
 /** A file's details, with Details and Preview tabs. */
 export const FileDetails: StoryObj = {
   render: () => <ExplorerDemo initialPath="storybook/demo-bucket/results/run-001/metrics.json" />,
+}
+
+/** A source file in the Preview tab, read-only and colored for its language, whatever it is. */
+export const CodeFilePreview: StoryObj<{ file: string }> = {
+  args: { file: 'go' },
+  argTypes: {
+    file: {
+      control: 'select',
+      options: ['go', 'sql', 'markdown'],
+      mapping: { go: 'scripts/train.go', sql: 'scripts/report.sql', markdown: 'README.md' },
+    },
+  },
+  render: ({ file }) => <ExplorerDemo key={file} initialPath={`storybook/demo-bucket/${file}`} />,
 }
 
 /** Checked rows take the theme's selection tint. */

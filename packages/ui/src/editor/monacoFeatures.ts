@@ -1,9 +1,10 @@
 /// <reference path="./monacoShell.d.ts" />
-// `monaco-editor`'s main entry registers every language Monaco has, with the TypeScript, CSS and
-// HTML services and their workers, which are megabytes in every host's build, and asks this
-// package's workers for services they can't run. The editor imports Monaco's API alone and this
-// beside it: the editor's features, and only the languages the package's own editors and field
-// suggestions name. A host adds others with `addEditorLanguages`.
+// `monaco-editor`'s main entry adds the TypeScript, CSS and HTML language services to its
+// languages, with workers of megabytes in every host's build, and asks this package's workers for
+// services they can't run. The editor imports Monaco's API alone and this beside it: the editor's
+// features, and the coloring of every language, each tokenizer a chunk fetched only when a model
+// shows its language, so a file of any kind reads colored. A host adds a service with
+// `addEditorLanguages`.
 import 'monaco-editor/features/register.all'
 // What the main entry has beyond the features entry, so the editor behaves as it did on it.
 // monacoFeatures.test.ts fails when a Monaco upgrade changes that list.
@@ -11,10 +12,7 @@ import 'monaco-editor/editor/contrib/caretOperations/browser/caretOperations'
 import 'monaco-editor/editor/contrib/dropOrPasteInto/browser/copyPasteContribution'
 import 'monaco-editor/editor/contrib/gotoError/browser/markerSelectionStatus'
 import 'monaco-editor/editor/contrib/semanticTokens/browser/documentSemanticTokens'
-import 'monaco-editor/languages/definitions/javascript/register'
-import 'monaco-editor/languages/definitions/python/register'
-import 'monaco-editor/languages/definitions/shell/register'
-import 'monaco-editor/languages/definitions/yaml/register'
+import 'monaco-editor/languages/definitions/register.all'
 import 'monaco-editor/languages/features/json/register'
 import { languages } from 'monaco-editor/editor/editor.api'
 

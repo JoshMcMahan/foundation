@@ -97,3 +97,19 @@ describe('followThemeTokens', () => {
     document.documentElement.style.removeProperty('--theme-code-number')
   })
 })
+
+describe('defineEditorThemes selection', () => {
+  it('selects in a dark scheme with the accent seen through, which stands out from the panel', () => {
+    document.documentElement.style.setProperty('--theme-accent', '#5b9ccf')
+    const themes = new Map<string, { colors: Record<string, string> }>()
+    defineEditorThemes({
+      defineTheme: (name: string, data: { colors: Record<string, string> }) =>
+        themes.set(name, data),
+    } as unknown as Parameters<typeof defineEditorThemes>[0])
+    expect(themes.get('app-dark')?.colors).toMatchObject({
+      'editor.selectionBackground': '#5b9ccf66',
+      'editor.inactiveSelectionBackground': '#5b9ccf40',
+    })
+    document.documentElement.style.removeProperty('--theme-accent')
+  })
+})
