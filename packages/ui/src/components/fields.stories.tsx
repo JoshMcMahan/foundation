@@ -1,8 +1,9 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { cx } from '../cx'
 import { ExpressionIcon } from '../icons'
+import { applyTheme, generateTheme, THEME_TOKENS } from '../theme'
 import { Checkbox, CheckboxGroup } from './Checkbox'
 import { ColorInput } from './ColorInput'
 import { Autocomplete, Combobox } from './Combobox'
@@ -550,6 +551,102 @@ function SlidersDemo() {
 /** One slider, often beside the number box that sets the same value. */
 export const Sliders: StoryObj = {
   render: () => <SlidersDemo />,
+}
+
+function EdgesColumn({ title, className }: { title: string; className?: string }) {
+  const [level, setLevel] = useState(40)
+  const row = 'flex items-center gap-3'
+  const name = 'w-16 text-xs text-(--theme-muted-text-color)'
+  return (
+    <div className={cx('flex w-72 flex-col gap-3 rounded-lg p-4', className)}>
+      <span className="text-xs font-medium text-(--theme-muted-text-color)">{title}</span>
+      <div className={row}>
+        <span className={name}>Checkbox</span>
+        <Checkbox aria-label={`${title}: off`} />
+        <Checkbox aria-label={`${title}: on`} defaultChecked />
+        <Checkbox aria-label={`${title}: off, disabled`} disabled />
+        <Checkbox aria-label={`${title}: on, disabled`} disabled defaultChecked />
+      </div>
+      <RadioGroup aria-label={`${title}: radios`} defaultValue="on" className={row}>
+        <span className={name}>Radio</span>
+        <Radio value="off" aria-label="Off" />
+        <Radio value="on" aria-label="On" />
+        <Radio value="off-disabled" aria-label="Off, disabled" disabled />
+      </RadioGroup>
+      <div className={row}>
+        <span className={name}>Switch</span>
+        <Switch aria-label={`${title}: switch off`} />
+        <Switch aria-label={`${title}: switch on`} defaultChecked />
+        <Switch aria-label={`${title}: switch disabled`} disabled />
+      </div>
+      <Input aria-label={`${title}: name`} placeholder="Name" />
+      <Select<string> aria-label={`${title}: zone`} placeholder="Zone" items={zones} />
+      <Slider
+        aria-label={`${title}: level`}
+        value={level}
+        min={0}
+        max={100}
+        onValueChange={setLevel}
+      />
+    </div>
+  )
+}
+
+interface EdgesArgs {
+  /** An accent to try in place of the theme's, such as one too pale to show on the page. */
+  accent: string
+}
+
+function EdgesDemo({ accent }: EdgesArgs) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) {
+      return
+    }
+    for (const token of THEME_TOKENS) {
+      el.style.removeProperty(token)
+    }
+    if (!accent) {
+      return
+    }
+    // The page's own base, with only the accent swapped; white where no theme is applied.
+    const base = getComputedStyle(document.documentElement).getPropertyValue('--theme-app-bg')
+    applyTheme(el, generateTheme({ interface: { base: base.trim() || '#ffffff', accent } }))
+  }, [accent])
+  return (
+    <div ref={ref} className="flex flex-wrap gap-4 bg-(--theme-app-bg) p-2 text-(--theme-app)">
+      <EdgesColumn title="On the page" />
+      <EdgesColumn title="On a panel" className="bg-(--theme-panel-bg) shadow-sm" />
+      <EdgesColumn title="On a muted panel" className="bg-(--theme-muted-panel-bg)" />
+    </div>
+  )
+}
+
+/** The edge or track of every control holds WCAG 1.4.11's 3:1 against the surfaces it sits on,
+ *  in each state, so an empty box or an off switch still shows where it is. A checked control's
+ *  edge holds it too, even under an accent too pale to show on the page. */
+export const ControlEdges: StoryObj<EdgesArgs> = {
+  args: { accent: '' },
+  argTypes: {
+    accent: {
+      control: 'select',
+      options: ['', '#fafafa', '#ffeb3b', '#c4a7e7'],
+      labels: {
+        '': 'The theme’s',
+        '#fafafa': 'Near white',
+        '#ffeb3b': 'Yellow',
+        '#c4a7e7': 'Lavender',
+      },
+    },
+  },
+  render: (args) => <EdgesDemo {...args} />,
+}
+
+/** Under an accent too pale to show on a light page, a checked control keeps its edge. */
+export const ControlEdgesPaleAccent: StoryObj<EdgesArgs> = {
+  ...ControlEdges,
+  args: { accent: '#fafafa' },
 }
 
 function PlaceholdersDemo() {

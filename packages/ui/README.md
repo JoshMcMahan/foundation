@@ -272,8 +272,19 @@ until it reaches its target against every surface it sits on.
 | Secondary text, links, status text, syntax and terminal colors | 4.5 / 4.5 / 7 | 60 / 70 / 85 |
 | Placeholders | 3 / 3 / 4.5 | 45 / 50 / 65 |
 | Focus ring, status icons, dots, borders and bars | 3 / 3 / 4.5 | |
-| Control borders | 1.6 / 2.2 / 3 | |
+| Control edges | 3 / 3 / 4.5 | |
 | Text on the accent, white text on a solid status fill | 4.5 | |
+
+Lines come in two tokens. `--theme-border` is decorative: card outlines,
+dividers and table lines, which stay quiet. `--theme-border-strong` is a
+control's edge: the box of an input, select or checkbox, the ring of a radio,
+and the off track of a switch or slider. It is often all that shows where the
+control is, so it is solved to WCAG 1.4.11's 3:1 on the page, the panels and the
+input fill. A checked control's edge, an on switch's track and a slider's
+filled part take `--theme-focus`: the accent as picked when it reaches 3:1, and
+otherwise the accent solved to secondary text's contrast, so on always reads
+heavier than the off track. A host that sets `--theme-border-strong` itself
+sets it to a color that keeps 3:1 against its surfaces.
 
 Status colors (success, error, warning, info, favorite) and terminal colors keep
 fixed hues, so red means the same thing in every theme.

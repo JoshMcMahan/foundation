@@ -24,8 +24,10 @@ const sizes = {
 export const focusOutline =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)'
 
+// The edge is often all that shows where a box is, so it takes the control edge the theme solves
+// to 3:1 on every surface, not the decorative border cards and dividers draw.
 const base =
-  'w-full min-w-0 rounded-md border border-(--theme-border) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder)'
+  'w-full min-w-0 rounded-md border border-(--theme-border-strong) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder)'
 
 // One look for every state, on the control itself, or on the box around it with `within`. Focus
 // takes the focus color rather than the accent, which is the color picked for buttons' fill and

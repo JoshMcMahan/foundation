@@ -40,12 +40,15 @@ export function Slider({
       className={cx('w-full', className)}
     >
       <BaseSlider.Control className="flex w-full touch-none select-none items-center py-2 data-disabled:cursor-not-allowed data-disabled:opacity-50">
-        <BaseSlider.Track className="h-1 w-full rounded-full bg-(--theme-border)">
-          <BaseSlider.Indicator className="rounded-full bg-(--theme-accent)" />
+        {/* The track shows the range the value sits in, so it takes the control edge; the
+            filled part and the thumb's ring take the focus color, which is darker than the track
+            under an accent too pale for the page. */}
+        <BaseSlider.Track className="h-1 w-full rounded-full bg-(--theme-border-strong)">
+          <BaseSlider.Indicator className="rounded-full bg-(--theme-focus)" />
           <BaseSlider.Thumb
             aria-label={ariaLabel}
             // The thumb holds the range input, so focus shows on it when the input has it.
-            className="size-4 rounded-full border-2 border-(--theme-accent) bg-(--theme-panel-bg) shadow-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--theme-focus)"
+            className="size-4 rounded-full border-2 border-(--theme-focus) bg-(--theme-panel-bg) shadow-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--theme-focus)"
           />
         </BaseSlider.Track>
       </BaseSlider.Control>

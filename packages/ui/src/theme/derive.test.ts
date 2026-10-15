@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deltaE, JND, oklch, parseColor, toHex } from './color'
 import { contrastRatio, isDarkColor, measure, over, type Shown, shownValue } from './contrast'
-import { PLACEHOLDER_ON } from './derive'
+import { CONTROL_ON, PLACEHOLDER_ON } from './derive'
 import {
   applyTheme,
   CODE_STYLES,
@@ -170,6 +170,8 @@ function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, numbe
   on('--theme-placeholder', PLACEHOLDER_ON, 3, 45)
   on('--theme-link', ['--theme-app-bg', '--theme-panel-bg', '--theme-hover'], 4.5, 60)
   on('--theme-focus', ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'], 3)
+  // A control's edge or off track: WCAG 1.4.11's 3:1, on its surfaces and its own fill.
+  on('--theme-border-strong', CONTROL_ON, 3)
   on('--theme-accent-text', ['--theme-accent', '--theme-accent-hover'], 4.5)
   for (const status of STATUSES) {
     // Both shades also sit on the status's own muted fill, as in a badge or a callout.
@@ -303,6 +305,43 @@ describe('generateTheme', () => {
     expect(
       deriveTheme({ interface: { base: '#f3f4f6', accent: '#06354f' } })['--theme-hover'],
     ).toBe('#e3e5e9')
+  })
+
+  it('holds control edges to 3:1 in both modes of every preset, and leaves decorative lines quiet', () => {
+    for (const preset of THEME_PRESETS) {
+      for (const mode of ['light', 'dark'] as const) {
+        const scheme = schemeFor(preset.theme, mode)
+        for (const contrast of CONTRASTS) {
+          const v = deriveTheme({ ...scheme, interface: { ...scheme.interface, contrast } })
+          const at = `${preset.name} ${mode} at ${contrast}`
+          for (const surface of CONTROL_ON) {
+            const edge = contrastRatio(v['--theme-border-strong'], v[surface])
+            expect(edge, `edge on ${surface}, ${at}`).toBeGreaterThanOrEqual(
+              contrast === 100 ? 4.5 : 3,
+            )
+            // A checked control's edge, and a slider's filled part.
+            if (surface !== '--theme-muted-panel-bg') {
+              expect(contrastRatio(v['--theme-focus'], v[surface]), at).toBeGreaterThanOrEqual(3)
+            }
+          }
+          // Cards, dividers and table lines keep their quieter line.
+          expect(contrastRatio(v['--theme-border'], v['--theme-app-bg']), at).toBeLessThan(3)
+        }
+      }
+    }
+  })
+
+  it('solves an accent too pale for the page darker than the off track', () => {
+    for (const { base, accent, contrast } of GRID) {
+      const v = deriveTheme({ interface: { base, accent, contrast } })
+      const onPage = (token: ThemeToken) => contrastRatio(v[token], v['--theme-app-bg'])
+      if (v['--theme-focus'] === v['--theme-accent']) {
+        continue
+      }
+      expect(onPage('--theme-focus'), `${base} ${accent} at ${contrast}`).toBeGreaterThan(
+        onPage('--theme-border-strong') * 1.2,
+      )
+    }
   })
 
   it('lifts panels above dark backgrounds and keeps them light on light ones', () => {

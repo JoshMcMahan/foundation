@@ -1,8 +1,8 @@
 // The generator: a scheme's three choices become every `--theme-*` token.
 //
 // Surfaces sit at fixed lightness offsets from the base, scaled by contrast.
-// Everything read as text, and the focus ring, status graphics and strong
-// borders, is solved: its lightness moves, at its own hue and chroma, until it
+// Everything read as text, and the focus ring, status graphics and controls'
+// edges, is solved: its lightness moves, at its own hue and chroma, until it
 // meets a WCAG 2 ratio, and for text an APCA target, on every surface it can
 // sit on. The accent the person picked fills buttons exactly. It all happens in OKLCH; each color is mapped
 // into sRGB, and into display-p3 where that shows more of it, only at the end,
@@ -164,6 +164,14 @@ export const PLACEHOLDER_ON: ThemeToken[] = [
   '--theme-muted-panel-bg',
 ]
 
+/** The surfaces a control's edge sits on: the page, panels, and the control's own fill. */
+export const CONTROL_ON: ThemeToken[] = [
+  '--theme-app-bg',
+  '--theme-panel-bg',
+  '--theme-muted-panel-bg',
+  '--theme-input-bg',
+]
+
 /** The roles' targets at a contrast. WCAG AA is the floor at every contrast. */
 function targets(k: number) {
   const at = (wcag: [number, number, number], apca: [number, number, number]): ContrastTarget => ({
@@ -178,9 +186,8 @@ function targets(k: number) {
     // hold a placeholder to 4.5:1; APCA's guidance puts such hints near Lc 45.
     placeholder: at([3, 3, 4.5], [45, 50, 65]),
     // A focus indicator, a status icon or dot, and a control's boundary are UI, which WCAG 2
-    // holds to 3:1 (1.4.11).
+    // holds to 3:1 (1.4.11) at every contrast.
     graphic: { wcag: byContrast(k, [3, 3, 4.5]) },
-    control: { wcag: byContrast(k, [1.6, 2.2, 3]) },
     label: { wcag: 4.5 },
   }
 }
@@ -349,19 +356,24 @@ function build(
     ['--theme-app-bg', '--theme-panel-bg', '--theme-muted-panel-bg', '--theme-hover'],
     t.secondary,
   )
+  // The accent as a graphic: a focus ring, a checked control's edge, an on switch's track, a
+  // slider's fill. An accent that already shows is kept as picked. One too pale for the page is
+  // solved past secondary text's contrast rather than to the bare 3:1, so an on switch or a
+  // filled slider reads as heavier than the off track, which sits at 3:1.
+  const focusOn: ThemeToken[] = ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg']
   const focus = solved(
     '--theme-focus',
     accent,
-    ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'],
-    t.graphic,
+    focusOn,
+    meets(toHex(accent), focusOn.map(hexOf), t.graphic) ? t.graphic : { wcag: t.secondary.wcag },
   )
   set('--theme-focus-ring', focus, dark ? 0.35 : 0.25)
-  solved(
-    '--theme-border-strong',
-    border,
-    ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'],
-    t.control,
-  )
+  // A control's edge: the box of an input or a checkbox, the off track of a switch or a slider.
+  // It is often all that shows where the control is, so it holds a graphic's 3:1 on every
+  // surface a control sits on, and on the input fill inside it. It starts from the decorative
+  // border and moves only as far as that needs, while cards, dividers and table lines keep
+  // the quieter `--theme-border`.
+  solved('--theme-border-strong', border, CONTROL_ON, t.graphic)
 
   set('--theme-accent', accent)
   const white = contrastRatio('#ffffff', toHex(accent)) >= 4.5

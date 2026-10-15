@@ -17,11 +17,13 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
     <BaseCheckbox.Root
       {...props}
       className={cx(
-        // The strong border holds a control's 3:1 against the page, so an empty box still shows.
+        // The control edge holds 3:1 against the page, so an empty box still shows.
         'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border-strong) bg-(--theme-input-bg) text-(--theme-accent-text) cursor-pointer transition-colors motion-reduce:transition-none',
         focusOutline,
-        'data-checked:border-(--theme-accent) data-checked:bg-(--theme-accent)',
-        'data-indeterminate:border-(--theme-accent) data-indeterminate:bg-(--theme-accent)',
+        // Ticked, it fills with the accent as picked, and its edge takes the focus color, the
+        // accent solved to at least 3:1, so a box still shows under an accent too pale for the page.
+        'data-checked:border-(--theme-focus) data-checked:bg-(--theme-accent)',
+        'data-indeterminate:border-(--theme-focus) data-indeterminate:bg-(--theme-accent)',
         'aria-invalid:border-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
         className,
