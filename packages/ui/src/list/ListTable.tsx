@@ -47,9 +47,15 @@ export const StretchRowLinkContext = createContext(false)
 // The link's box covers the row (the `ListRow`'s `<tr>` is its containing
 // block), so the whole row is the link: it opens in a new tab, shows its URL
 // and reads as a link, where a row click handler could do none of these. Its
-// focus ring follows, drawn around the row.
-const STRETCHED_LINK =
+// focus ring follows, drawn around the row. Mark the link `data-row-link`.
+export const STRETCHED_LINK =
   "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-link)"
+
+/** The row a `STRETCHED_LINK` covers: its box, with the row's other controls
+ *  raised above the link so they keep their own clicks. A checkbox is a
+ *  `role="checkbox"` span, not an input, so the role names it. */
+export const STRETCHED_LINK_ROW =
+  'relative [&_:is(a,button,input,label,[role=checkbox]):not([data-row-link])]:relative [&_:is(a,button,input,label,[role=checkbox]):not([data-row-link])]:z-[1]'
 
 export function NameCell({
   icon,

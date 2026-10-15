@@ -17,6 +17,7 @@ import {
   HEADERS_OFF,
   ListActionsHeader,
   NAME_MIN_WIDTH_PX,
+  STRETCHED_LINK_ROW,
   StretchRowLinkContext,
 } from './ListTable'
 import type { ListView, ListViewChrome } from './listView'
@@ -205,8 +206,7 @@ export function ListRow({
             : 'hover:theme-hover',
         (href || onActivate || selectionActive) && 'cursor-pointer',
         // The row is its stretched link's box; other controls rise above the link.
-        stretch &&
-          'relative [&_:is(a,button,input,label):not([data-row-link])]:relative [&_:is(a,button,input,label):not([data-row-link])]:z-[1]',
+        stretch && STRETCHED_LINK_ROW,
         className,
       )}
       onClick={handleRowClick}

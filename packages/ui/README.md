@@ -434,6 +434,7 @@ where it opens elsewhere, and renders it through `AppLink`:
 | A list row | `ListRow` `href` with a `NameCell` of the same `href`: the name's link covers the row |
 | A toast's action | `action: { label, href }` |
 | `SidebarRailItem` | `href`; `onSelect` then runs only on a plain click |
+| `FileExplorer` rows, tree, trail and "Open folder" | `pathHref(path)`; `onPathChange` is then optional, and the explorer's own moves go to `navigation.goTo` |
 | `EmptyState`, `SettingsCard` actions | a `Button` with `href` |
 
 `AppLink` routes in-app URLs through the provider's `link` slot, so a host

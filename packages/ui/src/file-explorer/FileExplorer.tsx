@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { AppLink } from '../components/AppLink'
 import { Button } from '../components/Button'
 import { buttonClasses } from '../components/buttonClasses'
 import { Callout } from '../components/Callout'
@@ -22,7 +23,7 @@ import { keyedByContent } from '../components/keys'
 import { Loader } from '../components/Loader'
 import { MenuItem, MenuPopup, MenuSeparator } from '../components/Menu'
 import type { MenuEntry } from '../components/MenuEntries'
-import { usePersistedState, useSlots, useStrings } from '../components/Provider'
+import { useNavigation, usePersistedState, useSlots, useStrings } from '../components/Provider'
 import { RefreshButton } from '../components/RefreshButton'
 import { RelativeTime } from '../components/relativeTime'
 import { StatusBadge } from '../components/StatusBadge'
@@ -133,7 +134,25 @@ function UriCard({ value }: { value: string }) {
   )
 }
 
-interface IFileExplorerProps {
+/** How the explorer moves between folders and files. */
+type ExplorerNavigation =
+  | {
+      /** The URL of a path, for a host that keeps the path in its URL. Rows, the
+       * tree, the trail and each row menu's "Open folder" are then links through
+       * the host's router (`useLink`), so a path opens in a new tab, shows its
+       * URL and can be copied, and back and forward move between paths. */
+      pathHref: (path: string) => string
+      /** Moves to a path without a link: from the keyboard, a delete, an upload.
+       * Absent, the explorer goes to `pathHref(path)` through the provider's
+       * `navigation.goTo`. */
+      onPathChange?: ((path: string) => void) | undefined
+    }
+  | {
+      pathHref?: undefined
+      onPathChange: (path: string) => void
+    }
+
+type IFileExplorerProps = ExplorerNavigation & {
   storages: TStorage[]
   /** Resolves the storage's injected provider pair; the host owns caching. */
   getProviderAndClient: (storage: TStorage) => Promise<{
@@ -149,7 +168,6 @@ interface IFileExplorerProps {
   groups?: { name: string; id?: string | undefined }[] | undefined
   groupsLoading?: boolean
   selectedPath: string
-  onPathChange: (path: string) => void
   /** Renders only the tree, for a host that embeds it as a navigator and owns
    * the pane beside it (the notebooks page puts its editor there). The host
    * also owns the width, so the tree fills its container instead of carrying
@@ -173,6 +191,18 @@ interface IFileExplorerProps {
   extraRowActions?: ((node: TreeNode, storage: TStorage | undefined) => RowAction[]) | undefined
   /** Host content for the selected folder's header, before its badges. */
   headerAccessory?: ((node: TreeNode, storage: TStorage | undefined) => ReactNode) | undefined
+}
+
+const breadcrumbClass =
+  'max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)'
+
+/** `href` resolved against the page, as the browser's "Copy link" gives it. */
+function absoluteUrl(href: string | undefined): string | undefined {
+  const url = safeUrl(href)
+  if (!url || typeof window === 'undefined') {
+    return url
+  }
+  return new URL(url, window.location.href).href
 }
 
 const MAX_UPLOAD_SIZE = 80 * 1024 * 1024 * 1024 // 80 GB
@@ -251,6 +281,7 @@ export default function FileExplorer({
   groupsLoading = false,
   selectedPath,
   onPathChange,
+  pathHref,
   getProviderAndClient,
   treeOnly = false,
   initialExpandedPaths,
@@ -265,6 +296,7 @@ export default function FileExplorer({
   const { common } = useStrings()
   const { copy } = useCopy()
   const slots = useSlots()
+  const { goTo } = useNavigation()
 
   const fileExplorerContext = useFileExplorer()
 
@@ -315,7 +347,8 @@ export default function FileExplorer({
     }
     return `${selectedPath}/`
   }, [selectedPath, treeMap])
-  const setSelectedPath = onPathChange
+  const setSelectedPath = (path: string) =>
+    onPathChange ? onPathChange(path) : pathHref && goTo(pathHref(path))
 
   // A Set, not an array: membership is tested once per tree row, so an array scan
   // made expansion O(rows x expanded).
@@ -342,13 +375,15 @@ export default function FileExplorer({
     }
   }, [refreshKey, selectedNode])
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
-  // The path is a prop the router owns, so back and forward move it with none of
-  // the handlers here running. Compared against the raw prop, not the normalized
-  // one, which also recomputes when the tree fills in.
+  const [detailTab, setDetailTab] = useState<'details' | 'preview'>('details')
+  // The path is a prop the router owns, so back and forward, and a row's link,
+  // move it with none of the handlers here running. Compared against the raw
+  // prop, not the normalized one, which also recomputes when the tree fills in.
   const [checkedItemsPath, setCheckedItemsPath] = useState(selectedPath)
   if (checkedItemsPath !== selectedPath) {
     setCheckedItemsPath(selectedPath)
     setCheckedItems(new Set())
+    setDetailTab('details')
   }
   const selectedNodeChildren = useMemo(
     () => (selectedNode ? getNodeChildren(parentToChildrenMap, selectedNode.path) : []),
@@ -464,8 +499,6 @@ export default function FileExplorer({
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TreeNode[] | null>(null)
-
-  const [detailTab, setDetailTab] = useState<'details' | 'preview'>('details')
 
   useEffect(() => clearPreviewCache, [])
   const { openMenu, contextMenu } = useContextMenu()
@@ -983,6 +1016,14 @@ export default function FileExplorer({
     setPreviewOpen(false)
   }
 
+  // With no details pane beside it, the tree is the only way to reach a file,
+  // so choosing one there opens it.
+  const openFromTree = (node: TreeNode) => {
+    if (treeOnly && node.type === 'file') {
+      openPreview(node)
+    }
+  }
+
   const openUserNode = (node: TreeNode) => {
     handleSelectTreeItem(node.path, node)
     if (!expandedPaths.has(node.path)) {
@@ -1096,12 +1137,13 @@ export default function FileExplorer({
       })
     }
 
+    const open = {
+      label: isFile ? t.preview.viewDetails : t.preview.openFolder,
+      icon: isFile ? <FileTextIcon /> : <FolderIcon />,
+    }
+    const href = pathHref?.(node.path)
     const lead: MenuEntry[] = [
-      {
-        label: isFile ? t.preview.viewDetails : t.preview.openFolder,
-        icon: isFile ? <FileTextIcon /> : <FolderIcon />,
-        onClick: () => handleSelectTreeItem(node.path, node),
-      },
+      href ? { ...open, href } : { ...open, onClick: () => handleSelectTreeItem(node.path, node) },
     ]
 
     const uriExtras = uris.map((value) => ({
@@ -1109,6 +1151,12 @@ export default function FileExplorer({
       value,
       icon: <LinkIcon />,
     }))
+    // The menu takes the right-click from the row's link, and with it the
+    // browser's own "Copy link", so it offers that copy itself.
+    const pageUrl = absoluteUrl(href)
+    if (pageUrl) {
+      uriExtras.unshift({ label: t.preview.link, value: pageUrl, icon: <LinkIcon /> })
+    }
 
     return assembleRowMenu({
       lead,
@@ -1174,11 +1222,15 @@ export default function FileExplorer({
                   >
                     {label}
                   </span>
+                ) : pathHref ? (
+                  <AppLink href={pathHref(node.path)} className={breadcrumbClass}>
+                    {label}
+                  </AppLink>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleSelectTreeItem(node.path, node)}
-                    className="max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
+                    className={breadcrumbClass}
                   >
                     {label}
                   </button>
@@ -1543,12 +1595,10 @@ export default function FileExplorer({
               onToggleExpand={handleToggleExpand}
               onSelect={(path, node) => {
                 void handleSelectTreeItem(path, node)
-                // With no details pane beside it, the tree is the only way to
-                // reach a file, so selecting one opens it.
-                if (treeOnly && node.type === 'file') {
-                  openPreview(node)
-                }
+                openFromTree(node)
               }}
+              pathHref={pathHref}
+              onFollowLink={openFromTree}
               onDropToFolder={onDropFiles}
               onContextMenu={openNodeContextMenu}
               onPreviewFile={openPreview}
@@ -1594,23 +1644,26 @@ export default function FileExplorer({
                     {t.chrome.storages}
                   </Table.Header>
                   <ListActionsHeader actionCount={1} />
-                  {rootNodes.map((rootNode) => (
-                    <UserRow
-                      key={rootNode.path}
-                      node={rootNode}
-                      icon={getNodeIcon(rootNode)}
-                      storageCount={getNodeChildren(parentToChildrenMap, rootNode.path).length}
-                      getItems={() => [
-                        {
-                          label: t.preview.open,
-                          icon: <FolderIcon />,
-                          onClick: () => openUserNode(rootNode),
-                        },
-                      ]}
-                      openMenu={openMenu}
-                      onOpen={openUserNode}
-                    />
-                  ))}
+                  {rootNodes.map((rootNode) => {
+                    const href = pathHref?.(rootNode.path)
+                    const open = { label: t.preview.open, icon: <FolderIcon /> }
+                    return (
+                      <UserRow
+                        key={rootNode.path}
+                        node={rootNode}
+                        icon={getNodeIcon(rootNode)}
+                        href={href}
+                        storageCount={getNodeChildren(parentToChildrenMap, rootNode.path).length}
+                        getItems={() => [
+                          href
+                            ? { ...open, href }
+                            : { ...open, onClick: () => openUserNode(rootNode) },
+                        ]}
+                        openMenu={openMenu}
+                        onOpen={openUserNode}
+                      />
+                    )
+                  })}
                 </Table>
                 {rootNodes.length === 0 && (
                   <NoDataAvailablePreview selectedStorage={null} onRefresh={handleRefresh} />
@@ -1822,6 +1875,7 @@ export default function FileExplorer({
                           onOpen={(n) => handleSelectTreeItem(n.path, n)}
                           onToggleCheck={handleItemCheckbox}
                           onPreview={openPreview}
+                          pathHref={pathHref}
                           loadMore={loadMoreProps}
                         />
                       ) : (

@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AppLink, isPlainClick } from '../components/AppLink'
 import { positionKeys } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { Skeleton } from '../components/Skeleton'
@@ -9,7 +10,7 @@ import { ChevronRightIcon, FolderIcon, FolderOpenIcon } from '../icons'
 import { canPreview } from './FilePreview/previewType'
 import { getNodeIcon } from './helpers'
 import type { TreeNode } from './lib/types'
-import { getParentPath } from './lib/utils'
+import { carriesFiles, getParentPath } from './lib/utils'
 import {
   edgeRow,
   findRowIndex,
@@ -47,6 +48,10 @@ interface TreeViewProps {
   onDropToFolder: (folderPath: string, files: FileList | DataTransferItemList) => void
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void
   onPreviewFile: (node: TreeNode) => void
+  /** The URL of a path; set, each row is a link to its path. */
+  pathHref?: ((path: string) => string) | undefined
+  /** A plain click on a row's link, which moves to its path on its own. */
+  onFollowLink?: ((node: TreeNode) => void) | undefined
   /** Directories with pages left to fetch, and how to fetch them. */
   paging?:
     | {
@@ -71,6 +76,8 @@ export function TreeView({
   onDropToFolder,
   onContextMenu,
   onPreviewFile,
+  pathHref,
+  onFollowLink,
   paging,
 }: TreeViewProps) {
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null)
@@ -246,6 +253,8 @@ export function TreeView({
           <TreeRowItem
             row={row}
             isSelected={row.node.path === selectedPath}
+            href={pathHref?.(row.node.path)}
+            onFollowLink={onFollowLink}
             onToggleExpand={onToggleExpand}
             onSelect={onSelect}
             onDropToFolder={onDropToFolder}
@@ -473,6 +482,9 @@ function useSpringLoadedDrop({
     dragHandlers: {
       onDragEnter: (e: React.DragEvent) => {
         e.preventDefault()
+        if (!carriesFiles(e.dataTransfer)) {
+          return
+        }
         // Don't bubble to ancestor folders, or they stay flagged as drop targets.
         e.stopPropagation()
         hoverCount.current += 1
@@ -487,6 +499,9 @@ function useSpringLoadedDrop({
       onDragOver: (e: React.DragEvent) => e.preventDefault(),
       onDragLeave: (e: React.DragEvent) => {
         e.preventDefault()
+        if (!carriesFiles(e.dataTransfer)) {
+          return
+        }
         e.stopPropagation()
         hoverCount.current -= 1
         if (hoverCount.current > 0) {
@@ -496,8 +511,11 @@ function useSpringLoadedDrop({
         clear()
       },
       onDrop: (e: React.DragEvent) => {
-        e.stopPropagation()
         e.preventDefault()
+        if (!carriesFiles(e.dataTransfer)) {
+          return
+        }
+        e.stopPropagation()
         hoverCount.current = 0
         setDragActive(false)
         clear()
@@ -519,6 +537,7 @@ function dispatchRowKey(
     node,
     isDirectory,
     isExpanded,
+    isLink,
     onSelect,
     onToggleExpand,
     onDelegate,
@@ -526,12 +545,17 @@ function dispatchRowKey(
     node: TreeNode
     isDirectory: boolean
     isExpanded: boolean
+    isLink: boolean
     onSelect: (e: React.KeyboardEvent) => void
     onToggleExpand: (path: string) => void
     onDelegate: (e: React.KeyboardEvent, node: TreeNode) => void
   },
 ) {
   if (e.key === 'Enter') {
+    // A link's own Enter, with a modifier, opens it in a new tab or window.
+    if (isLink && (e.metaKey || e.ctrlKey || e.shiftKey)) {
+      return
+    }
     e.preventDefault()
     onSelect(e)
     return
@@ -561,6 +585,9 @@ function dispatchRowKey(
 interface TreeRowItemProps {
   row: TreeRow
   isSelected: boolean
+  /** Makes the row a link to its path. */
+  href?: string | undefined
+  onFollowLink?: ((node: TreeNode) => void) | undefined
   onToggleExpand: (path: string) => void
   onSelect: (path: string, node: TreeNode) => void
   onDropToFolder: (folderPath: string, files: FileList | DataTransferItemList) => void
@@ -571,6 +598,8 @@ interface TreeRowItemProps {
 const TreeRowItem = memo(function TreeRowItem({
   row,
   isSelected,
+  href,
+  onFollowLink,
   onToggleExpand,
   onSelect,
   onDropToFolder,
@@ -600,11 +629,24 @@ const TreeRowItem = memo(function TreeRowItem({
     }
   }
 
+  // The link moves to the path itself, so a click only opens or closes the
+  // folder, and one opening a new tab leaves this tree as it is.
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (!isPlainClick(e)) {
+      return
+    }
+    onFollowLink?.(node)
+    if (isDirectory) {
+      onToggleExpand(node.path)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) =>
     dispatchRowKey(e, {
       node,
       isDirectory,
       isExpanded,
+      isLink: !!href,
       onSelect: handleSelect,
       onToggleExpand,
       onDelegate: onKeyDown,
@@ -613,6 +655,33 @@ const TreeRowItem = memo(function TreeRowItem({
   const customIcon = getNodeIcon(node)
   // A storage root shows its display name; a user node's display name is its name.
   const label = isDirectory && node.storageId && node.displayName ? node.displayName : node.name
+  // Roving: only the selected row is in the tab order, and arrows move from it.
+  const tabIndex = isSelected ? 0 : -1
+  const itemProps = {
+    className: cx(
+      'group relative flex items-center gap-1.5 pr-2 py-1 rounded-md cursor-pointer',
+      'transition-colors duration-150',
+      'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-(--theme-link)',
+      isSelected
+        ? 'bg-(--theme-accent)/15 font-medium'
+        : dragActive
+          ? 'theme-hover'
+          : 'hover:theme-hover',
+    ),
+    style: indentStyle(depth, isDirectory),
+    onContextMenu: (e: React.MouseEvent) => onContextMenu(e, node),
+    'aria-level': depth + 1,
+    'aria-posinset': row.posInSet,
+    'aria-setsize': row.setSize,
+    'aria-selected': isSelected,
+    ...(isDirectory && { 'aria-expanded': isExpanded }),
+    children: (
+      <>
+        <RowIcons isDirectory={isDirectory} isExpanded={isExpanded} customIcon={customIcon} />
+        <span className="text-sm truncate">{label}</span>
+      </>
+    ),
+  }
 
   return (
     <div
@@ -623,32 +692,26 @@ const TreeRowItem = memo(function TreeRowItem({
       {...dragHandlers}
     >
       <IndentGuides depth={depth} />
-      <div
-        className={cx(
-          'group relative flex items-center gap-1.5 pr-2 py-1 rounded-md cursor-pointer',
-          'transition-colors duration-150',
-          'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-(--theme-link)',
-          isSelected
-            ? 'bg-(--theme-accent)/15 font-medium'
-            : dragActive
-              ? 'theme-hover'
-              : 'hover:theme-hover',
-        )}
-        style={indentStyle(depth, isDirectory)}
-        onClick={handleSelect}
-        onKeyDown={handleKeyDown}
-        onContextMenu={(e) => onContextMenu(e, node)}
-        role="treeitem"
-        aria-level={depth + 1}
-        aria-posinset={row.posInSet}
-        aria-setsize={row.setSize}
-        aria-selected={isSelected}
-        {...(isDirectory && { 'aria-expanded': isExpanded })}
-        tabIndex={isSelected ? 0 : -1}
-      >
-        <RowIcons isDirectory={isDirectory} isExpanded={isExpanded} customIcon={customIcon} />
-        <span className="text-sm truncate">{label}</span>
-      </div>
+      {href ? (
+        // The tree view pattern's navigation tree: each treeitem is the link
+        // itself, so a row is one focusable element that also opens in a new tab.
+        <AppLink
+          {...itemProps}
+          role="treeitem"
+          tabIndex={tabIndex}
+          href={href}
+          onClick={handleLinkClick}
+          onKeyDown={handleKeyDown}
+        />
+      ) : (
+        <div
+          {...itemProps}
+          role="treeitem"
+          tabIndex={tabIndex}
+          onClick={handleSelect}
+          onKeyDown={handleKeyDown}
+        />
+      )}
     </div>
   )
 })

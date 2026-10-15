@@ -23,6 +23,8 @@ interface FileTableProps {
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void
   onPreview: (node: TreeNode) => void
+  /** The URL of a path; set, each row is a link to its node. */
+  pathHref?: ((path: string) => string) | undefined
   /** Set when the folder has pages left to fetch. */
   loadMore?: LoadMoreState | undefined
 }
@@ -41,6 +43,7 @@ export function FileTable({
   onOpen,
   onToggleCheck,
   onPreview,
+  pathHref,
   loadMore,
 }: FileTableProps) {
   // Callback ref into state so the virtualizer re-reads once the element exists.
@@ -276,6 +279,7 @@ export function FileTable({
           onOpen={handleOpen}
           onToggleCheck={onToggleCheck}
           onPreview={onPreview}
+          pathHref={pathHref}
         />
       </Table>
     </div>

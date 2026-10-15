@@ -2,7 +2,8 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { UIProvider } from '../components/Provider'
+import { isPlainClick } from '../components/AppLink'
+import { type UILinkComponent, UIProvider } from '../components/Provider'
 import { CorsError } from './lib/errors'
 import type { TListPageRequest } from './lib/paging'
 import type { TreeNode, TStorage, TStorageObject } from './lib/types'
@@ -736,5 +737,119 @@ describe('FileExplorer landmarks and names', () => {
     await renderExplorer(FOLDER_A)
     expect(await screen.findByRole('grid', { name: 'Files' })).toBeInTheDocument()
     expect(screen.getByRole('tree', { name: 'Folders' })).toBeInTheDocument()
+  })
+})
+
+describe('FileExplorer links', () => {
+  const pathHref = (path: string) => `/files/${path}`
+
+  /** Renders with `pathHref` under a router link that records what it routes,
+   *  the way a host's does: a plain click routes, any other is the browser's. */
+  async function renderLinked(selectedPath: string, { onPathChange = vi.fn() } = {}) {
+    const routed: string[] = []
+    const goTo = vi.fn()
+    const RouterLink: UILinkComponent = ({ href, onClick, ...props }) => (
+      <a
+        {...props}
+        href={href}
+        onClick={(e) => {
+          onClick?.(e)
+          if (!e.defaultPrevented && isPlainClick(e)) {
+            e.preventDefault()
+            routed.push(href)
+          }
+        }}
+      />
+    )
+    render(
+      <UIProvider slots={{ link: RouterLink }} navigation={{ goTo }}>
+        <FileExplorerProvider>
+          <FileExplorer
+            getProviderAndClient={scriptedStorage().getProviderAndClient}
+            storages={[storage]}
+            selectedPath={selectedPath}
+            pathHref={pathHref}
+            onPathChange={onPathChange}
+          />
+        </FileExplorerProvider>
+      </UIProvider>,
+    )
+    await act(async () => {})
+    return { routed, goTo, onPathChange }
+  }
+
+  it('makes file and folder rows, tree rows and the trail links to their paths', async () => {
+    await renderLinked(FOLDER_A)
+    await screen.findByLabelText('Select one.txt')
+
+    expect(within(grid()).getByRole('link', { name: 'one.txt' })).toHaveAttribute(
+      'href',
+      `/files/${FOLDER_A}/one.txt`,
+    )
+    expect(within(grid()).getByRole('link', { name: 'sub' })).toHaveAttribute(
+      'href',
+      `/files/${FOLDER_A}/sub/`,
+    )
+    const b = await findTreeItem('b')
+    expect(b.tagName).toBe('A')
+    expect(b).toHaveAttribute('href', `/files/${FOLDER_B}/`)
+    const trail = screen.getByRole('navigation', { name: 'Location' })
+    expect(within(trail).getByRole('link', { name: 'bucket' })).toHaveAttribute(
+      'href',
+      `/files/${ROOT}/`,
+    )
+  })
+
+  it('routes a plain click through the link alone, and leaves a modified one to the browser', async () => {
+    const { routed, onPathChange } = await renderLinked(FOLDER_A)
+    const row = await within(grid()).findByRole('link', { name: 'sub' })
+
+    fireEvent.click(row)
+    expect(routed).toEqual([`/files/${FOLDER_A}/sub/`])
+
+    fireEvent.click(row, { metaKey: true })
+    fireEvent.click(await findTreeItem('b'), { ctrlKey: true })
+    expect(routed).toHaveLength(1)
+    expect(onPathChange).not.toHaveBeenCalled()
+  })
+
+  it('moves from the keyboard through pathHref when the host passes no onPathChange', async () => {
+    const goTo = vi.fn()
+    render(
+      <UIProvider navigation={{ goTo }}>
+        <FileExplorerProvider>
+          <FileExplorer
+            getProviderAndClient={scriptedStorage().getProviderAndClient}
+            storages={[storage]}
+            selectedPath={FOLDER_A}
+            pathHref={pathHref}
+          />
+        </FileExplorerProvider>
+      </UIProvider>,
+    )
+    await act(async () => {})
+    await screen.findByLabelText('Select one.txt')
+
+    fireEvent.keyDown(await findTreeItem('a'), { key: 'ArrowDown' })
+    expect(goTo).toHaveBeenCalledWith(expect.stringMatching(/^\/files\//))
+  })
+
+  it("makes the row menu's Open folder a link and offers to copy it", async () => {
+    await renderLinked(FOLDER_A)
+    fireEvent.contextMenu(await findTreeItem('b'))
+
+    expect(await screen.findByRole('menuitem', { name: 'Open folder' })).toHaveAttribute(
+      'href',
+      `/files/${FOLDER_B}/`,
+    )
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy' }))
+    expect(await screen.findByRole('menuitem', { name: 'Copy link' })).toBeInTheDocument()
+  })
+
+  it('keeps rows, tree rows and the trail free of links without pathHref', async () => {
+    await renderExplorer(FOLDER_A)
+    await screen.findByLabelText('Select one.txt')
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+    expect((await findTreeItem('b')).tagName).toBe('DIV')
   })
 })

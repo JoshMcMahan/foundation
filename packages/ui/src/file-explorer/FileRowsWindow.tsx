@@ -48,6 +48,7 @@ interface FileRowsWindowProps {
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void
   onPreview: (node: TreeNode) => void
+  pathHref?: ((path: string) => string) | undefined
 }
 
 /** Must stay a single child of `<Table>`: Table re-keys children by traversal
@@ -67,6 +68,7 @@ export function FileRowsWindow({
   onOpen,
   onToggleCheck,
   onPreview,
+  pathHref,
 }: FileRowsWindowProps) {
   useNestedScrollerWarning(scrollEl, nodes.length)
   useRowPitchAudit(scrollEl, nodes, items)
@@ -106,6 +108,7 @@ export function FileRowsWindow({
             // 1-based, and the header row is 1, so data rows start at 2.
             rowIndex={item.index + 2}
             active={item.index === activeIndex}
+            href={pathHref?.(node.path)}
             node={node}
             icon={icon}
             checked={checkedItems.has(node.path)}

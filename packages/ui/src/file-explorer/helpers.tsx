@@ -35,7 +35,7 @@ import {
 import { ListSkeleton } from '../list/index'
 import { CorsError } from './lib/errors'
 import type { TreeNode, TStorage, UploadNode } from './lib/types'
-import { getFileExtension } from './lib/utils'
+import { carriesFiles, getFileExtension } from './lib/utils'
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'fileExplorerSidebarWidth'
 const SIDEBAR_WIDTH_DEFAULT = 300
@@ -554,7 +554,7 @@ function DragDropZone({ onDropFiles, children, className = '' }: IDragDropZonePr
       )}
       onDragOver={(e) => {
         e.preventDefault()
-        if (onDropFiles) {
+        if (onDropFiles && carriesFiles(e.dataTransfer)) {
           setIsDragging(true)
         }
       }}
@@ -562,7 +562,7 @@ function DragDropZone({ onDropFiles, children, className = '' }: IDragDropZonePr
       onDrop={(e) => {
         e.preventDefault()
         setIsDragging(false)
-        if (!onDropFiles) {
+        if (!onDropFiles || !carriesFiles(e.dataTransfer)) {
           return
         }
         onDropFiles(e.dataTransfer.items.length ? e.dataTransfer.items : e.dataTransfer.files)

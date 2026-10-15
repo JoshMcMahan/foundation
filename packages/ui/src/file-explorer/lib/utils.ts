@@ -419,6 +419,12 @@ export async function collectObjectKeysToDelete(
   return Array.from(keys)
 }
 
+/** True when a drag carries files or folders, not a link or text, such as a
+ *  row's own link dragged across the explorer. */
+export function carriesFiles(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).includes('Files')
+}
+
 export function getUriScheme(uri: string): string {
   return uri.match(/^([a-z0-9+.-]+):\/\//i)?.[1] ?? ''
 }
