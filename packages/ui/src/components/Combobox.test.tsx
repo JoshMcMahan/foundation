@@ -343,6 +343,15 @@ describe('Autocomplete', () => {
     expect(onValueChange).toHaveBeenLastCalledWith('failure()')
   })
 
+  it('hides the suggestions while none match the typed text', async () => {
+    render(<Field onValueChange={() => {}} />)
+    await open()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'a new value' } })
+    const popup = screen.getByRole('listbox').closest('[data-side]')
+    await waitFor(() => expect(popup).toHaveAttribute('data-empty'))
+    expect(popup).toHaveClass('data-empty:hidden')
+  })
+
   it('fills the field with a suggestion value, found by its label', async () => {
     const onValueChange = vi.fn()
     render(<Field onValueChange={onValueChange} />)

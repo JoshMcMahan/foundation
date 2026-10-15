@@ -711,6 +711,8 @@ function ListPopup<Value>({
             withDetails && '@container/picker flex h-[min(40rem,var(--available-height))] flex-col',
             className,
             panelClassName,
+            // Base UI leaves a popup with nothing to show open, as an empty panel, for its host to hide.
+            !empty && !loading && statusGroups.length === 0 && !header && 'data-empty:hidden',
           )}
         >
           {header}
