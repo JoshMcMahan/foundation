@@ -315,11 +315,13 @@ In React, `useColorMode(preference)` follows the device while the preference is
 `system`, and `useApplyTheme(theme, mode)` applies the theme to the document
 root (or to an element you pass) and sets `color-scheme`. `applyTheme` sets the
 display-p3 values on a wide-gamut screen. To render a theme on the server,
-`themeStylesheet(selector, scheme)` returns a stylesheet with both blocks.
+`themeStylesheet(selector, scheme)` returns a stylesheet with both blocks; given
+`{ light, dark }` schemes, it pairs each token's two values with `light-dark()`.
 `deriveTheme(scheme)` returns the sRGB tokens alone.
 
-`theme.css` defines the default theme's tokens, so a page renders before any
-script runs:
+`theme.css` defines the default theme's tokens for both modes, each as
+`light-dark()`, so a page renders before any script runs and a token the host
+leaves unset follows the `color-scheme` it sets:
 
 ```css
 /* In a Tailwind v4 build: */

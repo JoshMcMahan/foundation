@@ -4,7 +4,7 @@ import { cx } from '../cx'
 import { CheckIcon, ChevronDownIcon } from '../icons'
 import { type ComboboxItem, optionNaming, pickerItemClassName } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
-import { panelClassName, positionerClassName } from './floating'
+import { panelClassName, panelListClassName, positionerClassName } from './floating'
 import { OptionDescription } from './OptionDescription'
 import { Tooltip } from './Tooltip'
 
@@ -110,7 +110,12 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
               panelClassName,
             )}
           >
-            <BaseSelect.List className="max-h-[min(15rem,var(--available-height))] overflow-y-auto py-1">
+            <BaseSelect.List
+              className={cx(
+                'max-h-[min(15rem,var(--available-height))] overflow-y-auto',
+                panelListClassName,
+              )}
+            >
               {items.map((item, index) => (
                 <BaseSelect.Item
                   key={String(item.value)}

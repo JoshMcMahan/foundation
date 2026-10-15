@@ -2,7 +2,12 @@ import { Menu as BaseMenu } from '@base-ui/react/menu'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { CheckIcon, ChevronRightIcon } from '../icons'
-import { panelClassName, panelItemClassName, positionerClassName } from './floating'
+import {
+  panelClassName,
+  panelItemClassName,
+  panelListClassName,
+  positionerClassName,
+} from './floating'
 
 // Root, Trigger, Group, RadioGroup and FilterProvider carry no styles, so callers
 // use Base UI's directly; the parts below give every menu one look.
@@ -42,7 +47,8 @@ export function MenuPopup({
       >
         <BaseMenu.Popup
           className={cx(
-            'min-w-44 max-h-(--available-height) overflow-y-auto py-1',
+            'min-w-44 max-h-(--available-height) overflow-y-auto',
+            panelListClassName,
             panelClassName,
             className,
           )}
@@ -66,7 +72,7 @@ export function MenuLinkItem({ className, ...props }: Styled<BaseMenu.LinkItem.P
 /** A choice within a Menu.RadioGroup, checked while it holds the group's value. */
 export function MenuRadioItem({ className, children, ...props }: Styled<BaseMenu.RadioItem.Props>) {
   return (
-    <BaseMenu.RadioItem closeOnClick {...props} className={cx(itemClassName, 'pl-2', className)}>
+    <BaseMenu.RadioItem closeOnClick {...props} className={cx(itemClassName, 'pl-1', className)}>
       <span className="flex w-3.5 shrink-0 justify-center">
         <BaseMenu.RadioItemIndicator>
           <CheckIcon className="size-3" />
@@ -112,12 +118,12 @@ export function MenuSubmenuTrigger({
 }
 
 export function MenuSeparator({ className }: { className?: string | undefined }) {
-  return <BaseMenu.Separator className={cx('my-1 h-px bg-(--theme-border)', className)} />
+  return <BaseMenu.Separator className={cx('-mx-1 my-1 h-px bg-(--theme-border)', className)} />
 }
 
 export function MenuGroupLabel({ children }: { children: ReactNode }) {
   return (
-    <BaseMenu.GroupLabel className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-(--theme-muted-text-color)">
+    <BaseMenu.GroupLabel className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-(--theme-muted-text-color)">
       {children}
     </BaseMenu.GroupLabel>
   )

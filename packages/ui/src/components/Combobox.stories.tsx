@@ -80,6 +80,41 @@ export const Grouped: StoryObj<FieldArgs> = {
   render: (args) => <GroupedDemo {...args} />,
 }
 
+const presets: ComboboxGroup[] = [
+  { label: 'My presets', items: [{ label: 'my-config', value: 'my-config' }] },
+  { label: 'Built-in presets', items: [{ label: 'config_1', value: 'config_1' }] },
+]
+
+function ShortGroupsDemo(args: FieldArgs) {
+  const [value, setValue] = useState<string | null>(null)
+  return (
+    <Combobox
+      aria-label="Preset"
+      items={presets}
+      value={value}
+      onValueChange={setValue}
+      disabled={args.disabled}
+      aria-invalid={args.invalid}
+      placeholder={args.placeholder}
+    />
+  )
+}
+
+/** The last row highlighted: it sits in the same gutter at the panel's bottom as at its sides. */
+export const LastItemHighlighted: StoryObj<FieldArgs> = {
+  args: { placeholder: 'Load a preset' },
+  render: (args) => <ShortGroupsDemo {...args} />,
+  play: async ({ canvasElement, args }) => {
+    if (args.disabled) {
+      return
+    }
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Show options' }))
+    const last = await screen.findByRole('option', { name: 'config_1' })
+    await userEvent.hover(last)
+    await expect(last).toHaveAttribute('data-highlighted')
+  },
+}
+
 // Every cluster item is an object, so they read back without narrowing.
 const clusterItems = clusters.flatMap((g) => g.items) as ComboboxItem<{ id: string }>[]
 

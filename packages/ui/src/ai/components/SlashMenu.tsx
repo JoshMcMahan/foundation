@@ -1,5 +1,5 @@
 import { type KeyboardEvent, useEffect, useId, useState } from 'react'
-import { panelClassName, panelItemClassName } from '../../components/floating'
+import { panelClassName, panelItemClassName, panelListClassName } from '../../components/floating'
 import { cx } from '../../cx'
 
 export interface SlashCommandOption {
@@ -130,7 +130,8 @@ export function SlashMenu({
       aria-label={label}
       data-testid="slash-menu"
       className={cx(
-        'absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden py-1',
+        'absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden',
+        panelListClassName,
         panelClassName,
       )}
     >

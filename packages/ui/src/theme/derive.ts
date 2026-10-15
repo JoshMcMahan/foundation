@@ -30,7 +30,7 @@ import {
   shown,
   solve,
 } from './contrast'
-import { type CodeStyle, DEFAULT_CONTRAST, type Scheme } from './model'
+import { type CodeStyle, DEFAULT_CONTRAST, type Mode, type Scheme } from './model'
 
 export const THEME_TOKENS = [
   // Surfaces
@@ -579,17 +579,99 @@ export function deriveTheme(scheme: Scheme, options: DeriveOptions = {}): ThemeV
   return build(scheme, options).srgb
 }
 
+// A color as the generator writes one: hex, rgba() or display-p3.
+const COLOR = /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|color\([^)]*\)/gi
+
+/** One value for both modes: each color that differs becomes `light-dark()`, which follows the
+ *  CSS color-scheme. A shadow keeps its geometry and pairs its colors. */
+function lightDark(light: string, dark: string): string {
+  if (light === dark) {
+    return light
+  }
+  const darks = dark.match(COLOR) ?? []
+  if (light.replace(COLOR, '') !== dark.replace(COLOR, '')) {
+    throw new Error(`cannot pair ${light} with ${dark}`)
+  }
+  let i = 0
+  return light.replace(COLOR, (color) => {
+    const other = darks[i++] as string
+    return color === other ? color : `light-dark(${color}, ${other})`
+  })
+}
+
+/** Splits at the commas outside any parentheses. */
+function topLevel(value: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i]
+    if (ch === '(') {
+      depth++
+    } else if (ch === ')') {
+      depth--
+    } else if (ch === ',' && depth === 0) {
+      parts.push(value.slice(start, i).trim())
+      start = i + 1
+    }
+  }
+  parts.push(value.slice(start).trim())
+  return parts
+}
+
+/** A declaration laid out as the repository's formatter lays out CSS past 100 columns: a list
+ *  takes a line per item, and a single function a line per argument. */
+function declaration(token: string, value: string, indent: string): string {
+  const line = `${indent}${token}: ${value};`
+  if (line.length <= 100) {
+    return line
+  }
+  const inner = `${indent}  `
+  const items = topLevel(value)
+  if (items.length > 1) {
+    return `${indent}${token}:\n${items.map((item) => `${inner}${item}`).join(',\n')};`
+  }
+  const call = /^([\w-]+)\((.*)\)$/s.exec(value)
+  if (!call) {
+    return line
+  }
+  const args = topLevel(call[2] as string)
+  return `${indent}${token}: ${call[1]}(\n${args.map((arg) => `${inner}${arg}`).join(',\n')}\n${indent});`
+}
+
 /** A stylesheet for a scheme: sRGB under `selector`, and the display-p3 overrides under
- *  `@media (color-gamut: p3)`. `omit` leaves tokens out, such as ones a host supplies. */
+ *  `@media (color-gamut: p3)`. Given a scheme for each mode, every token that differs between
+ *  them is written as `light-dark()`, so the tokens follow the CSS color-scheme wherever they are
+ *  used. `omit` leaves tokens out, such as ones a host supplies. */
 export function themeStylesheet(
   selector: string,
-  scheme: Scheme,
+  scheme: Scheme | Record<Mode, Scheme>,
   options: DeriveOptions & { omit?: readonly ThemeToken[] } = {},
 ): string {
-  const { srgb, p3 } = generateTheme(scheme, options)
+  const tokens = THEME_TOKENS.filter((token) => !options.omit?.includes(token))
+  let srgb: Partial<ThemeVariables>
+  let p3: Partial<ThemeVariables>
+  if ('interface' in scheme) {
+    ;({ srgb, p3 } = generateTheme(scheme, options))
+  } else {
+    const light = generateTheme(scheme.light, options)
+    const dark = generateTheme(scheme.dark, options)
+    srgb = {}
+    p3 = {}
+    for (const token of tokens) {
+      srgb[token] = lightDark(light.srgb[token], dark.srgb[token])
+      if (light.p3[token] !== undefined || dark.p3[token] !== undefined) {
+        p3[token] = lightDark(
+          light.p3[token] ?? light.srgb[token],
+          dark.p3[token] ?? dark.srgb[token],
+        )
+      }
+    }
+  }
   const block = (vars: Partial<ThemeVariables>, indent: string) =>
-    THEME_TOKENS.filter((token) => !options.omit?.includes(token) && vars[token] !== undefined)
-      .map((token) => `${indent}${token}: ${vars[token]};`)
+    tokens
+      .filter((token) => vars[token] !== undefined)
+      .map((token) => declaration(token, vars[token] as string, indent))
       .join('\n')
   const wide = block(p3, '    ')
   return `${selector} {\n${block(srgb, '  ')}\n}\n${

@@ -82,6 +82,74 @@ export const ReadOnlyFile: StoryObj<typeof Editor> = {
   },
 }
 
+const PYTHON = [
+  '"""Normalize station observations before the ensemble runs."""',
+  'import argparse',
+  'from pathlib import Path',
+  '',
+  '',
+  'def normalize(src: Path, out: Path) -> None:',
+  '    df = read_table(src)',
+  '    df["temperature"] = df.temperature - 273.15',
+  '    df.to_parquet(out / src.name, index=False)',
+  '',
+  '',
+  'if __name__ == "__main__":',
+  '    parser = argparse.ArgumentParser()',
+  '    parser.add_argument("inputs", nargs="+", type=Path)',
+  '    args = parser.parse_args()',
+  '    for path in args.inputs:',
+  '        normalize(path, Path("normalized"))',
+  '',
+].join('\n')
+
+// The tokens a host with an older palette of its own sets on the root; it leaves the rest, the
+// code colors among them, to theme.css.
+const HOST_TOKENS = new Set([
+  '--theme-app-bg',
+  '--theme-app',
+  '--theme-accent',
+  '--theme-accent-text',
+  '--theme-placeholder',
+  '--theme-panel-bg',
+  '--theme-muted-panel-bg',
+  '--theme-muted-text-color',
+  '--theme-border',
+  '--theme-input-bg',
+  '--theme-input-disabled-bg',
+  '--theme-hover',
+  '--theme-link',
+])
+
+/** A file to read under a host that sets only its own surface tokens and switches mode by
+ * `color-scheme`: the code colors come from theme.css's defaults for the mode in effect. Switch
+ * the toolbar's Mode to check both. */
+export const HostSetsSomeTokens: StoryObj<typeof Editor> = {
+  args: {
+    readOnly: true,
+    language: 'python',
+    value: PYTHON,
+    ariaLabel: 'preprocess.py',
+    height: 420,
+    width: 720,
+    fontSize: 12,
+    minimap: { enabled: false },
+    overviewRulerLanes: 0,
+  },
+  decorators: [
+    (Story) => {
+      // The preview decorator has just applied every token; take back the ones this host leaves.
+      const root = document.documentElement.style
+      for (const name of [...root].filter((n) => n.startsWith('--theme-'))) {
+        if (!HOST_TOKENS.has(name)) {
+          root.removeProperty(name)
+        }
+      }
+      return <Story />
+    },
+  ],
+}
+
 /** Greyed out and read-only, as a disabled field is. The editor beside it keeps its colors:
  * Monaco's theme is page-wide, so a disabled editor greys out on its own. */
 export const Disabled: StoryObj<typeof Editor> = {

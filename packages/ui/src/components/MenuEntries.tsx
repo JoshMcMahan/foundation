@@ -133,7 +133,7 @@ export function MenuEntries({
     : entries
   return (
     <>
-      <div className="sticky top-0 z-[1] bg-(--theme-app-bg) px-2 pt-0.5 pb-1">
+      <div className="sticky top-0 z-[1] bg-(--theme-app-bg) px-1 pt-0.5 pb-1">
         <Menu.Input
           aria-label={search.placeholder}
           placeholder={search.placeholder}

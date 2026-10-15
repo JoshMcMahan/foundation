@@ -81,10 +81,12 @@ describe('the theme contract', () => {
     expect(themeCss).not.toMatch(/^\s*--theme-sidebar-/m)
   })
 
-  it('ships the default theme as theme.css defaults, sRGB and display-p3', () => {
-    const generated = themeStylesheet(':root', schemeFor(DEFAULT_THEME, 'light'), {
-      omit: SIDEBAR_TOKENS,
-    })
+  it('ships the default theme as theme.css defaults, both modes, sRGB and display-p3', () => {
+    const generated = themeStylesheet(
+      ':root',
+      { light: schemeFor(DEFAULT_THEME, 'light'), dark: schemeFor(DEFAULT_THEME, 'dark') },
+      { omit: SIDEBAR_TOKENS },
+    )
     const block = /\/\* generated:start[^\n]*\*\/\n([\s\S]*?)\/\* generated:end \*\//.exec(themeCss)
     if (process.env['UPDATE_THEME_CSS'] && block) {
       writeFileSync(themeCssPath, themeCss.replace(block[1] as string, generated))
@@ -355,6 +357,20 @@ describe('generateTheme', () => {
     expect(css).toMatch(/^:root \{\n {2}--theme-app-bg: #ffffff;/)
     expect(css).toMatch(
       /@media \(color-gamut: p3\) \{\n {2}:root \{\n {4}--theme-accent: color\(display-p3/,
+    )
+  })
+
+  it('pairs the two modes with light-dark(), keeping a shadow valid', () => {
+    const light = { interface: { base: '#ffffff', accent: '#06354f' } }
+    const dark = { interface: { base: '#0d1117', accent: '#5b9ccf' } }
+    const css = themeStylesheet(':root', { light, dark })
+    const value = (token: string) => new RegExp(`\\n {2}${token}: (.*);`).exec(css)?.[1]
+    expect(value('--theme-code-text')).toBe(
+      `light-dark(${deriveTheme(light)['--theme-code-text']}, ${deriveTheme(dark)['--theme-code-text']})`,
+    )
+    // light-dark() takes only colors, so each of a shadow's colors is paired, not the whole list.
+    expect(value('--theme-shadow-sm')).toMatch(
+      /^0 1px 2px light-dark\(rgba\([^)]*\), rgba\([^)]*\)\)$/,
     )
   })
 

@@ -833,7 +833,8 @@ function VirtualList<Value>({
       role="presentation"
       ref={scrollerRef}
       className={cx(
-        'overflow-auto overscroll-contain',
+        // The panel's gutter: the virtualizer pads the ends, so the list takes only the sides.
+        'overflow-auto overscroll-contain px-1',
         tall ? 'max-h-full' : 'max-h-[min(15rem,var(--available-height))]',
       )}
       style={{ height: total }}
@@ -859,7 +860,7 @@ function VirtualList<Value>({
                 data-index={virtual.index}
                 ref={virtualizer.measureElement}
                 style={style}
-                className="flex items-center gap-1.5 px-3 pt-2 pb-1 text-xs text-(--theme-muted-text-color)"
+                className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-xs text-(--theme-muted-text-color)"
               >
                 <GroupHeading group={row.group} />
               </div>

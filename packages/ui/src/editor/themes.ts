@@ -24,11 +24,36 @@ export function expandShorthandHex(color: string): string {
 
 const fallbacks: Partial<Record<Mode, Record<ThemeToken, string>>> = {}
 
+/** The arm of a `light-dark()` value for a mode, or the value itself. A token the host leaves to
+ *  theme.css reads as `light-dark(light, dark)`, which CSS resolves by the color-scheme of where it
+ *  is used; Monaco takes one color per theme, so each theme takes its own mode's arm. */
+export function forMode(value: string, mode: Mode): string {
+  const inner = /^light-dark\((.*)\)$/s.exec(value.trim())?.[1]
+  if (inner === undefined) {
+    return value
+  }
+  // The arms may be functions with commas of their own, such as rgba().
+  let depth = 0
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i]
+    if (ch === '(') {
+      depth++
+    } else if (ch === ')') {
+      depth--
+    } else if (ch === ',' && depth === 0) {
+      return (mode === 'light' ? inner.slice(0, i) : inner.slice(i + 1)).trim()
+    }
+  }
+  return value
+}
+
 /** A token as Monaco takes it: a 6-digit hex. Monaco can't read display-p3, so
  *  a wide-gamut value is mapped back into sRGB; the default theme fills in for
  *  a host that sets no tokens. */
 function token(style: CSSStyleDeclaration | undefined, name: ThemeToken, mode: Mode): string {
-  const color = parseColor(expandShorthandHex(style?.getPropertyValue(name).trim() ?? ''))
+  const color = parseColor(
+    expandShorthandHex(forMode(style?.getPropertyValue(name) ?? '', mode).trim()),
+  )
   if (color) {
     return toHex(color)
   }

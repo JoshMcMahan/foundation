@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { defineEditorThemes, expandShorthandHex, followThemeTokens } from './themes'
+import { defineEditorThemes, expandShorthandHex, followThemeTokens, forMode } from './themes'
 
 const validColor = /^#?([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?$/
 
@@ -40,6 +40,37 @@ describe('defineEditorThemes syntax', () => {
     expect(rule('keyword')?.foreground).toMatch(/^[\da-f]{6}$/)
     document.documentElement.style.removeProperty('--theme-code-keyword')
     document.documentElement.style.removeProperty('--theme-code-string')
+  })
+})
+
+describe('forMode', () => {
+  it("takes the mode's arm of light-dark(), even when the arms have commas of their own", () => {
+    expect(forMode('light-dark(#1c2330, #e1e9f2)', 'light')).toBe('#1c2330')
+    expect(forMode('light-dark(#1c2330, #e1e9f2)', 'dark')).toBe('#e1e9f2')
+    expect(forMode('light-dark(rgba(6, 53, 79, 0.25),rgba(91, 156, 207, 0.35))', 'dark')).toBe(
+      'rgba(91, 156, 207, 0.35)',
+    )
+    expect(forMode(' #abcdef ', 'dark')).toBe(' #abcdef ')
+  })
+})
+
+describe('defineEditorThemes for a host that sets only some tokens', () => {
+  it("gives each theme its own mode's default code colors, not the mode the root is in", () => {
+    // A host that switches to dark by color-scheme and sets its surfaces, but leaves the code
+    // tokens to a stylesheet that writes them for both modes, as theme.css does.
+    const root = document.documentElement.style
+    root.setProperty('--theme-panel-bg', '#0d1117')
+    root.setProperty('--theme-code-text', 'light-dark(#102030, #f0e0d0)')
+    const themes = new Map<string, { rules: { token: string; foreground?: string }[] }>()
+    defineEditorThemes({
+      defineTheme: (name: string, data: { rules: { token: string; foreground?: string }[] }) =>
+        themes.set(name, data),
+    } as unknown as Parameters<typeof defineEditorThemes>[0])
+    const text = (theme: string) => themes.get(theme)?.rules.find((r) => r.token === '')?.foreground
+    expect(text('app-dark')).toBe('f0e0d0')
+    expect(text('app-light')).toBe('102030')
+    root.removeProperty('--theme-panel-bg')
+    root.removeProperty('--theme-code-text')
   })
 })
 
