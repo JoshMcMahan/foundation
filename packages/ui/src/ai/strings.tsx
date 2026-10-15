@@ -271,7 +271,6 @@ const activityWords: readonly string[] = [
   'Manifesting',
   'Moseying',
   'Musing',
-  'Percussing',
   'Reticulating',
   'Schlepping',
   'Stewing',
