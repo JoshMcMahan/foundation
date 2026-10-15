@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.53.0](https://github.com/parallelworks/foundation/compare/ui-v0.52.0...ui-v0.53.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** a field's help opens as Tab reaches its control, and its ? is hidden from screen readers ([#312](https://github.com/parallelworks/foundation/issues/312))
+* **ui:** a read-only Editor views code to read, replacing the file preview's own editor ([#307](https://github.com/parallelworks/foundation/issues/307))
+* **ui:** load Monaco's editor core with only the languages the editor needs ([#308](https://github.com/parallelworks/foundation/issues/308))
+
+### Features
+
+* **ui:** a read-only Editor views code to read, replacing the file preview's own editor ([#307](https://github.com/parallelworks/foundation/issues/307)) ([2fbd3bb](https://github.com/parallelworks/foundation/commit/2fbd3bb43d79175f2558449a08501722f69feee5))
+* **ui:** load Monaco's editor core with only the languages the editor needs ([#308](https://github.com/parallelworks/foundation/issues/308)) ([8d87999](https://github.com/parallelworks/foundation/commit/8d87999d50e459eb2d7f92d681364a4298155b55))
+* **ui:** the file explorer's rows, tree and trail are links with pathHref ([#304](https://github.com/parallelworks/foundation/issues/304)) ([ac6bc46](https://github.com/parallelworks/foundation/commit/ac6bc4620d480cf9371ff122492945e35fca5543))
+
+
+### Bug Fixes
+
+* **ui:** a field's help opens as Tab reaches its control, and its ? is hidden from screen readers ([#312](https://github.com/parallelworks/foundation/issues/312)) ([3c2a45e](https://github.com/parallelworks/foundation/commit/3c2a45e366c2fb5dd49a9308b98dc04a6556ba2f))
+* **ui:** drop Percussing from the agent's status words ([#311](https://github.com/parallelworks/foundation/issues/311)) ([ddf1d32](https://github.com/parallelworks/foundation/commit/ddf1d32941a6ebba8e88e4baedf2a959863e2872))
+* **ui:** load the KaTeX stylesheet with the markdown renderer ([#305](https://github.com/parallelworks/foundation/issues/305)) ([285de8f](https://github.com/parallelworks/foundation/commit/285de8f70a0e6adaebc230f1d57b9da2c00db71a))
+
 ## [0.52.0](https://github.com/parallelworks/foundation/compare/ui-v0.51.0...ui-v0.52.0) (2026-10-14)
 
 
