@@ -1,8 +1,20 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, use } from 'react'
 import { Loader } from '../components/Loader'
+import { editorLanguagesLoading } from './languages'
 import type { EditorProps } from './Monaco'
 
-const MonacoEditor = lazy(() => import('./Monaco'))
+const loadMonaco = () => import('./Monaco')
+const MonacoEditor = lazy(loadMonaco)
+
+function LoadedEditor(props: EditorProps) {
+  const languages = editorLanguagesLoading()
+  if (languages) {
+    // Fetched alongside the host's languages rather than after them.
+    void loadMonaco()
+    use(languages)
+  }
+  return <MonacoEditor {...props} />
+}
 
 /** A Monaco code editor, loaded on first render so Monaco stays out of the host's first bundle. */
 export function Editor(props: EditorProps) {
@@ -16,7 +28,7 @@ export function Editor(props: EditorProps) {
         </div>
       }
     >
-      <MonacoEditor {...props} />
+      <LoadedEditor {...props} />
     </Suspense>
   )
 }

@@ -1,6 +1,7 @@
 export { Editor } from './Editor'
 export { EditorField, type IEditorField } from './EditorField'
 export { FormCodePanel, type FormCodePanelProps } from './FormCodePanel'
+export { addEditorLanguages, type EditorLanguages } from './languages'
 export { HOST_MARKER_OWNER, LINT_OWNER } from './lintOwner'
 export type { EditorMarker, EditorProps, ValidationMarker } from './Monaco'
 export { type NestedWorkflowText, nestedWorkflowText } from './nestedText'

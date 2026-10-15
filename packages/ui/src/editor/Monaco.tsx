@@ -1,4 +1,4 @@
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/editor/editor.api'
 import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { useStrings } from '../components/Provider'
 import { useCssIsDark } from '../components/useCssIsDark'
@@ -14,6 +14,7 @@ import {
   useLintSources,
 } from './lintContext'
 import { type NestedWorkflowText, publishNestedText } from './nestedText'
+import './monacoFeatures'
 import { registerRevealer } from './reveal'
 import { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 import { setupMonacoWorkers } from './workers'

@@ -1,4 +1,4 @@
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/editor/editor.api'
 
 const listeners = new WeakMap<monaco.editor.ITextModel, monaco.IDisposable[]>()
 

@@ -10,7 +10,9 @@
   },
   "type": "module",
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "./src/editor/monacoFeatures.ts",
+    "./dist/editor/monacoFeatures.js"
   ],
   "exports": {
     ".": "./src/index.ts",

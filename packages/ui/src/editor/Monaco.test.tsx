@@ -15,7 +15,7 @@ const fake = vi.hoisted(() => {
   return { models, created }
 })
 
-vi.mock('monaco-editor', () => {
+vi.mock('monaco-editor/editor/editor.api', () => {
   const makeModel = (value: string, language: string, uri: string) => {
     const state = {
       uri,
@@ -73,12 +73,13 @@ vi.mock('monaco-editor', () => {
     },
   }
 })
+vi.mock('./monacoFeatures', () => ({}))
 vi.mock('./workers', () => ({ setupMonacoWorkers: () => {} }))
 vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {} }))
 vi.mock('./reveal', () => ({ registerRevealer: () => () => {} }))
 vi.mock('../components/useCssIsDark', () => ({ useCssIsDark: () => false }))
 
-const monaco = await import('monaco-editor')
+const monaco = await import('monaco-editor/editor/editor.api')
 
 afterEach(() => {
   cleanup()

@@ -42,6 +42,8 @@ interface FakeModel {
 const worker = new FakeWorker()
 const setModelMarkers = vi.fn()
 const models: FakeModel[] = []
+const startServer = vi.fn()
+let onCreateModel: ((model: FakeModel) => void) | undefined
 
 function model(uri: string, languageId: string, text: string): FakeModel {
   return {
@@ -56,8 +58,13 @@ function model(uri: string, languageId: string, text: string): FakeModel {
   }
 }
 
-vi.mock('./workers', () => ({ createYamlWorker: () => worker }))
-vi.mock('monaco-editor', () => ({
+vi.mock('./workers', () => ({
+  createYamlWorker: () => {
+    startServer()
+    return worker
+  },
+}))
+vi.mock('monaco-editor/editor/editor.api', () => ({
   MarkerSeverity: { Error: 8, Warning: 4, Info: 2, Hint: 1 },
   languages: {
     CompletionItemKind: {},
@@ -68,7 +75,9 @@ vi.mock('monaco-editor', () => ({
   },
   editor: {
     getModels: () => models,
-    onDidCreateModel: () => {},
+    onDidCreateModel: (listener: (model: FakeModel) => void) => {
+      onCreateModel = listener
+    },
     setModelMarkers: (...args: unknown[]) => setModelMarkers(...args),
   },
 }))
@@ -164,5 +173,19 @@ describe('ensureYamlLanguage', () => {
         message: 'Property timeout is not allowed.',
       },
     ])
+  })
+})
+
+describe('a page with no YAML yet', () => {
+  it('starts the server with the first YAML model, not the first editor', async () => {
+    vi.resetModules()
+    models.length = 0
+    models.push(model('file:///script.sh', 'shell', 'echo hi\n'))
+    startServer.mockClear()
+    const { ensureYamlLanguage } = await import('./yamlLanguage')
+    ensureYamlLanguage()
+    expect(startServer).not.toHaveBeenCalled()
+    onCreateModel?.(model('file:///job.yaml', 'yaml', 'jobs: {}\n'))
+    expect(startServer).toHaveBeenCalledOnce()
   })
 })

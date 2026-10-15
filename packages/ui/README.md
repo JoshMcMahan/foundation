@@ -11,7 +11,7 @@ so an application ships only what it imports:
 | `./list` | list pages, tables, row menus and list controls |
 | `./form` | `DynamicForm` and its field registry |
 | `./graph` | job dependency graph and tree view, and the visual workflow editor: the graph, the run form as an inputs editor, and their dialogs |
-| `./editor` | Monaco editor (`monaco-editor` is an optional peer); YAML validation, completion and hover run in a bundled worker |
+| `./editor` | Monaco editor (`monaco-editor` is an optional peer), loaded on first mount with the languages it needs; YAML validation, completion and hover run in a bundled worker |
 | `./logviewer` | log viewer with ANSI color and search |
 | `./file-explorer` | object storage explorer over a host-supplied provider |
 | `./ai`, `./ai/openai`, `./ai/mock` | chat interface and adapters |
@@ -611,6 +611,39 @@ removes what it added.
 Text that comes back unchanged leaves the cursor alone, and a reset from outside keeps the cursor
 and scroll where they were. Each editor has a model of its own unless it is given a `path`, and it
 is named `UIStrings.common.codeEditor` unless given an `ariaLabel`.
+
+Monaco comes from the host's own `monaco-editor` through its bundler, never from a CDN, and loads
+when the first editor mounts, so it stays out of the host's first bundle. Its workers are files in
+the package that the host's bundler copies, started with `new Worker(url)`: a CSP needs
+`worker-src 'self'` and no `blob:`. The YAML language server starts with the first YAML model.
+
+The editor colors YAML, JSON, shell, Bash, Python and JavaScript, and validates and formats JSON.
+`addEditorLanguages` adds Monaco's other languages, loaded with the next editor to mount. Call it
+once at startup:
+
+```ts
+import { addEditorLanguages } from '@parallelworks/ui/editor'
+
+addEditorLanguages({ load: () => import('monaco-editor/languages/definitions/ruby/register') })
+// Every language Monaco colors, each one fetched only when an editor shows it.
+addEditorLanguages({ load: () => import('monaco-editor/languages/definitions/register.all') })
+```
+
+A language service with a worker of its own, such as TypeScript's, also takes its workers, by the
+label Monaco asks for. Build them as the host's bundler builds workers; with Vite:
+
+```ts
+import TsWorker from 'monaco-editor/language/typescript/ts.worker?worker'
+
+addEditorLanguages({
+  load: () =>
+    Promise.all([
+      import('monaco-editor/languages/definitions/typescript/register'),
+      import('monaco-editor/languages/features/typescript/register'),
+    ]),
+  workers: { typescript: () => new TsWorker(), javascript: () => new TsWorker() },
+})
+```
 
 ## AI chat
 

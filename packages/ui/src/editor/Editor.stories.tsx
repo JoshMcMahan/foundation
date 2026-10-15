@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { Editor } from './Editor'
+import { addEditorLanguages } from './languages'
 import { configureEditorYaml } from './yaml'
 
 const meta: Meta<typeof Editor> = {
@@ -13,7 +14,9 @@ const meta: Meta<typeof Editor> = {
           'Monaco loads lazily on mount. It renders here because monaco-editor ' +
           'is a devDependency of this package; consumers must install the ' +
           'optional peer to use `@parallelworks/ui/editor`. YAML models get ' +
-          'validation, completion, hover and formatting from a bundled worker.',
+          'validation, completion, hover and formatting from a bundled worker. ' +
+          'The editor colors YAML, JSON, shell, Bash, Python and JavaScript; ' +
+          '`addEditorLanguages` adds others.',
       },
     },
   },
@@ -62,6 +65,38 @@ export const Disabled: StoryObj<typeof Editor> = {
       <Editor language="yaml" value={YAML_VALUE} height={200} width={640} />
     </div>
   ),
+}
+
+/** Bash, which workflow fields suggest, colors as shell does. */
+export const Bash: StoryObj<typeof Editor> = {
+  args: {
+    language: 'bash',
+    value: 'for file in *.log; do\n  gzip "$file"\ndone\n',
+    height: 120,
+    width: 640,
+  },
+}
+
+let rubyAdded = false
+
+/** A language the editor doesn't carry, which the host adds with `addEditorLanguages`. */
+export const AddedLanguage: StoryObj<typeof Editor> = {
+  args: {
+    language: 'ruby',
+    value: 'def greet(name)\n  puts "Hello, #{name}"\nend\n',
+    height: 120,
+    width: 640,
+  },
+  loaders: [
+    () => {
+      if (!rubyAdded) {
+        rubyAdded = true
+        addEditorLanguages({
+          load: () => import('monaco-editor/languages/definitions/ruby/register'),
+        })
+      }
+    },
+  ],
 }
 
 /** The host hands back the text on every change, as a form does: the cursor stays where it is. */

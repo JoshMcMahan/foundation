@@ -1,4 +1,4 @@
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/editor/editor.api'
 import { createYamlWorker } from './workers'
 import { onYamlSchemas, type SchemasSettings } from './yaml'
 
@@ -279,56 +279,78 @@ function answerServer(method: string, params: unknown): unknown {
 }
 
 function startYamlLanguage(): void {
-  const worker = createYamlWorker()
-  // The first message starts the server; it carries an optional translation
-  // bundle, and without one the server speaks English.
-  worker.postMessage({})
-  const connection = new WorkerConnection(worker, answerServer)
+  let server: { connection: WorkerConnection; ready: Promise<void> } | undefined
+  let schemas: SchemasSettings[] = []
 
   // Keyed by the URI string sent to the server, which is how it names models back.
   const open = new Map<string, monaco.editor.ITextModel>()
 
-  const ready = connection
-    .request('initialize', {
-      processId: null,
-      rootUri: null,
-      capabilities: {
-        workspace: { configuration: true },
-        textDocument: {
-          synchronization: {},
-          completion: {
-            completionItem: {
-              snippetSupport: true,
-              insertReplaceSupport: true,
-              documentationFormat: ['markdown', 'plaintext'],
-            },
-          },
-          hover: { contentFormat: ['markdown', 'plaintext'] },
-          publishDiagnostics: {},
-        },
-      },
-    })
-    .then(() => {
-      connection.notify('initialized', {})
-      connection.notify('workspace/didChangeConfiguration', { settings: null })
-    })
-
-  onYamlSchemas((schemas: SchemasSettings[]) => {
-    // JSON-RPC reads an array as positional arguments, so the list is the one argument.
-    void ready.then(() => connection.notify('json/schemaAssociations', [schemas]))
-  })
-
-  connection.onNotification('textDocument/publishDiagnostics', (params) => {
-    const { uri, diagnostics } = params as { uri: string; diagnostics: Diagnostic[] }
-    const model = open.get(uri)
-    if (model && !model.isDisposed()) {
-      monaco.editor.setModelMarkers(model, MARKER_OWNER, diagnostics.map(toMarker))
+  // The server is a megabyte of worker, so it starts with the first YAML model rather than
+  // with the first editor, which may well be showing a shell script.
+  function connect() {
+    if (server) {
+      return server
     }
+    const worker = createYamlWorker()
+    // The first message starts the server; it carries an optional translation
+    // bundle, and without one the server speaks English.
+    worker.postMessage({})
+    const connection = new WorkerConnection(worker, answerServer)
+    connection.onNotification('textDocument/publishDiagnostics', (params) => {
+      const { uri, diagnostics } = params as { uri: string; diagnostics: Diagnostic[] }
+      const model = open.get(uri)
+      if (model && !model.isDisposed()) {
+        monaco.editor.setModelMarkers(model, MARKER_OWNER, diagnostics.map(toMarker))
+      }
+    })
+    const ready = connection
+      .request('initialize', {
+        processId: null,
+        rootUri: null,
+        capabilities: {
+          workspace: { configuration: true },
+          textDocument: {
+            synchronization: {},
+            completion: {
+              completionItem: {
+                snippetSupport: true,
+                insertReplaceSupport: true,
+                documentationFormat: ['markdown', 'plaintext'],
+              },
+            },
+            hover: { contentFormat: ['markdown', 'plaintext'] },
+            publishDiagnostics: {},
+          },
+        },
+      })
+      .then(() => {
+        connection.notify('initialized', {})
+        connection.notify('workspace/didChangeConfiguration', { settings: null })
+        sendSchemas()
+      })
+    server = { connection, ready }
+    return server
+  }
+
+  // Only once the server is up: what it is sent before `initialize` returns, it drops.
+  function notify(method: string, params: unknown): void {
+    const { connection, ready } = connect()
+    void ready.then(() => connection.notify(method, params))
+  }
+
+  function sendSchemas(): void {
+    // JSON-RPC reads an array as positional arguments, so the list is the one argument.
+    server?.connection.notify('json/schemaAssociations', [schemas])
+  }
+
+  onYamlSchemas((added: SchemasSettings[]) => {
+    schemas = added
+    void server?.ready.then(sendSchemas)
   })
 
   function close(uri: string, model: monaco.editor.ITextModel): void {
     open.delete(uri)
-    void ready.then(() => connection.notify('textDocument/didClose', { textDocument: { uri } }))
+    notify('textDocument/didClose', { textDocument: { uri } })
     if (!model.isDisposed()) {
       monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
     }
@@ -346,7 +368,7 @@ function startYamlLanguage(): void {
           version: model.getVersionId(),
           text: model.getValue(),
         }
-        void ready.then(() => connection.notify('textDocument/didOpen', { textDocument }))
+        notify('textDocument/didOpen', { textDocument })
       } else if (!isYaml && open.has(uri)) {
         close(uri, model)
       }
@@ -361,7 +383,7 @@ function startYamlLanguage(): void {
         textDocument: { uri, version: model.getVersionId() },
         contentChanges: [{ text: model.getValue() }],
       }
-      void ready.then(() => connection.notify('textDocument/didChange', params))
+      notify('textDocument/didChange', params)
     })
     model.onWillDispose(() => {
       if (open.get(uri) === model) {
@@ -382,6 +404,7 @@ function startYamlLanguage(): void {
     params: object,
     token: monaco.CancellationToken,
   ): Promise<T> {
+    const { connection, ready } = connect()
     await ready
     return connection.request<T>(
       method,

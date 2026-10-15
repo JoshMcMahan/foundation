@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 
-// The full monaco bundle registers browser commands jsdom lacks, so it loads after these;
-// only the text model is needed here.
+// The editor's features register browser commands jsdom lacks, so they load after these; only
+// the text model and the languages the editor registers are needed here.
 document.queryCommandSupported ??= () => false
 globalThis.CSS ??= { escape: (value: string) => value } as typeof CSS
 window.matchMedia ??= () =>
@@ -11,7 +11,8 @@ window.matchMedia ??= () =>
     addEventListener() {},
     removeEventListener() {},
   }) as unknown as MediaQueryList
-const monaco = await import('monaco-editor')
+await import('./monacoFeatures')
+const monaco = await import('monaco-editor/editor/editor.api')
 const { holdListeners, modelFor } = await import('./editorModel')
 
 afterEach(() => {

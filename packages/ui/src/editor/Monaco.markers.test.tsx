@@ -65,7 +65,7 @@ const fake = vi.hoisted(() => {
   return { markers, setModelMarkers, getModelMarkers, model, disposed, markerListeners, listen }
 })
 
-vi.mock('monaco-editor', () => ({
+vi.mock('monaco-editor/editor/editor.api', () => ({
   Uri: { parse: (path: string) => path },
   Range: class {
     startColumn: number
@@ -100,6 +100,7 @@ vi.mock('monaco-editor', () => ({
     }),
   },
 }))
+vi.mock('./monacoFeatures', () => ({}))
 vi.mock('./workers', () => ({ setupMonacoWorkers: () => {} }))
 vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {} }))
 vi.mock('./reveal', () => ({ registerRevealer: () => () => {} }))
