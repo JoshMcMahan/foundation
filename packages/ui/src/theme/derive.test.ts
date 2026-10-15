@@ -285,6 +285,26 @@ describe('generateTheme', () => {
     }
   })
 
+  it('makes a dark mode hover stand out from the page, and leaves light mode as it was', () => {
+    for (const base of ['#0d1117', '#111418', '#191724', '#000000', '#3a3a3a']) {
+      for (const contrast of CONTRASTS) {
+        const v = deriveTheme({ interface: { base, accent: '#2f81f7', contrast } })
+        const ratio = contrastRatio(v['--theme-hover'], v['--theme-app-bg'])
+        expect(ratio, `${base} at ${contrast}`).toBeGreaterThanOrEqual(
+          contrast === 30 ? 1.59 : 1.45,
+        )
+        // Text keeps well past AA on it.
+        expect(contrastRatio(v['--theme-app'], v['--theme-hover'])).toBeGreaterThanOrEqual(
+          contrast === 0 ? 4.5 : 7,
+        )
+      }
+    }
+    // A light base keeps its quieter step.
+    expect(
+      deriveTheme({ interface: { base: '#f3f4f6', accent: '#06354f' } })['--theme-hover'],
+    ).toBe('#e3e5e9')
+  })
+
   it('lifts panels above dark backgrounds and keeps them light on light ones', () => {
     const dark = deriveTheme({ interface: { base: '#0d1117', accent: '#2f81f7' } })
     const darkL = (token: ThemeToken) => oklch(dark[token]).l

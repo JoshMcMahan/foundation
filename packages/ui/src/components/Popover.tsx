@@ -56,6 +56,9 @@ export interface PopoverOptions
    *  a list read before one item in it is picked, or nowhere, for a popover that
    *  offers an action on what the reader is doing, such as copying a selection. */
   initialFocus?: 'first-control' | 'popup' | 'none'
+  /** Placed against this element rather than its trigger, such as a tip beside the field it
+   *  describes. It still opens and closes from the trigger. */
+  anchor?: Element | null | undefined
   /** Stays on `side` where it doesn't fit rather than flipping to the other, for a popup that
    *  must not cover what is there, such as the control a tip describes while it is typed in. */
   keepSide?: boolean | undefined
@@ -81,6 +84,7 @@ export function Popover({
   align = 'center',
   openOnHover = false,
   initialFocus = 'first-control',
+  anchor,
   keepSide = false,
   variant = 'panel',
   className,
@@ -113,7 +117,7 @@ export function Popover({
           sideOffset={tip ? 8 : 6}
           collisionPadding={8}
           {...(keepSide && { collisionAvoidance: { side: 'none' } as const })}
-          {...(at ? { anchor: toPositionerAnchor(at) } : {})}
+          {...(at ? { anchor: toPositionerAnchor(at) } : anchor ? { anchor } : {})}
           className={positionerClassName}
         >
           <BasePopover.Popup

@@ -187,6 +187,9 @@ function targets(k: number) {
 
 const WHITE: Oklch = { l: 1, c: 0, h: 0 }
 
+/** The WCAG contrast a dark mode's hover keeps against the page at contrast 0, 30 and 100. */
+const HOVER_STEP: [number, number, number] = [1.45, 1.6, 1.9]
+
 // Fixed hues in OKLCH degrees: status and syntax colors keep their meaning in
 // every theme; only their lightness is solved.
 const STATUS = { success: 150, error: 27, warning: 70, info: 255, favorite: 5 } as const
@@ -305,7 +308,19 @@ function build(
   const panel = set('--theme-panel-bg', raised(0.85, 0.035))
   set('--theme-panel-hover', neutral(panel.l + dir * (dark ? 0.04 : 0.025) * s, 1))
   const mutedPanel = set('--theme-muted-panel-bg', step(0.03, 0.065))
-  set('--theme-hover', step(0.045, 0.08))
+  // A highlighted row in a menu or list. Near black a fixed lightness step barely registers, so
+  // in dark mode the step is solved to a contrast against the page, short of where text could no
+  // longer reach its WCAG target on it (at high contrast, APCA's is out of reach on any hover).
+  // Light mode keeps its step, which already reads.
+  const hoverStep = step(0.045, 0.08)
+  const hoverGoal = dark
+    ? solve(hoverStep, [toHex(base)], { wcag: byContrast(k, HOVER_STEP) })
+    : hoverStep
+  const hoverAt = (share: number): Oklch => ({
+    ...hoverStep,
+    l: hoverStep.l + (hoverGoal.l - hoverStep.l) * share,
+  })
+  set('--theme-hover', hoverAt(roomFor(hoverAt, { wcag: t.primary.wcag })))
   set('--theme-input-bg', raised(0.7, 0.05))
   set('--theme-input-disabled-bg', step(0.02, 0.025))
   set('--theme-accent-subtle', {

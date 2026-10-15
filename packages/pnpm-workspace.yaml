@@ -30,7 +30,7 @@ overrides:
   # Remove once a tailwind release depends on 2.6.
   '@parcel/watcher@<2.6.0': '^2.6.0'
   # The math renderer and its markdown plugins still ask for katex 0.16, which
-  # has a prototype-pollution advisory fixed in 0.18.2; ui asks for the same
-  # range, so its stylesheet comes from the copy that renders. Remove once
-  # they depend on 0.18. Exact, because 0.18.11 shipped breaking changes by mistake.
-  'katex@<0.18.2': '0.18.10'
+  # has a prototype-pollution advisory fixed in 0.18.2. They render with the
+  # copy ui's stylesheet comes from, so it matches the markup. Remove once they
+  # depend on the range ui asks for.
+  'katex@<0.19.0': '^0.19.0'

@@ -96,7 +96,11 @@ function editorTheme(style: CSSStyleDeclaration | undefined, mode: Mode): ThemeD
       'editor.background': c('--theme-panel-bg'),
       'editor.border': c('--theme-border'),
       'editorCursor.foreground': c('--theme-app'),
-      'editor.lineHighlightBackground': c('--theme-hover'),
+      // Dark mode's hover is strong enough to mark a highlighted row in a menu; under every line
+      // the cursor rests on, the panel's own quieter hover is enough.
+      'editor.lineHighlightBackground': c(
+        mode === 'dark' ? '--theme-panel-hover' : '--theme-hover',
+      ),
       'editorLineNumber.foreground': c('--theme-placeholder'),
       'editorLineNumber.activeForeground': c('--theme-muted-text-color'),
       // A dark scheme's subtle accent sits within a shade of its panel, which leaves a selection

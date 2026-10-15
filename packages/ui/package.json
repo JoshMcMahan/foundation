@@ -141,7 +141,7 @@
     "clsx": "^2.1.1",
     "css-tree": "^3.2.1",
     "dequal": "^2.0.3",
-    "katex": "^0.16.27",
+    "katex": "^0.19.0",
     "lucide-react": "1.52.0",
     "luxon": "^3.7.2",
     "react-zoom-pan-pinch": "^4.2.0",

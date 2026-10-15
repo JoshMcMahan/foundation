@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor/editor/editor.api'
 import { useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { useFieldLabelledControl } from '../components/Field'
 import { useStrings } from '../components/Provider'
 import { useCssIsDark } from '../components/useCssIsDark'
 import { cx } from '../cx'
@@ -160,6 +161,8 @@ export default function MonacoEditor({
   ...options
 }: EditorProps) {
   const { common: t } = useStrings()
+  // In a Field, the label names the editor and its description and help describe it.
+  const field = useFieldLabelledControl()
   // Editors that shared one URI would share one model, and a second would take the first's text.
   const ownPath = `file:///editor/${useId().replace(/[^\w-]/g, '')}`
   const pathRef = useRef(pathProp ?? ownPath)
@@ -191,6 +194,7 @@ export default function MonacoEditor({
   // Each is given whether or not the editor is read-only, as Monaco keeps the last value it got.
   const editorOptions: monaco.editor.IEditorOptions = {
     ariaLabel: t.codeEditor,
+    ...(field?.['aria-required'] && { ariaRequired: true }),
     readOnlyMessage: { value: t.readOnlyText },
     // Keeps a touch device's keyboard from opening over text nobody can type into.
     domReadOnly: readOnly,
@@ -370,14 +374,36 @@ export default function MonacoEditor({
   }, [disabled])
 
   // Monaco marks its input readonly only for the textarea it falls back to, and never says so to
-  // a screen reader on the EditContext node it focuses where the browser has one.
+  // a screen reader on the EditContext node it focuses where the browser has one. A Field's label
+  // and description reach that node the same way: it is a div where the browser has EditContext,
+  // which no label's `for` can name, so the label names it by id.
+  const fieldId = field?.id
+  const labelledBy = field?.['aria-labelledby']
+  const describedBy = field?.['aria-describedby']
+  const invalid = field?.['aria-invalid']
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new path makes a new editor to mark.
   useEffect(() => {
-    monacoRef.current
+    const input = monacoRef.current
       ?.getDomNode()
       ?.querySelector('textarea.inputarea, .native-edit-context')
-      ?.setAttribute('aria-readonly', String(readOnly))
-  }, [readOnly, path])
+    if (!input) {
+      return
+    }
+    input.setAttribute('aria-readonly', String(readOnly))
+    const attributes = {
+      id: fieldId,
+      'aria-labelledby': labelledBy,
+      'aria-describedby': describedBy,
+      'aria-invalid': invalid && 'true',
+    }
+    for (const [name, value] of Object.entries(attributes)) {
+      if (value) {
+        input.setAttribute(name, value)
+      } else {
+        input.removeAttribute(name)
+      }
+    }
+  }, [readOnly, path, fieldId, labelledBy, describedBy, invalid])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: optionsKey stands for the options by value.
   useEffect(() => {

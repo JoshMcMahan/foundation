@@ -11,6 +11,7 @@ import { ErrorText, Field, type FieldLayout, FieldOption, FieldValue } from './F
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { IconButton } from './IconButton'
 import { Input, Textarea } from './Input'
+import { Modal } from './Modal'
 import { NumberInput } from './NumberInput'
 import { OneTimeCodeInput } from './OneTimeCodeInput'
 import { Radio, RadioGroup } from './Radio'
@@ -304,8 +305,8 @@ export const FrameWithActions: StoryObj = {
   },
 }
 
-// Room above the first field for its help, which opens over the label, as a page's header
-// would leave it.
+// Room above the first field for its help, which opens over the ? when it is hovered, as a
+// page's header would leave it.
 const roomAbove: Decorator = (Story) => (
   <div style={{ paddingTop: 64 }}>
     <Story />
@@ -332,9 +333,9 @@ export const FrameWithHelp: StoryObj<FrameArgs> = {
   },
 }
 
-/** Tabbing to the control opens its help over the label, where it covers neither the control
- *  nor the field after it. Escape or leaving the field closes it; a click into the control
- *  doesn't open it. */
+/** Tabbing to the control opens its help beside it, where it covers neither the control nor the
+ *  field above it. Escape or leaving the field closes it; a click into the control doesn't open
+ *  it. */
 export const FrameWithHelpOnKeyboardFocus: StoryObj<FrameArgs> = {
   ...FrameWithHelp,
   play: async ({ canvasElement }) => {
@@ -344,6 +345,82 @@ export const FrameWithHelpOnKeyboardFocus: StoryObj<FrameArgs> = {
     await expect(box).toHaveFocus()
     await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/cannot change later/))
   },
+}
+
+// Whether two boxes share any area; a box with none, as in a test DOM, overlaps nothing.
+const overlaps = (a: DOMRect, b: DOMRect) =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+
+function HelpForm() {
+  return (
+    <div className="flex w-full max-w-md flex-col gap-4">
+      <Field label="Cluster" required help={'The name other people see.\nIt cannot change later.'}>
+        <Input defaultValue="training-a" />
+      </Field>
+      <Field label="Zone" help="The nearest zone is the fastest to reach.">
+        <Select<string> placeholder="Zone" items={zones} />
+      </Field>
+      <Field label="Workers" help="How many machines run the job at once.">
+        <Input defaultValue="4" inputMode="numeric" />
+      </Field>
+    </div>
+  )
+}
+
+/** Tabbing down a form opens each field's help beside its control, so the field above, and
+ *  the help itself, stay in view. */
+export const HelpInStackedForm: StoryObj = {
+  render: () => <HelpForm />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.tab()
+    await userEvent.tab()
+    const zone = canvas.getByRole('combobox', { name: 'Zone' })
+    await expect(zone).toHaveFocus()
+    const tip = await waitFor(() => {
+      const open = screen.getByRole('dialog')
+      expect(open).toHaveTextContent(/nearest zone/)
+      return open
+    })
+    const above = canvas.getByRole('textbox', { name: /Cluster/ })
+    await expect(overlaps(tip.getBoundingClientRect(), above.getBoundingClientRect())).toBe(false)
+    await expect(overlaps(tip.getBoundingClientRect(), zone.getBoundingClientRect())).toBe(false)
+  },
+}
+
+/** The first field in a dialog: its help opens beside it, never over the dialog's title. */
+export const HelpOnFirstFieldInDialog: StoryObj = {
+  render: () => (
+    <Modal open onClose={() => {}} title="Create a cluster">
+      <HelpForm />
+    </Modal>
+  ),
+  play: async () => {
+    const title = await screen.findByRole('heading', { name: 'Create a cluster' })
+    const cluster = screen.getByRole('textbox', { name: /Cluster/ })
+    // Focus that follows a key, as Tab's does, rather than the dialog's own as it opens.
+    cluster.blur()
+    await userEvent.keyboard('{Shift}')
+    cluster.focus()
+    await expect(cluster).toHaveFocus()
+    const tip = await waitFor(() => {
+      // The help's own popup, not the dialog around the field, whose hidden description holds
+      // the same words.
+      const open = screen
+        .getAllByRole('dialog')
+        .find((d) => !d.contains(title) && /other people/.test(d.textContent ?? ''))
+      expect(open).toBeDefined()
+      return open as HTMLElement
+    })
+    await expect(overlaps(tip.getBoundingClientRect(), title.getBoundingClientRect())).toBe(false)
+  },
+}
+
+/** On a phone there is no room beside the control, so the help opens under it, over the field
+ *  Tab reaches next, rather than over the field or title above. */
+export const HelpOnPhone: StoryObj = {
+  ...HelpInStackedForm,
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
 }
 
 /** A link in the help keeps the ? in the Tab order, as the keyboard's way to the link. */

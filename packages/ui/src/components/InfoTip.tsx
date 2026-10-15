@@ -63,6 +63,8 @@ interface InfoTipProps {
   /** Stays on `side` rather than flipping where it doesn't fit, as while the control it
    *  describes is typed in, which a flipped tip would cover. */
   keepSide?: boolean | undefined
+  /** Placed against this element rather than the ?, such as beside the control it describes. */
+  anchor?: Element | null | undefined
 }
 
 /** Extra detail behind an info trigger. A popover that also opens on hover, so
@@ -76,6 +78,7 @@ export function InfoTip({
   open,
   onOpenChange,
   keepSide = false,
+  anchor,
 }: InfoTipProps) {
   const t = useStrings().common
   if (!text) {
@@ -88,6 +91,7 @@ export function InfoTip({
       openOnHover
       side={side}
       keepSide={keepSide}
+      anchor={anchor}
       {...(open === undefined ? {} : { open })}
       {...(onOpenChange ? { onOpenChange } : {})}
       // Opened while its control has focus, the tip must leave focus in the control, and a

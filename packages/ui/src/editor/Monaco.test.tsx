@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from '@testing-library/react'
+import '@testing-library/jest-dom/vitest'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { Field } from '../components/Field'
 import MonacoEditor from './Monaco'
 
 const fake = vi.hoisted(() => {
@@ -57,11 +59,15 @@ vi.mock('monaco-editor/editor/editor.api', () => {
       setModelLanguage: vi.fn(),
       onDidChangeMarkers: () => ({ dispose: () => {} }),
       createModel: makeModel,
-      create: (_element: HTMLElement, options: { model: ReturnType<typeof makeModel> }) => {
+      create: (element: HTMLElement, options: { model: ReturnType<typeof makeModel> }) => {
         const node = document.createElement('div')
-        node.append(
-          Object.assign(document.createElement('div'), { className: 'native-edit-context' }),
-        )
+        const input = Object.assign(document.createElement('div'), {
+          className: 'native-edit-context',
+          tabIndex: 0,
+        })
+        input.setAttribute('role', 'textbox')
+        node.append(input)
+        element.append(node)
         const editor = {
           getDomNode: () => node,
           updateOptions: vi.fn(),
@@ -243,4 +249,36 @@ test('disposes its model when it unmounts, but keeps a YAML one for the next edi
   for (const { editor } of fake.created) {
     expect(editor['dispose']).toHaveBeenCalledTimes(1)
   }
+})
+
+test('in a Field, the label names the editor and its description and help describe it', () => {
+  const { rerender } = render(
+    <Field label="Script" description="Runs before the job." help="Bash, by default." required>
+      <MonacoEditor value="echo hi" />
+    </Field>,
+  )
+  const editor = screen.getByRole('textbox', { name: 'Script' })
+  expect(editor).toHaveAccessibleDescription('Runs before the job. Bash, by default.')
+  expect(last().options).toMatchObject({ ariaRequired: true })
+  // The label points at no element by `for`; a click on it focuses the editor instead.
+  const label = screen.getByText('Script').closest('label')!
+  expect(label).not.toHaveAttribute('for')
+  fireEvent.click(label)
+  expect(editor).toHaveFocus()
+
+  rerender(
+    <Field label="Script" error="Not valid shell.">
+      <MonacoEditor value="echo hi" />
+    </Field>,
+  )
+  expect(editor).toHaveAttribute('aria-invalid', 'true')
+  expect(editor).toHaveAccessibleDescription('Not valid shell.')
+})
+
+test('outside a Field, the editor keeps its own name and no field attributes', () => {
+  render(<MonacoEditor value="a" />)
+  const input = document.querySelector('.native-edit-context')!
+  expect(input).not.toHaveAttribute('aria-labelledby')
+  expect(input).not.toHaveAttribute('aria-describedby')
+  expect(input).not.toHaveAttribute('id')
 })

@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { expect, screen, waitFor } from 'storybook/test'
 import { Editor } from './Editor'
+import { EditorField } from './EditorField'
 import { addEditorLanguages } from './languages'
 import { configureEditorYaml } from './yaml'
 
@@ -310,5 +313,54 @@ jobs:
     steps:
       - run: make TARGET=\${{ inputs.taget }}
 `,
+  },
+}
+
+interface EditorFieldArgs {
+  label: string
+  description: string
+  help: string
+  labelPosition: 'top' | 'left'
+  disabled: boolean
+}
+
+function EditorFieldDemo({ label, description, help, labelPosition, disabled }: EditorFieldArgs) {
+  const form = useForm({ defaultValues: { setup: 'module load cuda\nnvidia-smi\n' } })
+  return (
+    <FormProvider {...form}>
+      <div className="w-[640px]">
+        <EditorField
+          field={{ type: 'editor', name: 'setup', ...(description && { description }) }}
+          label={label}
+          help={help || undefined}
+          labelPosition={labelPosition}
+          disabled={disabled}
+        />
+      </div>
+    </FormProvider>
+  )
+}
+
+/** A form's code field. Its label names the editor, and its description and help describe it, as
+ *  any field's do; a click on the label puts the cursor in the editor. */
+export const InAField: StoryObj<EditorFieldArgs> = {
+  args: {
+    label: 'Setup script',
+    description: 'Runs on each node before the job starts.',
+    help: 'Bash, with the cluster’s modules on the path.',
+    labelPosition: 'top',
+    disabled: false,
+  },
+  argTypes: { labelPosition: { control: 'inline-radio', options: ['top', 'left'] } },
+  render: (args) => <EditorFieldDemo {...args} />,
+  play: async ({ args }) => {
+    const editor = await waitFor(
+      () => screen.getByRole('textbox', { name: new RegExp(args.label) }),
+      { timeout: 10000 },
+    )
+    if (args.description) {
+      await expect(editor).toHaveAccessibleDescription(new RegExp(args.description))
+    }
+    await expect(document.querySelector(`label[for="${editor.id}"]`)).toBeNull()
   },
 }

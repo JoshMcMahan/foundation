@@ -201,6 +201,37 @@ describe('FieldValue', () => {
   })
 })
 
+describe('a label’s for', () => {
+  // Every label `for` names an element that is there.
+  const dangling = () =>
+    [...document.querySelectorAll('label[for]')].filter(
+      (label) => !document.getElementById(label.getAttribute('for') ?? ''),
+    )
+
+  it('names a Base UI control by for, and points at nothing for a control named by its id', () => {
+    render(
+      <>
+        <Field label="Name">
+          <Input />
+        </Field>
+        <Field label="Allocation">
+          <FieldValue>8 GPUs</FieldValue>
+        </Field>
+        <Field label="Start" help="The first day the reservation holds.">
+          <DatePicker value="" onValueChange={() => {}} />
+        </Field>
+      </>,
+    )
+    expect(dangling()).toEqual([])
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument()
+    const start = screen.getByRole('button', { name: /Start/ })
+    expect(start).toHaveAccessibleDescription('The first day the reservation holds.')
+    // With no `for`, a click on the label still reaches the control.
+    fireEvent.click(screen.getByText('Start'))
+    expect(start).toHaveFocus()
+  })
+})
+
 describe('ErrorText', () => {
   it('describes a control outside a Field by its id, and is nothing when empty', () => {
     const { rerender } = render(
@@ -284,7 +315,7 @@ describe('Field help', () => {
     }
   })
 
-  it('opens over the label while the control has keyboard focus, until Escape or blur', async () => {
+  it('opens beside the control while it has keyboard focus, until Escape or blur', async () => {
     render(
       <>
         <Field label="Name" help="Lowercase letters.">
@@ -298,6 +329,8 @@ describe('Field help', () => {
     const name = screen.getByRole('textbox', { name: 'Name' })
     tabTo(name)
     await waitFor(() => expect(tip()).toHaveTextContent('Lowercase letters.'))
+    // Beside the control rather than over the label, so it covers nothing above the field.
+    expect(tip()).toHaveAttribute('data-side', 'right')
     fireEvent.keyDown(name, { key: 'Escape' })
     await waitFor(() => expect(tip()).toBeNull())
     expect(name).toHaveFocus()

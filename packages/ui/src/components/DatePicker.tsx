@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { cx } from '../cx'
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { buttonClasses } from './buttonClasses'
-import { useFieldControl, useFieldLabelId } from './Field'
+import { useFieldLabelledControl } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
 import { useStrings } from './Provider'
@@ -133,8 +133,7 @@ export function DatePicker({
   const t = useStrings().datePicker
   const { common } = useStrings()
   // The trigger is a button Base UI doesn't name from a Field's label, so it reads the Field.
-  const field = useFieldControl()
-  const fieldLabelId = useFieldLabelId()
+  const field = useFieldLabelledControl()
   const [open, setOpen] = useState(false)
   const [weekStartsOn] = useState(firstWeekday)
   const day = parseDay(value)
@@ -168,10 +167,10 @@ export function DatePicker({
     <div className={cx('flex w-full items-center', size === 'sm' ? 'gap-1.5' : 'gap-2', className)}>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger
-          id={id}
+          id={id ?? field?.id}
           disabled={disabled}
           aria-label={ariaLabel}
-          aria-labelledby={ariaLabelledBy ?? (ariaLabel ? undefined : fieldLabelId)}
+          aria-labelledby={ariaLabelledBy ?? (ariaLabel ? undefined : field?.['aria-labelledby'])}
           aria-describedby={ariaDescribedBy ?? field?.['aria-describedby']}
           aria-invalid={ariaInvalid || field?.['aria-invalid']}
           aria-required={ariaRequired || field?.['aria-required']}

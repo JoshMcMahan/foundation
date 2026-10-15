@@ -73,6 +73,7 @@ export {
   type FieldValueProps,
   RevealToggle,
   useFieldControl,
+  useFieldLabelledControl,
 } from './components/Field'
 export { type FieldBoxOptions, type FieldBoxSize, fieldBox } from './components/fieldBox'
 export type { FloatingAnchor } from './components/floating'

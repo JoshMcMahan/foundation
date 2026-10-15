@@ -15,14 +15,13 @@ export interface IEditorField extends BaseField {
 
 /** A form field that edits its value as code, in the language its `options` name (shell by default). */
 export function EditorField(props: FieldComponentProps<IEditorField>) {
-  const { field, label, disabled, onChange } = props
+  const { field, disabled, onChange } = props
   // The form names every field before it renders one.
   const [value, change] = useFieldValue<string | undefined>(field.name ?? '')
 
   return (
     <Field {...fieldFrame(props)}>
       <Editor
-        ariaLabel={label}
         height="200px"
         // The editor keeps the cursor where it is when the form hands back the text it just sent,
         // and takes a reset or another field's change as it comes.

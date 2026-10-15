@@ -7,8 +7,10 @@ import {
   type OutputHTMLAttributes,
   type ReactNode,
   use,
+  useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useState,
 } from 'react'
 import { cx } from '../cx'
@@ -30,7 +32,14 @@ export interface FieldControlProps {
   'aria-required'?: true | undefined
 }
 
-const ControlContext = createContext<{ control: FieldControlProps; labelId: string } | null>(null)
+interface ControlContextValue {
+  control: FieldControlProps
+  labelId: string
+  /** Called by a control the label names by id rather than by `for`; returns its release. */
+  claimLabel: () => () => void
+}
+
+const ControlContext = createContext<ControlContextValue | null>(null)
 
 /** Set by a layout that lines up the fields in a row, as a form's grid does: a stacked field's
  *  label and control take the row's label and control tracks, so controls under labels of
@@ -43,10 +52,19 @@ export function useFieldControl(): FieldControlProps | null {
   return use(ControlContext)?.control ?? null
 }
 
-/** The label's id, for a control that isn't a Base UI one and so isn't named by the label's
- *  `for`, such as a button that opens a picker. */
-export function useFieldLabelId(): string | undefined {
-  return use(ControlContext)?.labelId
+/** The surrounding Field's control props for a control that isn't a Base UI one, such as a
+ *  code editor, a button that opens a picker or an `<output>`, which the label's `for` can't
+ *  name. The props name it by the label's id instead, and while it is mounted the label drops
+ *  its `for`, which would point at no element, and focuses the control by its id when clicked.
+ *  Null outside a Field. */
+export function useFieldLabelledControl():
+  | (FieldControlProps & { 'aria-labelledby': string })
+  | null {
+  const context = use(ControlContext)
+  const claim = context?.claimLabel
+  // Before paint, so the label never shows a `for` to nothing.
+  useLayoutEffect(() => claim?.(), [claim])
+  return context ? { ...context.control, 'aria-labelledby': context.labelId } : null
 }
 
 export type FieldLayout = 'stacked' | 'inline'
@@ -156,7 +174,13 @@ export function Field({
     ...(required && { 'aria-required': true }),
   }
 
-  const controlContext = { control, labelId }
+  // How many controls under the label name themselves by its id; while any do, it has no `for`.
+  const [labelledBy, setLabelledBy] = useState(0)
+  const claimLabel = useCallback(() => {
+    setLabelledBy((n) => n + 1)
+    return () => setLabelledBy((n) => n - 1)
+  }, [])
+  const controlContext = { control, labelId, claimLabel }
 
   const inline = layout === 'inline'
   // In a row of fields, the label and the control take the row's two tracks, the label at the
@@ -165,21 +189,25 @@ export function Field({
   const labelSize = labelSizes[size]
   // Opened by keyboard focus or by the pointer on the ?, which decides where it may go.
   const [helpOpen, setHelpOpen] = useState<'focus' | 'pointer' | false>(false)
+  const [controlBox, setControlBox] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
     if (help) {
       trackFocusModality()
     }
   }, [help])
-  // Over the label rather than under the control, so it covers neither the control nor the
-  // field after it, and the form doesn't shift as focus moves down it.
+  // Opened by the pointer, the tip sits over the ? it came from. Opened as Tab reaches the
+  // control, it sits beside the control, where it covers neither the control nor the field above
+  // it, or a dialog's title over a first field; where there is no room beside it, as on a phone,
+  // it goes under the control, over the field Tab reaches next. The form never shifts.
+  const besideControl = helpOpen === 'focus'
   const helpTip = help && (
     <InfoTip
       text={help}
       describesControl
       open={Boolean(helpOpen)}
       onOpenChange={(open) => setHelpOpen(open && 'pointer')}
-      // Flipped under the ?, it would cover the control being typed in.
-      keepSide={helpOpen === 'focus'}
+      side={besideControl ? 'right' : 'top'}
+      anchor={besideControl ? controlBox : undefined}
     />
   )
   // Shown for keyboard focus only: a click already says where the person is looking, and a
@@ -226,6 +254,7 @@ export function Field({
   const placed = typeof children === 'function' ? children(control) : children
   const body = (
     <div
+      ref={help ? setControlBox : undefined}
       className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}
       {...helpFocus}
     >
@@ -301,7 +330,15 @@ export function Field({
       <div className={labelBox}>
         <BaseField.Label
           // A Base UI control tells the label its id; a function's control takes the one made here.
-          {...(typeof children === 'function' || ownId !== undefined ? { htmlFor: id } : {})}
+          // One named by the label's id has no `for` to take, so a click focuses it instead.
+          {...(labelledBy > 0
+            ? {
+                htmlFor: undefined,
+                onClick: () => document.getElementById(id)?.focus(),
+              }
+            : typeof children === 'function' || ownId !== undefined
+              ? { htmlFor: id }
+              : {})}
           id={labelId}
           data-field-label
         >
@@ -378,13 +415,12 @@ export interface FieldValueProps extends OutputHTMLAttributes<HTMLOutputElement>
  *  up with the fields around it. For a set of names and values on their own, use
  *  DescriptionList. */
 export function FieldValue({ size = 'md', className, children, ...props }: FieldValueProps) {
-  const control = useFieldControl()
   // An output isn't a Base UI control, so the Field's label names it by id rather than by `for`.
-  const labelId = useFieldLabelId()
+  const control = useFieldLabelledControl()
   return (
     <output
       id={control?.id}
-      aria-labelledby={labelId}
+      aria-labelledby={control?.['aria-labelledby']}
       aria-describedby={control?.['aria-describedby']}
       {...props}
       className={cx(
