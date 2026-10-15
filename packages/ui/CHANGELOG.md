@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.54.0](https://github.com/parallelworks/foundation/compare/ui-v0.53.0...ui-v0.54.0) (2026-10-15)
+
+
+### Features
+
+* **ui:** an access drawer that grants roles to groups ([#314](https://github.com/parallelworks/foundation/issues/314)) ([8f8ac93](https://github.com/parallelworks/foundation/commit/8f8ac933ec04eef70063041b3894c86284d18fb1))
+
+
+### Bug Fixes
+
+* **ui:** explorer Refresh leaves a collapsed folder's old contents when it is reopened ([#309](https://github.com/parallelworks/foundation/issues/309)) ([cff8fdf](https://github.com/parallelworks/foundation/commit/cff8fdf38299820c95c106105817a2d2302ee488))
+* **ui:** readable code colors in dark mode under a host's partial tokens, and no strip under a highlighted last row ([#315](https://github.com/parallelworks/foundation/issues/315)) ([4cff3de](https://github.com/parallelworks/foundation/commit/4cff3def4555d14a2913d8be3c886758fb2f4ce2))
+
 ## [0.53.0](https://github.com/parallelworks/foundation/compare/ui-v0.52.0...ui-v0.53.0) (2026-10-15)
 
 
