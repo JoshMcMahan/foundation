@@ -141,6 +141,13 @@ export function clearListingsUnder(listings: TListings, path: string): TListings
   return next
 }
 
+export function retainListings(listings: TListings, paths: ReadonlySet<string>): TListings {
+  if ([...listings.keys()].every((path) => paths.has(path))) {
+    return listings
+  }
+  return new Map([...listings].filter(([path]) => paths.has(path)))
+}
+
 /** Tree paths whose children should keep arrival order, since sorting them would
  *  reshuffle rows under the user mid-scroll. */
 export function incompletePaths(listings: TListings): Set<string> {

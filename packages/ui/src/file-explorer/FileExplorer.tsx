@@ -95,6 +95,7 @@ import {
   nextHydrationStep,
   recordListingError,
   replaceListing,
+  retainListings,
   type TListings,
 } from './lib/paging'
 import type { ExplorerObject, TreeNode, TStorage, UploadNode } from './lib/types'
@@ -1547,6 +1548,7 @@ export default function FileExplorer({
     ) {
       dirs.push(selectedNode)
     }
+    setListings((prev) => retainListings(prev, new Set(dirs.map((dir) => dir.path))))
     if (dirs.length > 0) {
       const results = await Promise.all(
         dirs.map((dir) => fetchNodeChildren(dir, { replace: true, silent: opts?.silent })),

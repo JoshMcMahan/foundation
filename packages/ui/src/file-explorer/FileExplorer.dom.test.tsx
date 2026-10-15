@@ -294,6 +294,23 @@ describe('FileExplorer listing on demand', () => {
     expect(script.callsFor('b/')).toHaveLength(0)
   })
 
+  it('lists a collapsed folder again when it is opened after a refresh', async () => {
+    const { script } = await renderExplorer(ROOT)
+    await screen.findByLabelText('Select a')
+    fireEvent.keyDown(treeItem('a') as HTMLElement, { key: 'ArrowRight' })
+    await findTreeItem('one.txt')
+    fireEvent.keyDown(treeItem('a') as HTMLElement, { key: 'ArrowLeft' })
+    script.fixture.set('a/', [[file('a/one.txt'), file('a/new.txt')]])
+
+    fireEvent.click(refreshButton())
+    await waitFor(() => expect(script.callsFor('')).toHaveLength(2))
+    expect(script.callsFor('a/')).toHaveLength(1)
+    fireEvent.keyDown(treeItem('a') as HTMLElement, { key: 'ArrowRight' })
+
+    expect(await findTreeItem('new.txt')).toBeInTheDocument()
+    expect(script.callsFor('a/')).toHaveLength(2)
+  })
+
   it('keeps the tree and the folder actions in place while a refresh is in flight', async () => {
     const { script } = await renderExplorer(FOLDER_A)
     await screen.findByLabelText('Select one.txt')
