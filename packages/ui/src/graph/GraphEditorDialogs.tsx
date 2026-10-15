@@ -1748,7 +1748,7 @@ function StepForm({
 
 interface ViewProps {
   source?: string | undefined
-  /** Adds the job or step being edited; applied with the first save, so cancelling adds nothing. */
+  /** Adds the job or step being edited; applied with the first save, so canceling adds nothing. */
   addition?: GraphEdit | undefined
   /** The view to open in; YAML unless the host says form. */
   view?: SettingsView | undefined

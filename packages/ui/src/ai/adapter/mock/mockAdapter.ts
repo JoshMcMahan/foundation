@@ -2,7 +2,7 @@ import { createMemoryConversationStore } from '../memoryStore'
 import type { ChatAdapter, StreamResult } from '../types'
 
 const CANNED_REPLIES = [
-  "Here's a canned reply from the mock adapter. It streams word by word so the typewriter animation, cancel behavior, and background streams all exercise the same code paths as a real backend.\n\n- No network requests are made\n- Conversations persist in localStorage\n- Try cancelling mid-stream: the partial reply is kept",
+  "Here's a canned reply from the mock adapter. It streams word by word so the typewriter animation, cancel behavior, and background streams all exercise the same code paths as a real backend.\n\n- No network requests are made\n- Conversations persist in localStorage\n- Try canceling mid-stream: the partial reply is kept",
   "Everything you see is generated locally. The mock adapter implements the same `ChatAdapter` interface as the OpenAI-compatible adapter and any backend's own, so the UI can't tell the difference.\n\n```ts\nconst adapter = createMockChatAdapter()\n```\n\nMarkdown, `inline code`, and code blocks render through the same pipeline.",
   'Branching works too: edit one of your earlier messages or hit regenerate on a reply, then use the arrows to flip between branches.',
 ]

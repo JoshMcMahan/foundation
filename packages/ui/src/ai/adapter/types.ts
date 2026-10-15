@@ -105,7 +105,7 @@ export interface StreamResult {
 }
 
 // Aborting the signal must leave any partial content persisted server-side;
-// the UI refetches the conversation shortly after cancelling to pick up the
+// the UI refetches the conversation shortly after canceling to pick up the
 // server-assigned message ID.
 export type StreamCompletion = (
   req: StreamRequest,

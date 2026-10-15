@@ -12,5 +12,6 @@ Shared Go and npm packages for building web services. The repository is public.
 - A PR that changes a UI component shows it: screenshots of each changed state in the PR description, and a short recording (under 30 seconds, with a visible pointer) as an `.mp4` for a multi-step interaction. Upload them with `--attach` on `gh pr create` or `gh pr edit` (gh 2.99+), never by committing them to a branch: reference each file in the body by its local path, such as `![Composer with a pasted card](./composer-card.png)`, and gh replaces the path with the uploaded asset's URL.
 - Release-please excludes only directories from the root Go module, so a change to a root-level file (`README.md`, `Makefile`, this file) releases it. Document `dev` and the npm packages in their own READMEs.
 - Comments explain why, not what. PR titles follow Conventional Commits; PRs target `canary`.
+- Write American English in code, comments, docs, copy, commits and PRs: color, center, behavior, canceled, canceling.
 
 `make check` runs every linter and test.

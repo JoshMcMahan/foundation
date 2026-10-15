@@ -1468,7 +1468,7 @@ function useGraphEditorState({
         })
         return
       }
-      // Cancelling the pointerdown also cancels its mousedown, which is what starts a pan.
+      // Canceling the pointerdown also cancels its mousedown, which is what starts a pan.
       e.preventDefault()
       const base = store.get()
       // Connectors hold still while the box is drawn, so their lines are measured once.

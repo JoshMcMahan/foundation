@@ -353,7 +353,7 @@ describe('composer queue', () => {
     expect(drained.map((m) => m.content)).toEqual(['first', 'third'])
   })
 
-  it('cancelling a stream keeps the queue and the next send carries it', async () => {
+  it('canceling a stream keeps the queue and the next send carries it', async () => {
     const { adapter, stream } = makeStreamingAdapter()
     await startFirstTurn(adapter)
 

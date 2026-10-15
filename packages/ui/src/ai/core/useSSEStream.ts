@@ -27,7 +27,7 @@ interface UseSSEStreamResult {
   streamingConversationIdRef: React.MutableRefObject<string | null>
   /** Per-conversation background stream storage */
   backgroundStreamsRef: React.MutableRefObject<Map<string, BackgroundStream>>
-  /** AbortController ref for cancelling fetch requests */
+  /** AbortController ref for canceling fetch requests */
   abortControllerRef: React.MutableRefObject<AbortController | null>
 }
 
