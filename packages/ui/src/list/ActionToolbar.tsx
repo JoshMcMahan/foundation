@@ -19,6 +19,7 @@ import { MenuEntries, useRunAction, warnIfInert } from '../components/MenuEntrie
 import { useStrings } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
+import { isDev } from '../dev'
 import { MoreIcon } from '../icons'
 import type { RowAction } from './rowMenu'
 
@@ -478,7 +479,7 @@ const warnedPrimary = new Set<string>()
  *  the one next step, so two of them mark none. */
 function warnIfManyPrimary(items: ToolbarItem[]) {
   // Checked first and on its own, so a production build drops the rest.
-  if (process.env.NODE_ENV === 'production') {
+  if (!isDev()) {
     return
   }
   const labels = items.flatMap((item) => ('label' in item && item.primary ? [item.label] : []))
@@ -496,7 +497,7 @@ const warnedIcons = new Set<string>()
  *  in a narrow toolbar, they would look the same. */
 function warnIfIconsRepeat(items: ToolbarItem[]) {
   // Checked first and on its own, so a production build drops the rest.
-  if (process.env.NODE_ENV === 'production') {
+  if (!isDev()) {
     return
   }
   const byIcon = new Map<unknown, string[]>()

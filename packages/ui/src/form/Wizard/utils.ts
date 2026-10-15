@@ -1,3 +1,4 @@
+import { isDev } from '../../dev'
 import type { ParsedWizardConfig, StepFieldConfig, WizardConfig } from './types'
 
 function isWizardMeta(value: unknown): value is { wizard: WizardConfig } {
@@ -29,7 +30,7 @@ export function parseWizardConfig(options: Record<string, unknown>): ParsedWizar
 
   // Must have at least one step
   if (stepOrder.length === 0) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (isDev()) {
       console.warn('Wizard mode enabled but no steps found')
     }
     return null
