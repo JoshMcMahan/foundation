@@ -675,6 +675,12 @@ animations) and streamdown's classes next to the theme contract:
 
 The prebuilt `@parallelworks/ui/styles.css` already includes both.
 
+Math needs nothing from the host: `Markdown` imports KaTeX's stylesheet
+itself, from the `katex` package, so the host's bundler loads it and its fonts
+with the markdown renderer's lazy chunk. The bundler must accept CSS imported
+from JavaScript, as the editor's Monaco also requires. Inline math takes `$$`
+within a sentence; a single `$` stays text, so prices are never read as math.
+
 ## Form state
 
 `DynamicForm` keeps its values in react-hook-form, a peer dependency, so the

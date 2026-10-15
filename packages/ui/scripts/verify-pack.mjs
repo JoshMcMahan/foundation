@@ -13,6 +13,7 @@
 // producing a tarball where every entrypoint fails to resolve.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -161,6 +162,33 @@ try {
   for (const url of workerUrls) {
     if (!url.startsWith('../') || !existsSync(path.join(editorDir, url))) {
       throw new Error(`dist/editor/workers.js references missing or absolute ${url}`)
+    }
+  }
+
+  console.log("• asserting the math renderer's stylesheet and fonts resolve")
+  // The markdown renderer imports KaTeX's sheet by package name, so a host's
+  // bundler loads it from the installed katex; a sheet or font that fails to
+  // resolve there leaves every formula printed twice.
+  const markdownImpl = path.join(
+    fixture,
+    'node_modules/@parallelworks/ui/dist/components/MarkdownImpl.js',
+  )
+  const cssImports = [
+    ...readFileSync(markdownImpl, 'utf8').matchAll(/^import "([^"]+\.css)";$/gm),
+  ].map(([, spec]) => spec)
+  if (!cssImports.includes('katex/dist/katex.min.css')) {
+    throw new Error('dist/components/MarkdownImpl.js no longer imports the KaTeX stylesheet')
+  }
+  const katexCss = createRequire(markdownImpl).resolve('katex/dist/katex.min.css')
+  const fontUrls = [...readFileSync(katexCss, 'utf8').matchAll(/url\(([^)]+)\)/g)].map(
+    ([, url]) => url,
+  )
+  if (!fontUrls.length) {
+    throw new Error('the KaTeX stylesheet references no fonts')
+  }
+  for (const url of fontUrls) {
+    if (!existsSync(path.join(path.dirname(katexCss), url))) {
+      throw new Error(`the KaTeX stylesheet references missing ${url}`)
     }
   }
 

@@ -71,13 +71,15 @@
   color: inherit;
 }
 
-/* KaTeX overrides */
-.katex-display {
+/* KaTeX overrides. Its own sheet loads with the markdown renderer, after
+ * this one, so these need the extra class to win. A wide display formula
+ * scrolls instead of widening the answer. */
+.markdown .katex-display {
   margin: 1em 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
-.katex {
+.markdown .katex {
   font-size: 1.1em;
 }
 

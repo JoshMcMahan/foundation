@@ -16,6 +16,7 @@ import * as controls from './components/controls.stories'
 import * as descriptionList from './components/DescriptionList.stories'
 import * as fields from './components/fields.stories'
 import * as loading from './components/loading.stories'
+import * as markdown from './components/Markdown.stories'
 import * as menus from './components/Menu.stories'
 import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
@@ -66,6 +67,7 @@ const SUITES = {
   sections,
   descriptionList,
   loading,
+  markdown,
   combobox,
   controls,
   copy,

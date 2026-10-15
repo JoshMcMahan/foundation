@@ -72,7 +72,7 @@ export function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
 }
 
 const MARKDOWN_TOUR = [
-  'Here is a **markdown tour** covering the common shapes.\n\n```ts\nconst adapter = createMockChatAdapter()\nawait adapter.conversations.list()\n```\n\n| Partition | Nodes | State |\n|---|---|---|\n| compute | 12 | idle |\n| gpu | 4 | busy |\n\nInline math $E = mc^2$ and display math:\n\n$$\\sum_{i=1}^{n} x_i^2$$\n\n- [x] stream the reply\n- [ ] polish the renderer',
+  'Here is a **markdown tour** covering the common shapes.\n\n```ts\nconst adapter = createMockChatAdapter()\nawait adapter.conversations.list()\n```\n\n| Partition | Nodes | State |\n|---|---|---|\n| compute | 12 | idle |\n| gpu | 4 | busy |\n\nInline math $$E = mc^2$$ and display math:\n\n$$\\sum_{i=1}^{n} x_i^2$$\n\n- [x] stream the reply\n- [ ] polish the renderer',
   'Second reply with `inline code`, a [link](https://example.com), and a list:\n\n1. First\n2. Second\n3. Third',
 ]
 

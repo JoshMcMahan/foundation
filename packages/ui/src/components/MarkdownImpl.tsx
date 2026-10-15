@@ -1,5 +1,12 @@
 import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
+// KaTeX writes each formula twice, as MathML for assistive technology and as
+// HTML for the eye, and only its stylesheet hides the MathML copy and lays
+// out the HTML one. Importing it beside the renderer brings it into the same
+// lazy chunk, so a host gets it without importing it and pays for it only
+// once markdown renders. The build keeps this a bare import of the katex
+// package, so the host's bundler resolves the fonts relative to that sheet.
+import 'katex/dist/katex.min.css'
 import { useEffect, useState } from 'react'
 import { defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
 import { cx } from '../cx'
