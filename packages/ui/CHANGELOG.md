@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.55.0](https://github.com/parallelworks/foundation/compare/ui-v0.54.0...ui-v0.55.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** a stronger dark-mode highlight, an editor its Field's label names and describes, help beside its control, and katex 0.19 ([#318](https://github.com/parallelworks/foundation/issues/318))
+
+### Bug Fixes
+
+* **ui:** a stronger dark-mode highlight, an editor its Field's label names and describes, help beside its control, and katex 0.19 ([#318](https://github.com/parallelworks/foundation/issues/318)) ([bee3c3d](https://github.com/parallelworks/foundation/commit/bee3c3d510ebd216a325accb6285344541ffcbd4))
+* **ui:** an Autocomplete shows an empty panel under the field when no suggestion matches ([#316](https://github.com/parallelworks/foundation/issues/316)) ([cd21963](https://github.com/parallelworks/foundation/commit/cd2196355bea406c2ce989c29cee5be99911a096))
+
 ## [0.54.0](https://github.com/parallelworks/foundation/compare/ui-v0.53.0...ui-v0.54.0) (2026-10-15)
 
 
