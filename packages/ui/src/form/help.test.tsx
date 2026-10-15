@@ -8,7 +8,7 @@ vi.mock('../components/Provider', async (importOriginal) =>
 )
 
 describe('a field’s tooltip', () => {
-  it('describes the field’s control, behind a ? that Tab passes over', async () => {
+  it('describes the field’s control, behind a ? hidden from assistive technology and Tab', async () => {
     render(
       <DynamicForm
         formJSONs={{
@@ -21,7 +21,11 @@ describe('a field’s tooltip', () => {
     const name = await screen.findByRole('textbox', { name: 'Name' })
     expect(name).toHaveAccessibleDescription(/Lowercase letters\s*and dashes/)
     expect(screen.getByRole('textbox', { name: 'Size' })).toHaveAccessibleDescription('Nodes')
-    for (const help of screen.getAllByRole('button', { name: /More info/ })) {
+    expect(screen.queryByRole('button', { name: /More info/ })).toBeNull()
+    const helps = document.querySelectorAll('button[aria-hidden="true"]')
+    expect(helps).toHaveLength(2)
+    for (const help of helps) {
+      expect(help).toHaveAttribute('aria-hidden', 'true')
       expect(help).toHaveAttribute('tabindex', '-1')
     }
   })

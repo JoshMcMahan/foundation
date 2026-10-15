@@ -73,7 +73,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | Views of one thing | `Tabs` |
 | A list of actions | `ActionMenu`; `useContextMenu` for a right-click or a row's menu |
 | A panel of controls anchored to a trigger | `Popover` |
-| A hint for a control | `Tooltip`; `InfoTip` for help everyone must reach |
+| A hint for a control | `Tooltip`; a `Field`'s `help` for more about a field, which its control reads and which opens as Tab reaches it; `InfoTip` for help about anything else |
 | A preview of what a link leads to | `HoverCard` |
 | A task that blocks the page | `Modal`, laid out with `title`, `description` and `footer` as a `Drawer` is; `ConfirmModal` to confirm one action; `CreateModal` to name and create one thing |
 | A panel beside the page | `Drawer` |
@@ -814,7 +814,7 @@ controls. A label that wraps to two lines sits at the foot of a label row the
 fields in that row share, so its control stays level with its neighbors'.
 Set `align: rows` when every immediate child is a
 section. Adjacent sections then share a header row and one row per direct child.
-A description, help text, or validation message increases the shared row height,
+A description or validation message increases the shared row height,
 so the following rows stay aligned. A nested grid counts as one child row.
 The grid's gap controls shared row spacing. Hidden children retain their row slot
 while a neighboring section uses it; empty sections disappear. When the configured

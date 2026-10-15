@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { cx } from '../cx'
 import { ExpressionIcon } from '../icons'
 import { Checkbox, CheckboxGroup } from './Checkbox'
@@ -154,6 +154,8 @@ interface FrameArgs {
   error: string
   description: string
   help: string
+  /** Shows a hint beside the label, here the field's key. */
+  hint: boolean
 }
 
 /** One frame names, describes and flags any control: the label, its hint, a description and an error. */
@@ -166,17 +168,18 @@ export const Frame: StoryObj<FrameArgs> = {
     error: '',
     description: 'Letters, numbers and dashes.',
     help: '',
+    hint: true,
   },
   argTypes: {
     layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
     size: { control: 'inline-radio', options: ['sm', 'md'] },
   },
   // The controls sit straight in their Fields, which name, describe and mark them.
-  render: ({ layout, size, required, disabled, error, description, help }) => (
+  render: ({ layout, size, required, disabled, error, description, help, hint }) => (
     <div className="flex max-w-lg flex-col gap-4">
       <Field
         label="Cluster"
-        hint={<code className="text-xs theme-muted-text">cluster</code>}
+        hint={hint && <code className="text-xs theme-muted-text">cluster</code>}
         help={help || undefined}
         description={description || undefined}
         error={error || undefined}
@@ -301,22 +304,62 @@ export const FrameWithActions: StoryObj = {
   },
 }
 
-/** Help behind the ? beside the label: Tab passes over the ?, the control reads the help as its
- *  description, and the help shows under the control while it has keyboard focus. */
+// Room above the first field for its help, which opens over the label, as a page's header
+// would leave it.
+const roomAbove: Decorator = (Story) => (
+  <div style={{ paddingTop: 64 }}>
+    <Story />
+  </div>
+)
+
+/** Help behind the ? beside the label. The control reads it as its description, so the ? is
+ *  hidden from assistive technology and Tab passes over it. Hovering the ? opens it. */
 export const FrameWithHelp: StoryObj<FrameArgs> = {
   ...Frame,
   args: {
     ...Frame.args,
-    layout: 'inline',
-    help: 'Names the cluster in [the dashboard](https://example.com).\nIt cannot change later.',
+    description: '',
+    help: 'The name other people see.\nIt cannot change later.',
+    // Only the help beside the label, so nothing else there draws the eye from it.
+    hint: false,
   } as FrameArgs,
+  decorators: [roomAbove],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const box = canvas.getByRole('textbox', { name: /Cluster/ })
+    await expect(box).toHaveAccessibleDescription(/cannot change later/)
+    await expect(canvas.queryByRole('button', { name: /More info/ })).toBeNull()
+  },
+}
+
+/** Tabbing to the control opens its help over the label, where it covers neither the control
+ *  nor the field after it. Escape or leaving the field closes it; a click into the control
+ *  doesn't open it. */
+export const FrameWithHelpOnKeyboardFocus: StoryObj<FrameArgs> = {
+  ...FrameWithHelp,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.tab()
     const box = canvas.getByRole('textbox', { name: /Cluster/ })
     await expect(box).toHaveFocus()
-    await expect(box).toHaveAccessibleDescription(/cannot change later/)
-    await expect(canvas.getByText(/Names the cluster/)).toBeVisible()
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/cannot change later/))
+  },
+}
+
+/** A link in the help keeps the ? in the Tab order, as the keyboard's way to the link. */
+export const FrameWithHelpLink: StoryObj<FrameArgs> = {
+  ...Frame,
+  args: {
+    ...Frame.args,
+    layout: 'inline',
+    help: 'Names the cluster in [the dashboard](https://example.com).\nIt cannot change later.',
+    hint: false,
+  } as FrameArgs,
+  decorators: [roomAbove],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.tab()
+    await expect(canvas.getByRole('button', { name: /More info/ })).toHaveFocus()
   },
 }
 

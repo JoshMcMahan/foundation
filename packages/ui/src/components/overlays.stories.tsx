@@ -190,18 +190,22 @@ export const DrawerContained: StoryObj = {
   },
 }
 
-type PopoverArgs = Pick<PopoverProps, 'side' | 'align' | 'openOnHover'>
+type PopoverArgs = Pick<PopoverProps, 'side' | 'align' | 'openOnHover' | 'keepSide'>
 
 /** A panel of controls under the button that opens it, named by its title. */
 export const PopoverStory: StoryObj<PopoverArgs> = {
   name: 'Popover',
-  args: { side: 'bottom', align: 'start', openOnHover: false },
+  args: { side: 'bottom', align: 'start', openOnHover: false, keepSide: false },
   argTypes: {
     side: { control: 'inline-radio', options: ['top', 'bottom', 'left', 'right'] },
     align: { control: 'inline-radio', options: ['start', 'center', 'end'] },
     openOnHover: {
       control: 'boolean',
       description: 'Also opens on hover; a press still opens it.',
+    },
+    keepSide: {
+      control: 'boolean',
+      description: 'Stays on `side` where it does not fit rather than flipping to the other.',
     },
   },
   render: (args) => (

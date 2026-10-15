@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { Checkbox } from './Checkbox'
 import { Combobox } from './Combobox'
@@ -8,6 +8,7 @@ import { DatePicker } from './DatePicker'
 import { ErrorText, Field, FieldOption, FieldRowContext, FieldValue, RevealToggle } from './Field'
 import { fieldBox } from './fieldBox'
 import { Input, Textarea } from './Input'
+import { Modal } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Radio, RadioGroup } from './Radio'
 import { Select } from './Select'
@@ -226,15 +227,15 @@ describe('a control placed in a Field', () => {
     ['DatePicker', () => <DatePicker value="" onValueChange={() => {}} />, 'button'],
   ]
   it.each(cases)(
-    '%s takes the label, description and error without a render function',
+    '%s takes the label, description, help and error without a render function',
     (name, control, role) => {
       render(
-        <Field label={name} description="Where it runs" error="Pick one">
+        <Field label={name} description="Where it runs" help="Nearest is fastest" error="Pick one">
           {control({})}
         </Field>,
       )
       const element = screen.getByRole(role, { name })
-      expect(element).toHaveAccessibleDescription('Where it runs Pick one')
+      expect(element).toHaveAccessibleDescription('Where it runs Nearest is fastest Pick one')
       expect(element).toHaveAttribute('aria-invalid', 'true')
     },
   )
@@ -246,19 +247,114 @@ describe('a control placed in a Field', () => {
 })
 
 describe('Field help', () => {
-  it('describes the control, keeps its ? out of the Tab order, and shows under keyboard focus', () => {
+  // The tip's popup, as opposed to the hidden description the control reads.
+  const tip = () => screen.queryByRole('dialog')
+  // Focus as Tab moves it: the key goes down, then focus lands.
+  const tabTo = (element: HTMLElement) => {
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Tab' })
+    act(() => element.focus())
+  }
+
+  it('describes the control, and hides its ? from assistive technology and Tab', () => {
     render(
-      <Field label="Name" description="Shown on the card." help="Lowercase letters.">
-        <Input />
-      </Field>,
+      <>
+        <Field label="Name" description="Shown on the card." help="Lowercase letters.">
+          <Input />
+        </Field>
+        <Field label="Zone" group help="Nearest is fastest.">
+          {(control) => (
+            <RadioGroup {...control}>
+              <FieldOption>
+                <Radio value="a" />A
+              </FieldOption>
+            </RadioGroup>
+          )}
+        </Field>
+      </>,
     )
     const input = screen.getByRole('textbox', { name: 'Name' })
     expect(input).toHaveAccessibleDescription('Shown on the card. Lowercase letters.')
-    expect(screen.getByRole('button', { name: /More info/ })).toHaveAttribute('tabindex', '-1')
-    // Hidden until the field holds keyboard focus, which CSS on the field's group shows.
-    expect(screen.getByText('Lowercase letters.')).toHaveClass(
-      'hidden',
-      'group-has-[:focus-visible]/field:block',
+    expect(screen.getByRole('group', { name: 'Zone' })).toHaveAccessibleDescription(
+      'Nearest is fastest.',
+    )
+    expect(screen.queryByRole('button', { name: /More info/ })).toBeNull()
+    for (const help of screen.getAllByRole('button', { hidden: true })) {
+      expect(help).toHaveAttribute('aria-hidden', 'true')
+      expect(help).toHaveAttribute('tabindex', '-1')
+    }
+  })
+
+  it('opens over the label while the control has keyboard focus, until Escape or blur', async () => {
+    render(
+      <>
+        <Field label="Name" help="Lowercase letters.">
+          <Input />
+        </Field>
+        <Field label="Size">
+          <Input />
+        </Field>
+      </>,
+    )
+    const name = screen.getByRole('textbox', { name: 'Name' })
+    tabTo(name)
+    await waitFor(() => expect(tip()).toHaveTextContent('Lowercase letters.'))
+    fireEvent.keyDown(name, { key: 'Escape' })
+    await waitFor(() => expect(tip()).toBeNull())
+    expect(name).toHaveFocus()
+
+    act(() => name.blur())
+    tabTo(name)
+    await waitFor(() => expect(tip()).not.toBeNull())
+    tabTo(screen.getByRole('textbox', { name: 'Size' }))
+    await waitFor(() => expect(tip()).toBeNull())
+  })
+
+  it('takes the first Escape in a dialog, leaving the dialog open', async () => {
+    const onClose = vi.fn()
+    render(
+      <Modal open onClose={onClose} title="Create">
+        <Field label="Name" help="Lowercase letters.">
+          <Input />
+        </Field>
+      </Modal>,
+    )
+    const name = await screen.findByRole('textbox', { name: 'Name' })
+    act(() => name.blur())
+    tabTo(name)
+    await waitFor(() => expect(screen.getAllByRole('dialog')).toHaveLength(2))
+    fireEvent.keyDown(name, { key: 'Escape' })
+    await waitFor(() => expect(screen.getAllByRole('dialog')).toHaveLength(1))
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('stays shut when the control is clicked, though a text box then matches :focus-visible', async () => {
+    render(
+      <Field label="Name" help="Lowercase letters.">
+        <Input />
+      </Field>,
+    )
+    const name = screen.getByRole('textbox', { name: 'Name' })
+    tabTo(name)
+    await waitFor(() => expect(tip()).not.toBeNull())
+    fireEvent.pointerDown(document.body)
+    act(() => name.blur())
+    await waitFor(() => expect(tip()).toBeNull())
+    fireEvent.pointerDown(name)
+    act(() => name.focus())
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(tip()).toBeNull()
+  })
+
+  it('keeps the ? in the Tab order when the help has a link to reach', () => {
+    render(
+      <Field label="Name" help="See [the guide](https://example.com).">
+        <Input />
+      </Field>,
+    )
+    const help = screen.getByRole('button', { name: /More info/ })
+    expect(help).not.toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription(
+      /^See the guide/,
     )
   })
 

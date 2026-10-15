@@ -442,8 +442,9 @@ const WIZARD_IN_A_GROUP = {
             label: 'Partition',
             default: 'gpu',
             options: ['gpu', 'cpu'],
+            tooltip: 'The queue the job waits in.',
           },
-          nodes: { type: 'number', label: 'Nodes', default: 2 },
+          nodes: { type: 'number', label: 'Nodes', default: 2, tooltip: 'Machines the job spans.' },
         },
       },
       storage: {
@@ -461,6 +462,76 @@ export const WizardInAGroup: StoryObj<typeof DynamicForm> = {
     formJSONs: WIZARD_IN_A_GROUP,
     initialValues: {},
     skipValueParse: true,
+  },
+}
+
+const HELP_FIELDS = {
+  name: {
+    type: 'string',
+    label: 'Run name',
+    default: 'experiment-24',
+    tooltip: 'Shown in the run list.\nLowercase letters, numbers and dashes.',
+  },
+  nodes: {
+    type: 'number',
+    label: 'Nodes',
+    default: 4,
+    tooltip: 'Machines the run spans. More finish sooner but wait longer for a slot.',
+  },
+  queue: {
+    type: 'dropdown',
+    label: 'Queue',
+    default: 'gpu',
+    options: ['cpu', 'gpu', 'debug'],
+    tooltip: 'Debug runs start at once but stop after 30 minutes.',
+  },
+  precision: {
+    type: 'radio',
+    label: 'Precision',
+    options: ['half', 'single'],
+    tooltip: 'Half precision uses half the memory.',
+  },
+  notify: {
+    type: 'boolean',
+    label: 'Notify when complete',
+    default: true,
+    tooltip: 'Sends an email when the run ends, however it ends.',
+  },
+  storage: {
+    type: 'object',
+    label: 'Storage',
+    tooltip: 'Where the run reads and writes files.',
+    options: {
+      scratch: {
+        type: 'number',
+        label: 'Scratch (GB)',
+        default: 100,
+        tooltip: 'Wiped when the run ends.',
+      },
+    },
+  },
+}
+
+/** Every field's help opens over its label as Tab reaches its control, and the control reads it
+ *  as its description. Tab passes over each field's ?; a section's ? keeps its Tab stop, having no
+ *  control to be read with. */
+export const HelpOnKeyboardFocus: StoryObj<typeof DynamicForm> = {
+  args: { formJSONs: HELP_FIELDS, initialValues: {}, skipValueParse: true },
+  // Room above the first field for its help, which opens over the label.
+  decorators: [
+    (Story) => (
+      <div style={{ paddingTop: 64 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = await canvas.findByRole('textbox', { name: /Run name/ }, { timeout: 5000 })
+    await expect(name).toHaveAccessibleDescription(/Shown in the run list/)
+    await userEvent.tab()
+    await expect(name).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/run list/))
   },
 }
 

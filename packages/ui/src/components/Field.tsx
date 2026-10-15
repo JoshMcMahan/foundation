@@ -1,9 +1,20 @@
 import { Field as BaseField } from '@base-ui/react/field'
 import { Fieldset } from '@base-ui/react/fieldset'
-import { createContext, type OutputHTMLAttributes, type ReactNode, use, useId } from 'react'
+import {
+  createContext,
+  type FocusEvent,
+  type KeyboardEvent,
+  type OutputHTMLAttributes,
+  type ReactNode,
+  use,
+  useEffect,
+  useId,
+  useState,
+} from 'react'
 import { cx } from '../cx'
 import { EyeIcon, EyeOffIcon, WarningIcon } from '../icons'
 import type { FieldBoxSize } from './fieldBox'
+import { focusCameFromKeyboard, trackFocusModality } from './focus'
 import { formatInfoTipContent, InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
 import { RequiredMark } from './RequiredMark'
@@ -45,10 +56,11 @@ export interface FieldProps {
   /** Beside the label and outside it, so it stays out of the control's name, such as a count. For
    *  help text, use `help`. */
   hint?: ReactNode
-  /** More about the field, behind a ? beside the label that opens on hover or press. It is read
-   *  with the control as part of its description, so the ? stays out of the Tab order, and it shows
-   *  under the control while the control has keyboard focus. `[text](url)` links and line breaks
-   *  show as such. */
+  /** More about the field, behind a ? beside the label. It is read with the control as part of
+   *  its description, so the ? is hidden from assistive technology and Tab passes over it. It
+   *  opens on hover or press of the ?, and while the control has keyboard focus, until Escape.
+   *  `[text](url)` links and line breaks show as such; a link keeps the ? in the Tab order, as
+   *  the keyboard's way to it. */
   help?: string | undefined
   /** Buttons at the far end of the label's row that act on the field, such as one that
    *  switches its control to a typed expression. */
@@ -151,7 +163,49 @@ export function Field({
   // foot of its track so it stays by its control.
   const inRow = use(FieldRowContext) && !inline && !group
   const labelSize = labelSizes[size]
-  const helpTip = help && <InfoTip text={help} tabIndex={-1} />
+  // Opened by keyboard focus or by the pointer on the ?, which decides where it may go.
+  const [helpOpen, setHelpOpen] = useState<'focus' | 'pointer' | false>(false)
+  useEffect(() => {
+    if (help) {
+      trackFocusModality()
+    }
+  }, [help])
+  // Over the label rather than under the control, so it covers neither the control nor the
+  // field after it, and the form doesn't shift as focus moves down it.
+  const helpTip = help && (
+    <InfoTip
+      text={help}
+      describesControl
+      open={Boolean(helpOpen)}
+      onOpenChange={(open) => setHelpOpen(open && 'pointer')}
+      // Flipped under the ?, it would cover the control being typed in.
+      keepSide={helpOpen === 'focus'}
+    />
+  )
+  // Shown for keyboard focus only: a click already says where the person is looking, and a
+  // text box matches :focus-visible on a click too.
+  const helpFocus = help
+    ? {
+        onFocus: () => {
+          if (focusCameFromKeyboard()) {
+            setHelpOpen('focus')
+          }
+        },
+        onBlur: (event: FocusEvent) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setHelpOpen(false)
+          }
+        },
+        // Escape closes the help first, as it would any popup, rather than also the dialog
+        // the field sits in.
+        onKeyDown: (event: KeyboardEvent) => {
+          if (event.key === 'Escape' && helpOpen) {
+            event.stopPropagation()
+            setHelpOpen(false)
+          }
+        },
+      }
+    : {}
   const labelBox = cx(
     labelClassName,
     labelSize.text,
@@ -171,7 +225,10 @@ export function Field({
   )
   const placed = typeof children === 'function' ? children(control) : children
   const body = (
-    <div className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}>
+    <div
+      className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}
+      {...helpFocus}
+    >
       {/* A field inside this one, such as in a group, starts its own row. */}
       <FieldRowContext value={false}>
         <ControlContext value={controlContext}>
@@ -193,12 +250,9 @@ export function Field({
         </BaseField.Description>
       )}
       {help && (
-        // The ? is out of the Tab order, so the help is read with the control, and shown under it
-        // while the control has keyboard focus, along with any link in it.
-        <BaseField.Description
-          id={helpId}
-          className="hidden text-xs leading-relaxed text-(--theme-muted-text-color) group-has-[:focus-visible]/field:block [&_a]:underline"
-        >
+        // What the control reads as its description; the ? shows it to sighted people. A
+        // description may name hidden text, so this one stays out of the way.
+        <BaseField.Description id={helpId} hidden>
           {formatInfoTipContent(help)}
         </BaseField.Description>
       )}
@@ -211,12 +265,8 @@ export function Field({
     </div>
   )
   const frame = inRow
-    ? cx('group/field contents', className)
-    : cx(
-        'group/field flex w-full',
-        inline ? 'items-start' : cx('flex-col', labelSize.stackGap),
-        className,
-      )
+    ? cx('contents', className)
+    : cx('flex w-full', inline ? 'items-start' : cx('flex-col', labelSize.stackGap), className)
 
   if (group) {
     return (

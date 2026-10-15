@@ -13,6 +13,7 @@ import { CreateModal, CreateModalSwitch } from './CreateModal'
 import { DatePicker } from './DatePicker'
 import { EmptyState } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
+import { fieldBox } from './fieldBox'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
 import { positionKeys } from './keys'
@@ -547,6 +548,29 @@ export const InfoTips: StoryObj = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'More information' }))
     await waitFor(() => expect(screen.getByRole('link', { name: /^the docs/ })).toBeVisible())
+  },
+}
+
+/** An InfoTip whose text a control already reads as its description hides its ? from assistive
+ *  technology and Tab. A Field's `help` sets this up, and opens the tip while the control has
+ *  keyboard focus. */
+export const InfoTipDescribingAControl: StoryObj = {
+  render: () => (
+    <div className="flex items-center gap-2 p-8 pt-20 text-sm">
+      <label htmlFor="retries">Retries</label>
+      <InfoTip text="How many times a job reruns." describesControl />
+      <input id="retries" aria-describedby="retries-help" className={fieldBox()} />
+      <span id="retries-help" hidden>
+        How many times a job reruns.
+      </span>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('textbox', { name: 'Retries' })).toHaveAccessibleDescription(
+      'How many times a job reruns.',
+    )
+    await expect(canvas.queryByRole('button', { name: 'More information' })).toBeNull()
   },
 }
 
