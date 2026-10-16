@@ -71,6 +71,7 @@ import { type JobHandlers, Joblist } from './JobSummary'
 import { Lineage, LineageContext } from './lineage'
 import { MatrixGroupNode, MatrixGroupSummaryItem } from './MatrixGroup'
 import { Reveal } from './Reveal'
+import { StepSummaries } from './StepSummaries'
 import { StepSummary } from './StepSummary'
 import { Store, useStore } from './store'
 import TreeView from './TreeView'
@@ -286,9 +287,9 @@ export const addCleanupSteps = ({ jobs }: { jobs: Record<string, WorkflowJob> })
   return clonedJobs
 }
 
-const PREVIEW_PADDING = 24
+const FIT_PADDING = 24
 
-interface PreviewView {
+interface FitView {
   scale: number
   offsetY: number
 }
@@ -303,9 +304,9 @@ function outerNodes(content: HTMLElement) {
 // Bounds are measured in content space against the view captured on first
 // layout, so panning never resizes the panel. Null until the graph has nodes
 // and the library has applied its initial transform.
-function measurePreviewHeight(
+function measureFitHeight(
   content: HTMLElement | null,
-  viewRef: React.RefObject<PreviewView | null>,
+  viewRef: React.RefObject<FitView | null>,
 ): number | null {
   const nodes = content ? outerNodes(content) : undefined
   const transform = content?.parentElement
@@ -323,7 +324,7 @@ function measurePreviewHeight(
   for (const node of nodes) {
     bottom = Math.max(bottom, offsetWithin(node, content).y + node.offsetHeight)
   }
-  return Math.ceil(bottom * scale + offsetY + PREVIEW_PADDING)
+  return Math.ceil(bottom * scale + offsetY + FIT_PADDING)
 }
 
 // Position of `el` relative to `ancestor`, summed over the offsetParent chain.
@@ -402,6 +403,8 @@ function jobHandlers({
   const isStepsOpen = (j: string) => stepsOpen.has(pathPrefix + j)
   const subworkflowKey = (j: string, s: number) => `${pathPrefix}${j}:${s}`
   const openLog = (j: string, s: number) => setSublogOpen(engine.stepLogPath(pathPrefix, j, s))
+  const openSummary = (j: string, s: number) =>
+    setSublogOpen(fileBeside(engine.stepLogPath(pathPrefix, j, s), 'summary.md'))
   return {
     isStepsOpen,
     onJobClick: (j) => {
@@ -428,6 +431,7 @@ function jobHandlers({
       }
     },
     onStepLogClick: openLog,
+    onStepSummaryClick: openSummary,
     onSubworkflowIcon: (j, s) => openInNewGraph(pathPrefix, j, s),
     renderSubworkflow: (j, s) => {
       const subJobs = jobs[j]?.steps?.[s]?.subworkflow?.jobs
@@ -1163,7 +1167,6 @@ export default function DependencyGraph({
   openStep,
   onCloseLog,
   sidebarStickyTop,
-  children,
 }: {
   run: GraphRun
   preview?: boolean
@@ -1183,8 +1186,6 @@ export default function DependencyGraph({
   onCloseLog?: (() => void) | undefined
   /** Pins the job list this many pixels below the top of the page's scroll area, under the host's own pinned bars. */
   sidebarStickyTop?: number | undefined
-  /** Shown under the annotations, above the graph. */
-  children?: ReactNode
 }) {
   const engine = useWorkflowEngine()
   // Animation timing constant (seconds) — controls line draw, dot transitions, and stagger delay
@@ -1215,7 +1216,7 @@ export default function DependencyGraph({
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  // Size the DAG panel to fit the remaining viewport below its top edge so the
+  // Cap the DAG panel at the remaining viewport below its top edge so the
   // graph always fits on screen without page scrolling at any window size or zoom.
   // A ref callback captures the element on mount, and a ResizeObserver on its
   // parent re-measures the top offset whenever siblings above (summary,
@@ -1255,15 +1256,17 @@ export default function DependencyGraph({
   )
   const containerHeight = topOffset !== null ? Math.max(windowSize.h - topOffset - 16, 160) : null
 
-  // A preview has no viewport to fill (embedded previews, docs examples), so
-  // its panel is only as tall as the graph. The transform library mounts its
-  // content after the first commit, so the observer watches the panel and the
-  // measurement retries until the graph is up.
-  const [previewHeight, setPreviewHeight] = useState<number | null>(null)
-  const previewViewRef = useRef<PreviewView | null>(null)
+  // The panel is only as tall as the graph, up to that cap, so a small graph
+  // leaves no empty box above the step summaries under it. The transform
+  // library mounts its content after the first commit, so the observer watches
+  // the panel and the measurement retries until the graph is up.
+  const [fitHeight, setFitHeight] = useState<number | null>(null)
+  const fitViewRef = useRef<FitView | null>(null)
   useEffect(() => {
-    const container = containerRef.current
-    if (!preview || !container || fixedHeight) {
+    const container = containerEl
+    // A new panel (back from the tree view) gets a new initial view.
+    fitViewRef.current = null
+    if (!container || fixedHeight) {
       return
     }
     let raf = 0
@@ -1271,7 +1274,7 @@ export default function DependencyGraph({
     const measure = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(() => {
-        const next = measurePreviewHeight(graphContentRef.current, previewViewRef)
+        const next = measureFitHeight(graphContentRef.current, fitViewRef)
         if (next === null) {
           if (attempts++ < 120) {
             measure()
@@ -1279,7 +1282,7 @@ export default function DependencyGraph({
           return
         }
         attempts = 0
-        setPreviewHeight((prev) => (prev === next ? prev : next))
+        setFitHeight((prev) => (prev === next ? prev : next))
       })
     }
     measure()
@@ -1289,7 +1292,7 @@ export default function DependencyGraph({
       observer.disconnect()
       cancelAnimationFrame(raf)
     }
-  }, [preview, fixedHeight])
+  }, [containerEl, fixedHeight])
 
   const { common, dag: dagStrings } = useStrings()
   const stepHeaderRef = useRef<HTMLDivElement>(null)
@@ -1579,17 +1582,16 @@ export default function DependencyGraph({
       await Promise.allSettled(running.map((transition) => transition.finished))
       running = sizingTransitions(content)
     }
-    // A preview's panel follows its graph a frame behind, and the fit measures the panel.
-    const panelHeight =
-      preview && !fixedHeight ? measurePreviewHeight(content, previewViewRef) : null
+    // The panel follows its graph a frame behind, and the fit measures the panel.
+    const panelHeight = fixedHeight ? null : measureFitHeight(content, fitViewRef)
     if (panelHeight !== null) {
-      flushSync(() => setPreviewHeight(panelHeight))
+      flushSync(() => setFitHeight(panelHeight))
     }
     // The pan/zoom library cancels a running animation whenever the graph or its panel resizes.
     await sizesSettled([container, content, ...outerNodes(content)])
     invalidateConnectors()
     fitGraph(FIT_ANIMATION_MS)
-  }, [fitGraph, invalidateConnectors, preview, fixedHeight])
+  }, [fitGraph, invalidateConnectors, fixedHeight])
 
   const centerOn = useCallback((el: HTMLElement) => {
     const container = containerRef.current
@@ -2072,7 +2074,6 @@ export default function DependencyGraph({
           </div>
         )}
         {!preview && <AnnotationBanner executedJobs={jobs} />}
-        {children}
         {viewMode === 'tree' && !preview ? (
           <div className="panel w-full border">
             <TreeView
@@ -2094,12 +2095,13 @@ export default function DependencyGraph({
             style={{
               height:
                 fixedHeight ??
-                (containerHeight !== null
-                  ? `${containerHeight}px`
-                  : previewHeight !== null
-                    ? `${Math.min(previewHeight, windowSize.h * 0.62)}px`
+                (fitHeight !== null
+                  ? `${Math.min(fitHeight, containerHeight ?? windowSize.h * 0.62)}px`
+                  : containerHeight !== null
+                    ? `${containerHeight}px`
                     : '62vh'),
-              minHeight: previewHeight !== null && !fixedHeight ? 0 : 160,
+              // A run's panel keeps room for its toolbar; a preview has none.
+              minHeight: preview && fitHeight !== null && !fixedHeight ? 0 : 160,
             }}
           >
             <TransformWrapper
@@ -2192,6 +2194,15 @@ export default function DependencyGraph({
             </TransformWrapper>
             {editorOverlays}
           </div>
+        )}
+        {!preview && (
+          <StepSummaries
+            runSlug={runSlug}
+            jobs={rootJobs}
+            onOpenLog={({ prefix, job, index }) =>
+              setSublogOpen(engine.stepLogPath(prefix, job, index))
+            }
+          />
         )}
       </div>
       <Modal

@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import type { ReactNode, Ref } from 'react'
 import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -586,7 +587,7 @@ describe('DependencyGraph step summary', () => {
     expect(screen.getByTestId('log')).toHaveTextContent('step log')
     expect(tab('Logs')).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('tab', { name: 'Summary' })).not.toBeInTheDocument()
-    expect(calls.some(([path]) => path?.endsWith('summary.md'))).toBe(false)
+    expect(calls.some(([path]) => path?.endsWith('step_1/summary.md'))).toBe(false)
   })
 
   it('keeps the step and its tabs on screen while a tab loads', () => {
@@ -692,9 +693,7 @@ describe('DependencyGraph step summary', () => {
     const { container } = render(
       <div data-testid="scroller">
         <UIProvider>
-          <DependencyGraph run={summaryRun}>
-            <p>Below the graph</p>
-          </DependencyGraph>
+          <DependencyGraph run={summaryRun} />
         </UIProvider>
       </div>,
     )
@@ -710,30 +709,61 @@ describe('DependencyGraph step summary', () => {
     rect.mockRestore()
   })
 
-  it('marks the steps that wrote a summary in the job list', () => {
+  it('opens a step on its summary from its summary mark in the job list', async () => {
     render(
-      <UIProvider>
+      <UIProvider
+        data={{
+          useRunFile: (_slug, path) => ({
+            data: path?.endsWith('/summary.md') ? '## Tests\n' : 'step log',
+            isLoading: false,
+            error: undefined,
+          }),
+        }}
+      >
         <DependencyGraph run={summaryRun} />
       </UIProvider>,
     )
     fireEvent.click(screen.getAllByText('Report')[0]!)
     // The sidebar and the graph list the job's steps alike.
-    const marked = screen.getAllByRole('img', { name: 'Has a summary' })
-    expect(marked.map((icon) => icon.closest('button')?.textContent)).toEqual(['test', 'test'])
+    const marks = screen.getAllByRole('button', { name: 'Step summary' })
+    expect(marks.map((mark) => mark.parentElement?.textContent)).toEqual(['test', 'test'])
+    fireEvent.click(marks[0]!)
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Tests' })).toBeInTheDocument()
+    expect(tab('Summary')).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('shows what the host puts above the graph', () => {
+  it('shows the step summaries under the graph, each opening its step on its log', async () => {
     const { container } = render(
-      <UIProvider>
-        <DependencyGraph run={summaryRun}>
-          <p>Above the graph</p>
-        </DependencyGraph>
+      <UIProvider
+        data={{
+          useRunFile: (_slug, path) => ({
+            data: path?.endsWith('/summary.md') ? '## Tests\n' : 'step log',
+            isLoading: false,
+            error: undefined,
+          }),
+        }}
+      >
+        <DependencyGraph run={summaryRun} />
       </UIProvider>,
     )
+    const summaries = screen.getByRole('region', { name: 'Step summaries' })
     const panel = container.querySelector('.panel.overflow-hidden')
-    expect(panel?.compareDocumentPosition(screen.getByText('Above the graph')) ?? 0).toBe(
-      Node.DOCUMENT_POSITION_PRECEDING,
+    expect(panel?.compareDocumentPosition(summaries) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    const card = within(summaries).getByRole('article', { name: 'Report › test' })
+    expect(within(card).getByRole('heading', { name: 'Tests' })).toBeInTheDocument()
+    fireEvent.click(within(card).getByRole('button', { name: 'Logs' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('step log')
+    expect(tab('Logs')).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('leaves the step summaries out of a preview', () => {
+    render(
+      <UIProvider>
+        <DependencyGraph run={summaryRun} preview />
+      </UIProvider>,
     )
+    expect(screen.queryByRole('region', { name: 'Step summaries' })).toBeNull()
   })
 
   it('pins the job list under the host bars only when asked', () => {

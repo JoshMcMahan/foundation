@@ -47,6 +47,7 @@ export interface JobHandlers {
   onJobClick: (jobName: string) => void
   onStepClick: (jobName: string, stepIndex: number) => void
   onStepLogClick: (jobName: string, stepIndex: number) => void
+  onStepSummaryClick: (jobName: string, stepIndex: number) => void
   // The secondary subworkflow action bound to the icon (the primary is the step
   // click); the icon opens the subworkflow in its own graph.
   onSubworkflowIcon: (jobName: string, stepIndex: number) => void
@@ -121,14 +122,6 @@ export function Joblist(
                 >
                   {inputs.preview ? '↳' : <RunStatusIcon status={step.status} />}
                   <div>{stepLabel}</div>
-                  {step.summary && !inputs.preview && (
-                    <Tooltip content={dag.hasSummary}>
-                      <SummaryIcon
-                        aria-label={dag.hasSummary}
-                        className="w-[1.1em] h-[1.1em] shrink-0 text-(--theme-muted-text-color)"
-                      />
-                    </Tooltip>
-                  )}
                 </button>
               )
               return (
@@ -151,6 +144,21 @@ export function Joblist(
                       </EditableStepRow>
                     ) : (
                       stepButton
+                    )}
+                    {step.summary && !inputs.preview && (
+                      <Tooltip content={dag.hasSummary}>
+                        <button
+                          type="button"
+                          aria-label={dag.hasSummary}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            inputs.onStepSummaryClick(jobName, i)
+                          }}
+                          className="ml-1.5 shrink-0 text-(--theme-muted-text-color) hover:text-(--theme-link)"
+                        >
+                          <SummaryIcon className="w-[1.1em] h-[1.1em]" />
+                        </button>
+                      </Tooltip>
                     )}
                     {step.subworkflow && (
                       <>
