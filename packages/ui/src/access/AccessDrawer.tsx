@@ -9,36 +9,59 @@ import { LoadingRegion, Skeleton } from '../components/Skeleton'
 import { useQueryMatch } from '../components/search'
 import { toast } from '../components/Toast'
 import { AddIcon, LockIcon, UsersIcon } from '../icons'
-import { ByGroup, ByRole, type PendingRemoval, removeKey } from './AccessList'
+import {
+  ByPrincipal,
+  ByRole,
+  OWNER_SECTION,
+  type PendingRemoval,
+  principalLabel,
+  removeKey,
+} from './AccessList'
 import { holdFocus, useFocusAfterRender } from './focus'
 import { type GrantSelection, useGrantView } from './GrantView'
-import type { DetailsCache } from './GroupPicker'
-import { type AccessModel, buildModel, invert, key, warnAboutMisuse } from './model'
+import {
+  type AccessModel,
+  buildModel,
+  invert,
+  key,
+  principalsWithAccess,
+  warnAboutMisuse,
+} from './model'
+import type { DetailsCache, SearchPrincipals } from './PrincipalPicker'
 import { type AccessStrings, useAccessStrings } from './strings'
 import type {
   AccessChange,
   AccessGrant,
-  AccessGroup,
   AccessGroupDetails,
+  AccessInheritedGrant,
   AccessPermission,
+  AccessPrincipal,
   AccessRole,
 } from './types'
 
-export type AccessArrangement = 'role' | 'group'
+export type AccessArrangement = 'role' | 'principal'
 
 export interface AccessDrawerProps {
   open: boolean
   onClose: () => void
   /** What access is to, as the reader knows it: "gpu-cluster-east". */
   resourceName: string
-  /** Every role that can be granted here, in the order to list them. */
+  /** Every role that can be granted here, in the order to list them, and any held here only
+   *  through somewhere else (`grantable: false`). */
   roles: readonly AccessRole[]
-  /** Every group that holds a role here, and everyone when the resource can be granted to
-   *  everyone. Without `searchGroups`, also every group that can be granted one. */
-  groups: readonly AccessGroup[]
+  /** Every person and group that holds a role here or owns it, the groups those people are in,
+   *  and everyone when the resource can be granted to everyone. Without `searchPrincipals`,
+   *  also everyone who can be granted one. */
+  principals: readonly AccessPrincipal[]
   /** Who holds which role. The drawer shows these and never changes them itself. */
   grants: readonly AccessGrant[]
-  /** Names the permissions roles list, for what a group loses when it loses a role. */
+  /** The principal who owns it, among `principals`: it has every permission, always, and can't
+   *  be removed. */
+  owner?: string | undefined
+  /** Roles held through something the resource is part of, such as its organization: they
+   *  show, locked, and count toward what someone keeps. */
+  inherited?: readonly AccessInheritedGrant[] | undefined
+  /** Names the permissions roles list, for what someone loses when they lose a role. */
   permissions?: readonly AccessPermission[] | undefined
   /** Saves a change. Return a promise that settles once it is saved: until then its rows show
    *  that they are saving, and when it rejects the drawer says that nothing changed and offers
@@ -51,21 +74,21 @@ export interface AccessDrawerProps {
   readOnly?: boolean | undefined
   /** Who can change it, said in read-only mode: "Only people with the Admin role can change it." */
   readOnlyReason?: ReactNode
-  /** More about a group, asked for when it is highlighted in the group picker and kept while the
+  /** More about a group, asked for when it is highlighted in the picker and kept while the
    *  drawer is mounted. A highlight that moves on aborts `signal`. */
   describeGroup?:
     | ((groupId: string, signal: AbortSignal) => Promise<AccessGroupDetails>)
     | undefined
-  /** Finds groups to grant to, for an organization with too many to pass in `groups`. A newer
-   *  query aborts `signal`. Without it, the picker filters `groups`. */
-  searchGroups?:
-    | ((query: string, signal: AbortSignal) => Promise<readonly AccessGroup[]>)
-    | undefined
+  /** Finds people and groups to grant to, for an organization with too many to pass in
+   *  `principals`. A newer query aborts `signal`. Without it, the picker filters `principals`. */
+  searchPrincipals?: SearchPrincipals | undefined
   /** How many groups the organization has, for the picker's hint and heading. */
   groupCount?: number | undefined
-  /** Groups the reader granted to lately, listed first in the picker. */
-  recentGroupIds?: readonly string[] | undefined
-  /** How the list starts out: role by role, or group by group. */
+  /** How many people the organization has, for the picker's hint and heading. */
+  peopleCount?: number | undefined
+  /** People and groups the reader granted to lately, listed first in the picker. */
+  recentPrincipalIds?: readonly string[] | undefined
+  /** How the list starts out: role by role, or person and group one by one. */
   defaultArrangement?: AccessArrangement | undefined
   /** As `Drawer`'s. */
   width?: number | string | undefined
@@ -75,48 +98,51 @@ interface Failure {
   change: AccessChange
   title: string
   message: string | undefined
-  /** Where it shows: the grant form, or under the role or group the change was about. */
+  /** Where it shows: the grant form, or under the role or principal the change was about. */
   inGrant: boolean
-  groupId: string
+  principalId: string
   roleId?: string | undefined
 }
 
-const EMPTY_SELECTION: GrantSelection = { groupIds: [], roleIds: [] }
+const EMPTY_SELECTION: GrantSelection = { principalIds: [], roleIds: [] }
 
-/** Who has access to one resource, and the place to change it: roles granted to groups.
- *  Overlapping roles are allowed and only redundant, which the drawer points out; taking a
- *  role away first says exactly what the group loses. Each change is saved as it is made, with
- *  Undo in a toast. */
+/** Who has access to one resource, and the place to change it: roles granted to people and
+ *  groups. Overlapping roles are allowed and only redundant, which the drawer points out; taking
+ *  a role away first says exactly what is lost. The owner and roles granted above the resource
+ *  show, locked. Each change is saved as it is made, with Undo in a toast. */
 export function AccessDrawer({
   open,
   onClose,
   resourceName,
   roles,
-  groups,
+  principals,
   grants,
+  owner,
+  inherited,
   permissions,
   onChange,
   loading = false,
   readOnly = false,
   readOnlyReason,
   describeGroup,
-  searchGroups,
+  searchPrincipals,
   groupCount,
-  recentGroupIds,
+  peopleCount,
+  recentPrincipalIds,
   defaultArrangement = 'role',
   width = 560,
 }: AccessDrawerProps) {
   const t = useAccessStrings()
   const uid = useId()
   const model = useMemo(
-    () => buildModel(roles, groups, grants, permissions),
-    [roles, groups, grants, permissions],
+    () => buildModel({ roles, principals, grants, permissions, inherited, owner }),
+    [roles, principals, grants, permissions, inherited, owner],
   )
   useEffect(() => {
     if (!loading) {
-      warnAboutMisuse(roles, groups, grants, permissions)
+      warnAboutMisuse({ roles, principals, grants, permissions, inherited, owner })
     }
-  }, [roles, groups, grants, permissions, loading])
+  }, [roles, principals, grants, permissions, inherited, owner, loading])
 
   const [view, setView] = useState<'list' | 'grant'>('list')
   const [selection, setSelection] = useState<GrantSelection>(EMPTY_SELECTION)
@@ -124,15 +150,15 @@ export function AccessDrawer({
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState<Record<AccessArrangement, ReadonlySet<string>>>({
     role: new Set(),
-    group: new Set(),
+    principal: new Set(),
   })
   const [removal, setRemoval] = useState<PendingRemoval>()
   const [saving, setSaving] = useState<AccessChange>()
   const [failure, setFailure] = useState<Failure>()
   const cache = useRef<DetailsCache>(new Map()).current
-  const seen = useRef(new Map<string, AccessGroup>()).current
+  const seen = useRef(new Map<string, AccessPrincipal>()).current
   const body = useRef<HTMLDivElement | null>(null)
-  // Also as state, so the group list can be bounded by it once it is there.
+  // Also as state, so the picker's list can be bounded by it once it is there.
   const [bodyElement, setBodyElement] = useState<HTMLDivElement | null>(null)
   const bodyRef = useCallback((element: HTMLDivElement | null) => {
     body.current = element
@@ -150,14 +176,14 @@ export function AccessDrawer({
 
   const names = (changed: AccessChange) => {
     const all = [...changed.grant, ...changed.revoke]
-    const groupNames = [...new Set(all.map((grant) => grant.groupId))].map((id) => {
-      const group = seen.get(id) ?? model.groupById.get(id)
-      return group?.kind === 'everyone' ? t.everyone : (group?.name ?? id)
+    const principalNames = [...new Set(all.map((grant) => grant.principalId))].map((id) => {
+      const principal = seen.get(id) ?? model.principalById.get(id)
+      return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
     })
     const roleNames = [...new Set(all.map((grant) => grant.roleId))].map(
       (id) => model.roleById.get(id)?.name ?? id,
     )
-    return { groupNames, roleNames }
+    return { principalNames, roleNames }
   }
 
   const undo = (done: AccessChange) => {
@@ -172,7 +198,7 @@ export function AccessDrawer({
     if (!onChange || (next.grant.length === 0 && next.revoke.length === 0)) {
       return false
     }
-    const { groupNames, roleNames } = names(next)
+    const { principalNames, roleNames } = names(next)
     setSaving(next)
     setFailure(undefined)
     try {
@@ -182,8 +208,8 @@ export function AccessDrawer({
         change: next,
         title:
           next.grant.length > 0
-            ? t.grantFailed(groupNames, roleNames)
-            : t.removeFailed(groupNames[0] ?? '', roleNames),
+            ? t.grantFailed(principalNames, roleNames)
+            : t.removeFailed(principalNames[0] ?? '', roleNames),
         message: messageOf(error),
         ...where,
       })
@@ -192,7 +218,9 @@ export function AccessDrawer({
       setSaving(undefined)
     }
     toast.success(
-      next.grant.length > 0 ? t.granted(groupNames, roleNames) : t.removed(groupNames, roleNames),
+      next.grant.length > 0
+        ? t.granted(principalNames, roleNames)
+        : t.removed(principalNames, roleNames),
       { action: { label: t.common.undo, onClick: () => undo(next) } },
     )
     return true
@@ -204,19 +232,19 @@ export function AccessDrawer({
     focusLater(() => visible(body.current?.querySelectorAll<HTMLElement>('[data-grant-access]')))
   }
 
-  const toGrant = (groupIds: string[] = []) => {
-    setSelection({ groupIds, roleIds: [] })
+  const toGrant = (principalIds: string[] = []) => {
+    setSelection({ principalIds, roleIds: [] })
     setRemoval(undefined)
     setView('grant')
     focusLater(() => body.current?.querySelector<HTMLElement>('input[role="combobox"]'))
   }
 
   const grant = async (next: AccessChange) => {
-    if (await save(next, { inGrant: true, groupId: next.grant[0]?.groupId ?? '' })) {
+    if (await save(next, { inGrant: true, principalId: next.grant[0]?.principalId ?? '' })) {
       // The new grants show opened, so the reader sees where they went.
       setExpanded((current) => ({
         role: new Set([...current.role, ...next.grant.map((g) => g.roleId)]),
-        group: new Set([...current.group, ...next.grant.map((g) => g.groupId)]),
+        principal: new Set([...current.principal, ...next.grant.map((g) => g.principalId)]),
       }))
       toList()
     }
@@ -225,16 +253,16 @@ export function AccessDrawer({
   const remove = async (pending: PendingRemoval) => {
     const next = {
       grant: [],
-      revoke: pending.roleIds.map((roleId) => ({ groupId: pending.groupId, roleId })),
+      revoke: pending.roleIds.map((roleId) => ({ principalId: pending.principalId, roleId })),
     }
     const anchor = arrangement === 'role' && !pending.all ? pending.roleIds[0] : undefined
-    await save(next, { inGrant: false, groupId: pending.groupId, roleId: anchor })
+    await save(next, { inGrant: false, principalId: pending.principalId, roleId: anchor })
     setRemoval(undefined)
     // The row it was on is gone, or has its error under it: its section takes focus, or the
     // filter when the section went with it.
     focusLater(
       () =>
-        document.getElementById(sectionId(anchor ?? pending.groupId)) ??
+        document.getElementById(sectionId(anchor ?? pending.principalId)) ??
         body.current?.querySelector<HTMLElement>('input[type="search"]'),
     )
   }
@@ -242,7 +270,11 @@ export function AccessDrawer({
   const retry = (failed: Failure) =>
     failed.inGrant
       ? grant(failed.change)
-      : save(failed.change, { inGrant: false, groupId: failed.groupId, roleId: failed.roleId })
+      : save(failed.change, {
+          inGrant: false,
+          principalId: failed.principalId,
+          roleId: failed.roleId,
+        })
 
   const failureNode = failure && (
     <Callout
@@ -273,9 +305,10 @@ export function AccessDrawer({
     onSelectionChange: setSelection,
     resourceName,
     describeGroup,
-    searchGroups,
+    searchPrincipals,
     groupCount,
-    recentGroupIds,
+    peopleCount,
+    recentPrincipalIds,
     cache,
     seen,
     saving: saving !== undefined,
@@ -288,8 +321,9 @@ export function AccessDrawer({
   })
 
   const savingKeys = useMemo(() => new Set(saving?.revoke.map(key) ?? []), [saving])
-  const empty = !loading && model.held.size === 0
-  const View = arrangement === 'role' ? ByRole : ByGroup
+  const withAccess = principalsWithAccess(model)
+  const empty = !loading && withAccess.length === 0
+  const View = arrangement === 'role' ? ByRole : ByPrincipal
   const grantButton = (className: string) => (
     <Button
       variant="primary"
@@ -322,10 +356,12 @@ export function AccessDrawer({
               onValueChange={setArrangement}
               options={[
                 { value: 'role', label: t.byRole },
-                { value: 'group', label: t.byGroup },
+                { value: 'principal', label: t.byPrincipal },
               ]}
             />
           </div>
+          {editable && grantButton('ms-auto hidden @min-[30rem]/access:inline-flex')}
+          {/* A row of its own, as the switch and Grant access leave too little room for it. */}
           <SearchInput
             label={t.filter}
             value={query}
@@ -333,9 +369,8 @@ export function AccessDrawer({
               setQuery(next)
               setExpanded(expandedFor(model, next.trim(), match, t))
             }}
-            className="min-w-0 flex-1 basis-full @min-[30rem]/access:basis-0"
+            className="min-w-0 basis-full"
           />
-          {editable && grantButton('hidden @min-[30rem]/access:inline-flex')}
         </div>
       )}
       {failure && !failure.inGrant && !filtered.order.includes(anchorOf(failure, arrangement)) && (
@@ -408,10 +443,14 @@ export function AccessDrawer({
                 }
               },
               onRemove: remove,
-              onGrantMore: (groupId) => toGrant([groupId]),
+              onGrantMore: (principalId) => toGrant([principalId]),
               failure:
                 failure && !failure.inGrant
-                  ? { node: failureNode, groupId: failure.groupId, roleId: failure.roleId }
+                  ? {
+                      node: failureNode,
+                      principalId: failure.principalId,
+                      roleId: failure.roleId,
+                    }
                   : undefined,
             }}
           />
@@ -440,8 +479,9 @@ export function AccessDrawer({
             ? resourceName
             : t.summary(
                 resourceName,
-                [...model.held.keys()].filter((id) => id !== model.everyone?.id).length,
-                model.everyone !== undefined && model.held.has(model.everyone.id),
+                withAccess.filter((principal) => principal.kind === 'user').length,
+                withAccess.filter((principal) => principal.kind === 'group').length,
+                withAccess.some((principal) => principal.kind === 'everyone'),
               )
       }
       onBack={granting ? toList : undefined}
@@ -475,10 +515,10 @@ const messageOf = (error: unknown) =>
   error instanceof Error && error.message ? error.message : undefined
 
 const anchorOf = (failure: Failure, arrangement: AccessArrangement) =>
-  arrangement === 'role' ? (failure.roleId ?? '') : failure.groupId
+  arrangement === 'role' ? (failure.roleId ?? '') : failure.principalId
 
-/** The first of several elements that is laid out, such as the one of two buttons a width shows. */
-/** The one of `elements` that is laid out, or the first where nothing is (as in tests). */
+/** The one of `elements` that is laid out, such as the one of two buttons a width shows, or the
+ *  first where nothing is (as in tests). */
 function visible(elements: NodeListOf<HTMLElement> | undefined) {
   const all = [...(elements ?? [])]
   return all.find((element) => element.getClientRects().length > 0) ?? all[0]
@@ -486,8 +526,14 @@ function visible(elements: NodeListOf<HTMLElement> | undefined) {
 
 type Match = (query: string, ...texts: (string | undefined)[]) => boolean
 
-const groupNames = (group: AccessGroup, t: AccessStrings) =>
-  group.kind === 'everyone' ? [group.name, t.everyone, t.everyoneInOrganization] : [group.name]
+/** What a principal can be found by. */
+const principalTexts = (model: AccessModel, principal: AccessPrincipal, t: AccessStrings) => [
+  principalLabel(principal, t),
+  principal.name,
+  principal.detail,
+  ...(principal.kind === 'everyone' ? [t.everyone] : []),
+  ...(model.owner?.id === principal.id ? [t.owner] : []),
+]
 
 /** The sections in view and the rows under each. A section named by the query shows all its
  *  rows; otherwise only the rows the query names, and no section when none are. */
@@ -513,40 +559,52 @@ export function filterAccess(
 ) {
   const shown = new Map<string, readonly string[]>()
   const order: string[] = []
+  const found = (principal: AccessPrincipal) => match(query, ...principalTexts(model, principal, t))
   if (arrangement === 'role') {
+    const owner = model.owner
+    if (owner && (!query || match(query, t.owner) || found(owner))) {
+      order.push(OWNER_SECTION)
+      shown.set(OWNER_SECTION, [owner.id])
+    }
     for (const role of model.roles) {
-      const holders = model.holders.get(role.id) ?? []
+      // Own grants first, then those from above, each once.
+      const holders = [
+        ...new Map(
+          [
+            ...(model.holders.get(role.id) ?? []),
+            ...(model.inheritedHolders.get(role.id) ?? []).map((holder) => holder.principal),
+          ].map((principal) => [principal.id, principal]),
+        ).values(),
+      ]
+      if (role.grantable === false && holders.length === 0) {
+        continue
+      }
       const rows =
-        !query || match(query, role.name, role.description)
-          ? holders
-          : holders.filter((group) => match(query, ...groupNames(group, t)))
+        !query || match(query, role.name, role.description) ? holders : holders.filter(found)
       if (!query || rows.length > 0) {
         order.push(role.id)
         shown.set(
           role.id,
-          rows.map((group) => group.id),
+          rows.map((principal) => principal.id),
         )
       }
     }
   } else {
-    const everyone = model.everyone
-    const holders = [...model.held.keys()].sort((a, b) =>
-      a === everyone?.id ? -1 : b === everyone?.id ? 1 : 0,
-    )
-    for (const groupId of holders) {
-      const group = model.groupById.get(groupId)
-      const held = model.held.get(groupId) ?? []
-      if (!group) {
-        continue
-      }
+    for (const principal of principalsWithAccess(model)) {
+      const roles = [
+        ...new Set([
+          ...(model.held.get(principal.id) ?? []),
+          ...(model.inherited.get(principal.id) ?? []).map((holding) => holding.role),
+        ]),
+      ]
       const rows =
-        !query || match(query, ...groupNames(group, t))
-          ? held
-          : held.filter((role) => match(query, role.name, role.description))
-      if (!query || rows.length > 0) {
-        order.push(groupId)
+        !query || found(principal)
+          ? roles
+          : roles.filter((role) => match(query, role.name, role.description))
+      if (!query || rows.length > 0 || (model.owner?.id === principal.id && found(principal))) {
+        order.push(principal.id)
         shown.set(
-          groupId,
+          principal.id,
           rows.map((role) => role.id),
         )
       }
@@ -558,13 +616,13 @@ export function filterAccess(
 /** Opens the sections a query found rows in, so the matches show; each can then be folded. */
 function expandedFor(model: AccessModel, query: string, match: Match, t: AccessStrings) {
   if (!query) {
-    return { role: new Set<string>(), group: new Set<string>() }
+    return { role: new Set<string>(), principal: new Set<string>() }
   }
   const open = (arrangement: AccessArrangement) => {
     const { shown } = filterAccess(model, arrangement, query, match, t)
     return new Set([...shown].filter(([, rows]) => rows.length > 0).map(([id]) => id))
   }
-  return { role: open('role'), group: open('group') }
+  return { role: open('role'), principal: open('principal') }
 }
 
 function RowsSkeleton() {

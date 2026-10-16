@@ -3,18 +3,18 @@ import { Button } from '../components/Button'
 import { Callout } from '../components/Callout'
 import { Combobox, type ComboboxItem } from '../components/Combobox'
 import { StatusBadge } from '../components/StatusBadge'
+import { type AccessModel, covers, grantPlan, isOwner } from './model'
 import {
   type DescribeGroup,
   type DetailsCache,
-  GroupPicker,
-  type SearchGroups,
-} from './GroupPicker'
-import { type AccessModel, covers, grantPlan, overlapOf } from './model'
+  PrincipalPicker,
+  type SearchPrincipals,
+} from './PrincipalPicker'
 import type { AccessStrings } from './strings'
-import type { AccessChange, AccessGroup, AccessRole } from './types'
+import type { AccessChange, AccessPrincipal, AccessRole } from './types'
 
 export interface GrantSelection {
-  groupIds: string[]
+  principalIds: string[]
   roleIds: string[]
 }
 
@@ -25,9 +25,10 @@ export function useGrantView({
   onSelectionChange,
   resourceName,
   describeGroup,
-  searchGroups,
+  searchPrincipals,
   groupCount,
-  recentGroupIds,
+  peopleCount,
+  recentPrincipalIds,
   cache,
   seen,
   saving,
@@ -43,11 +44,12 @@ export function useGrantView({
   onSelectionChange: (next: GrantSelection) => void
   resourceName: string
   describeGroup?: DescribeGroup | undefined
-  searchGroups?: SearchGroups | undefined
+  searchPrincipals?: SearchPrincipals | undefined
   groupCount?: number | undefined
-  recentGroupIds?: readonly string[] | undefined
+  peopleCount?: number | undefined
+  recentPrincipalIds?: readonly string[] | undefined
   cache: DetailsCache
-  seen: Map<string, AccessGroup>
+  seen: Map<string, AccessPrincipal>
   saving: boolean
   /** The failed grant's callout, which stays in the form so the choices can be retried. */
   failure: ReactNode
@@ -55,7 +57,7 @@ export function useGrantView({
   onCancel: () => void
   /** Sends focus somewhere once the change it goes with has rendered. */
   focusLater: (find: () => HTMLElement | null | undefined) => void
-  /** The drawer's body, above its footer, which the open group list fills. */
+  /** The drawer's body, above its footer, which the open list fills. */
   boundary: Element | null
   t: AccessStrings
 }): { body: ReactNode; footer: ReactNode } {
@@ -63,58 +65,61 @@ export function useGrantView({
   const [confirming, setConfirming] = useState(false)
   const keepButton = useRef<HTMLButtonElement>(null)
   const grantId = `${uid}grant`
-  const { groupIds, roleIds } = selection
+  const { principalIds, roleIds } = selection
   const roles = roleIds
     .map((id) => model.roleById.get(id))
     .filter((role): role is AccessRole => role !== undefined)
   const roleNames = roles.map((role) => role.name)
-  const groupName = (id: string) => {
-    const group = seen.get(id)
-    return group?.kind === 'everyone' ? t.everyone : (group?.name ?? id)
+  const principalName = (id: string) => {
+    const principal = seen.get(id)
+    return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
   }
-  const plan = grantPlan(model, groupIds, roleIds)
+  const plan = grantPlan(model, principalIds, roleIds)
   const everyone = model.everyone
-  const toEveryone = everyone !== undefined && groupIds.includes(everyone.id)
+  const toEveryone = everyone !== undefined && principalIds.includes(everyone.id)
   const people = everyone?.memberCount
+  const everyoneHolds = (role: AccessRole) =>
+    everyone !== undefined &&
+    [
+      ...(model.held.get(everyone.id) ?? []),
+      ...(model.inherited.get(everyone.id) ?? []).map((holding) => holding.role),
+    ].some((held) => held.id === role.id || covers(held, role))
 
   // A handful of roles, worked out afresh as the choices change.
-  const roleItems = model.roles.map((role): ComboboxItem<string> => {
+  const roleItems = model.grantable.map((role): ComboboxItem<string> => {
     const chosen = roleIds
       .filter((id) => id !== role.id)
       .map((id) => model.roleById.get(id))
       .filter((other): other is AccessRole => other !== undefined)
-    const holders = groupIds.filter((id) =>
-      (model.held.get(id) ?? []).some((held) => held.id === role.id),
+    const holders = principalIds.filter(
+      (id) => isOwner(model, id) || (model.held.get(id) ?? []).some((held) => held.id === role.id),
     )
     const coveredBy = chosen.filter((other) => covers(other, role)).map((r) => r.name)
     const everyoneHas =
-      everyone !== undefined &&
-      !groupIds.includes(everyone.id) &&
-      (overlapOf(model, everyone.id, role).coveredBy.length > 0 ||
-        (model.held.get(everyone.id) ?? []).some((held) => held.id === role.id))
+      everyone !== undefined && !principalIds.includes(everyone.id) && everyoneHolds(role)
     const hints = [
-      holders.length > 0 && t.alreadyHave(holders.map(groupName)),
+      holders.length > 0 && t.alreadyHave(holders.map(principalName)),
       coveredBy.length > 0 && t.alreadyCovered(coveredBy),
       everyoneHas && t.everyoneHasIt,
     ].filter((hint): hint is string => typeof hint === 'string')
     return {
       value: role.id,
       label: role.name,
-      description: [role.description, ...hints].filter(Boolean).join(' '),
-      badge: role.highImpact ? <StatusBadge variant="warning">{t.highImpact}</StatusBadge> : null,
+      description: [role.description, hints.join(' · ')].filter(Boolean).join(' '),
+      badge: role.privileged ? <StatusBadge>{t.privileged}</StatusBadge> : null,
     }
   })
 
-  const getting = [...new Set(plan.grant.map((grant) => grant.groupId))].map(groupName)
+  const getting = [...new Set(plan.grant.map((grant) => grant.principalId))].map(principalName)
   const status: { text: ReactNode; ready: boolean } =
-    groupIds.length === 0 && roleIds.length === 0
-      ? { text: t.pickGroupsAndRoles, ready: false }
-      : groupIds.length === 0
-        ? { text: t.pickGroups, ready: false }
+    principalIds.length === 0 && roleIds.length === 0
+      ? { text: t.pickPrincipalsAndRoles, ready: false }
+      : principalIds.length === 0
+        ? { text: t.pickPrincipals, ready: false }
         : roleIds.length === 0
           ? { text: t.pickRoles, ready: false }
           : plan.grant.length === 0
-            ? { text: t.nothingToGrant(groupIds.map(groupName), roleNames), ready: false }
+            ? { text: t.nothingToGrant(principalIds.map(principalName), roleNames), ready: false }
             : {
                 text: t.grantSummary(
                   getting,
@@ -134,21 +139,21 @@ export function useGrantView({
   const body = (
     <div className="flex flex-col gap-5 p-4">
       <div>
-        <label htmlFor={`${uid}groups`} className="mb-1.5 block text-sm font-medium">
-          {t.groupsLabel}
+        <label htmlFor={`${uid}principals`} className="mb-1.5 block text-sm font-medium">
+          {t.principalsLabel}
         </label>
-        <GroupPicker
-          id={`${uid}groups`}
-          describedBy={`${uid}groupsHint`}
+        <PrincipalPicker
+          id={`${uid}principals`}
+          describedBy={`${uid}principalsHint`}
           model={model}
-          value={groupIds}
-          onValueChange={(next) => onSelectionChange({ groupIds: next, roleIds })}
+          value={principalIds}
+          onValueChange={(next) => onSelectionChange({ principalIds: next, roleIds })}
           granting={roles}
-          resourceName={resourceName}
           describeGroup={describeGroup}
-          searchGroups={searchGroups}
+          searchPrincipals={searchPrincipals}
           groupCount={groupCount}
-          recentGroupIds={recentGroupIds}
+          peopleCount={peopleCount}
+          recentPrincipalIds={recentPrincipalIds}
           cache={cache}
           seen={seen}
           boundary={boundary}
@@ -164,7 +169,7 @@ export function useGrantView({
           id={`${uid}roles`}
           items={roleItems}
           value={roleIds}
-          onValueChange={(next) => onSelectionChange({ groupIds, roleIds: next })}
+          onValueChange={(next) => onSelectionChange({ principalIds, roleIds: next })}
           placeholder={t.searchRoles}
         />
       </div>
@@ -202,7 +207,7 @@ export function useGrantView({
           {t.common.cancel}
         </Button>
         <Button
-          variant={roles.some((role) => role.highImpact) ? 'danger' : 'primary'}
+          variant={roles.some((role) => role.privileged) ? 'danger' : 'primary'}
           loading={saving}
           onClick={grant}
         >

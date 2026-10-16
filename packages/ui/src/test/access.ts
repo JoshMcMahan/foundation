@@ -3,9 +3,10 @@
 import type {
   AccessChange,
   AccessGrant,
-  AccessGroup,
   AccessGroupDetails,
+  AccessInheritedGrant,
   AccessPermission,
+  AccessPrincipal,
   AccessRole,
 } from '../access/types'
 
@@ -31,14 +32,14 @@ export const ROLES: AccessRole[] = [
       'cluster:login',
       'cluster:view',
     ],
-    highImpact: true,
+    privileged: true,
   },
   {
     id: 'sudo',
     name: 'Sudo',
     description: 'Run commands as root on cluster nodes.',
     permissions: ['cluster:root', 'cluster:login', 'cluster:view'],
-    highImpact: true,
+    privileged: true,
   },
   {
     id: 'power',
@@ -58,17 +59,32 @@ export const ROLES: AccessRole[] = [
     description: 'See the cluster, its nodes and its usage.',
     permissions: ['cluster:view'],
   },
+  {
+    id: 'org-admin',
+    name: 'Organization admin',
+    description: 'Administers everything in the organization.',
+    permissions: [
+      'access:manage',
+      'cluster:root',
+      'cluster:power',
+      'cluster:login',
+      'cluster:view',
+    ],
+    privileged: true,
+    grantable: false,
+  },
 ]
 
-const NAMED: AccessGroup[] = [
+const NAMED: AccessPrincipal[] = [
   { id: 'everyone', name: 'Everyone', kind: 'everyone', memberCount: 214 },
-  { id: 'g-ml-platform', name: 'ml-platform', memberCount: 12 },
-  { id: 'g-analytics-admins', name: 'analytics-admins', memberCount: 4 },
-  { id: 'g-bio-admins', name: 'bio-admins', memberCount: 5 },
-  { id: 'g-research-team', name: 'research-team', memberCount: 38 },
-  { id: 'g-contractors', name: 'contractors', memberCount: 3 },
-  { id: 'g-data-eng', name: 'data-eng', memberCount: 24 },
-  { id: 'g-bio-lab', name: 'bio-lab', memberCount: 17 },
+  { id: 'g-ml-platform', name: 'ml-platform', kind: 'group', memberCount: 12 },
+  { id: 'g-analytics-admins', name: 'analytics-admins', kind: 'group', memberCount: 4 },
+  { id: 'g-bio-admins', name: 'bio-admins', kind: 'group', memberCount: 5 },
+  { id: 'g-research-team', name: 'research-team', kind: 'group', memberCount: 38 },
+  { id: 'g-contractors', name: 'contractors', kind: 'group', memberCount: 3 },
+  { id: 'g-data-eng', name: 'data-eng', kind: 'group', memberCount: 24 },
+  { id: 'g-bio-lab', name: 'bio-lab', kind: 'group', memberCount: 17 },
+  { id: 'g-org-admins', name: 'org-admins', kind: 'group', memberCount: 3 },
 ]
 
 const TEAMS = [
@@ -85,42 +101,28 @@ const TEAMS = [
 ]
 const KINDS = ['lab', 'users', 'admins', 'readers', 'interns', 'oncall', 'reviewers', 'leads']
 
-/** The organization's 240 groups, the named ones first and then the rest by name. */
-export const ALL_GROUPS: AccessGroup[] = [
+/** The organization's 240 groups, everyone and the named ones first, then the rest by name. */
+export const ALL_GROUPS: AccessPrincipal[] = [
   ...NAMED,
   ...TEAMS.flatMap((team, t) =>
     KINDS.flatMap((kind, k) =>
       [0, 1, 2].map(
-        (n): AccessGroup => ({
+        (n): AccessPrincipal => ({
           id: `g-${team}-${kind}-${n}`,
           name: n === 0 ? `${team}-${kind}` : `${team}-${kind}-${n + 1}`,
+          kind: 'group',
           memberCount: ((t * 7 + k * 5 + n * 3) % 40) + 2,
         }),
       ),
     ),
   ),
 ]
-  .slice(0, 240)
+  .slice(0, 241)
   .sort((a, b) =>
     a.kind === 'everyone' ? -1 : b.kind === 'everyone' ? 1 : a.name.localeCompare(b.name),
   )
 
-export const GRANTS: AccessGrant[] = [
-  { groupId: 'g-ml-platform', roleId: 'admin' },
-  { groupId: 'g-analytics-admins', roleId: 'admin' },
-  { groupId: 'g-bio-admins', roleId: 'sudo' },
-  { groupId: 'g-bio-admins', roleId: 'power' },
-  { groupId: 'g-bio-admins', roleId: 'login' },
-  { groupId: 'g-research-team', roleId: 'power' },
-  { groupId: 'g-research-team', roleId: 'login' },
-  { groupId: 'g-contractors', roleId: 'login' },
-  { groupId: 'g-data-eng', roleId: 'login' },
-  { groupId: 'everyone', roleId: 'view' },
-]
-
-export const RECENT = ['g-research-team', 'g-data-eng', 'g-contractors']
-
-const PEOPLE = [
+const NAMES = [
   'Ana Ruiz',
   'Tom Becker',
   'Priya Nair',
@@ -130,6 +132,54 @@ const PEOPLE = [
   'Lena Fischer',
   'Sam Okafor',
 ]
+
+const person = (id: string, name: string, groupIds: string[]): AccessPrincipal => ({
+  id,
+  name,
+  kind: 'user',
+  detail: `${name.toLowerCase().replace(' ', '.')}@example.com`,
+  groupIds,
+})
+
+/** People in the organization, and the groups among the named ones they are in. */
+export const PEOPLE: AccessPrincipal[] = [
+  person('u-maya', 'Maya Lopez', ['g-ml-platform']),
+  person('u-tom', 'Tom Becker', ['g-research-team']),
+  person('u-priya', 'Priya Nair', ['g-data-eng']),
+  person('u-jun', 'Jun Kim', []),
+  person('u-ana', 'Ana Ruiz', ['g-research-team', 'g-data-eng']),
+  person('u-omar', 'Omar Haddad', ['g-contractors']),
+  person('u-lena', 'Lena Fischer', ['g-bio-admins']),
+  person('u-sam', 'Sam Okafor', []),
+]
+
+/** Everyone a grant can go to: people, then groups. */
+export const ALL_PRINCIPALS: AccessPrincipal[] = [...PEOPLE, ...ALL_GROUPS]
+
+/** Owns the cluster. */
+export const OWNER = 'u-maya'
+
+export const GRANTS: AccessGrant[] = [
+  { principalId: 'g-ml-platform', roleId: 'admin' },
+  { principalId: 'g-analytics-admins', roleId: 'admin' },
+  { principalId: 'g-bio-admins', roleId: 'sudo' },
+  { principalId: 'g-bio-admins', roleId: 'power' },
+  { principalId: 'g-bio-admins', roleId: 'login' },
+  { principalId: 'g-research-team', roleId: 'power' },
+  { principalId: 'g-research-team', roleId: 'login' },
+  { principalId: 'g-contractors', roleId: 'login' },
+  { principalId: 'g-data-eng', roleId: 'login' },
+  { principalId: 'everyone', roleId: 'view' },
+  { principalId: 'u-tom', roleId: 'sudo' },
+  { principalId: 'u-priya', roleId: 'login' },
+]
+
+/** Granted to the organization, so it shows here locked. */
+export const INHERITED: AccessInheritedGrant[] = [
+  { principalId: 'g-org-admins', roleId: 'org-admin', from: 'the organization' },
+]
+
+export const RECENT = ['g-research-team', 'g-data-eng', 'g-contractors']
 
 const DESCRIPTIONS: Record<string, string> = {
   'g-data-eng': 'Data engineering: pipelines and the warehouse.',
@@ -142,28 +192,39 @@ const DESCRIPTIONS: Record<string, string> = {
 export function detailsOf(groupId: string): AccessGroupDetails {
   const group = ALL_GROUPS.find((g) => g.id === groupId)
   const count = group?.memberCount ?? 0
-  const offset = groupId.length % PEOPLE.length
+  const offset = groupId.length % NAMES.length
   const members = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
-    name: PEOPLE[(offset + i) % PEOPLE.length] ?? 'Someone',
+    name: NAMES[(offset + i) % NAMES.length] ?? 'Someone',
   }))
   return {
     description: DESCRIPTIONS[groupId],
     source: group?.kind === 'everyone' ? undefined : groupId.length % 2 === 0 ? 'synced' : 'manual',
-    members: groupId === 'g-data-eng' ? PEOPLE.slice(0, 5).map((name) => ({ name })) : members,
+    members: groupId === 'g-data-eng' ? NAMES.slice(0, 5).map((name) => ({ name })) : members,
     memberCount: count,
     updatedAt: Date.now() - 2 * 60 * 60 * 1000,
   }
 }
 
-/** The groups a host passes up front: everyone, and every group that holds a role. */
-export const GRANTED_GROUPS = ALL_GROUPS.filter(
-  (group) => group.kind === 'everyone' || GRANTS.some((grant) => grant.groupId === group.id),
-)
+/** The principals a host that searches passes up front: everyone, the owner, everyone who
+ *  holds a role, and the groups those people are in. */
+export function principalsFor(grants: readonly AccessGrant[]): AccessPrincipal[] {
+  const holding = new Set([
+    OWNER,
+    ...grants.map((grant) => grant.principalId),
+    ...INHERITED.map((grant) => grant.principalId),
+  ])
+  const people = PEOPLE.filter((person) => holding.has(person.id))
+  const theirGroups = new Set(people.flatMap((person) => person.groupIds ?? []))
+  return ALL_PRINCIPALS.filter(
+    (principal) =>
+      principal.kind === 'everyone' || holding.has(principal.id) || theirGroups.has(principal.id),
+  )
+}
 
 /** Applies a change to grants, as the host does once it is saved. */
 export function applyChange(grants: readonly AccessGrant[], change: AccessChange): AccessGrant[] {
   const same = (a: AccessGrant) => (b: AccessGrant) =>
-    a.groupId === b.groupId && a.roleId === b.roleId
+    a.principalId === b.principalId && a.roleId === b.roleId
   return [
     ...grants.filter((grant) => !change.revoke.some(same(grant))),
     ...change.grant.filter((grant) => !grants.some(same(grant))),

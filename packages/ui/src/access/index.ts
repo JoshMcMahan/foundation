@@ -8,9 +8,10 @@ export {
 export type {
   AccessChange,
   AccessGrant,
-  AccessGroup,
   AccessGroupDetails,
+  AccessInheritedGrant,
   AccessMember,
   AccessPermission,
+  AccessPrincipal,
   AccessRole,
 } from './types'

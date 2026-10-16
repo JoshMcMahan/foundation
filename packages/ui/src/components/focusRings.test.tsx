@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
+import { AccessDrawer } from '../access'
+import { ALL_PRINCIPALS, GRANTS, RESOURCE, ROLES } from '../test/access'
 import { Disclosure } from './Disclosure'
 import { Section } from './Section'
 import { TabPanel, Tabs } from './Tabs'
@@ -43,5 +45,19 @@ describe('focus rings', () => {
   it('outlines a focused section title in the focus color', () => {
     render(<Section title="Network">content</Section>)
     expect(drawsFocusRing(screen.getByRole('button', { name: 'Network' }))).toBe(true)
+  })
+
+  it('outlines a focused access drawer section in the focus color', () => {
+    render(
+      <AccessDrawer
+        open
+        onClose={() => {}}
+        resourceName={RESOURCE}
+        roles={ROLES}
+        principals={ALL_PRINCIPALS}
+        grants={GRANTS}
+      />,
+    )
+    expect(drawsFocusRing(screen.getByRole('button', { name: /^Admin/ }))).toBe(true)
   })
 })

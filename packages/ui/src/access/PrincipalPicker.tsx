@@ -9,9 +9,9 @@ import { useQueryMatch } from '../components/search'
 import { cx } from '../cx'
 import type { TimeValue } from '../format'
 import { OrganizationIcon, RefreshIcon, UsersIcon } from '../icons'
-import { type AccessModel, covers } from './model'
+import { type AccessModel, covers, isOwner } from './model'
 import type { AccessStrings } from './strings'
-import type { AccessGroup, AccessGroupDetails, AccessRole } from './types'
+import type { AccessGroupDetails, AccessPrincipal, AccessRole } from './types'
 
 /** Waits this long on a highlighted group before asking for its details, so arrowing past
  *  groups doesn't ask for each one. */
@@ -24,18 +24,49 @@ const FACES = 5
 const NAMES = 3
 
 export type DescribeGroup = (groupId: string, signal: AbortSignal) => Promise<AccessGroupDetails>
-export type SearchGroups = (query: string, signal: AbortSignal) => Promise<readonly AccessGroup[]>
+export type SearchPrincipals = (
+  query: string,
+  signal: AbortSignal,
+) => Promise<readonly AccessPrincipal[]>
 
 /** Details already loaded, kept for as long as the drawer is open. */
 export type DetailsCache = Map<string, AccessGroupDetails>
 
-export function GroupTile({ everyone, className }: { everyone: boolean; className?: string }) {
+/** A person's face, or a group's or everyone's icon, beside their name. */
+export function PrincipalTile({
+  principal,
+  compact = false,
+  className,
+}: {
+  principal: AccessPrincipal
+  /** The smaller size, for a picker row. */
+  compact?: boolean
+  className?: string
+}) {
+  if (principal.kind === 'user') {
+    // The name is beside it, so the face isn't read as well.
+    return (
+      <span
+        aria-hidden="true"
+        className={cx(
+          'flex shrink-0 items-center justify-center',
+          compact ? 'size-6' : 'size-8',
+          className,
+        )}
+      >
+        <Avatar src={principal.avatarUrl} name={principal.name} size={compact ? 'sm' : 'md'} />
+      </span>
+    )
+  }
+  const everyone = principal.kind === 'everyone'
   const Icon = everyone ? OrganizationIcon : UsersIcon
   return (
     <span
       aria-hidden="true"
       className={cx(
         'flex size-8 shrink-0 items-center justify-center rounded-md [&_svg]:size-4',
+        // The same box as a person's face beside it, so a square and a circle read as one size.
+        compact && 'size-6 [&_svg]:size-3.5',
         everyone
           ? 'bg-(--theme-info-muted) text-(--theme-info-text)'
           : 'bg-(--theme-muted-panel-bg) text-(--theme-muted-text-color)',
@@ -47,20 +78,20 @@ export function GroupTile({ everyone, className }: { everyone: boolean; classNam
   )
 }
 
-interface GroupPickerProps {
+interface PrincipalPickerProps {
   model: AccessModel
   value: readonly string[]
   onValueChange: (ids: string[]) => void
-  /** The roles being granted, which the details weigh against what the group holds. */
+  /** The roles being granted, which the details weigh against what the highlighted holds. */
   granting: readonly AccessRole[]
-  resourceName: string
   describeGroup?: DescribeGroup | undefined
-  searchGroups?: SearchGroups | undefined
+  searchPrincipals?: SearchPrincipals | undefined
   groupCount?: number | undefined
-  recentGroupIds?: readonly string[] | undefined
+  peopleCount?: number | undefined
+  recentPrincipalIds?: readonly string[] | undefined
   cache: DetailsCache
-  /** Every group the picker has seen, by id, so a chosen one found by a search keeps its name. */
-  seen: Map<string, AccessGroup>
+  /** Everyone the picker has seen, by id, so a chosen one found by a search keeps its name. */
+  seen: Map<string, AccessPrincipal>
   id: string
   describedBy: string
   /** The drawer's body, above its footer, which the open list fills. */
@@ -68,90 +99,117 @@ interface GroupPickerProps {
   t: AccessStrings
 }
 
-/** The groups field: everyone pinned first, then recent groups, then all of them; a pane beside
- *  the list says who is in the highlighted group and what it holds here. */
-export function GroupPicker({
+/** The people and groups field: everyone pinned first, then recent picks, then people and
+ *  groups; a pane beside the list says more about the highlighted one and what it holds here. */
+export function PrincipalPicker({
   model,
   value,
   onValueChange,
   granting,
-  resourceName,
   describeGroup,
-  searchGroups,
+  searchPrincipals,
   groupCount,
-  recentGroupIds = [],
+  peopleCount,
+  recentPrincipalIds = [],
   cache,
   seen,
   id,
   describedBy,
   boundary,
   t,
-}: GroupPickerProps) {
+}: PrincipalPickerProps) {
   const [highlighted, setHighlighted] = useState<string | undefined>(undefined)
-  const details = useDetails(highlighted, describeGroup, cache)
-  const search = useSearch(searchGroups)
+  const search = useSearch(searchPrincipals)
   const match = useQueryMatch()
-  // Remembered as they arrive, idempotently, so a chosen group's chip keeps its name after the
+  // Remembered as they arrive, idempotently, so a chosen one's chip keeps its name after the
   // search that found it is gone.
-  for (const group of [...model.groupById.values(), ...(search.results ?? [])]) {
-    seen.set(group.id, group)
+  for (const principal of [...model.principalById.values(), ...(search.results ?? [])]) {
+    seen.set(principal.id, principal)
   }
+  // People carry what the pane says about them; only groups and everyone are described.
+  const describedId =
+    highlighted !== undefined && seen.get(highlighted)?.kind !== 'user' ? highlighted : undefined
+  const details = useDetails(describedId, describeGroup, cache)
 
   // The highlighted group's details, once loaded, say whether it is synced, which its row reads.
   // biome-ignore lint/correctness/useExhaustiveDependencies: details.details marks the cache's change
   const items = useMemo(() => {
-    const roleNames = (groupId: string) => (model.held.get(groupId) ?? []).map((r) => r.name)
-    const item = (group: AccessGroup): ComboboxItem<string> => {
-      const everyone = group.kind === 'everyone'
-      const held = roleNames(group.id)
+    const roleNames = (principalId: string) =>
+      (model.held.get(principalId) ?? []).map((r) => r.name)
+    const item = (principal: AccessPrincipal): ComboboxItem<string> => {
+      const held = roleNames(principal.id)
+      const icon = <PrincipalTile principal={principal} compact />
+      if (principal.kind === 'user') {
+        const owner = isOwner(model, principal.id)
+        return {
+          value: principal.id,
+          label: principal.name,
+          description: [principal.detail, owner ? t.owner : held.length > 0 && t.hasRoles(held)]
+            .filter(Boolean)
+            .join(' · '),
+          accessibleDescription: t.personSummary(principal.detail, owner, held),
+          icon,
+        }
+      }
+      const everyone = principal.kind === 'everyone'
       const size =
-        group.memberCount === undefined
+        principal.memberCount === undefined
           ? undefined
           : everyone
-            ? t.people(group.memberCount)
-            : t.members(group.memberCount)
+            ? t.people(principal.memberCount)
+            : t.members(principal.memberCount)
       return {
-        value: group.id,
-        label: everyone ? t.everyone : group.name,
+        value: principal.id,
+        label: everyone ? t.everyone : principal.name,
         description: [size, held.length > 0 && t.hasRoles(held)].filter(Boolean).join(' · '),
         accessibleDescription: t.groupSummary(
-          group.memberCount,
+          principal.memberCount,
           everyone,
-          cache.get(group.id)?.source,
+          cache.get(principal.id)?.source,
           held,
         ),
-        icon: <GroupTile everyone={everyone} className="size-7" />,
+        icon,
       }
     }
     const everyone = model.everyone
-    const recent = recentGroupIds
-      .map((groupId) => seen.get(groupId))
-      .filter((group): group is AccessGroup => group !== undefined && group.kind !== 'everyone')
-    const listed = search.results ?? [...model.groupById.values()]
-    const pinned = new Set([everyone?.id, ...recent.map((group) => group.id)])
-    const rest = listed.filter((group) => group.kind !== 'everyone' && !pinned.has(group.id))
-    // While searching, recent groups are among the results rather than above them.
+    const recent = recentPrincipalIds
+      .map((principalId) => seen.get(principalId))
+      .filter(
+        (principal): principal is AccessPrincipal =>
+          principal !== undefined && principal.kind !== 'everyone',
+      )
+    const listed = search.results ?? [...model.principalById.values()]
+    // While searching, recent picks are among the results rather than above them.
     const searching = search.results !== undefined
-    const groups: ComboboxGroup<string>[] = [
-      // The host's search finds groups; everyone is the drawer's own, so it is matched here.
+    const pinned = new Set(searching ? [] : recent.map((principal) => principal.id))
+    const rest = listed.filter(
+      (principal) => principal.kind !== 'everyone' && !pinned.has(principal.id),
+    )
+    const people = rest.filter((principal) => principal.kind === 'user')
+    const groups = rest.filter((principal) => principal.kind === 'group')
+    const count = (given: number | undefined, kind: AccessPrincipal['kind']) =>
+      searching
+        ? undefined
+        : (given ?? listed.filter((principal) => principal.kind === kind).length).toLocaleString()
+    const sections: ComboboxGroup<string>[] = [
+      // The host's search finds people and groups; everyone is the drawer's own, so it is
+      // matched here.
       ...(everyone && (!searching || match(search.query, everyone.name, t.everyone))
         ? [{ label: t.organization, items: [item(everyone)] }]
         : []),
       ...(!searching && recent.length > 0 ? [{ label: t.recent, items: recent.map(item) }] : []),
-      {
-        label: t.allGroups,
-        description: (groupCount ?? listed.length).toLocaleString(),
-        items: (searching ? listed.filter((g) => g.kind !== 'everyone') : rest).map(item),
-      },
+      { label: t.peopleSection, description: count(peopleCount, 'user'), items: people.map(item) },
+      { label: t.groupsSection, description: count(groupCount, 'group'), items: groups.map(item) },
     ]
-    return groups.filter((group) => group.items.length > 0)
+    return sections.filter((section) => section.items.length > 0)
   }, [
     model,
-    recentGroupIds,
+    recentPrincipalIds,
     search.results,
     search.query,
     match,
     groupCount,
+    peopleCount,
     seen,
     cache,
     t,
@@ -159,10 +217,13 @@ export function GroupPicker({
   ])
 
   const everyoneChosen = model.everyone !== undefined && value.includes(model.everyone.id)
-  const nameOf = (groupId: string) => {
-    const group = seen.get(groupId)
-    return group?.kind === 'everyone' ? t.everyoneInOrganization : (group?.name ?? groupId)
+  const nameOf = (principalId: string) => {
+    const principal = seen.get(principalId)
+    return principal?.kind === 'everyone'
+      ? t.everyoneInOrganization
+      : (principal?.name ?? principalId)
   }
+  const highlightedPrincipal = highlighted === undefined ? undefined : seen.get(highlighted)
 
   return (
     <>
@@ -174,29 +235,37 @@ export function GroupPicker({
         value={value}
         onValueChange={onValueChange}
         itemToStringLabel={nameOf}
-        placeholder={t.addGroup}
-        onQueryChange={searchGroups ? search.setQuery : undefined}
+        placeholder={t.addPrincipal}
+        onQueryChange={searchPrincipals ? search.setQuery : undefined}
         loading={search.loading}
         onItemHighlighted={setHighlighted}
         collisionBoundary={boundary}
-        details={(groupId) => (
-          <GroupDetailsPane
-            group={groupId === undefined ? undefined : seen.get(groupId)}
-            state={details}
-            model={model}
-            granting={granting}
-            resourceName={resourceName}
-            t={t}
-          />
-        )}
+        details={(principalId) => {
+          const principal = principalId === undefined ? undefined : seen.get(principalId)
+          return principal?.kind === 'user' ? (
+            <PersonDetailsPane person={principal} model={model} granting={granting} t={t} />
+          ) : (
+            <GroupDetailsPane
+              group={principal}
+              state={details}
+              model={model}
+              granting={granting}
+              t={t}
+            />
+          )
+        }}
         detailsSummary={() =>
-          details.details ? <DetailsLine details={details.details} t={t} /> : null
+          highlightedPrincipal?.kind === 'user' ? (
+            (highlightedPrincipal.detail ?? null)
+          ) : details.details ? (
+            <DetailsLine details={details.details} t={t} />
+          ) : null
         }
       />
       <p id={describedBy} className="m-0 mt-1.5 text-xs text-(--theme-muted-text-color)">
         {everyoneChosen
           ? t.everyoneCoversGroups
-          : t.groupsHint(groupCount, model.everyone !== undefined)}
+          : t.pickerHint(peopleCount, groupCount, model.everyone !== undefined)}
       </p>
     </>
   )
@@ -251,21 +320,24 @@ function useDetails(
 }
 
 /** A search on the host's side, run once typing pauses; a newer query drops the older one's. */
-function useSearch(searchGroups: SearchGroups | undefined) {
+function useSearch(searchPrincipals: SearchPrincipals | undefined) {
   const [query, setQuery] = useState('')
-  const [found, setFound] = useState<{ query: string; groups: readonly AccessGroup[] }>()
+  const [found, setFound] = useState<{
+    query: string
+    principals: readonly AccessPrincipal[]
+  }>()
   const trimmed = query.trim()
   useEffect(() => {
-    if (!searchGroups || trimmed === '') {
+    if (!searchPrincipals || trimmed === '') {
       return
     }
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      searchGroups(trimmed, controller.signal).then(
-        (groups) => setFound({ query: trimmed, groups }),
+      searchPrincipals(trimmed, controller.signal).then(
+        (principals) => setFound({ query: trimmed, principals }),
         () => {
           if (!controller.signal.aborted) {
-            setFound({ query: trimmed, groups: [] })
+            setFound({ query: trimmed, principals: [] })
           }
         },
       )
@@ -274,13 +346,13 @@ function useSearch(searchGroups: SearchGroups | undefined) {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [searchGroups, trimmed])
-  const active = searchGroups !== undefined && trimmed !== ''
+  }, [searchPrincipals, trimmed])
+  const active = searchPrincipals !== undefined && trimmed !== ''
   return {
     query: trimmed,
     setQuery,
     // The last results stay up while the next search runs, so the list doesn't flicker empty.
-    results: active ? (found?.groups ?? []) : undefined,
+    results: active ? (found?.principals ?? []) : undefined,
     loading: active && found?.query !== trimmed,
   }
 }
@@ -337,19 +409,119 @@ function DetailsLine({ details, t }: { details: AccessGroupDetails; t: AccessStr
   )
 }
 
+/** What the highlighted one holds here, and what granting the picked roles would change. */
+function OnResource({
+  principalId,
+  model,
+  granting,
+  t,
+}: {
+  principalId: string
+  model: AccessModel
+  granting: readonly AccessRole[]
+  t: AccessStrings
+}) {
+  const held = model.held.get(principalId) ?? []
+  const owner = isOwner(model, principalId)
+  const heldIds = new Set(held.map((role) => role.id))
+  const fresh = owner ? [] : granting.filter((role) => !heldIds.has(role.id))
+  const redundant = held.filter((role) => fresh.some((by) => covers(by, role)))
+  return (
+    <div>
+      <PaneHeading>{t.currentRoles}</PaneHeading>
+      {owner || held.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {owner && (
+            <StatusBadge size="md" variant="info">
+              {t.owner}
+            </StatusBadge>
+          )}
+          {held.map((role) => (
+            <StatusBadge key={role.id} size="md">
+              {role.name}
+            </StatusBadge>
+          ))}
+        </div>
+      ) : (
+        <p className="m-0 text-xs text-(--theme-muted-text-color)">{t.noRolesHere}</p>
+      )}
+      {owner && (
+        <p className="m-0 mt-2 text-xs leading-snug text-(--theme-muted-text-color)">
+          {t.ownerDescription}
+        </p>
+      )}
+      {redundant.length > 0 && (
+        <p className="m-0 mt-2 text-xs leading-snug text-(--theme-muted-text-color)">
+          {t.becomesRedundant(
+            fresh.filter((by) => redundant.some((role) => covers(by, role))).map((r) => r.name),
+            redundant.map((role) => role.name),
+          )}
+        </p>
+      )}
+      {!owner && granting.length > 0 && fresh.length === 0 && (
+        <p className="m-0 mt-2 text-xs leading-snug text-(--theme-muted-text-color)">
+          {t.alreadyHas(granting.map((role) => role.name))}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PersonDetailsPane({
+  person,
+  model,
+  granting,
+  t,
+}: {
+  person: AccessPrincipal
+  model: AccessModel
+  granting: readonly AccessRole[]
+  t: AccessStrings
+}) {
+  const groups = (person.groupIds ?? [])
+    .map((id) => model.principalById.get(id))
+    .filter((group): group is AccessPrincipal => group?.kind === 'group')
+  return (
+    <div className="flex min-h-full flex-col gap-4 p-4 text-sm">
+      <div className="flex items-start gap-3">
+        <PrincipalTile principal={person} />
+        <div className="min-w-0">
+          <p className="m-0 font-semibold wrap-break-word">{person.name}</p>
+          {person.detail && (
+            <p className="m-0 text-xs wrap-break-word text-(--theme-muted-text-color)">
+              {person.detail}
+            </p>
+          )}
+        </div>
+      </div>
+      {groups.length > 0 && (
+        <div>
+          <PaneHeading>{t.inGroups}</PaneHeading>
+          <div className="flex flex-wrap gap-1">
+            {groups.map((group) => (
+              <StatusBadge key={group.id} size="md">
+                {group.name}
+              </StatusBadge>
+            ))}
+          </div>
+        </div>
+      )}
+      <OnResource principalId={person.id} model={model} granting={granting} t={t} />
+    </div>
+  )
+}
+
 function GroupDetailsPane({
   group,
   state,
   model,
   granting,
-  resourceName,
   t,
 }: {
-  group: AccessGroup | undefined
+  group: AccessPrincipal | undefined
   state: DetailsState
   model: AccessModel
   granting: readonly AccessRole[]
-  resourceName: string
   t: AccessStrings
 }) {
   if (!group) {
@@ -361,7 +533,6 @@ function GroupDetailsPane({
   const count = details?.memberCount ?? group.memberCount
   const heldIds = new Set(held.map((role) => role.id))
   const fresh = granting.filter((role) => !heldIds.has(role.id))
-  const redundant = held.filter((role) => fresh.some((by) => covers(by, role)))
   const source = everyone
     ? t.wholeOrganization
     : details?.source === 'synced'
@@ -372,7 +543,7 @@ function GroupDetailsPane({
   return (
     <div className="flex min-h-full flex-col gap-4 p-4 text-sm">
       <div className="flex items-start gap-3">
-        <GroupTile everyone={everyone} />
+        <PrincipalTile principal={group} />
         <div className="min-w-0">
           <p className="m-0 font-semibold wrap-break-word">{everyone ? t.everyone : group.name}</p>
           {state.loading && !everyone ? (
@@ -429,37 +600,7 @@ function GroupDetailsPane({
           )}
         </Callout>
       )}
-      <div>
-        <PaneHeading>{t.onResource(resourceName)}</PaneHeading>
-        {held.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {held.map((role) => (
-              <StatusBadge
-                key={role.id}
-                size="md"
-                variant={role.highImpact ? 'warning' : 'default'}
-              >
-                {role.name}
-              </StatusBadge>
-            ))}
-          </div>
-        ) : (
-          <p className="m-0 text-xs text-(--theme-muted-text-color)">{t.noRolesHere}</p>
-        )}
-        {redundant.length > 0 && (
-          <p className="m-0 mt-2 text-xs leading-snug text-(--theme-muted-text-color)">
-            {t.becomesRedundant(
-              fresh.filter((by) => redundant.some((role) => covers(by, role))).map((r) => r.name),
-              redundant.map((role) => role.name),
-            )}
-          </p>
-        )}
-        {granting.length > 0 && fresh.length === 0 && (
-          <p className="m-0 mt-2 text-xs leading-snug text-(--theme-muted-text-color)">
-            {t.alreadyHas(granting.map((role) => role.name))}
-          </p>
-        )}
-      </div>
+      <OnResource principalId={group.id} model={model} granting={granting} t={t} />
       {details?.updatedAt !== undefined && details.updatedAt !== null && (
         <Updated value={details.updatedAt} t={t} />
       )}

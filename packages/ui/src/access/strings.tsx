@@ -7,6 +7,8 @@ import { type UIStrings, useStrings } from '../components/Provider'
 
 const plural = new Intl.PluralRules('en')
 const list = new Intl.ListFormat('en', { type: 'conjunction' })
+/** Counts side by side, as a label lists them: "Everyone, 3 people, 7 groups". */
+const units = new Intl.ListFormat('en', { type: 'unit', style: 'short' })
 
 /** A count and its noun: "1 group", "1,024 groups". */
 const countOf = (n: number, one: string, other: string) =>
@@ -14,114 +16,136 @@ const countOf = (n: number, one: string, other: string) =>
 const and = (names: readonly string[]) => list.format(names)
 // "research-team has", "research-team and contractors have".
 const has = (names: readonly string[]) => (names.length === 1 ? 'has' : 'have')
+const who = (people: number, groups: number, everyone = false) =>
+  [
+    everyone && 'Everyone',
+    people > 0 && countOf(people, 'person', 'people'),
+    groups > 0 && countOf(groups, 'group', 'groups'),
+  ].filter((part): part is string => typeof part === 'string')
 
 export const ACCESS_STRINGS = {
   title: 'Access',
-  /** Under the title: the resource, and how many groups have a role on it. */
-  summary: (resource: string, groups: number, everyone: boolean) =>
-    everyone
-      ? groups === 0
-        ? `${resource} · Everyone has access`
-        : `${resource} · Everyone and ${countOf(groups, 'group have access', 'groups have access')}`
-      : groups === 0
-        ? `${resource} · No groups have access`
-        : `${resource} · ${countOf(groups, 'group has access', 'groups have access')}`,
+  /** Under the title: the resource, and who has a role on it. */
+  summary: (resource: string, people: number, groups: number, everyone: boolean) => {
+    const parts = who(people, groups, everyone)
+    return `${resource} · ${parts.length === 0 ? 'No access granted' : units.format(parts)}`
+  },
   /** Names the switch between the two ways of listing who has access. */
   arrange: 'List access',
   byRole: 'By role',
-  byGroup: 'By group',
-  filter: 'Filter by role or group',
+  byPrincipal: 'By person or group',
+  filter: 'Filter by role, person or group',
   grantAccess: 'Grant access',
-  highImpact: 'High impact',
-  loading: 'Loading who has access',
-  groups: (n: number) => countOf(n, 'group', 'groups'),
-  /** How many of a role's groups a filter left. */
-  groupsShown: (shown: number, total: number) =>
-    `${shown.toLocaleString()} of ${countOf(total, 'group', 'groups')}`,
+  privileged: 'Privileged',
+  loading: 'Loading access',
+  /** Who holds a role: "1 person, 2 groups". */
+  holders: (people: number, groups: number) => units.format(who(people, groups)),
+  /** How many of a role's holders a filter left. */
+  holdersShown: (shown: number, total: number) =>
+    `${shown.toLocaleString()} of ${total.toLocaleString()}`,
   members: (n: number) => countOf(n, 'member', 'members'),
   people: (n: number) => countOf(n, 'person', 'people'),
   /** Everyone, where it is short: a tag or a picker row. */
   everyone: 'Everyone',
   /** Everyone, where it stands as a row of its own. */
   everyoneInOrganization: 'Everyone in your organization',
-  everyoneJoinLater: 'Including people who join later',
-  /** Read with the badges a group row folds away: "+2". */
+  everyoneJoinLater: 'Includes people who join later',
+  owner: 'Owner',
+  /** Under the owner section and row. */
+  ownerDescription: 'All permissions, can’t be removed',
+  /** Read with the badges a row folds away: "+2". */
   moreRoles: (n: number) => `+${n.toLocaleString()}`,
   moreRolesLabel: (roles: readonly string[]) => `Also ${and(roles)}`,
-  /** Beside a group whose other role gives everything this one does. */
-  coveredBy: (roles: readonly string[]) => `${and(roles)} covers this too`,
-  /** Beside a group that has this through everyone as well. */
-  everyoneHasThisToo: 'Everyone has this too',
-  /** A role a group holds that another of its roles already gives. */
-  redundant: (roles: readonly string[]) => `Redundant: ${and(roles)} already covers this.`,
-  /** A role a group has only because everyone does. */
-  throughEveryone: 'Everyone in your organization has it',
-  removeRole: (group: string, role: string) => `Remove ${group} from ${role}`,
-  grantMoreRoles: 'Grant more roles',
+  /** Beside someone whose other role gives everything this one does. */
+  coveredBy: (roles: readonly string[]) => `Included in ${and(roles)}`,
+  /** Beside the owner, who has every role's permissions anyway. */
+  ownerHasAll: 'Included in Owner',
+  /** Beside someone who has this through everyone as well. */
+  everyoneHasThisToo: 'Also via Everyone',
+  /** Beside someone who has this through their groups, or an inherited role, as well. */
+  throughToo: (from: readonly string[]) => `Also via ${and(from)}`,
+  /** A role someone holds that another of their roles already gives. */
+  redundant: (roles: readonly string[]) => `Redundant, included in ${and(roles)}`,
+  redundantOwner: 'Redundant, included in Owner',
+  /** A role someone has only because everyone does. */
+  throughEveryone: 'Via Everyone',
+  /** A role someone has through one of their groups, or an inherited role. */
+  through: (from: string) => `Via ${from}`,
+  /** A role granted somewhere else, which can't be removed here. */
+  inheritedFrom: (from: string) => `Inherited from ${from}`,
+  removeRole: (principal: string, role: string) => `Remove ${principal} from ${role}`,
+  grantMoreRoles: 'Grant roles',
   removeAllAccess: 'Remove all access',
-  removeTitle: (group: string, roles: readonly string[]) => `Remove ${group} from ${and(roles)}?`,
-  removeAllTitle: (group: string) => `Remove all of ${group}’s access?`,
-  /** Leads the list of what a group loses; `members` is undefined when the count isn't known. */
-  losesIntro: (members: number | undefined, everyone: boolean) =>
-    everyone
-      ? 'People who have it only through everyone will no longer be able to:'
-      : members === undefined
-        ? 'Its members will no longer be able to:'
-        : `Its ${countOf(members, 'member', 'members')} will no longer be able to:`,
-  /** After the list: why these are lost, and what they keep. */
-  keeps: (own: readonly string[], throughEveryone: readonly string[]) =>
-    [
-      'No other role of theirs gives these.',
-      own.length > 0 && `They keep ${and(own)}.`,
-      throughEveryone.length > 0 && `They keep ${and(throughEveryone)}, which everyone has.`,
+  removeTitle: (principal: string, roles: readonly string[]) =>
+    `Remove ${principal} from ${and(roles)}?`,
+  removeAllTitle: (principal: string) => `Remove all access for ${principal}?`,
+  /** Heads the list of what is lost; `members` is undefined when a group's size isn't known. */
+  losesIntro: (kind: 'user' | 'group' | 'everyone', members: number | undefined) =>
+    kind === 'everyone'
+      ? 'Permissions lost by people without other access'
+      : kind === 'group' && members !== undefined
+        ? `Permissions lost by ${countOf(members, 'member', 'members')}`
+        : 'Permissions lost',
+  /** After the list: what they keep, their own roles and those through their groups, inherited
+   *  roles or everyone. Empty when they keep nothing. */
+  keeps: (
+    own: readonly string[],
+    throughEveryone: readonly string[],
+    through: readonly { from: string; roles: readonly string[] }[],
+  ) => {
+    const kept = [
+      ...own,
+      ...through.flatMap(({ from, roles }) => roles.map((role) => `${role} via ${from}`)),
+      ...throughEveryone.map((role) => `${role} via Everyone`),
     ]
-      .filter(Boolean)
-      .join(' '),
-  /** When the roles it keeps give everything the removed ones did. */
-  losesNothing: (own: readonly string[], throughEveryone: readonly string[]) =>
-    `They lose nothing: ${and([...own, ...throughEveryone])} still ${own.length + throughEveryone.length === 1 ? 'gives' : 'give'} them all of it.`,
+    return kept.length > 0 ? `Still has ${and(kept)}` : ''
+  },
+  /** When the roles they keep give everything the removed ones did. */
+  losesNothing: (roles: readonly string[]) =>
+    `No permissions lost. Still covered by ${and(roles)}.`,
+  ownerLosesNothing: 'No permissions lost. Owners have all permissions.',
   confirmRemove: (roles: readonly string[]) =>
     roles.length === 1 ? `Remove ${roles[0]}` : 'Remove all access',
-  removeFailed: (group: string, roles: readonly string[]) =>
-    `Couldn’t remove ${group} from ${and(roles)}`,
-  grantFailed: (groups: readonly string[], roles: readonly string[]) =>
-    `Couldn’t grant ${and(roles)} to ${and(groups)}`,
+  removeFailed: (principal: string, roles: readonly string[]) =>
+    `Couldn’t remove ${principal} from ${and(roles)}`,
+  grantFailed: (principals: readonly string[], roles: readonly string[]) =>
+    `Couldn’t grant ${and(roles)} to ${and(principals)}`,
   undoFailed: 'Couldn’t undo the change',
   /** Under a failed save; `reason` is the host's error message, when it gave one. */
   nothingChanged: (reason: string | undefined) =>
     reason ? `${reason.replace(/\.?$/, '.')} Nothing changed.` : 'Nothing changed.',
   /** The toast after a grant. */
-  granted: (groups: readonly string[], roles: readonly string[]) =>
-    `Gave ${and(groups)} ${and(roles)}.`,
+  granted: (principals: readonly string[], roles: readonly string[]) =>
+    `Granted ${and(roles)} to ${and(principals)}`,
   /** The toast after a removal. */
-  removed: (groups: readonly string[], roles: readonly string[]) =>
-    `Removed ${and(groups)} from ${and(roles)}.`,
-  undone: 'Change undone.',
-  readOnly: 'You can see who has access.',
+  removed: (principals: readonly string[], roles: readonly string[]) =>
+    `Removed ${and(principals)} from ${and(roles)}`,
+  undone: 'Change undone',
+  readOnly: 'View only.',
   /** After `readOnly` when the host gives no reason. */
-  readOnlyReason: 'Only people who manage access here can change it.',
-  emptyTitle: 'No groups have access yet',
+  readOnlyReason: 'Only people who manage access can make changes.',
+  emptyTitle: 'No access granted',
   emptyDescription: (resource: string) =>
-    `Give a group a role so its members can see, use or manage ${resource}.`,
-  noMatches: 'No roles or groups match',
+    `Grant a role to a person or group to give them access to ${resource}.`,
+  noMatches: 'No matches',
   clearFilter: 'Clear filter',
 
   // The grant view.
-  back: 'Back to who has access',
-  groupsLabel: 'Groups',
-  addGroup: 'Add a group',
-  /** Under the groups field; `count` is undefined when the host doesn't say how many there are. */
-  groupsHint: (count: number | undefined, everyone: boolean) =>
-    count === undefined
-      ? everyone
-        ? 'Search groups, or pick Everyone in your organization.'
-        : 'Search groups.'
-      : `Search ${countOf(count, 'group', 'groups')}${everyone ? ', or pick Everyone in your organization' : ''}.`,
-  everyoneCoversGroups: 'Everyone covers every group, so there’s no need to add others.',
+  back: 'Back to access',
+  principalsLabel: 'People and groups',
+  addPrincipal: 'Add people or groups',
+  /** Under the people and groups field; a count is undefined when the host doesn't give it. */
+  pickerHint: (people: number | undefined, groups: number | undefined, everyone: boolean) =>
+    `Search ${and([
+      people === undefined ? 'people' : countOf(people, 'person', 'people'),
+      groups === undefined ? 'groups' : countOf(groups, 'group', 'groups'),
+    ])}${everyone ? ', or choose Everyone' : ''}`,
+  everyoneCoversGroups: 'Everyone includes all people and groups',
   organization: 'Organization',
   recent: 'Recent',
-  allGroups: 'All groups',
-  /** On a group's row in the picker: the roles it holds here. */
+  peopleSection: 'People',
+  groupsSection: 'Groups',
+  /** On a row in the picker: the roles it holds here. */
   hasRoles: (roles: readonly string[]) => `has ${and(roles)}`,
   /** Read with a group's row: its size, where it comes from and its roles here. */
   groupSummary: (
@@ -138,25 +162,30 @@ export const ACCESS_STRINGS = {
     ]
       .filter(Boolean)
       .join(', '),
+  /** Read with a person's row: what tells them apart, and their roles here. */
+  personSummary: (detail: string | undefined, owner: boolean, roles: readonly string[]) =>
+    [detail, owner ? 'owner' : roles.length > 0 ? `has ${and(roles)} here` : 'no roles here']
+      .filter(Boolean)
+      .join(', '),
   rolesLabel: 'Roles',
   searchRoles: 'Search roles',
   /** On a role's row in the picker. */
-  alreadyHave: (groups: readonly string[]) => `${and(groups)} already ${has(groups)} it.`,
-  alreadyCovered: (roles: readonly string[]) => `${and(roles)} already covers this.`,
-  everyoneHasIt: 'Everyone already has it.',
+  alreadyHave: (principals: readonly string[]) => `Already granted to ${and(principals)}`,
+  alreadyCovered: (roles: readonly string[]) => `Included in ${and(roles)}`,
+  everyoneHasIt: 'Already granted to Everyone',
   /** The footer's account of what pressing Grant does. */
-  grantSummary: (groups: readonly string[], roles: readonly string[]): ReactNode => (
+  grantSummary: (principals: readonly string[], roles: readonly string[]): ReactNode => (
     <>
-      <strong className="font-medium text-(--theme-app)">{and(groups)}</strong>{' '}
-      {groups.length === 1 ? 'gets' : 'get'} {and(roles)}.
+      <strong className="font-medium text-(--theme-app)">{and(roles)}</strong>
+      {` for ${and(principals)}`}
     </>
   ),
-  /** Why Grant can't be pressed: every group has every role already. */
-  nothingToGrant: (groups: readonly string[], roles: readonly string[]) =>
-    `${and(groups)} already ${has(groups)} ${and(roles)}, so there’s nothing to grant.`,
-  pickGroupsAndRoles: 'Pick the groups and the roles to grant.',
-  pickGroups: 'Pick a group to grant to.',
-  pickRoles: 'Pick a role to grant.',
+  /** Why Grant can't be pressed: everyone picked has every role picked already. */
+  nothingToGrant: (principals: readonly string[], roles: readonly string[]) =>
+    `${and(principals)} already ${has(principals)} ${and(roles)}`,
+  pickPrincipalsAndRoles: 'Choose people or groups and roles',
+  pickPrincipals: 'Choose people or groups',
+  pickRoles: 'Choose roles',
   grant: (roles: readonly string[]) =>
     roles.length === 0
       ? 'Grant'
@@ -169,34 +198,37 @@ export const ACCESS_STRINGS = {
       ? `${and(roles)} for everyone`
       : `${and(roles)} for all ${countOf(people, 'person', 'people')}`,
   everyoneWarning: (resource: string) =>
-    `Everyone in your organization, and everyone who joins later, will have it on ${resource}.`,
+    `Everyone in your organization gets access to ${resource}, including people who join later.`,
   confirmEveryoneTitle: (roles: readonly string[], people: number | undefined) =>
     people === undefined
       ? `Grant ${and(roles)} to everyone?`
       : `Grant ${and(roles)} to all ${countOf(people, 'person', 'people')}?`,
 
-  // The group picker's details pane.
-  synced: 'Synced from your identity provider',
+  // The picker's details pane.
+  synced: 'Synced from identity provider',
   syncedShort: 'Synced',
-  manual: 'Members added by hand',
-  wholeOrganization: 'Your whole organization',
-  joinLater: 'And anyone who joins later gets it automatically.',
+  manual: 'Managed manually',
+  wholeOrganization: 'Entire organization',
+  joinLater: 'Includes people who join later',
+  /** Heads the groups a person is in that hold a role here. */
+  inGroups: 'Groups with access',
   /** The first few members by name, and how many more there are. */
   memberNames: (names: readonly string[], more: number) =>
     more > 0 ? and([...names, `${more.toLocaleString()} more`]) : and(names),
   moreMembers: (n: number) => `+${n.toLocaleString()}`,
-  onResource: (resource: string) => `On ${resource}`,
-  noRolesHere: 'No roles here yet.',
-  /** When a role being granted gives everything one the group holds does. */
+  /** Heads the roles the highlighted one holds on this resource. */
+  currentRoles: 'Current roles',
+  noRolesHere: 'No roles',
+  /** When a role being granted gives everything one already held does. */
   becomesRedundant: (granting: readonly string[], held: readonly string[]) =>
-    `${and(granting)} also ${granting.length === 1 ? 'gives' : 'give'} them ${and(held)}, so ${and(held)} becomes redundant. Nothing is removed.`,
-  alreadyHas: (roles: readonly string[]) => `Already has ${and(roles)}.`,
+    `${and(held)} will be redundant, included in ${and(granting)}`,
+  alreadyHas: (roles: readonly string[]) => `Already has ${and(roles)}`,
   everyoneReach: (roles: readonly string[], people: number | undefined) =>
-    `${and(roles)} for everyone reaches ${people === undefined ? 'every person' : `all ${countOf(people, 'person', 'people')}`} in your organization, and anyone who joins later. You’ll be asked to confirm.`,
+    `Grants ${and(roles)} to ${people === undefined ? 'everyone' : `all ${countOf(people, 'person', 'people')}`}, including people who join later. Requires confirmation.`,
   updated: (ago: string) => `Membership updated ${ago}`,
-  detailsFailed: 'Couldn’t load this group’s details.',
-  loadingDetails: 'Loading the group’s details',
-  noHighlight: 'Highlight a group to see who is in it.',
+  detailsFailed: 'Couldn’t load group details',
+  loadingDetails: 'Loading group details',
+  noHighlight: 'Highlight a person or group to see details',
 }
 
 /** The drawer's own text, which a host translates through UIProvider's `access`. */

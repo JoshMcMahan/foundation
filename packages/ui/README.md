@@ -14,7 +14,7 @@ so an application ships only what it imports:
 | `./editor` | Monaco editor (`monaco-editor` is an optional peer), loaded on first mount with the languages it needs; YAML validation, completion and hover run in a bundled worker |
 | `./logviewer` | log viewer with ANSI color and search |
 | `./file-explorer` | object storage explorer over a host-supplied provider |
-| `./access` | `AccessDrawer`: who has access to a resource, and granting roles to groups |
+| `./access` | `AccessDrawer`: who has access to a resource, and granting roles to people and groups |
 | `./ai`, `./ai/openai`, `./ai/mock` | chat interface and adapters |
 | `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css` | stylesheets |
 
@@ -488,11 +488,13 @@ into a tone. Pass an `id` to replace a toast rather than stack another.
 ## Access
 
 `AccessDrawer` shows who holds which role on one resource, and grants and takes
-them away. A role is a named set of permissions; groups are granted roles, never
-permissions one by one. Two roles may overlap: the drawer works the overlap out
-from each role's `permissions` and says so as a hint ("Sudo covers this too"),
-and before a role is taken away it lists exactly what the group loses, the
-permissions no role it keeps still gives, and what it keeps.
+them away. A role is a named set of permissions; people and groups are granted
+roles, never permissions one by one. Two roles may overlap: the drawer works the
+overlap out from each role's `permissions` and says so as a hint ("Sudo covers
+this too"), and before a role is taken away it lists exactly what is lost, the
+permissions nothing they keep still gives, and what they keep: their other
+roles, a person's groups' roles, everyone's, and roles granted above the
+resource.
 
 ```tsx
 import { AccessDrawer, type AccessChange } from '@parallelworks/ui/access'
@@ -503,11 +505,17 @@ import { AccessDrawer, type AccessChange } from '@parallelworks/ui/access'
   resourceName={cluster.name}
   roles={[{ id: 'login', name: 'Login', description: 'Sign in.', permissions: ['cluster:login'] }]}
   permissions={[{ id: 'cluster:login', label: 'Sign in' }]}
-  groups={[{ id: 'org', name: 'Everyone', kind: 'everyone', memberCount: 214 }, ...granted]}
-  grants={grants} // { groupId, roleId }[]
+  principals={[
+    { id: 'org', name: 'Everyone', kind: 'everyone', memberCount: 214 },
+    { id: 'u-ana', name: 'Ana Ruiz', kind: 'user', detail: 'ana@example.com', groupIds: ['g-data'] },
+    { id: 'g-data', name: 'data-eng', kind: 'group', memberCount: 24 },
+  ]}
+  grants={grants} // { principalId, roleId }[]
+  owner="u-ana"
+  inherited={[{ principalId: 'g-admins', roleId: 'org-admin', from: 'the organization' }]}
   onChange={(change: AccessChange) => api.patch(change)} // { grant, revoke }
   describeGroup={(id, signal) => api.group(id, { signal })}
-  searchGroups={(query, signal) => api.groups({ query, signal })}
+  searchPrincipals={(query, signal) => api.principals({ query, signal })}
   readOnly={!canManage}
   readOnlyReason="Only people with the Admin role can change it."
 />
@@ -518,18 +526,29 @@ import { AccessDrawer, type AccessChange } from '@parallelworks/ui/access'
   and when it rejects the drawer says that nothing changed and offers Retry. A
   saved change offers Undo in a toast. Pass the new grants back through
   `grants`; the drawer never keeps its own copy.
-- `groups` holds every group that has a role here, and everyone if the resource
-  can be granted to everyone (`kind: 'everyone'`, at most one). Without
-  `searchGroups` it is also the list to grant to; with it, the picker asks the
-  host as the reader types.
-- `describeGroup` fills the pane beside the group picker for the highlighted
-  group: where it comes from, its first members and when it last changed. It is
-  asked once per group while the drawer is mounted, and aborted when the
-  highlight moves on.
-- `highImpact` roles carry a tag, and granting anything to everyone says how
-  many people it reaches and asks to confirm.
-- A development build warns about duplicate ids and grants that name unknown
-  roles or groups.
+- `principals` holds every person and group that holds a role here or owns it,
+  the groups those people are in, and everyone if the resource can be granted
+  to everyone (`kind: 'everyone'`, at most one). Without `searchPrincipals` it
+  is also the list to grant to; with it, the picker asks the host as the reader
+  types, and lists people and groups apart.
+- A person's `groupIds` name the groups they are in. Only groups holding a role
+  here matter, and with them, taking a role from the person says what they keep
+  through those groups.
+- `owner` names the principal who owns the resource. It has every permission,
+  shows first, and can't be removed; granting it a role adds nothing.
+- `inherited` holds roles granted above the resource, such as to the whole
+  organization. They show locked, "through" where they were granted, and count
+  toward what someone keeps. A role held only that way takes
+  `grantable: false`, so it isn't offered to grant here.
+- `describeGroup` fills the pane beside the picker for the highlighted group:
+  where it comes from, its first members and when it last changed. It is asked
+  once per group while the drawer is mounted, and aborted when the highlight
+  moves on. A person's pane comes from the principal itself.
+- `privileged` roles are labeled in the role picker. Granting anything to
+  everyone says how many people it reaches and asks to confirm, with a
+  destructive button when a privileged role is among them.
+- A development build warns about duplicate ids, and grants, inherited grants
+  or an owner that name unknown roles or principals.
 
 ## Host chrome
 

@@ -2,23 +2,33 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
-  ALL_GROUPS,
+  ALL_PRINCIPALS,
   applyChange,
   detailsOf,
   GRANTS,
+  INHERITED,
+  OWNER,
+  PEOPLE,
   PERMISSIONS,
+  principalsFor,
   RECENT,
   RESOURCE,
   ROLES,
   wait,
 } from '../test/access'
 import { AccessDrawer, type AccessDrawerProps } from './AccessDrawer'
-import type { AccessChange, AccessGrant, AccessGroup } from './types'
+import type { AccessChange, AccessGrant } from './types'
 
 interface StoryArgs
   extends Pick<
     AccessDrawerProps,
-    'resourceName' | 'readOnly' | 'loading' | 'defaultArrangement' | 'groupCount' | 'width'
+    | 'resourceName'
+    | 'readOnly'
+    | 'loading'
+    | 'defaultArrangement'
+    | 'groupCount'
+    | 'peopleCount'
+    | 'width'
   > {
   readOnlyReason: string
   /** Story only: no grants yet. */
@@ -29,10 +39,15 @@ interface StoryArgs
   saveDelay: number
   /** Story only: passes `describeGroup`, answering after this many milliseconds; -1 never does. */
   describeDelay: number | null
-  /** Story only: groups come from `searchGroups`, as from a server, instead of all up front. */
+  /** Story only: people and groups come from `searchPrincipals`, as from a server, instead of
+   *  all up front. */
   asyncSearch: boolean
-  /** Story only: passes `recentGroupIds`. */
+  /** Story only: passes `recentPrincipalIds`. */
   recent: boolean
+  /** Story only: passes `owner`. */
+  withOwner: boolean
+  /** Story only: passes `inherited`, a role granted to the organization. */
+  withInherited: boolean
 }
 
 const meta: Meta<StoryArgs> = {
@@ -44,6 +59,7 @@ const meta: Meta<StoryArgs> = {
     loading: false,
     defaultArrangement: 'role',
     groupCount: 240,
+    peopleCount: PEOPLE.length,
     width: 560,
     empty: false,
     failSaves: false,
@@ -51,9 +67,11 @@ const meta: Meta<StoryArgs> = {
     describeDelay: 300,
     asyncSearch: false,
     recent: true,
+    withOwner: true,
+    withInherited: true,
   },
   argTypes: {
-    defaultArrangement: { control: 'inline-radio', options: ['role', 'group'] },
+    defaultArrangement: { control: 'inline-radio', options: ['role', 'principal'] },
     width: { control: 'text', description: 'Pixels, or a CSS length such as 100%.' },
     describeDelay: {
       control: 'number',
@@ -75,19 +93,17 @@ function Demo({
   describeDelay,
   asyncSearch,
   recent,
+  withOwner,
+  withInherited,
   ...props
 }: StoryArgs) {
   const [open, setOpen] = useState(true)
   const [grants, setGrants] = useState<AccessGrant[]>(empty ? [] : GRANTS)
-  // A host passing groups up front passes them all; one that searches passes those it shows.
-  const groups: AccessGroup[] = asyncSearch
-    ? ALL_GROUPS.filter(
-        (group) =>
-          group.kind === 'everyone' ||
-          grants.some((grant) => grant.groupId === group.id) ||
-          RECENT.includes(group.id),
-      )
-    : ALL_GROUPS
+  // A host passing principals up front passes them all; one that searches passes those it shows.
+  const upFront = new Set([...principalsFor(grants).map((principal) => principal.id), ...RECENT])
+  const principals = asyncSearch
+    ? ALL_PRINCIPALS.filter((principal) => upFront.has(principal.id))
+    : ALL_PRINCIPALS
   const onChange = async (change: AccessChange) => {
     await wait(saveDelay)
     if (failSaves) {
@@ -112,11 +128,13 @@ function Demo({
         onClose={() => setOpen(false)}
         roles={ROLES}
         permissions={PERMISSIONS}
-        groups={groups}
+        principals={principals}
         grants={grants}
+        owner={withOwner ? OWNER : undefined}
+        inherited={withInherited && !empty ? INHERITED : undefined}
         onChange={onChange}
         readOnlyReason={readOnlyReason || undefined}
-        recentGroupIds={recent ? RECENT : undefined}
+        recentPrincipalIds={recent ? RECENT : undefined}
         describeGroup={
           describeDelay === null || describeDelay === undefined
             ? undefined
@@ -125,12 +143,16 @@ function Demo({
                 return detailsOf(groupId)
               }
         }
-        searchGroups={
+        searchPrincipals={
           asyncSearch
             ? async (query, signal) => {
                 await wait(400, signal)
                 const q = query.toLowerCase()
-                return ALL_GROUPS.filter((group) => group.name.toLowerCase().includes(q))
+                return ALL_PRINCIPALS.filter((principal) =>
+                  [principal.name, principal.detail].some((text) =>
+                    text?.toLowerCase().includes(q),
+                  ),
+                )
               }
             : undefined
         }
@@ -156,7 +178,7 @@ async function openGrant() {
   if (button) {
     await userEvent.click(button)
   }
-  return screen.findByRole('combobox', { name: 'Groups' })
+  return screen.findByRole('combobox', { name: 'People and groups' })
 }
 
 async function pickRoles(...names: string[]) {
@@ -183,17 +205,20 @@ async function highlight(name: string, key: 'ArrowDown' | 'ArrowUp' = 'ArrowDown
     await userEvent.keyboard(`{${key}}`)
     await wait(50)
     const current = document.querySelector('[role="option"][data-highlighted]')
-    if (current?.textContent?.startsWith(name)) {
+    // A person's row starts with the initials their face falls back to.
+    if (current?.textContent?.includes(name)) {
       return
     }
   }
 }
 
-async function pickGroups(...names: string[]) {
-  const groups = screen.getByRole('combobox', { name: 'Groups' })
-  await userEvent.click(groups)
+const principalsField = () => screen.getByRole('combobox', { name: 'People and groups' })
+
+async function pickPrincipals(...names: string[]) {
+  const principals = principalsField()
+  await userEvent.click(principals)
   for (const name of names) {
-    await userEvent.type(groups, name)
+    await userEvent.type(principals, name)
     await userEvent.click(await screen.findByRole('option', { name }))
   }
 }
@@ -204,18 +229,18 @@ export const ByRole: Story = {
   play: async () => {
     await expand(/^Admin/)
     await expand(/^Login/)
-    await expect(await screen.findByText(/Sudo covers this too/)).toBeInTheDocument()
+    await expect(await screen.findByText(/Included in Sudo/)).toBeInTheDocument()
   },
 }
 
-/** Group by group: a redundant role says what already covers it, and roles from everyone show
- *  beside the group's own. */
-export const ByGroup: Story = {
-  args: { defaultArrangement: 'group' },
+/** One by one: the owner first, then everyone, then people and groups. A redundant role says
+ *  what already covers it, and roles from everyone show beside a group's own. */
+export const ByPrincipal: Story = {
+  args: { defaultArrangement: 'principal' },
   render,
   play: async () => {
     await expand(/^bio-admins/)
-    const redundant = await screen.findByText('Redundant: Sudo already covers this.')
+    const redundant = await screen.findByText('Redundant, included in Sudo')
     await waitFor(() => expect(redundant).toBeVisible())
   },
 }
@@ -225,8 +250,8 @@ export const Grant: Story = {
   render,
   play: async () => {
     await openGrant()
-    await pickGroups('research-team', 'contractors')
-    await closeList(screen.getByRole('combobox', { name: 'Groups' }))
+    await pickPrincipals('research-team', 'contractors')
+    await closeList(principalsField())
     await pickRoles('Sudo')
     // The open list hides the rest of the drawer from queries, as from a screen reader.
     await expect(screen.getByRole('button', { name: 'Grant Sudo', hidden: true })).toBeEnabled()
@@ -234,29 +259,29 @@ export const Grant: Story = {
   },
 }
 
-/** The group picker: the pane beside the list follows the highlighted group. */
-export const GroupPicker: Story = {
+/** The picker: the pane beside the list follows the highlighted group. */
+export const Picker: Story = {
   render,
   play: async () => {
     await openGrant()
-    await pickGroups('research-team')
+    await pickPrincipals('research-team')
     await pickRoles('Sudo')
-    await userEvent.click(screen.getByRole('combobox', { name: 'Groups' }))
+    await userEvent.click(principalsField())
     await highlight('data-eng')
-    await expect(await screen.findByText(/Login becomes redundant/)).toBeInTheDocument()
+    await expect(await screen.findByText(/Login will be redundant/)).toBeInTheDocument()
   },
 }
 
 /** Everyone highlighted: the pane says how far a grant to everyone reaches. */
-export const GroupPickerEveryone: Story = {
+export const PickerEveryone: Story = {
   render,
   play: async () => {
     await openGrant()
-    await pickGroups('research-team')
+    await pickPrincipals('research-team')
     await pickRoles('Sudo')
-    await userEvent.click(screen.getByRole('combobox', { name: 'Groups' }))
+    await userEvent.click(principalsField())
     await highlight('Everyone', 'ArrowUp')
-    await expect(await screen.findByText(/You’ll be asked to confirm/)).toBeInTheDocument()
+    await expect(await screen.findByText(/Requires confirmation/)).toBeInTheDocument()
   },
 }
 
@@ -266,36 +291,83 @@ export const GroupDetailsLoading: Story = {
   render,
   play: async () => {
     await openGrant()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Groups' }))
+    await userEvent.click(principalsField())
     await highlight('data-eng')
   },
 }
 
-/** Groups searched for on the server, for an organization with too many to pass up front. */
+/** People and groups searched for on the server, for an organization with too many to pass up
+ *  front. */
 export const AsyncSearch: Story = {
   args: { asyncSearch: true },
   render,
   play: async () => {
     await openGrant()
-    const groups = screen.getByRole('combobox', { name: 'Groups' })
-    await userEvent.type(groups, 'genomics')
+    await userEvent.type(principalsField(), 'genomics')
     await expect(await screen.findByRole('option', { name: 'genomics-admins' })).toBeVisible()
   },
 }
 
-/** Every group picked has every role picked already, so there is nothing to grant. */
+/** The owner has every permission and can't be removed. */
+export const Owner: Story = {
+  render,
+  play: async () => {
+    await expand(/^Owner/)
+    await expect(await screen.findByText('maya.lopez@example.com')).toBeVisible()
+  },
+}
+
+/** A role granted to the organization shows here, locked, and isn't offered to grant. */
+export const Inherited: Story = {
+  render,
+  play: async () => {
+    await expand(/^Organization admin/)
+    const note = await screen.findByText(/Inherited from the organization/)
+    await waitFor(() => expect(note).toBeVisible())
+  },
+}
+
+/** Granting to a person: the pane says which of their groups have access here already. */
+export const GrantToPerson: Story = {
+  render,
+  play: async () => {
+    await openGrant()
+    await pickPrincipals('Jun Kim')
+    await closeList(principalsField())
+    await pickRoles('Login')
+    await userEvent.click(principalsField())
+    await highlight('Ana Ruiz')
+    await expect(await screen.findByText('Groups with access')).toBeInTheDocument()
+  },
+}
+
+/** Taking a role from a person says what they keep through their groups. */
+export const RemoveFromPerson: Story = {
+  args: { defaultArrangement: 'principal' },
+  render,
+  play: async () => {
+    await expand(/^Tom Becker/)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Remove Tom Becker from Sudo' }),
+    )
+    const kept = await screen.findByText(/Still has Login via research-team/)
+    await waitFor(() => expect(kept).toBeVisible())
+  },
+}
+
+/** Every one picked has every role picked already, so there is nothing to grant. */
 export const NothingToGrant: Story = {
   render,
   play: async () => {
     await openGrant()
-    await pickGroups('contractors')
-    await closeList(screen.getByRole('combobox', { name: 'Groups' }))
+    await pickPrincipals('contractors')
+    await closeList(principalsField())
     await pickRoles('Login')
     await expect(screen.getByRole('button', { name: 'Grant Login', hidden: true })).toHaveAttribute(
       'aria-disabled',
       'true',
     )
-    await expect(screen.getByText(/so there’s nothing to grant/)).toBeVisible()
+    await expect(screen.getByText('contractors already has Login')).toBeVisible()
   },
 }
 
@@ -304,8 +376,8 @@ export const GrantToEveryone: Story = {
   render,
   play: async () => {
     await openGrant()
-    await pickGroups('Everyone')
-    await closeList(screen.getByRole('combobox', { name: 'Groups' }))
+    await pickPrincipals('Everyone')
+    await closeList(principalsField())
     await pickRoles('Login')
     await expect(await screen.findByText('Login for all 214 people')).toBeVisible()
   },
@@ -360,7 +432,7 @@ export const ReadOnly: Story = {
 
 /** Nothing granted yet. */
 export const Empty: Story = {
-  args: { empty: true },
+  args: { empty: true, withOwner: false },
   render,
 }
 
@@ -379,14 +451,14 @@ export const Phone: Story = {
   },
 }
 
-/** The group picker on a phone: no room for the pane, so a line under the highlighted group
+/** The picker on a phone: no room for the pane, so a line under the highlighted group
  *  stands in for it. */
-export const PhoneGroupPicker: Story = {
+export const PhonePicker: Story = {
   render,
   globals: { viewport: { value: 'mobile2', isRotated: false } },
   play: async () => {
     await openGrant()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Groups' }))
+    await userEvent.click(principalsField())
     await highlight('data-eng')
     // The pane, hidden at this width, names them too; the line under the option is what shows.
     await waitFor(() =>
