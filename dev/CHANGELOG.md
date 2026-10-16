@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/parallelworks/foundation/compare/dev/v0.16.0...dev/v0.17.0) (2026-10-16)
+
+
+### Features
+
+* **dev:** dev clean --install adds to the schedule instead of replacing it ([#346](https://github.com/parallelworks/foundation/issues/346)) ([f1f7714](https://github.com/parallelworks/foundation/commit/f1f7714ce9856c329b914d58d257db36ec63d5a2))
+
 ## [0.16.0](https://github.com/parallelworks/foundation/compare/dev/v0.15.0...dev/v0.16.0) (2026-10-13)
 
 
