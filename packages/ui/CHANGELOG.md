@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.62.0](https://github.com/parallelworks/foundation/compare/ui-v0.61.0...ui-v0.62.0) (2026-10-16)
+
+
+### Features
+
+* **ui:** the form's booleans put the switch before its label ([#352](https://github.com/parallelworks/foundation/issues/352)) ([47c98ab](https://github.com/parallelworks/foundation/commit/47c98ab9825bf5f3ed48a16fc26f20a05489220b))
+
 ## [0.61.0](https://github.com/parallelworks/foundation/compare/ui-v0.60.0...ui-v0.61.0) (2026-10-16)
 
 
