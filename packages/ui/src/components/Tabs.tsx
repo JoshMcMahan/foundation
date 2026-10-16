@@ -8,6 +8,7 @@ import {
   segmentClassName,
   segmentGroupClassName,
 } from './segmented'
+import { stickyClasses, useStickyTop } from './stickyTop'
 import { Tooltip } from './Tooltip'
 
 export interface TabItem<Value extends string = string> {
@@ -21,11 +22,6 @@ export interface TabItem<Value extends string = string> {
   disabled?: boolean
   testId?: string
 }
-
-// The shell's PageHeaderBar sits above the page's scroller, so pinned tabs stick
-// to the scroller's top. Something pinned above them inside the page, such as a
-// toolbar, moves them down with a `top-*` in `className`.
-const stickyClassName = 'sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)'
 
 export interface TabsProps<Value extends string> extends SegmentLayout {
   /** Names the set of tabs for assistive technology. */
@@ -41,8 +37,8 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
   variant?: 'line' | 'segmented' | undefined
   /** At the tab row's far end, such as a picker for what the tabs show. */
   end?: ReactNode
-  /** Pins the tab row to the top of the page's scroller as it scrolls; give it a
-   *  `top-*` in `className` to pin it under something else pinned there. */
+  /** Pins the tab row as the page scrolls, just below whatever the page's
+   *  scroller already pins at the top, such as the page header and a toolbar. */
   sticky?: boolean | undefined
   /** On the tab row. */
   className?: string | undefined
@@ -75,6 +71,8 @@ export function Tabs<Value extends string>({
   const [own, setOwn] = useState(defaultValue ?? items[0]?.value)
   const current = value ?? own
   const showRow = items.length > 1 || !!end
+  const [row, setRow] = useState<HTMLDivElement | null>(null)
+  useStickyTop(row, !!sticky)
 
   const tabs = items.map((item) => {
     const tab = (
@@ -119,10 +117,11 @@ export function Tabs<Value extends string>({
     >
       {showRow && (
         <div
+          ref={setRow}
           className={cx(
             'flex items-center justify-between gap-2',
             !segmented && 'border-b border-(--theme-border)',
-            sticky && stickyClassName,
+            sticky && stickyClasses,
             className,
           )}
         >

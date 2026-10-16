@@ -1,6 +1,5 @@
 export {
   ActionToolbar,
-  stickyToolbarClasses,
   type ToolbarAction,
   ToolbarButton,
   type ToolbarItem,

@@ -5,6 +5,7 @@ import { Disclosure } from './Disclosure'
 import { InfoTip } from './InfoTip'
 import { Section, type SectionVariant } from './Section'
 import { StatusDot } from './StatusBadge'
+import { StickyBar } from './StickyBar'
 import { Switch } from './Switch'
 import { TabPanel, Tabs } from './Tabs'
 
@@ -207,15 +208,14 @@ function StickyTabsDemo({ toolbar, panels }: StickyTabsArgs) {
       </div>
       <div data-testid="page" className="min-h-0 flex-1 overflow-y-auto">
         {toolbar && (
-          <div className="sticky top-0 z-(--layer-sticky) flex h-12 items-center border-b border-(--theme-border) bg-(--theme-app-bg) px-4 text-sm">
+          <StickyBar className="flex h-12 items-center border-b border-(--theme-border) px-4 text-sm">
             Toolbar
-          </div>
+          </StickyBar>
         )}
         <Tabs
           label="Resource"
+          // Under the page's own pinned toolbar, when there is one.
           sticky
-          // Under the page's own pinned toolbar.
-          className={toolbar ? 'top-12' : undefined}
           value={page}
           onValueChange={setPage}
           items={views.map((view) => ({ ...view, ...(panels ? {} : { href: `#${view.value}` }) }))}

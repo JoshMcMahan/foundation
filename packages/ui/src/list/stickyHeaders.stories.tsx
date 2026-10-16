@@ -3,25 +3,23 @@ import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge } from '../components/StatusBadge'
+import { StickyBar } from '../components/StickyBar'
 import { Table } from '../components/Table'
 import { Tabs } from '../components/Tabs'
-import { cx } from '../cx'
 import { RefreshIcon, SnapshotIcon, StopIcon, TerminalIcon } from '../icons'
-import { ActionToolbar, stickyToolbarClasses, type ToolbarItem } from './ActionToolbar'
+import { ActionToolbar, type ToolbarItem } from './ActionToolbar'
 import { ListPage } from './ListPage'
 import { listTableProps } from './ListTable'
 
 // A detail page in a shell that pins its chrome inside the page's scroller:
-// the page header at the top, the page's toolbar under it and its tabs under
-// that. Each sets its own `top`, the way a host stacks them. A table's header
-// finds where they end by itself. Sizes are inline: the package's stylesheet
-// doesn't scan stories.
+// the host's page header at the top, the page's toolbar under it and its tabs
+// under that. Only the header says where it pins; the toolbar, the tabs and a
+// table's header each find where the chrome above them ends. Sizes are inline:
+// the package's stylesheet doesn't scan stories.
 const HEADER = 44
-const TOOLBAR = 40
-const TABS = HEADER + TOOLBAR
 
 const meta: Meta = {
-  title: 'UI/Sticky table headers',
+  title: 'UI/Sticky page chrome',
   parameters: { layout: 'padded' },
 }
 export default meta
@@ -110,7 +108,13 @@ function DetailShell({
       style={{ height: '34rem', maxWidth: width }}
     >
       <div data-testid="page" className="h-full overflow-auto">
-        <div className={stickyToolbarClasses}>
+        {/* The host's own header, pinned with `position: sticky` and a `top`
+            as an earlier sibling of the page in the same scroller. */}
+        <div
+          data-testid="header"
+          className="z-(--layer-header) bg-(--theme-app-bg)"
+          style={{ position: 'sticky', top: 0, height: HEADER }}
+        >
           <PageHeader
             breadcrumbs={[
               { label: 'Compute', href: '/compute' },
@@ -120,9 +124,9 @@ function DetailShell({
           />
         </div>
         {toolbar ?? (
-          <div className={cx('px-4 py-1.5', stickyToolbarClasses)} style={{ top: HEADER }}>
+          <StickyBar className="px-4 py-1.5">
             <ActionToolbar label="Cluster controls" groups={TOOLBAR_GROUPS} right={TOOLBAR_RIGHT} />
-          </div>
+          </StickyBar>
         )}
         {children}
       </div>
@@ -130,16 +134,20 @@ function DetailShell({
   )
 }
 
-function PageTabs({ top }: { top: number }) {
-  return (
-    // Pinned by a wrapper, so the story can give it an inline `top`.
-    <div
-      className="z-(--layer-sticky) bg-(--theme-app-bg) px-4"
-      style={{ position: 'sticky', top }}
-    >
-      <Tabs label="gpu-trainer-01" value="nodes" items={TAB_ITEMS} />
-    </div>
-  )
+function PageTabs() {
+  return <Tabs label="gpu-trainer-01" value="nodes" sticky className="px-4" items={TAB_ITEMS} />
+}
+
+/** How far below the page's top `el` sits. */
+function offset(canvasElement: HTMLElement, el: Element) {
+  const page = within(canvasElement).getByTestId('page')
+  return el.getBoundingClientRect().top - page.getBoundingClientRect().top
+}
+
+/** Where the tab row ends while it's pinned. */
+function tabsBottom(canvasElement: HTMLElement) {
+  const row = within(canvasElement).getByRole('tablist').parentElement as HTMLElement
+  return Number.parseFloat(row.style.top) + row.getBoundingClientRect().height
 }
 
 const section = 'space-y-2 px-4 py-4'
@@ -171,7 +179,7 @@ export const DetailPageEmbeddedTable: StoryObj<DetailArgs> = {
   },
   render: ({ rows, width }) => (
     <DetailShell width={width}>
-      <PageTabs top={TABS} />
+      <PageTabs />
       <section className={section}>
         <h2 className={heading}>Overview</h2>
         <Filler lines={8} />
@@ -187,8 +195,7 @@ export const DetailPageEmbeddedTable: StoryObj<DetailArgs> = {
     </DetailShell>
   ),
   play: async ({ canvasElement }) => {
-    const tabs = within(canvasElement).getByRole('tablist').closest('[style]') as HTMLElement
-    await expectPinnedBelow(canvasElement, 'Nodes', TABS + tabs.getBoundingClientRect().height)
+    await expectPinnedBelow(canvasElement, 'Nodes', tabsBottom(canvasElement))
   },
 }
 
@@ -199,19 +206,15 @@ export const NestedStickyHeading: StoryObj<DetailArgs> = {
   args: { rows: 30, width: 900 },
   render: ({ rows, width }) => (
     <DetailShell width={width}>
-      <PageTabs top={TABS} />
+      <PageTabs />
       <section className={section}>
         <h2 className={heading}>Overview</h2>
         <Filler lines={8} />
       </section>
       <section className="px-4 pb-4">
-        <h2
-          className={cx(heading, 'z-(--layer-sticky) border-b border-(--theme-border) py-2')}
-          // Below the tabs, which are 37px tall.
-          style={{ position: 'sticky', top: TABS + 37, background: 'var(--theme-app-bg)' }}
-        >
-          Nodes
-        </h2>
+        <StickyBar testId="section-heading" className="border-b border-(--theme-border) py-2">
+          <h2 className={heading}>Nodes</h2>
+        </StickyBar>
         <NodesTable count={rows} label="Nodes" />
       </section>
       <section className={section}>
@@ -221,7 +224,8 @@ export const NestedStickyHeading: StoryObj<DetailArgs> = {
     </DetailShell>
   ),
   play: async ({ canvasElement }) => {
-    const heading = within(canvasElement).getByRole('heading', { name: 'Nodes' })
+    const heading = within(canvasElement).getByTestId('section-heading')
+    await expect(Number.parseFloat(heading.style.top)).toBe(tabsBottom(canvasElement))
     const bottom = Number.parseFloat(heading.style.top) + heading.getBoundingClientRect().height
     await expectPinnedBelow(canvasElement, 'Nodes', bottom)
   },
@@ -234,7 +238,7 @@ export const OwnScrollBox: StoryObj<DetailArgs> = {
   args: { rows: 30, width: 900 },
   render: ({ rows, width }) => (
     <DetailShell width={width}>
-      <PageTabs top={TABS} />
+      <PageTabs />
       <section className={section}>
         <h2 className={heading}>Events</h2>
         <div
@@ -263,41 +267,43 @@ export const OwnScrollBox: StoryObj<DetailArgs> = {
   },
 }
 
-/** A toolbar that wraps onto a second row on a narrow page: the header moves
- *  down with it, in the same frame. Drag the width to wrap it. */
-export const WrappingToolbar: StoryObj<DetailArgs> = {
-  name: 'Under a toolbar that wraps',
-  args: { rows: 30, width: 420 },
-  argTypes: { width: { control: { type: 'range', min: 320, max: 1200, step: 10 } } },
+const FILTERS = ['Status: any', 'Zone: us-east-1a', 'Instance: g5.xlarge', 'Owner: alice']
+
+/** A page whose chrome stacks by itself: under the host's pinned header, a
+ *  toolbar of actions and filters, then tabs, then the Nodes table's column
+ *  titles. Narrow the width and the toolbar wraps onto a second row; the tabs
+ *  and the column titles move down with it in the same frame, with no gap and
+ *  no overlap. */
+export const StackedChrome: StoryObj<DetailArgs> = {
+  name: 'Header, toolbar, tabs and table',
+  args: { rows: 30, width: 480 },
+  argTypes: {
+    rows: { control: { type: 'range', min: 3, max: 60, step: 1 } },
+    width: { control: { type: 'range', min: 320, max: 1200, step: 10 } },
+  },
   render: ({ rows, width }) => (
     <DetailShell
       width={width}
       toolbar={
-        <div
-          data-testid="filters"
-          className={cx(
-            'flex flex-wrap items-center gap-2 border-b border-(--theme-border) px-4 py-2 text-xs',
-            stickyToolbarClasses,
-          )}
-          style={{ top: HEADER }}
+        <StickyBar
+          testId="toolbar"
+          className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-(--theme-border) px-4 py-1.5"
         >
-          {[
-            'Status: any',
-            'Zone: us-east-1a',
-            'Instance: g5.xlarge',
-            'Owner: alice',
-            'Tag: gpu',
-          ].map((filter) => (
-            <span
-              key={filter}
-              className="rounded-full border border-(--theme-border) px-2 py-0.5 whitespace-nowrap"
-            >
-              {filter}
-            </span>
-          ))}
-        </div>
+          <ActionToolbar label="Cluster controls" groups={TOOLBAR_GROUPS} />
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            {FILTERS.map((filter) => (
+              <span
+                key={filter}
+                className="whitespace-nowrap rounded-full border border-(--theme-border) px-2 py-0.5"
+              >
+                {filter}
+              </span>
+            ))}
+          </div>
+        </StickyBar>
       }
     >
+      <PageTabs />
       <section className={section}>
         <h2 className={heading}>Overview</h2>
         <Filler lines={8} />
@@ -307,13 +313,18 @@ export const WrappingToolbar: StoryObj<DetailArgs> = {
         <NodesTable count={rows} label="Nodes" />
       </section>
       <section className={section}>
+        <h2 className={heading}>Settings</h2>
         <Filler lines={20} />
       </section>
     </DetailShell>
   ),
   play: async ({ canvasElement }) => {
-    const filters = within(canvasElement).getByTestId('filters')
-    await expectPinnedBelow(canvasElement, 'Nodes', HEADER + filters.getBoundingClientRect().height)
+    const canvas = within(canvasElement)
+    const toolbar = canvas.getByTestId('toolbar')
+    const tabs = canvas.getByRole('tablist').parentElement as HTMLElement
+    await expectPinnedBelow(canvasElement, 'Nodes', tabsBottom(canvasElement))
+    await expect(offset(canvasElement, toolbar)).toBe(HEADER)
+    await expect(offset(canvasElement, tabs)).toBe(HEADER + toolbar.getBoundingClientRect().height)
   },
 }
 

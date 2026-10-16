@@ -72,6 +72,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A titled part of a page or form | `Section` |
 | More detail under a line | `Disclosure` |
 | Views of one thing | `Tabs` |
+| Chrome that stays in view as the page scrolls | `sticky` on `ActionToolbar` or `Tabs`; `StickyBar` around controls of your own. They stack under the page header by themselves (see [Host chrome](#host-chrome)) |
 | A list of actions | `ActionMenu`; `useContextMenu` for a right-click or a row's menu |
 | A panel of controls anchored to a trigger | `Popover` |
 | A hint for a control | `Tooltip`; a `Field`'s `help` for more about a field, which its control reads and which opens as Tab reaches it; `InfoTip` for help about anything else |
@@ -582,13 +583,34 @@ document.documentElement.style.setProperty('--app-inset-top', '56px')
 document.documentElement.style.setProperty('--app-inset-start', '220px')
 ```
 
-A table's sticky header row (`Table stickyHeader`, which list tables use) needs
-no variable. It stops just below whatever its scrolling box already pins at the
-top, such as a page header, a toolbar and tabs: it finds each element there with
-`position: sticky` and a `top` whose parent also holds the table, so it stays
-pinned while the table passes, and follows it as it wraps to a new height or
-comes and goes. In a box that scrolls on its own, such as a fixed-height panel
-or `ListPage`'s rows, it pins at the box's top.
+Sticky chrome stacks by itself, with no offsets to set. A page's pinned pieces,
+`ActionToolbar sticky`, `Tabs sticky`, a `StickyBar` around controls of the
+page's own, and a table's header row (`Table stickyHeader`, which list tables
+use), each stop just below whatever their scrolling box already pins at the top.
+Each finds the elements there with `position: sticky` and a `top` whose parent
+also holds it, so they stay pinned while it passes, and follows them as they
+wrap to a new height or come and go, before the page paints. In a box that
+scrolls on its own, such as a fixed-height panel or `ListPage`'s rows, they pin
+at the box's top.
+
+The stack starts from the host's page header. Put it inside the page's
+scroller, ahead of the page, with `position: sticky` and a `top`, such as
+`sticky top-0`: as a child of the scroller or of a wrapper the page also sits
+in. A header above the scroller, outside it, needs nothing: the page's chrome
+pins at the scroller's top, just under it.
+
+```tsx
+<div className="overflow-auto">
+  <header className="sticky top-0 z-(--layer-header)">…</header>
+  <main>
+    <StickyBar className="px-4 py-1.5">
+      <ActionToolbar groups={actions} />
+    </StickyBar>
+    <Tabs label="Cluster" sticky items={tabs} />
+    <Table stickyHeader>…</Table>
+  </main>
+</div>
+```
 
 Everything the package lays over the page stacks on one scale, set on the
 document root by `base.css`. Give the host's own fixed elements a place on it,

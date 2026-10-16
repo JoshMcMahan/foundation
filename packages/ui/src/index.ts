@@ -207,6 +207,7 @@ export {
   StatusDot,
   statusTextClass,
 } from './components/StatusBadge'
+export { StickyBar, type StickyBarProps } from './components/StickyBar'
 export { Switch, type SwitchProps } from './components/Switch'
 export { isTextEntryContext, useShortcutKey } from './components/shortcutKey'
 export { type SortDirection, Table, type TableDensity } from './components/Table'

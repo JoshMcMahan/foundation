@@ -61,13 +61,11 @@ describe('Tabs', () => {
     expect(screen.getByTestId('tabs')).not.toHaveClass('contents')
   })
 
-  it('pins the row to the top of the scroller, or where the caller moves it', () => {
-    const { rerender } = render(<Tabs label="Resource" sticky items={items} />)
-    const row = () => screen.getByRole('tablist').parentElement as HTMLElement
-    expect(row()).toHaveClass('sticky', 'top-0')
-    rerender(<Tabs label="Resource" sticky className="top-12" items={items} />)
-    expect(row()).toHaveClass('top-12')
-    expect(row()).not.toHaveClass('top-0')
+  it('pins the row, at the top of a scroller that pins nothing else', () => {
+    render(<Tabs label="Resource" sticky items={items} />)
+    const row = screen.getByRole('tablist').parentElement as HTMLElement
+    expect(row).toHaveClass('sticky')
+    expect(row).toHaveStyle({ top: '0px' })
   })
 
   it('moves between tabs with the arrow keys', async () => {

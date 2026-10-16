@@ -1,4 +1,8 @@
-import { type RefObject, useLayoutEffect } from 'react'
+import { useLayoutEffect } from 'react'
+
+/** Pins a bar to the top of its scroller, over what scrolls under it.
+ *  `useStickyTop` moves it below whatever else is pinned there. */
+export const stickyClasses = 'sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)'
 
 // `clip` and `visible` clip or show what overflows without making a box
 // that scrolls, so a sticky element looks past them.
@@ -79,18 +83,24 @@ function pinnedBottom(chrome: HTMLElement): number {
  * the top, such as a page header, a toolbar and a tab row, rather than at
  * `top: 0` behind them. It finds them in the page, so neither they nor the
  * host declare anything, and it follows them as they change height (a toolbar
- * wrapping on a narrow screen) or come and go, before the browser paints.
+ * wrapping on a narrow screen), move, or come and go, before the browser
+ * paints. Chrome that uses it stacks: each piece pins under the ones before
+ * it, and its own `top` moving is a change the pieces after it follow.
  * In a box that scrolls on its own, nothing sits above, so it pins at 0.
  */
-export function useStickyTop(ref: RefObject<HTMLElement | null>, enabled: boolean) {
+export function useStickyTop(el: HTMLElement | null, enabled: boolean) {
   useLayoutEffect(() => {
-    const el = ref.current
     if (!enabled || !el) {
       return
     }
     let chrome: HTMLElement[] = []
     const place = () => {
-      el.style.top = `${Math.max(0, ...chrome.map(pinnedBottom))}px`
+      const top = `${Math.max(0, ...chrome.map(pinnedBottom))}px`
+      // Writing the same value still records a mutation, which would send
+      // everything pinned below this element to look for its chrome again.
+      if (el.style.top !== top) {
+        el.style.top = top
+      }
     }
     // Observing a box reports its size once, so only a change to the page,
     // never a resize, gathers and observes the chrome afresh.
@@ -110,7 +120,9 @@ export function useStickyTop(ref: RefObject<HTMLElement | null>, enabled: boolea
       for (const parent of above.parents) {
         changes.observe(parent, { childList: true })
       }
-      // A class or style turning a sibling sticky, or moving where it pins.
+      // A class or style turning a sibling sticky, or moving where it pins,
+      // as this hook does to chrome above that uses it too. Only what comes
+      // earlier is watched, so changes flow down the stack and never back.
       for (const sib of above.siblings) {
         changes.observe(sib, { attributes: true, attributeFilter: ['class', 'style'] })
       }
@@ -122,5 +134,5 @@ export function useStickyTop(ref: RefObject<HTMLElement | null>, enabled: boolea
       changes.disconnect()
       el.style.top = ''
     }
-  }, [ref, enabled])
+  }, [el, enabled])
 }

@@ -17,6 +17,7 @@ import { buttonClasses } from '../components/buttonClasses'
 import { MenuPopup, MenuSeparator } from '../components/Menu'
 import { MenuEntries, useRunAction, warnIfInert } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
+import { stickyClasses, useStickyTop } from '../components/stickyTop'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { isDev } from '../dev'
@@ -389,9 +390,6 @@ function ItemSlot({ item, folded }: { item: ToolbarItem; folded: boolean }) {
   )
 }
 
-/** Pins a toolbar to the top of the page's scroll area while the content scrolls under it. */
-export const stickyToolbarClasses = 'sticky top-0 z-(--layer-sticky) bg-(--theme-app-bg)'
-
 /** A view's controls in one WAI-ARIA toolbar: a single tab stop, with the arrow
  *  keys moving between its items, the `…` menu and disabled ones included, so
  *  their reasons stay reachable. Action groups sit on the left and `right` holds
@@ -408,7 +406,8 @@ export function ActionToolbar({
 }: {
   groups: ToolbarItem[][]
   right?: ToolbarItem[]
-  /** Pins it to the top of the page's scroll area while the page scrolls. */
+  /** Pins it as the page scrolls, just below whatever the page's scroller
+   *  already pins at the top, such as the page header. */
   sticky?: boolean
   /** Names the toolbar for assistive technology, such as "Log controls";
    *  defaults to "Actions". */
@@ -425,6 +424,7 @@ export function ActionToolbar({
   warnIfManyPrimary(all)
   warnIfIconsRepeat(all)
   const fit = useToolbarFit(root, copy, visibleGroups, visibleRight)
+  useStickyTop(root, sticky)
   const overflow = new Set(fit.overflow)
   const folded = new Set(fit.folded)
   const shown = (items: ToolbarItem[]) => items.filter((item) => !overflow.has(item.key))
@@ -440,7 +440,7 @@ export function ActionToolbar({
       aria-label={label ?? common.actions}
       className={cx(
         'relative flex min-w-0 items-center gap-2.5',
-        sticky && cx(stickyToolbarClasses, 'py-1.5'),
+        sticky && cx(stickyClasses, 'py-1.5'),
       )}
     >
       <MeasuringCopy ref={setCopy} items={all} />

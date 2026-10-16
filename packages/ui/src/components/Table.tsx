@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 import { cx } from '../cx'
 import { SortDownIcon, SortUnsortedIcon, SortUpIcon } from '../icons'
 import { Loader } from './Loader'
@@ -169,7 +169,7 @@ export function Table({
   tableProps,
 }: TableProps) {
   const childList = React.Children.toArray(children)
-  const thead = useRef<HTMLTableSectionElement>(null)
+  const [thead, setThead] = useState<HTMLTableSectionElement | null>(null)
   useStickyTop(thead, stickyHeader && !isLoading)
   const hasOverflow = wrapperClassName.split(' ').some((cls) => cls.startsWith('overflow-'))
 
@@ -201,7 +201,7 @@ export function Table({
           >
             <table className={cx('min-w-full divide-y theme-border', className)} {...tableProps}>
               <thead
-                ref={thead}
+                ref={setThead}
                 className={cx(
                   // Collapsed borders stay where the row was, so the line under
                   // a stuck header is a shadow that moves with it. It sits on
