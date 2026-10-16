@@ -74,6 +74,20 @@ describe('ThemeEditor', () => {
     expect(theme?.dark?.interface.accent).toBe('#06354f')
   })
 
+  it('swaps the background and the accent of the mode it’s on, keeping the contrast', () => {
+    const onTheme = vi.fn()
+    const initial: Theme = {
+      version: 1,
+      light: { interface: { base: '#ffffff', accent: '#06354f', contrast: 60 } },
+    }
+    render(<Harness initial={initial} onTheme={onTheme} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Swap background and accent' }))
+    expect(onTheme).toHaveBeenLastCalledWith({
+      ...initial,
+      light: { interface: { base: '#06354f', accent: '#ffffff', contrast: 60 } },
+    })
+  })
+
   it('sets the contrast with the slider’s keys', () => {
     const onTheme = vi.fn()
     render(<Harness initial={base} onTheme={onTheme} />)

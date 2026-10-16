@@ -77,6 +77,24 @@ export const ContrastEnds: StoryObj = {
   },
 }
 
+/** Swap exchanges the background and the accent of the mode being edited. */
+export const SwapColors: StoryObj = {
+  render: () => (
+    <EditorDemo
+      preview
+      appearance={false}
+      initial={{ version: 1, light: { interface: { base: '#ffffff', accent: '#0c75ad' } } }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Swap background and accent' }))
+    await waitFor(() => expect(token('--theme-app-bg')).toBe('#0c75ad'))
+    await expect(canvas.getByRole('textbox', { name: 'Background' })).toHaveValue('#0c75ad')
+    await expect(canvas.getByRole('textbox', { name: 'Accent' })).toHaveValue('#ffffff')
+  },
+}
+
 /** The sidebar takes its own background and accent; text on it is solved like the page's. */
 export const CustomSidebar: StoryObj = {
   render: () => (

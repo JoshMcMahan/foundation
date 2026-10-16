@@ -16,6 +16,8 @@ export interface ColorInputProps {
   label?: ReactNode
   /** Beside the label and outside it, so it stays out of the field's name. */
   hint?: ReactNode
+  /** Buttons at the far end of the label's row that act on the color, as Field's `actions`. */
+  actions?: ReactNode
   /** Help under the field. */
   description?: ReactNode
   error?: ReactNode
@@ -53,6 +55,7 @@ export function ColorInput({
   onValueChange,
   label,
   hint,
+  actions,
   description,
   error,
   size = 'md',
@@ -76,7 +79,7 @@ export function ColorInput({
   // Framed, the message is the Field's error; alone, it sits under the row.
   const ownError = unparsed && label === undefined
   return framed(
-    { label, hint, description, error: error ?? (unparsed ? t.invalid : undefined), size },
+    { label, hint, actions, description, error: error ?? (unparsed ? t.invalid : undefined), size },
     { id, required, disabled },
     (control) => (
       <div className={cx('flex w-full flex-col gap-1', className)}>

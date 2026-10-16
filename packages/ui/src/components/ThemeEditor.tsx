@@ -1,5 +1,6 @@
 import { type CSSProperties, useId, useMemo, useState } from 'react'
 import { cx } from '../cx'
+import { SwapIcon } from '../icons'
 import {
   CODE_STYLES,
   type CodeStyle,
@@ -25,6 +26,7 @@ import { ColorInput } from './ColorInput'
 import { Disclosure } from './Disclosure'
 import { Field } from './Field'
 import { fieldBox } from './fieldBox'
+import { IconButton } from './IconButton'
 import { Textarea } from './Input'
 import { useStrings } from './Provider'
 import { SegmentedControl } from './SegmentedControl'
@@ -147,6 +149,13 @@ export function ThemeEditor({
         <ColorInput label={t.base} value={seed.base} onValueChange={(base) => setSeed({ base })} />
         <ColorInput
           label={t.accent}
+          actions={
+            <IconButton
+              icon={<SwapIcon className="rotate-90" />}
+              label={t.swap}
+              onClick={() => setSeed({ base: seed.accent, accent: seed.base })}
+            />
+          }
           value={seed.accent}
           onValueChange={(accent) => setSeed({ accent })}
         />

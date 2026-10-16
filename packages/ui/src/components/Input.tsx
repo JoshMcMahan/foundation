@@ -33,7 +33,15 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 
 /** The Field around a control when it has a label; the control alone when it doesn't. */
 export function framed(
-  { label, hint, help, description, error, size }: Omit<FramedProps, 'mono'>,
+  {
+    label,
+    hint,
+    help,
+    actions,
+    description,
+    error,
+    size,
+  }: Omit<FramedProps, 'mono'> & { actions?: ReactNode },
   {
     id,
     required,
@@ -49,6 +57,7 @@ export function framed(
       label={label}
       hint={hint}
       help={help}
+      actions={actions}
       description={description}
       error={error}
       required={required}

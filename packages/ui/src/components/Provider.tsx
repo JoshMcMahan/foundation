@@ -161,6 +161,8 @@ export interface UIStrings {
     /** The background a theme is generated from. */
     base: string
     accent: string
+    /** Exchanges the background and the accent. */
+    swap: string
     contrast: string
     /** Under the contrast slider. */
     contrastHelp: string
@@ -879,6 +881,7 @@ const DEFAULTS: UIProviderValue = {
       presets: 'Presets',
       base: 'Background',
       accent: 'Accent',
+      swap: 'Swap background and accent',
       contrast: 'Contrast',
       contrastHelp: 'Separates surfaces and strengthens text. Text always meets WCAG AA.',
       customSidebar: 'Custom sidebar',

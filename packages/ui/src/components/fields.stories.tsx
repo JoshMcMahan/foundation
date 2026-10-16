@@ -2,7 +2,7 @@ import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { cx } from '../cx'
-import { ExpressionIcon } from '../icons'
+import { ExpressionIcon, UndoIcon } from '../icons'
 import { applyTheme, generateTheme, THEME_TOKENS } from '../theme'
 import { Checkbox, CheckboxGroup } from './Checkbox'
 import { ColorInput } from './ColorInput'
@@ -1055,15 +1055,26 @@ interface ColorArgs {
   size: FieldBoxSize
   disabled: boolean
   error: string
+  actions: boolean
 }
 
-function ColorDemo({ size, disabled, error }: ColorArgs) {
+function ColorDemo({ size, disabled, error, actions }: ColorArgs) {
   const [color, setColor] = useState('#1f6feb')
   return (
     <div className="flex max-w-xs flex-col gap-2">
       <ColorInput
         label="Brand color"
         description="The accent of buttons and links."
+        actions={
+          actions && (
+            <IconButton
+              icon={<UndoIcon />}
+              label="Reset to default"
+              disabled={disabled}
+              onClick={() => setColor('#1f6feb')}
+            />
+          )
+        }
         value={color}
         onValueChange={setColor}
         size={size}
@@ -1077,7 +1088,7 @@ function ColorDemo({ size, disabled, error }: ColorArgs) {
 /** A color as a swatch that opens the system picker beside its hex. A half-typed hex stays,
  *  marked, until it parses. */
 export const Color: StoryObj<ColorArgs> = {
-  args: { size: 'md', disabled: false, error: '' },
+  args: { size: 'md', disabled: false, error: '', actions: false },
   argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
   render: (args) => <ColorDemo {...args} />,
 }
