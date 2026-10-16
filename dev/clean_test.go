@@ -2,13 +2,17 @@ package dev
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 // isolateGit keeps the developer's git configuration, such as commit
@@ -205,22 +209,40 @@ func TestParseSize(t *testing.T) {
 	}
 }
 
-func TestCleanSchedules(t *testing.T) {
-	home := t.TempDir()
+// stubScheduler points HOME at a temporary directory and records the
+// launchctl and systemctl commands a test would run, running none.
+func stubScheduler(t *testing.T) (home string, ran *[][]string) {
+	t.Helper()
+	home = t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv("PATH", "/opt/bin:/usr/bin")
-	var ran [][]string
+	ran = new([][]string)
 	run := scheduler
 	scheduler = func(_ context.Context, name string, args ...string) error {
-		ran = append(ran, append([]string{name}, args...))
+		*ran = append(*ran, append([]string{name}, args...))
 		return nil
 	}
 	t.Cleanup(func() { scheduler = run })
-	argv := []string{"--idle", "6h0m0s", "/src/a & b"}
-	var out strings.Builder
+	return home, ran
+}
 
-	if err := installClean(t.Context(), "darwin", "/bin/dev", argv, 3*time.Hour, &out); err != nil {
+// defaultSchedule is the flags' defaults, as `dev clean` declares them.
+func defaultSchedule() cleanSchedule {
+	var s cleanSchedule
+	cleanFlags(pflag.NewFlagSet("t", pflag.ContinueOnError), &s)
+	return s
+}
+
+func given(names ...string) func(string) bool {
+	return func(n string) bool { return slices.Contains(names, n) }
+}
+
+func TestCleanScheduleFiles(t *testing.T) {
+	home, ran := stubScheduler(t)
+	s := cleanSchedule{exe: "/bin/dev", repos: []string{"/src/a & b", `/src/"100%" $x`}, idle: 6 * time.Hour, stale: 0, goCache: "25GB", every: 3 * time.Hour}
+
+	if err := installClean(t.Context(), "darwin", s); err != nil {
 		t.Fatal(err)
 	}
 	plist, err := os.ReadFile(filepath.Join(home, "Library", "LaunchAgents", cleanLabel+".plist"))
@@ -232,12 +254,12 @@ func TestCleanSchedules(t *testing.T) {
 			t.Errorf("plist lacks %s:\n%s", want, plist)
 		}
 	}
-	if last := ran[len(ran)-1]; last[0] != "launchctl" || last[1] != "bootstrap" {
-		t.Errorf("launchctl not loaded: %v", ran)
+	if last := (*ran)[len(*ran)-1]; last[0] != "launchctl" || last[1] != "bootstrap" {
+		t.Errorf("launchctl not loaded: %v", *ran)
 	}
 
-	ran = nil
-	if err := installClean(t.Context(), "linux", "/bin/dev", argv, 3*time.Hour, &out); err != nil {
+	*ran = nil
+	if err := installClean(t.Context(), "linux", s); err != nil {
 		t.Fatal(err)
 	}
 	units := filepath.Join(home, ".config", "systemd", "user")
@@ -245,30 +267,279 @@ func TestCleanSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(service), `ExecStart="/bin/dev" "clean" "--idle" "6h0m0s" "/src/a & b"`) {
+	if !strings.Contains(string(service), `ExecStart="/bin/dev" "clean" "--idle" "6h0m0s" "--stale" "0s" "--go-cache" "25GB" "/src/a & b"`) {
 		t.Errorf("service runs the wrong command:\n%s", service)
 	}
 	timer, err := os.ReadFile(filepath.Join(units, cleanUnit+".timer"))
 	if err != nil || !strings.Contains(string(timer), "OnUnitActiveSec=10800s") {
 		t.Errorf("timer: %v\n%s", err, timer)
 	}
-	if !slices.ContainsFunc(ran, func(c []string) bool {
+	if !slices.ContainsFunc(*ran, func(c []string) bool {
 		return slices.Equal(c, []string{"systemctl", "--user", "enable", "--now", cleanUnit + ".timer"})
 	}) {
-		t.Errorf("timer not enabled: %v", ran)
+		t.Errorf("timer not enabled: %v", *ran)
 	}
 
+	// What was written reads back as it was, quoting and all.
 	for _, goos := range []string{"darwin", "linux"} {
-		if err := uninstallClean(t.Context(), goos, &out); err != nil {
-			t.Fatal(err)
+		got, err := readSchedule(goos)
+		if err != nil {
+			t.Fatalf("%s: %v", goos, err)
+		}
+		if got == nil || got.exe != s.exe || !slices.Equal(got.repos, s.repos) || got.idle != s.idle || got.stale != s.stale || got.goCache != s.goCache || got.every != s.every {
+			t.Errorf("%s: read back %+v, want %+v", goos, got, s)
 		}
 	}
-	for _, f := range []string{filepath.Join(home, "Library", "LaunchAgents", cleanLabel+".plist"), filepath.Join(units, cleanUnit+".service"), filepath.Join(units, cleanUnit+".timer")} {
-		if _, err := os.Stat(f); err == nil {
-			t.Errorf("%s left after uninstall", f)
-		}
-	}
-	if err := installClean(t.Context(), "plan9", "/bin/dev", argv, time.Hour, &out); err == nil {
+	if err := installClean(t.Context(), "plan9", s); err == nil {
 		t.Error("installed on an unsupported system")
+	}
+}
+
+func TestCleanScheduleAppends(t *testing.T) {
+	for _, goos := range []string{"darwin", "linux"} {
+		t.Run(goos, func(t *testing.T) {
+			stubScheduler(t)
+			core, games, lib := t.TempDir(), t.TempDir(), t.TempDir()
+			install := func(add []string, flags cleanSchedule, names ...string) string {
+				t.Helper()
+				var out strings.Builder
+				if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: add, flags: flags, given: given(names...)}, &out); err != nil {
+					t.Fatal(err)
+				}
+				return out.String()
+			}
+			read := func() *cleanSchedule {
+				t.Helper()
+				s, err := readSchedule(goos)
+				if err != nil || s == nil {
+					t.Fatalf("readSchedule: %v, %v", s, err)
+				}
+				return s
+			}
+
+			first := defaultSchedule()
+			first.idle = 2 * time.Hour
+			out := install([]string{core, games}, first, "idle")
+			if !strings.Contains(out, core+"  (added)") || !strings.Contains(out, games+"  (added)") {
+				t.Errorf("a new schedule's repositories are not marked added:\n%s", out)
+			}
+
+			// Lowering the cache limit for one repository keeps the other,
+			// and the idle time given before.
+			lower := defaultSchedule()
+			lower.goCache = "25GB"
+			out = install([]string{core}, lower, "go-cache")
+			s := read()
+			if !slices.Equal(s.repos, []string{core, games}) {
+				t.Errorf("repositories = %v, want both kept once", s.repos)
+			}
+			if s.goCache != "25GB" || s.idle != 2*time.Hour || s.stale != 72*time.Hour || s.every != 3*time.Hour {
+				t.Errorf("flags not merged: %+v", s)
+			}
+			for _, want := range []string{
+				"dev clean runs every 3h0m0s on:\n",
+				"  " + core + "\n", "  " + games + "\n",
+				"--idle 2h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB)\n",
+			} {
+				if !strings.Contains(out, want) {
+					t.Errorf("summary lacks %q:\n%s", want, out)
+				}
+			}
+			if strings.Contains(out, "(added)") {
+				t.Errorf("a repository already scheduled is marked added:\n%s", out)
+			}
+			wantLog := "journalctl --user -u " + cleanUnit
+			if goos == "darwin" {
+				wantLog = cleanLog(os.Getenv("HOME"))
+			}
+			if !strings.Contains(out, wantLog) {
+				t.Errorf("summary does not say where it logs (%s):\n%s", wantLog, out)
+			}
+
+			out = install([]string{lib}, defaultSchedule())
+			if s := read(); !slices.Equal(s.repos, []string{core, games, lib}) || s.goCache != "25GB" {
+				t.Errorf("after adding lib: %+v", s)
+			}
+			if !strings.Contains(out, lib+"  (added)") || strings.Contains(out, "(was") {
+				t.Errorf("summary of adding lib:\n%s", out)
+			}
+
+			out = install([]string{games}, defaultSchedule())
+			if !strings.Contains(out, "nothing changed") || !strings.Contains(out, lib+"\n") {
+				t.Errorf("a re-install that changes nothing should say so and show the schedule:\n%s", out)
+			}
+
+			var status strings.Builder
+			if err := scheduleStatus(goos, &status); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(status.String(), "--go-cache 25GB\n") || strings.Contains(status.String(), "added") {
+				t.Errorf("status:\n%s", status.String())
+			}
+
+			// --replace starts over.
+			fresh := defaultSchedule()
+			fresh.every = time.Hour
+			install([]string{lib}, fresh, "every")
+			var replaced strings.Builder
+			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: []string{lib}, flags: defaultSchedule(), given: given(), replace: true}, &replaced); err != nil {
+				t.Fatal(err)
+			}
+			if s := read(); !slices.Equal(s.repos, []string{lib}) || s.goCache != "60GB" || s.idle != 6*time.Hour || s.every != 3*time.Hour {
+				t.Errorf("after --replace: %+v", s)
+			}
+			if !strings.Contains(replaced.String(), core+"  (removed)") || !strings.Contains(replaced.String(), "every 3h0m0s (was 1h0m0s)") {
+				t.Errorf("summary of --replace:\n%s", replaced.String())
+			}
+		})
+	}
+}
+
+func TestCleanScheduleUninstall(t *testing.T) {
+	for _, goos := range []string{"darwin", "linux"} {
+		t.Run(goos, func(t *testing.T) {
+			home, _ := stubScheduler(t)
+			a, b := t.TempDir(), t.TempDir()
+			uninstall := func(repos ...string) string {
+				t.Helper()
+				var out strings.Builder
+				if err := scheduleUninstall(t.Context(), goos, repos, &out); err != nil {
+					t.Fatal(err)
+				}
+				return out.String()
+			}
+			flags := defaultSchedule()
+			flags.goCache = "10GB"
+			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: []string{a, b}, flags: flags, given: given("go-cache")}, io.Discard); err != nil {
+				t.Fatal(err)
+			}
+
+			out := uninstall(a)
+			s, err := readSchedule(goos)
+			if err != nil || s == nil || !slices.Equal(s.repos, []string{b}) || s.goCache != "10GB" {
+				t.Fatalf("after removing one: %+v, %v", s, err)
+			}
+			if !strings.Contains(out, a+"  (removed)") || !strings.Contains(out, "  "+b+"\n") {
+				t.Errorf("summary of removing one:\n%s", out)
+			}
+
+			if out := uninstall("/not/scheduled"); !strings.Contains(out, "/not/scheduled is not on the schedule") {
+				t.Errorf("removing one not scheduled:\n%s", out)
+			}
+
+			// The last one takes the schedule with it.
+			if out := uninstall(b); !strings.Contains(out, "no longer runs on a schedule") {
+				t.Errorf("removing the last:\n%s", out)
+			}
+			paths, err := schedulePaths(goos, home)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, f := range paths {
+				if _, err := os.Stat(f); err == nil {
+					t.Errorf("%s left after removing the last repository", f)
+				}
+			}
+			var status strings.Builder
+			if err := scheduleStatus(goos, &status); err != nil || !strings.Contains(status.String(), "does not run on a schedule") {
+				t.Errorf("status with none: %v\n%s", err, status.String())
+			}
+
+			// Without a repository, the whole schedule goes.
+			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: []string{a, b}, flags: flags, given: given()}, io.Discard); err != nil {
+				t.Fatal(err)
+			}
+			uninstall()
+			if s, err := readSchedule(goos); s != nil || err != nil {
+				t.Errorf("after uninstalling everything: %+v, %v", s, err)
+			}
+		})
+	}
+}
+
+func TestCleanScheduleUnreadable(t *testing.T) {
+	for _, goos := range []string{"darwin", "linux"} {
+		t.Run(goos, func(t *testing.T) {
+			home, _ := stubScheduler(t)
+			paths, err := schedulePaths(goos, home)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, p := range paths {
+				write(t, p, "edited by hand\n")
+			}
+			if _, err := readSchedule(goos); err == nil {
+				t.Fatal("read a hand-edited schedule as dev clean's")
+			}
+			var status strings.Builder
+			if err := scheduleStatus(goos, &status); err != nil || !strings.Contains(status.String(), "not one dev can read") {
+				t.Errorf("status: %v\n%s", err, status.String())
+			}
+			if err := scheduleUninstall(t.Context(), goos, []string{"/src/a"}, io.Discard); err == nil {
+				t.Error("removed one repository from a schedule it cannot read")
+			}
+
+			a := t.TempDir()
+			var out strings.Builder
+			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: []string{a}, flags: defaultSchedule(), given: given()}, &out); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out.String(), "not one dev can read") || !strings.Contains(out.String(), a+"  (added)") {
+				t.Errorf("install over an unreadable schedule:\n%s", out.String())
+			}
+			if s, err := readSchedule(goos); err != nil || s == nil || !slices.Equal(s.repos, []string{a}) {
+				t.Errorf("after replacing it: %+v, %v", s, err)
+			}
+		})
+	}
+}
+
+func TestCleanInstallCommand(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("dev clean schedules itself on macOS and Linux")
+	}
+	isolateGit(t)
+	stubScheduler(t)
+	exe := cleanExecutable
+	cleanExecutable = func() (string, error) { return "/bin/dev", nil }
+	t.Cleanup(func() { cleanExecutable = exe })
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core, games := filepath.Join(root, "core"), filepath.Join(root, "games")
+	for _, r := range []string{core, games} {
+		gitT(t, root, "init", "-q", r)
+	}
+	run := func(args ...string) string {
+		t.Helper()
+		var verbose bool
+		cmd := newCleanCmd(&verbose)
+		var out strings.Builder
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetArgs(args)
+		if err := cmd.ExecuteContext(t.Context()); err != nil {
+			t.Fatalf("dev clean %v: %v\n%s", args, err, out.String())
+		}
+		t.Logf("dev clean %s\n%s", strings.Join(args, " "), out.String())
+		return out.String()
+	}
+
+	run("--install", "--idle", "4h", core, games)
+	run("--install", "--go-cache", "25GB", filepath.Join(core, "."))
+	s, err := readSchedule(runtime.GOOS)
+	if err != nil || s == nil {
+		t.Fatal(s, err)
+	}
+	if !slices.Equal(s.repos, []string{core, games}) || s.idle != 4*time.Hour || s.goCache != "25GB" {
+		t.Errorf("after lowering the cache limit: %+v", s)
+	}
+	if out := run("--status"); !strings.Contains(out, "--idle 4h0m0s, --stale 72h0m0s, --go-cache 25GB\n") {
+		t.Errorf("status:\n%s", out)
+	}
+	run("--uninstall", games)
+	if s, _ := readSchedule(runtime.GOOS); s == nil || !slices.Equal(s.repos, []string{core}) {
+		t.Errorf("after removing games: %+v", s)
 	}
 }

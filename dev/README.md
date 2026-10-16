@@ -267,7 +267,37 @@ worth keeping.
 Then Go's build cache is trimmed to `--go-cache` (default 60GB), least
 recently used first, keeping anything used in the last hour. Entries are
 content-addressed, so one removed is rebuilt when needed. `--go-cache 0`
-leaves the cache alone, and `--uninstall` stops the schedule.
+leaves the cache alone.
+
+### On a schedule
+
+`--install` runs `dev clean` every `--every` (default 3 hours), and once now.
+Each install adds its repositories (default: the one here) to those already
+scheduled, and the flags it is given replace the schedule's, while the rest
+keep their scheduled values; `--replace` schedules only this call's
+repositories and flags instead. Every change prints the whole schedule:
+
+```sh
+dev clean --install ~/src/app ~/src/lib
+dev clean --install --go-cache 25GB   # in ~/src/app: lower one limit, keeping the rest
+dev clean --status                    # show the schedule, changing nothing
+dev clean --uninstall ~/src/lib       # stop cleaning one repository
+dev clean --uninstall                 # stop the schedule
+```
+
+```text
+dev clean runs every 3h0m0s on:
+  /Users/me/src/app
+  /Users/me/src/lib
+with --idle 6h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB)
+logging to /Users/me/Library/Logs/foundation-dev-clean.log
+```
+
+The schedule is the launchd agent `~/Library/LaunchAgents/foundation.dev.clean.plist`
+on macOS, or the systemd user units `foundation-dev-clean.service` and `.timer`
+on Linux, logging to the journal. `dev clean` reads its repositories and flags
+back from there, so one edited by hand into something else, or removed with
+`launchctl` or `systemctl`, is simply replaced by the next `--install`.
 
 ## Ports
 

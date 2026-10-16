@@ -392,10 +392,10 @@ func formatSize(n int64) string {
 
 func newCleanCmd(verbose *bool) *cobra.Command {
 	var (
-		opts               cleanOptions
-		goCache            string
-		install, uninstall bool
-		every              time.Duration
+		opts                       cleanOptions
+		sched                      cleanSchedule
+		install, uninstall, status bool
+		replace                    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "clean [repository...]",
@@ -408,19 +408,44 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 			"Ignored files in a removed worktree, such as build output and .devstack, go with it.\n\n" +
 			"Then trim Go's build cache to --go-cache, least recently used first: Go itself only drops what has been " +
 			"unused for five days, which never bounds the cache of a machine that builds every day.\n\n" +
-			"--install runs it on a schedule, every --every, with the same repositories and flags.",
-		Example: `  dev clean -n                       # what would go
+			"--install runs it on a schedule, every --every. It adds the repositories to those already scheduled, " +
+			"and the flags given replace the schedule's, while those not given keep their scheduled values; " +
+			"--replace schedules only this call's repositories and flags instead. " +
+			"--uninstall with repositories takes just those off the schedule, and without any removes the schedule. " +
+			"--status shows the schedule and changes nothing.",
+		Example: `  dev clean -n                           # what would go
   dev clean ~/src/app ~/src/lib
-  dev clean --install ~/src/app      # every 3h, from now on
-  dev clean --uninstall`,
+  dev clean --install ~/src/app          # every 3h from now on, with any already scheduled
+  dev clean --install --go-cache 25GB    # add the repository here, lowering one limit
+  dev clean --status
+  dev clean --uninstall ~/src/lib        # stop cleaning one repository
+  dev clean --uninstall                  # stop the schedule`,
 		Annotations: map[string]string{anywhere: "yes"},
 		RunE: func(cmd *cobra.Command, repos []string) error {
 			ctx := cmd.Context()
 			out := cmd.OutOrStdout()
-			if uninstall {
-				return uninstallClean(ctx, runtime.GOOS, out)
+			goos := runtime.GOOS
+			if replace && !install {
+				return errors.New("--replace goes with --install")
 			}
-			limit, err := parseSize(goCache)
+			if status {
+				if len(repos) > 0 {
+					return errors.New("--status takes no repository")
+				}
+				return scheduleStatus(goos, out)
+			}
+			if uninstall {
+				// A repository gone from disk still comes off the schedule.
+				for i, r := range repos {
+					if top, err := gitIn(ctx, r, "rev-parse", "--show-toplevel"); err == nil {
+						repos[i] = top
+					} else if abs, err := filepath.Abs(r); err == nil {
+						repos[i] = abs
+					}
+				}
+				return scheduleUninstall(ctx, goos, repos, out)
+			}
+			limit, err := parseSize(sched.goCache)
 			if err != nil {
 				return err
 			}
@@ -439,10 +464,12 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				args := append([]string{"--idle", opts.idle.String(), "--stale", opts.stale.String(), "--go-cache", goCache}, repos...)
-				return installClean(ctx, runtime.GOOS, exe, args, every, out)
+				return scheduleInstall(ctx, goos, scheduleChange{
+					exe: exe, add: repos, flags: sched, given: cmd.Flags().Changed, replace: replace,
+				}, out)
 			}
 			opts.verbose = *verbose
+			opts.idle, opts.stale = sched.idle, sched.stale
 			running, err := Instances(ctx)
 			if err != nil {
 				return err
@@ -467,13 +494,14 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 	}
 	f := cmd.Flags()
 	f.BoolVarP(&opts.dryRun, "dry-run", "n", false, "list what would go, and remove nothing")
-	f.DurationVar(&opts.idle, "idle", 6*time.Hour, "keep worktrees touched more recently than this")
-	f.DurationVar(&opts.stale, "stale", 72*time.Hour, "remove unmerged worktrees untouched this long, keeping their commits on a branch (0: never)")
-	f.StringVar(&goCache, "go-cache", "60GB", "trim Go's build cache to this size (0: leave it)")
-	f.BoolVar(&install, "install", false, "run dev clean on a schedule, with these repositories and flags")
-	f.DurationVar(&every, "every", 3*time.Hour, "how often the schedule runs")
-	f.BoolVar(&uninstall, "uninstall", false, "stop running dev clean on a schedule")
-	cmd.MarkFlagsMutuallyExclusive("install", "uninstall")
+	cleanFlags(f, &sched)
+	f.BoolVar(&install, "install", false, "run dev clean on a schedule, adding these repositories and flags to it")
+	f.BoolVar(&replace, "replace", false, "with --install, schedule only these repositories and flags, dropping the others")
+	f.BoolVar(&uninstall, "uninstall", false, "take these repositories off the schedule, or with none, stop it")
+	f.BoolVar(&status, "status", false, "show the schedule, changing nothing")
+	cmd.MarkFlagsMutuallyExclusive("install", "uninstall", "status")
 	cmd.MarkFlagsMutuallyExclusive("dry-run", "install")
+	cmd.MarkFlagsMutuallyExclusive("dry-run", "uninstall")
+	cmd.MarkFlagsMutuallyExclusive("dry-run", "status")
 	return cmd
 }
