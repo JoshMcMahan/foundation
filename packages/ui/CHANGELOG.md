@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.61.0](https://github.com/parallelworks/foundation/compare/ui-v0.60.0...ui-v0.61.0) (2026-10-16)
+
+
+### Features
+
+* **ui:** Breadcrumbs renders the page header's trail anywhere, and the file explorer's trail folds ([#344](https://github.com/parallelworks/foundation/issues/344)) ([2da75f7](https://github.com/parallelworks/foundation/commit/2da75f737211cce2d6ad5ea7d6c81a6fa2bf5bcd))
+
 ## [0.60.0](https://github.com/parallelworks/foundation/compare/ui-v0.59.0...ui-v0.60.0) (2026-10-16)
 
 
