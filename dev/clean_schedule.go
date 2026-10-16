@@ -276,7 +276,7 @@ func installClean(ctx context.Context, goos string, s cleanSchedule) error {
 		}
 		domain := "gui/" + strconv.Itoa(os.Getuid())
 		_ = scheduler(ctx, "launchctl", "bootout", domain+"/"+cleanLabel) // not loaded yet is fine
-		return scheduler(ctx, "launchctl", "bootstrap", domain, paths[0])
+		return bootstrap(ctx, domain, paths[0])
 	}
 	service, timer := systemdUnitFiles(argv, path, s.every)
 	if err := writeFile(paths[0], service); err != nil {
@@ -289,6 +289,29 @@ func installClean(ctx context.Context, goos string, s cleanSchedule) error {
 		return err
 	}
 	return scheduler(ctx, "systemctl", "--user", "enable", "--now", cleanUnit+".timer")
+}
+
+// bootstrapWait is how long bootstrap keeps retrying; a variable so that
+// tests don't wait.
+var bootstrapWait = 10 * time.Second
+
+// bootstrap loads the plist into domain. launchctl's bootout returns before
+// the old job is gone, and stopping a run in progress takes a moment, so a
+// bootstrap right after it fails with "Input/output error" until the label
+// is free: it retries until bootstrapWait has passed.
+func bootstrap(ctx context.Context, domain, plist string) error {
+	deadline := time.Now().Add(bootstrapWait)
+	for delay := 100 * time.Millisecond; ; delay = min(2*delay, time.Second) {
+		err := scheduler(ctx, "launchctl", "bootstrap", domain, plist)
+		if err == nil || time.Now().Add(delay).After(deadline) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(delay):
+		}
+	}
 }
 
 func cleanLog(home string) string {

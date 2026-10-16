@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -292,6 +293,49 @@ func TestCleanScheduleFiles(t *testing.T) {
 	}
 	if err := installClean(t.Context(), "plan9", s); err == nil {
 		t.Error("installed on an unsupported system")
+	}
+}
+
+func TestCleanScheduleRetriesBootstrap(t *testing.T) {
+	_, ran := stubScheduler(t)
+	t.Cleanup(func(w time.Duration) func() { return func() { bootstrapWait = w } }(bootstrapWait))
+	s := cleanSchedule{exe: "/bin/dev", repos: []string{"/src/a"}, goCache: "25GB", every: 3 * time.Hour}
+	// launchctl answers "Input/output error" until bootout's job is gone.
+	busy := func(n int) {
+		tries := 0
+		scheduler = func(_ context.Context, name string, args ...string) error {
+			*ran = append(*ran, append([]string{name}, args...))
+			if args[0] == "bootstrap" {
+				if tries++; tries <= n {
+					return errors.New("Bootstrap failed: 5: Input/output error")
+				}
+			}
+			return nil
+		}
+	}
+	bootstraps := func() (n int) {
+		for _, r := range *ran {
+			if r[1] == "bootstrap" {
+				n++
+			}
+		}
+		return n
+	}
+
+	bootstrapWait = 5 * time.Second
+	busy(2)
+	if err := installClean(t.Context(), "darwin", s); err != nil {
+		t.Fatalf("install while the old job stops: %v", err)
+	}
+	if n := bootstraps(); n != 3 {
+		t.Errorf("bootstrap ran %d times, want 3", n)
+	}
+
+	*ran = nil
+	bootstrapWait = 0
+	busy(1)
+	if err := installClean(t.Context(), "darwin", s); err == nil {
+		t.Error("install succeeded though launchctl never took the job")
 	}
 }
 
