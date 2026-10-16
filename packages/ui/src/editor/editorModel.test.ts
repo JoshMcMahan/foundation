@@ -12,6 +12,10 @@ window.matchMedia ??= () =>
     removeEventListener() {},
   }) as unknown as MediaQueryList
 await import('./monacoFeatures')
+// A JSON model's first use starts loading Monaco's JSON support without awaiting it; loaded here,
+// it can't still be loading when the file's environment is torn down.
+// @ts-expect-error Monaco ships no types for the module behind its JSON registration.
+await import('monaco-editor/languages/features/json/jsonMode')
 const monaco = await import('monaco-editor/editor/editor.api')
 const { holdListeners, modelFor } = await import('./editorModel')
 
