@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.58.0](https://github.com/parallelworks/foundation/compare/ui-v0.57.0...ui-v0.58.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** a sticky table header pins below the chrome its page pins ([#329](https://github.com/parallelworks/foundation/issues/329))
+
+### Features
+
+* **ui:** a step's dialog opens on its summary, with its log and script as tabs ([#240](https://github.com/parallelworks/foundation/issues/240)) ([fbe1e51](https://github.com/parallelworks/foundation/commit/fbe1e51fc2cc494b0b31276497c0268f3dc80109))
+* **ui:** fallback avatars take a stable color from their name ([#330](https://github.com/parallelworks/foundation/issues/330)) ([577e74d](https://github.com/parallelworks/foundation/commit/577e74d5a688450c1e2cbb9a863fbb4cc385fffd))
+* **ui:** file explorer rows can copy their path ([#185](https://github.com/parallelworks/foundation/issues/185)) ([cb5b555](https://github.com/parallelworks/foundation/commit/cb5b555e89e50f3e0ed4691484321cf7b0af6530))
+
+
+### Bug Fixes
+
+* **ui:** a sticky table header pins below the chrome its page pins ([#329](https://github.com/parallelworks/foundation/issues/329)) ([921fecc](https://github.com/parallelworks/foundation/commit/921fecc17a05f7701149e51d80bc2bde7e995ea0))
+
 ## [0.57.0](https://github.com/parallelworks/foundation/compare/ui-v0.56.0...ui-v0.57.0) (2026-10-16)
 
 
