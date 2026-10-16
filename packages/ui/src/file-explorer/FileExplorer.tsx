@@ -44,6 +44,7 @@ import {
   FileIcon,
   FileTextIcon,
   FolderIcon,
+  FolderTreeIcon,
   LinkIcon,
   PreviewIcon,
   ShareIcon,
@@ -1147,28 +1148,30 @@ export default function FileExplorer({
       href ? { ...open, href } : { ...open, onClick: () => handleSelectTreeItem(node.path, node) },
     ]
 
-    const uriExtras = uris.map((value) => ({
-      label: `${getUriScheme(value).toUpperCase()} URI`,
-      value,
-      icon: <LinkIcon />,
-    }))
     // The menu takes the right-click from the row's link, and with it the
     // browser's own "Copy link", so it offers that copy itself.
-    const pageUrl = absoluteUrl(href)
-    if (pageUrl) {
-      uriExtras.unshift({ label: t.preview.link, value: pageUrl, icon: <LinkIcon /> })
-    }
+    const copy = copySubmenu({
+      name: isFile ? node.name : undefined,
+      extra: [
+        {
+          label: t.preview.path,
+          // The root's node path would otherwise yield the storage's name.
+          value: node.root ? undefined : getObjectKeyFromNode(node),
+          icon: <FolderTreeIcon />,
+        },
+        { label: t.preview.link, value: absoluteUrl(href), icon: <LinkIcon /> },
+        ...uris.map((value) => ({
+          label: `${getUriScheme(value).toUpperCase()} URI`,
+          value,
+          icon: <LinkIcon />,
+        })),
+      ],
+    })
 
     return assembleRowMenu({
       lead,
       actions,
-      copy:
-        uriExtras.length > 0
-          ? copySubmenu({
-              name: isFile ? node.name : undefined,
-              extra: uriExtras,
-            })
-          : undefined,
+      copy: copy.items.length > 0 ? copy : undefined,
     })
   }
 

@@ -725,6 +725,30 @@ describe('FileExplorer host extensions', () => {
   })
 })
 
+describe('FileExplorer copy path', () => {
+  it.each([
+    ['file', 'one.txt', 'a/one.txt'],
+    ['folder', 'b', 'b/'],
+  ])("copies a %s's path within its storage from its Copy menu", async (_, row, path) => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    await renderExplorer(FOLDER_A)
+
+    fireEvent.contextMenu(await findTreeItem(row))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy path' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(path))
+  })
+
+  it('offers nothing to copy for the storage root', async () => {
+    await renderExplorer(FOLDER_A)
+
+    fireEvent.contextMenu(await findTreeItem(storage.name))
+    expect(await screen.findByRole('menuitem', { name: 'Open folder' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Copy' })).not.toBeInTheDocument()
+  })
+})
+
 describe('FileExplorer write without delete', () => {
   it('offers upload and new folder but no delete when the storage cannot delete', async () => {
     const script = scriptedStorage()

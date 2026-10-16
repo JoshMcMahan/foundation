@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, fireEvent, screen, userEvent, within } from 'storybook/test'
 import { type UILinkComponent, UIProvider } from '../components/Provider'
 import FileExplorer from './FileExplorer'
 import { FileExplorerProvider } from './FileExplorerContext'
@@ -307,6 +307,20 @@ export const Links: StoryObj<{ links: boolean }> = {
     const canvas = within(canvasElement)
     const row = await canvas.findByRole('link', { name: 'run-001' }, { timeout: 10000 })
     await expect(row).toHaveAttribute('href', '#/storybook/demo-bucket/results/run-001/')
+  },
+}
+
+/** A row's right-click menu with Copy open: the file's name, its path within
+ *  the storage and its page's link. Arrow keys reach every entry. */
+export const RowMenuCopy: StoryObj = {
+  render: () => <LinkedExplorerDemo links initialPath="storybook/demo-bucket/results/run-002" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const row = await canvas.findByRole('link', { name: 'report.ipynb' }, { timeout: 10000 })
+    const { left, top } = row.getBoundingClientRect()
+    fireEvent.contextMenu(row, { clientX: left + 24, clientY: top + 8 })
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Copy' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Copy path' })).toBeVisible()
   },
 }
 

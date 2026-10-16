@@ -284,6 +284,8 @@ export interface UIStrings {
       openFolder: string
       /** A path's page in the app, as in "Copy link". */
       link: string
+      /** An object's key within its storage, as in "Copy path". */
+      path: string
       detailsTab: string
       previewTab: string
       preview: string
@@ -1003,6 +1005,7 @@ const DEFAULTS: UIProviderValue = {
         viewDetails: 'View details',
         openFolder: 'Open folder',
         link: 'link',
+        path: 'path',
         detailsTab: 'Details',
         previewTab: 'Preview',
         preview: 'Preview',
