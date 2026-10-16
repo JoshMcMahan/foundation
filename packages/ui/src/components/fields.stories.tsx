@@ -452,6 +452,8 @@ interface ControlFirstArgs {
   /** Off shows the label-first frame a checkbox had before, label then ? then box. */
   controlFirst: boolean
   help: string
+  /** Text after the switch's label and outside its name, such as the name of its state. */
+  hint: string
   description: string
   error: string
   disabled: boolean
@@ -468,6 +470,7 @@ export const ControlFirst: StoryObj<ControlFirstArgs> = {
     size: 'md',
     controlFirst: true,
     help: 'Finished runs move to the archive after 30 days.',
+    hint: '',
     description: 'Archived runs keep their logs.',
     error: '',
     disabled: false,
@@ -478,7 +481,7 @@ export const ControlFirst: StoryObj<ControlFirstArgs> = {
     size: { control: 'inline-radio', options: ['sm', 'md'] },
   },
   decorators: [roomAbove],
-  render: ({ layout, size, controlFirst, help, description, error, disabled, longLabel }) => (
+  render: ({ layout, size, controlFirst, help, hint, description, error, disabled, longLabel }) => (
     <div className={cx('flex flex-col gap-4', longLabel ? 'max-w-sm' : 'max-w-lg')}>
       <Field label="Cluster" layout={layout} size={size} disabled={disabled}>
         <Input defaultValue="training-a" size={size} disabled={disabled} />
@@ -503,6 +506,11 @@ export const ControlFirst: StoryObj<ControlFirstArgs> = {
         label="Monitoring"
         controlFirst={controlFirst}
         help={help ? 'Collects usage every minute.' : undefined}
+        hint={
+          hint ? (
+            <span className="font-normal text-(--theme-muted-text-color)">{hint}</span>
+          ) : undefined
+        }
         disabled={disabled}
         layout={layout}
         size={size}
@@ -549,6 +557,13 @@ export const ControlFirstInline: StoryObj<ControlFirstArgs> = {
 export const ControlFirstOff: StoryObj<ControlFirstArgs> = {
   ...ControlFirst,
   args: { ...ControlFirst.args, controlFirst: false } as ControlFirstArgs,
+}
+
+/** A hint, here the name of the switch's state, follows the label and its ? on the label's
+ *  baseline, outside the switch's name. */
+export const ControlFirstWithHint: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, hint: 'Every minute' } as ControlFirstArgs,
 }
 
 export const ControlFirstWithoutHelp: StoryObj<ControlFirstArgs> = {

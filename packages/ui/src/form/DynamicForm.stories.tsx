@@ -264,7 +264,7 @@ export const Choices: StoryObj<typeof DynamicForm> = {
 }
 
 /** Options in groups, one setting another field as it's chosen, and a switch whose states have
- *  names of their own. */
+ *  names of their own, shown after its label. */
 export const GroupedChoicesAndNamedStates: StoryObj<typeof DynamicForm> = {
   args: {
     formJSONs: {
@@ -296,6 +296,7 @@ export const GroupedChoicesAndNamedStates: StoryObj<typeof DynamicForm> = {
         options: { onOption: 'PUBLIC', offOption: 'PRIVATE' },
       },
     },
+    initialValues: { visibility: 'PRIVATE' },
     workflowForm: true,
   },
   play: async ({ canvasElement }) => {
@@ -308,7 +309,97 @@ export const GroupedChoicesAndNamedStates: StoryObj<typeof DynamicForm> = {
       expect(canvas.getByRole('textbox', { name: 'Zone' })).toHaveValue('eu-central-1a'),
     )
     await expect(canvas.getByText('Private')).toBeVisible()
+    // The state's name follows the label, outside the switch's name.
+    const visibility = canvas.getByRole('switch', { name: 'Visibility' })
+    await userEvent.click(canvas.getByText('Visibility'))
+    await expect(visibility).toBeChecked()
+    await expect(canvas.getByText('Public')).toBeVisible()
   },
+}
+
+const BOOLEAN_FIELDS = {
+  notify: { type: 'boolean', label: 'Email me when the run ends', default: true },
+  spot: {
+    type: 'boolean',
+    label: 'Use spot instances',
+    default: false,
+    tooltip: 'Spot instances cost less but can be reclaimed at any time.',
+    description: 'A reclaimed node restarts its task from the last checkpoint.',
+  },
+  gpu: {
+    type: 'boolean',
+    label: 'Attach GPUs',
+    default: true,
+    disabled: true,
+    disabled_message: 'This queue has no GPUs.',
+    description: 'Set by the queue.',
+  },
+  visibility: {
+    type: 'boolean',
+    label: 'Visibility',
+    default: 'PRIVATE',
+    options: { onOption: 'PUBLIC', offOption: 'PRIVATE' },
+  },
+  storage: {
+    type: 'object',
+    label: 'Storage',
+    options: {
+      keep: {
+        type: 'boolean',
+        label: 'Keep scratch files after the run',
+        default: false,
+        tooltip: 'Kept files count toward the project quota.',
+      },
+    },
+  },
+  advanced: {
+    type: 'group',
+    label: 'Advanced',
+    items: {
+      verbose: { type: 'boolean', label: 'Verbose logs', default: false },
+    },
+  },
+}
+
+/** Each switch comes before its label, as a switch reads. A click on the label flips it, its help
+ *  and description are read with it, and a disabled one dims its label too. */
+export const Booleans: StoryObj<typeof DynamicForm> = {
+  args: {
+    formJSONs: BOOLEAN_FIELDS,
+    initialValues: {
+      notify: true,
+      spot: false,
+      gpu: true,
+      visibility: 'PRIVATE',
+      storage: { keep: false },
+      verbose: false,
+    },
+    skipValueParse: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const spot = await canvas.findByRole(
+      'switch',
+      { name: 'Use spot instances' },
+      { timeout: 5000 },
+    )
+    await expect(spot).toHaveAccessibleDescription(
+      /reclaimed node restarts.*Spot instances cost less/,
+    )
+    await userEvent.click(canvas.getByText('Use spot instances'))
+    await waitFor(() => expect(spot).toBeChecked())
+    await userEvent.click(canvas.getByText('Use spot instances'))
+    await waitFor(() => expect(spot).not.toBeChecked())
+    const gpu = canvas.getByRole('switch', { name: 'Attach GPUs' })
+    await expect(gpu).toBeDisabled()
+    await userEvent.click(canvas.getByText('Attach GPUs'), { pointerEventsCheck: 0 })
+    await expect(gpu).toBeChecked()
+  },
+}
+
+/** The same switches with their labels over the fields around them. */
+export const BooleansStacked: StoryObj<typeof DynamicForm> = {
+  args: { ...Booleans.args, labelPosition: 'top' },
 }
 
 const WORKER_OPTIONS = {

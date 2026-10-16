@@ -32,15 +32,20 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
   const onOption = field.options ? String(field.options.onOption ?? true) : true
   const offOption = field.options ? String(field.options.offOption ?? false) : false
   const checked = value === true || value === 'true' || value === onOption
-  // Named options name the state beside the switch, in sentence case: "YES" reads "Yes".
-  const stateName = (option: string | boolean) =>
-    typeof option === 'string'
-      ? option.charAt(0).toUpperCase() + option.slice(1).toLowerCase()
-      : undefined
+  // Named options name the state after the label, in sentence case: "YES" reads "Yes". Beside the
+  // switch it would read as the start of the label. The switch announces its own state.
+  const option = checked ? onOption : offOption
+  const stateName =
+    typeof option === 'string' ? (
+      <span aria-hidden="true" className="font-normal text-(--theme-muted-text-color)">
+        {option.charAt(0).toUpperCase() + option.slice(1).toLowerCase()}
+      </span>
+    ) : undefined
 
   return (
-    // A boolean is always set, so the field never needs a value.
-    <Field {...fieldFrame(props)} required={false}>
+    // A boolean is always set, so the field never needs a value. The switch comes before its
+    // label, as a switch reads, and a click on the label flips it.
+    <Field {...fieldFrame(props)} required={false} controlFirst hint={stateName}>
       {(control) => (
         <Tooltip content={field.disabled_message} disabled={!disabled}>
           <Switch
@@ -49,8 +54,6 @@ export default function BooleanField(props: FieldComponentProps<IBooleanField>) 
             render={<button type="button" />}
             checked={checked}
             onCheckedChange={(on) => handleChange(on ? onOption : offOption)}
-            onLabel={stateName(onOption)}
-            offLabel={stateName(offOption)}
             disabled={disabled}
           />
         </Tooltip>

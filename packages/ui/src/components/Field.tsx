@@ -137,6 +137,7 @@ const labelSizes = {
 } satisfies Record<FieldBoxSize, Record<string, string>>
 const labelClassName = 'flex items-center gap-1 font-medium'
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
+const controlFirstExtrasClassName = 'ms-1 inline-flex items-center gap-1 align-[-0.125em]'
 const errorTextClassName = 'flex items-center gap-1.5 text-xs text-(--theme-error-text)'
 
 /** An error in the look a Field gives its own, for a control outside a Field, or for a part of
@@ -336,7 +337,9 @@ export function Field({
           ref={help ? setControlBox : undefined}
           className={cx(
             'flex w-fit max-w-full min-w-0 items-start gap-2',
-            lined && labelSize.inlineLine,
+            // A switch stands taller than the label's line; the padding gives it that room, so
+            // a stack of them doesn't touch.
+            lined ? labelSize.inlineLine : 'py-0.5',
             inRow && 'row-start-2',
           )}
         >
@@ -350,11 +353,11 @@ export function Field({
                 wraps. */}
             <div className={cx('font-medium', labelSize.text, disabled && 'opacity-60')}>
               {fieldLabel(disabled ? 'cursor-not-allowed' : 'cursor-pointer')}
-              {(help || hint || actions) && (
-                <span className="ms-1 inline-flex items-center gap-1 align-[-0.125em]">
-                  {labelExtras}
-                </span>
-              )}
+              {/* The ? and the actions sit on the text's middle; a hint is text, on its
+                  baseline. */}
+              {helpTip && <span className={controlFirstExtrasClassName}>{helpTip}</span>}
+              {hint && <span className="ms-1">{hint}</span>}
+              {actions && <span className={controlFirstExtrasClassName}>{actions}</span>}
             </div>
             {messages}
           </div>
