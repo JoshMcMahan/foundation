@@ -460,6 +460,19 @@ describe('generateTheme', () => {
     expect(oklch(plain['--theme-sidebar-bg']).l).toBeLessThan(oklch(plain['--theme-app-bg']).l)
   })
 
+  it('shades a mid-tone sidebar’s own hue for the active item under a white sidebar accent', () => {
+    const sidebar = oklch('#0c75ad')
+    const vars = deriveTheme({
+      interface: { base: '#ffffff', accent: '#0c75ad' },
+      sidebar: { base: '#0c75ad', accent: '#ffffff' },
+    })
+    const active = oklch(vars['--theme-sidebar-active-bg'])
+    expect(active.c).toBeGreaterThan(0.08)
+    expect(Math.abs(active.h - sidebar.h)).toBeLessThan(10)
+    // White text has no room on a lighter fill, so the fill deepens rather than matching the sidebar.
+    expect(active.l).toBeLessThan(sidebar.l - 0.05)
+  })
+
   it('colors code by style: mono keeps keywords to the text tone, vivid outshines muted', () => {
     const scheme: Scheme = { interface: { base: '#ffffff', accent: '#0d6efd' } }
     const mono = deriveTheme(scheme, { code: 'mono' })

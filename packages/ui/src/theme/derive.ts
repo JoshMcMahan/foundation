@@ -468,6 +468,10 @@ function build(
     ? oklch(scheme.sidebar.base)
     : neutral(dark ? Math.max(0.08, base.l - 0.035 * s) : base.l - 0.035 * s)
   const sidebarAccent = scheme.sidebar?.accent ? oklch(scheme.sidebar.accent) : accent
+  // A white, black or gray accent has no hue to show: the active item is then a shade of the
+  // sidebar itself, at its own chroma, rather than a gray patch on a colored sidebar.
+  const activeTint =
+    sidebarAccent.c < 0.02 ? sidebarBase : { ...sidebarAccent, c: Math.min(sidebarAccent.c, 0.08) }
   const sidebarDark = isDarkColor(toHex(sidebarBase))
   const sidebarDir = sidebarDark ? 1 : -1
   set('--theme-sidebar-bg', sidebarBase)
@@ -476,12 +480,19 @@ function build(
     l: sidebarBase.l + sidebarDir * (sidebarDark ? 0.08 : 0.05) * s,
   })
   // The active item's fill steps away from the sidebar, but never so far that text can't reach its target on it.
-  const activeAt = (f: number): Oklch => ({
-    l: sidebarBase.l + sidebarDir * (sidebarDark ? 0.12 : 0.07) * s * f,
-    c: Math.min(sidebarAccent.c, 0.08),
-    h: sidebarAccent.h,
-  })
-  set('--theme-sidebar-active-bg', activeAt(roomFor(activeAt, t.primary)))
+  // A mid-tone sidebar's text may have no room on a lighter fill, or a deeper one; the fill then
+  // steps the other way, so the active item still stands out.
+  const activeAt =
+    (dir: number) =>
+    (f: number): Oklch => ({
+      l: sidebarBase.l + dir * (sidebarDark ? 0.12 : 0.07) * s * f,
+      c: activeTint.c,
+      h: activeTint.h,
+    })
+  const [active, room] = [activeAt(sidebarDir), activeAt(-sidebarDir)]
+    .map((fill) => [fill, roomFor(fill, t.primary)] as const)
+    .reduce((a, b) => (b[1] > a[1] ? b : a))
+  set('--theme-sidebar-active-bg', active(room))
   solved(
     '--theme-sidebar-text',
     inkFor(sidebarBase, sidebarBase, sidebarDark),
@@ -490,7 +501,7 @@ function build(
   )
   solved(
     '--theme-sidebar-active-text',
-    { l: sidebarBase.l, c: Math.min(sidebarAccent.c, 0.04), h: sidebarAccent.h },
+    { l: sidebarBase.l, c: Math.min(activeTint.c, 0.04), h: activeTint.h },
     ['--theme-sidebar-active-bg'],
     t.primary,
   )

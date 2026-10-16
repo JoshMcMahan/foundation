@@ -99,6 +99,28 @@ export const CustomSidebar: StoryObj = {
   },
 }
 
+/** A white sidebar accent on a colored sidebar: the active item is a shade of the sidebar's own hue. */
+export const WhiteSidebarAccent: StoryObj = {
+  render: () => (
+    <EditorDemo
+      preview
+      appearance={false}
+      initial={{
+        version: 1,
+        light: {
+          interface: { base: '#ffffff', accent: '#0c75ad' },
+          sidebar: { base: '#0c75ad', accent: '#ffffff' },
+        },
+      }}
+    />
+  ),
+  play: async () => {
+    await expect(
+      contrastRatio(token('--theme-sidebar-active-text'), token('--theme-sidebar-active-bg')),
+    ).toBeGreaterThanOrEqual(4.5)
+  },
+}
+
 /** A pasted theme applies; one that isn't says where it's wrong. */
 export const ImportTheme: StoryObj = {
   render: () => <EditorDemo preview appearance={false} />,
