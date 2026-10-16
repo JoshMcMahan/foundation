@@ -1,9 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useRef, useState } from 'react'
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { RunStatus } from '../engine'
 import { formatBytes } from '../format'
-import { Avatar } from './Avatar'
+import {
+  applyTheme,
+  DEFAULT_PRESET,
+  generateTheme,
+  type Mode,
+  schemeFor,
+  THEME_PRESETS,
+} from '../theme/index'
+import { Avatar, type AvatarSize } from './Avatar'
 import { Button } from './Button'
 import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
@@ -109,6 +117,128 @@ export const Avatars: StoryObj = {
         'KJ',
       ),
     )
+  },
+}
+
+const NAMES = [
+  'Ada Lovelace',
+  'Grace Hopper',
+  'Alan Turing',
+  'Katherine Johnson',
+  'Edsger Dijkstra',
+  'Barbara Liskov',
+  'Donald Knuth',
+  'Frances Allen',
+  'Ken Thompson',
+  'Margaret Hamilton',
+  'Dennis Ritchie',
+  'Radia Perlman',
+  'research-team',
+  'data-eng',
+  'contractors',
+  'ml-platform',
+]
+
+interface AvatarColorArgs {
+  /** Story only: the names in the grid, one per line. */
+  names: string
+  colorKey: string
+  size: AvatarSize
+  /** Story only: the scheme's contrast, 0–100. */
+  contrast: number
+}
+
+/** The grid in one mode of the toolbar's theme, whatever mode the page is in. */
+function ModePanel({
+  mode,
+  theme,
+  contrast,
+  children,
+}: {
+  mode: Mode
+  theme: string
+  contrast: number
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const preset = THEME_PRESETS.find((p) => p.name === theme) ?? DEFAULT_PRESET
+  useLayoutEffect(() => {
+    const scheme = schemeFor(preset.theme, mode)
+    if (ref.current) {
+      applyTheme(
+        ref.current,
+        generateTheme({ ...scheme, interface: { ...scheme.interface, contrast } }),
+      )
+      ref.current.style.colorScheme = mode
+    }
+  }, [preset, mode, contrast])
+  return (
+    <div ref={ref} className="rounded-lg bg-(--theme-app-bg) p-4 text-(--theme-app)">
+      <p className="m-0 mb-3 text-sm font-medium text-(--theme-muted-text-color)">
+        {mode === 'light' ? 'Light' : 'Dark'}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+/** Without a picture, a face takes a color from the theme's categorical palette, picked by its
+ *  name, so the same name has the same color everywhere. Every fill keeps its initials at text
+ *  contrast; a nameless face keeps the accent. */
+export const AvatarColors: StoryObj<AvatarColorArgs> = {
+  args: { names: NAMES.join('\n'), colorKey: '', size: 'lg', contrast: 30 },
+  argTypes: {
+    names: { control: 'text' },
+    colorKey: {
+      control: 'text',
+      description: 'Passed to every avatar; empty keys each by its name.',
+    },
+    size: { control: 'select', options: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] },
+    contrast: { control: { type: 'range', min: 0, max: 100, step: 5 } },
+  },
+  render: ({ names, colorKey, size, contrast }, { globals }) => {
+    const list = names
+      .split('\n')
+      .map((name) => name.trim())
+      .filter(Boolean)
+    const grid = (
+      <ul
+        // Stories build no styles of their own, so the grid is inline.
+        className="m-0 grid list-none gap-3 p-0"
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))' }}
+      >
+        {list.map((name, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the list may repeat a name
+          <li key={`${index}:${name}`} className="flex min-w-0 items-center gap-2 text-sm">
+            <Avatar name={name} size={size} colorKey={colorKey || undefined} />
+            <span className="truncate">{name}</span>
+          </li>
+        ))}
+        <li className="flex items-center gap-2 text-sm text-(--theme-muted-text-color)">
+          <Avatar size={size} />
+          No name
+        </li>
+      </ul>
+    )
+    return (
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(20rem, 1fr))' }}
+      >
+        {(['light', 'dark'] as const).map((mode) => (
+          <ModePanel key={mode} mode={mode} theme={globals['theme']} contrast={contrast}>
+            {grid}
+          </ModePanel>
+        ))}
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const [light] = within(canvasElement).getAllByRole('list')
+    // The same name keeps its color; a nameless face keeps the accent.
+    const fill = (name: string) => within(light as HTMLElement).getByRole('img', { name }).innerHTML
+    await expect(fill('Ada Lovelace')).toMatch(/theme-category-\d/)
+    await expect(fill('User avatar')).not.toMatch(/theme-category/)
   },
 }
 

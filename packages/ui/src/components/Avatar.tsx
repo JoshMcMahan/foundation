@@ -1,5 +1,6 @@
 import { Avatar as BaseAvatar } from '@base-ui/react/avatar'
 import { cx } from '../cx'
+import { categoryClasses } from './category'
 import { useStrings } from './Provider'
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -9,6 +10,10 @@ export interface AvatarProps {
   /** Image URL. Until it loads, or when it fails, the initials of `name` show. */
   src?: string | null | undefined
   name?: string | undefined
+  /** Picks the fallback's color from the theme's categorical palette, so the same key gets the
+   *  same color everywhere. Defaults to `name`; pass a stable id when names can repeat or
+   *  change, or `null` for the accent fill whatever the name. Without either, the accent fills it. */
+  colorKey?: string | null | undefined
   size?: AvatarSize | undefined
   status?: AvatarStatus | undefined
   className?: string | undefined
@@ -44,9 +49,11 @@ export function avatarInitials(name: string | undefined): string {
 /** A person's picture, or their initials while it loads or when it fails. It is
  *  one image to assistive technology, named for the person, whichever shows,
  *  and their presence when it has a status dot. */
-export function Avatar({ src, name, size = 'md', status, className }: AvatarProps) {
+export function Avatar({ src, name, colorKey, size = 'md', status, className }: AvatarProps) {
   const { common } = useStrings()
   const who = name || common.userAvatar
+  // A nameless avatar shows "?", which a color would only make look like someone's.
+  const colorBy = colorKey === undefined ? name?.trim() : colorKey
   return (
     <span
       role="img"
@@ -73,7 +80,12 @@ export function Avatar({ src, name, size = 'md', status, className }: AvatarProp
         )}
         <BaseAvatar.Fallback
           aria-hidden="true"
-          className="flex size-full items-center justify-center bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-accent-text)"
+          className={cx(
+            'flex size-full items-center justify-center',
+            colorBy
+              ? categoryClasses(colorBy)
+              : 'bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-accent-text)',
+          )}
         >
           {/* Two letters crowd a 16px circle and sit under the status dot. */}
           {size === 'xs' ? avatarInitials(name).charAt(0) : avatarInitials(name)}

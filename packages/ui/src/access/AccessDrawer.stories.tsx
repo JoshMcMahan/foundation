@@ -234,11 +234,17 @@ export const ByRole: Story = {
 }
 
 /** One by one: the owner first, then everyone, then people and groups. A redundant role says
- *  what already covers it, and roles from everyone show beside a group's own. */
+ *  what already covers it, and roles from everyone show beside a group's own. Each person and
+ *  group takes its name's color, the same wherever it shows; everyone keeps its own tone. */
 export const ByPrincipal: Story = {
   args: { defaultArrangement: 'principal' },
   render,
   play: async () => {
+    const dialog = await drawer()
+    await waitFor(() =>
+      expect(dialog.querySelectorAll('[class*="--theme-category-"]').length).toBeGreaterThan(3),
+    )
+    await expect(dialog.querySelector('[class*="--theme-info-muted"]')).not.toBeNull()
     await expand(/^bio-admins/)
     const redundant = await screen.findByText('Redundant, included in Sudo')
     await waitFor(() => expect(redundant).toBeVisible())

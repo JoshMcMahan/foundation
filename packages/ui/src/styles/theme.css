@@ -78,6 +78,22 @@
   --theme-ansi-magenta: light-dark(#8d3a88, #ffaafe);
   --theme-ansi-cyan: light-dark(#00666c, #00dbe5);
   --theme-ansi-white: light-dark(#555d6c, #e1e9f2);
+  --theme-category-1: light-dark(#ffcfce, #593030);
+  --theme-category-1-text: light-dark(#6e3537, #fed2d0);
+  --theme-category-2: light-dark(#f7d6b8, #533618);
+  --theme-category-2-text: light-dark(#673f12, #f6d8bc);
+  --theme-category-3: light-dark(#dfe1b7, #3f4017);
+  --theme-category-3-text: light-dark(#4e4e11, #dfe2bc);
+  --theme-category-4: light-dark(#c1e8cd, #20462f);
+  --theme-category-4-text: light-dark(#1f5636, #c5e8d0);
+  --theme-category-5: light-dark(#b3e9eb, #034649);
+  --theme-category-5-text: light-dark(#00555a, #b8e9eb);
+  --theme-category-6: light-dark(#c0e2ff, #1f405b);
+  --theme-category-6-text: light-dark(#1f4e73, #c3e2fe);
+  --theme-category-7: light-dark(#dcd8ff, #3d375a);
+  --theme-category-7-text: light-dark(#4a4273, #ddd9fe);
+  --theme-category-8: light-dark(#f5d0ec, #50314a);
+  --theme-category-8-text: light-dark(#63385a, #f4d2eb);
 }
 
 @media (color-gamut: p3) {

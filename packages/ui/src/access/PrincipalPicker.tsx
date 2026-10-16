@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Avatar } from '../components/Avatar'
 import { Callout } from '../components/Callout'
 import { Combobox, type ComboboxGroup, type ComboboxItem } from '../components/Combobox'
+import { categoryClasses } from '../components/category'
 import { useRelativeTime } from '../components/relativeTime'
 import { Skeleton } from '../components/Skeleton'
 import { StatusBadge } from '../components/StatusBadge'
@@ -67,9 +68,11 @@ export function PrincipalTile({
         'flex size-8 shrink-0 items-center justify-center rounded-md [&_svg]:size-4',
         // The same box as a person's face beside it, so a square and a circle read as one size.
         compact && 'size-6 [&_svg]:size-3.5',
+        // A group takes its name's color, as a person's face does; everyone keeps the info
+        // tone, and the square and the icon tell a group from a person.
         everyone
           ? 'bg-(--theme-info-muted) text-(--theme-info-text)'
-          : 'bg-(--theme-muted-panel-bg) text-(--theme-muted-text-color)',
+          : categoryClasses(principal.name),
         className,
       )}
     >

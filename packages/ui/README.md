@@ -84,7 +84,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
 | Pages of a long list | `Pagination` |
 | A grouped page of settings | `SettingsCard` with `SettingRow`s |
-| A person | `Avatar` |
+| A person | `Avatar`, colored by name without a picture |
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
 | A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
 | A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet; `useCopy` for a menu row or a control of your own |
@@ -311,6 +311,16 @@ icon beside an error message may keep the message's text shade through
 `currentColor`. Syntax colors turn away
 from the accent's hue when they come within 30° of it, so a keyword never looks
 like a link.
+
+Eight category colors tell things apart without ranking them:
+`--theme-category-1` to `--theme-category-8` are soft fills at hues 45° apart,
+all at one lightness and chroma so none reads louder, and each
+`--theme-category-N-text` is solved to secondary text's targets on its fill. An
+`Avatar` without a picture takes one, picked by an FNV-1a hash of its name (or
+its `colorKey`), so the same name has the same color on every page; a nameless
+one keeps the accent. `categoryOf(key)` gives the same pick, 1–8, and
+`categoryClasses(key)` its fill and text classes, for anything else drawn
+beside a name, such as a group's icon.
 
 Every color is mapped into sRGB with the CSS Color 4 method, which lowers
 chroma at fixed lightness and hue. It is mapped into display-p3 too: where the

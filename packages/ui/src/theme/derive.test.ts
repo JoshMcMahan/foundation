@@ -2,8 +2,16 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deltaE, JND, oklch, parseColor, toHex } from './color'
-import { contrastRatio, isDarkColor, measure, over, type Shown, shownValue } from './contrast'
-import { CONTROL_ON, PLACEHOLDER_ON } from './derive'
+import {
+  apcaContrast,
+  contrastRatio,
+  isDarkColor,
+  measure,
+  over,
+  type Shown,
+  shownValue,
+} from './contrast'
+import { CATEGORY_COUNT, CONTROL_ON, PLACEHOLDER_ON } from './derive'
 import {
   applyTheme,
   CODE_STYLES,
@@ -186,6 +194,10 @@ function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, numbe
     // A solid fill keeps a white label.
     on(`--theme-${status}-solid`, [WHITE], 4.5)
   }
+  for (let i = 1; i <= CATEGORY_COUNT; i++) {
+    // A fallback avatar's initials, or a group's icon, on its category fill.
+    on(`--theme-category-${i}-text` as ThemeToken, [`--theme-category-${i}` as ThemeToken], 4.5, 60)
+  }
   on('--theme-sidebar-text', ['--theme-sidebar-bg', '--theme-sidebar-hover'], 4.5, 75)
   on('--theme-sidebar-active-text', ['--theme-sidebar-active-bg'], 4.5, 75)
   for (const token of [
@@ -361,6 +373,49 @@ describe('generateTheme', () => {
               2,
             )
           }
+        }
+      }
+    }
+  })
+
+  it('keeps category text readable on its fill in both modes of every preset', () => {
+    for (const preset of THEME_PRESETS) {
+      for (const mode of ['light', 'dark'] as const) {
+        const scheme = schemeFor(preset.theme, mode)
+        for (const contrast of CONTRASTS) {
+          const v = deriveTheme({ ...scheme, interface: { ...scheme.interface, contrast } })
+          for (let i = 1; i <= CATEGORY_COUNT; i++) {
+            const fill = v[`--theme-category-${i}` as ThemeToken]
+            const text = v[`--theme-category-${i}-text` as ThemeToken]
+            const at = `${preset.name} ${mode} category ${i} at ${contrast}`
+            expect(contrastRatio(text, fill), at).toBeGreaterThanOrEqual(contrast === 100 ? 7 : 4.5)
+            expect(apcaContrast(text, fill), at).toBeGreaterThanOrEqual(
+              contrast === 0 ? 60 : contrast === 30 ? 70 : 85,
+            )
+          }
+        }
+      }
+    }
+  })
+
+  it('keeps category fills calm and apart: one lightness, one chroma, distinct hues', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const v = deriveTheme(schemeFor(DEFAULT_THEME, mode))
+      const fills = Array.from({ length: CATEGORY_COUNT }, (_, i) =>
+        oklch(v[`--theme-category-${i + 1}` as ThemeToken]),
+      )
+      const ls = fills.map((f) => f.l)
+      const cs = fills.map((f) => f.c)
+      // Matched within what sRGB rounding and gamut mapping leave.
+      expect(Math.max(...ls) - Math.min(...ls), mode).toBeLessThan(0.02)
+      expect(Math.max(...cs) - Math.min(...cs), mode).toBeLessThan(0.02)
+      // Every pair is several just-noticeable differences apart.
+      for (let a = 0; a < fills.length; a++) {
+        for (let b = a + 1; b < fills.length; b++) {
+          expect(
+            deltaE(fills[a] as never, fills[b] as never),
+            `${mode} ${a + 1}/${b + 1}`,
+          ).toBeGreaterThan(2 * JND)
         }
       }
     }

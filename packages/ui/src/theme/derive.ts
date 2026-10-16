@@ -107,6 +107,23 @@ export const THEME_TOKENS = [
   '--theme-ansi-magenta',
   '--theme-ansi-cyan',
   '--theme-ansi-white',
+  // Categories: a fill and its text for each hue, such as a fallback avatar's
+  '--theme-category-1',
+  '--theme-category-1-text',
+  '--theme-category-2',
+  '--theme-category-2-text',
+  '--theme-category-3',
+  '--theme-category-3-text',
+  '--theme-category-4',
+  '--theme-category-4-text',
+  '--theme-category-5',
+  '--theme-category-5-text',
+  '--theme-category-6',
+  '--theme-category-6-text',
+  '--theme-category-7',
+  '--theme-category-7-text',
+  '--theme-category-8',
+  '--theme-category-8-text',
 ] as const
 
 export type ThemeToken = (typeof THEME_TOKENS)[number]
@@ -207,6 +224,11 @@ const HOVER_STEP: [number, number, number] = [1.45, 1.6, 1.9]
 const STATUS = { success: 150, error: 27, warning: 70, info: 255, favorite: 5 } as const
 const ANSI = { red: 27, green: 145, yellow: 90, blue: 255, magenta: 330, cyan: 200 } as const
 const SYNTAX = { string: 145, number: 55, function: 300, type: 195, property: 240 } as const
+// Categories tell things apart without ranking them: hues evenly spaced around OKLCH, every fill
+// at one lightness and chroma, so no hue reads louder than another.
+export const CATEGORY_COUNT = 8
+const CATEGORY_START = 20
+const CATEGORY_CHROMA = { light: 0.055, dark: 0.06 } as const
 const CODE_CHROMA: Record<CodeStyle, number> = { balanced: 0.13, vivid: 0.19, muted: 0.07, mono: 0 }
 
 /** The largest share, 0–1, of a fill's step from its surface that still lets the readable
@@ -509,6 +531,26 @@ function build(
   }
   keep('--theme-ansi-black', dark ? comment : codeText, codeOn, t.secondary)
   keep('--theme-ansi-white', dark ? codeText : comment, codeOn, t.secondary)
+
+  // Categories: a soft fill a step off the page, and text in the fill's hue solved on it like
+  // secondary text, so initials and icons read at every contrast. The fills follow the base's
+  // lightness only within a narrow band, which keeps them calm on a mid-gray dark base.
+  // Past the default contrast the fills step away from their text, as far as APCA's higher
+  // target needs.
+  const categoryL =
+    (dark ? clamp(base.l + 0.14, 0.36, 0.46) : clamp(base.l - 0.07, 0.86, 0.9)) -
+    dir * byContrast(k, [0, 0, 0.03])
+  for (let i = 0; i < CATEGORY_COUNT; i++) {
+    const h = (CATEGORY_START + (360 / CATEGORY_COUNT) * i) % 360
+    const token = `--theme-category-${i + 1}` as ThemeToken
+    set(token, { l: categoryL, c: CATEGORY_CHROMA[dark ? 'dark' : 'light'], h })
+    solved(
+      `--theme-category-${i + 1}-text` as ThemeToken,
+      dark ? { l: 0.9, c: 0.05, h } : { l: 0.42, c: 0.08, h },
+      [token],
+      t.secondary,
+    )
+  }
 
   const shade = dark ? 0.35 : 0.07
   const a = (v: number) => Number((v * b).toFixed(3))

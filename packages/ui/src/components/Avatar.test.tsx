@@ -53,6 +53,36 @@ describe('Avatar', () => {
     expect(screen.getByText('A')).toBeInTheDocument()
   })
 
+  it('colors the fallback by name, the same for the same name', () => {
+    render(
+      <>
+        <Avatar name="Ada Lovelace" />
+        <Avatar name="ada lovelace" />
+        <Avatar name="Grace Hopper" />
+      </>,
+    )
+    const fill = (name: string) =>
+      screen.getByRole('img', { name }).querySelector('[class*="--theme-category-"]')?.className
+    expect(fill('Ada Lovelace')).toContain('bg-(--theme-category-7) text-(--theme-category-7-text)')
+    expect(fill('ada lovelace')).toBe(fill('Ada Lovelace'))
+    expect(fill('Grace Hopper')).toContain('bg-(--theme-category-4)')
+  })
+
+  it('colors by a color key over the name, and keeps the accent without either', () => {
+    render(
+      <>
+        <Avatar name="Ada Lovelace" colorKey="Grace Hopper" />
+        <Avatar name="Alan Turing" colorKey={null} />
+        <Avatar />
+      </>,
+    )
+    const html = (name: string) => screen.getByRole('img', { name }).innerHTML
+    expect(html('Ada Lovelace')).toContain('bg-(--theme-category-4)')
+    expect(html('Alan Turing')).not.toContain('--theme-category-')
+    expect(html('Alan Turing')).toContain('--theme-accent')
+    expect(html('User avatar')).not.toContain('--theme-category-')
+  })
+
   it('shows a status dot', () => {
     render(<Avatar name="Ada" status="online" />)
     expect(screen.getByTestId('online-indicator')).toBeInTheDocument()
