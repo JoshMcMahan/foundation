@@ -1155,8 +1155,9 @@ export default function FileExplorer({
       extra: [
         {
           label: t.preview.path,
-          // The root's node path would otherwise yield the storage's name.
-          value: node.root ? undefined : getObjectKeyFromNode(node),
+          // The root's node path would otherwise yield the storage's name. A
+          // folder's key is a prefix ending in a slash; a path names it without.
+          value: node.root ? undefined : getObjectKeyFromNode(node).replace(/\/$/, ''),
           icon: <FolderTreeIcon />,
         },
         { label: t.preview.link, value: absoluteUrl(href), icon: <LinkIcon /> },

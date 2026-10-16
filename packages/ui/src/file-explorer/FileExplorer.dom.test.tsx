@@ -728,7 +728,7 @@ describe('FileExplorer host extensions', () => {
 describe('FileExplorer copy path', () => {
   it.each([
     ['file', 'one.txt', 'a/one.txt'],
-    ['folder', 'b', 'b/'],
+    ['folder', 'b', 'b'],
   ])("copies a %s's path within its storage from its Copy menu", async (_, row, path) => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
