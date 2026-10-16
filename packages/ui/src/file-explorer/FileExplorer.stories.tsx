@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
-import { expect, fireEvent, screen, userEvent, within } from 'storybook/test'
+import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type UILinkComponent, UIProvider } from '../components/Provider'
 import FileExplorer from './FileExplorer'
 import { FileExplorerProvider } from './FileExplorerContext'
@@ -328,6 +328,24 @@ export const NarrowPane: StoryObj = {
   render: () => (
     <ExplorerDemo width={960} initialPath="storybook/demo-bucket/results/run-002/checkpoints" />
   ),
+}
+
+/** A deep folder in a pane too narrow for its whole trail: the trail folds all
+ *  but the parent into the "…" menu, and choosing a folder there opens it. */
+export const FoldedTrail: StoryObj = {
+  render: () => (
+    <ExplorerDemo width={780} initialPath="storybook/demo-bucket/results/run-002/checkpoints" />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const trail = await canvas.findByRole('navigation', { name: 'Location' }, { timeout: 10000 })
+    const more = await within(trail).findByRole('button', { name: 'Show full path' })
+    await expect(within(trail).getByRole('button', { name: 'run-002' })).toBeVisible()
+    await userEvent.click(more)
+    // The menu fades in.
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'results' })).toBeVisible())
+    await userEvent.keyboard('{Escape}')
+  },
 }
 
 function ComputeRootDemo() {

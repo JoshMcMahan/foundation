@@ -769,9 +769,28 @@ describe('FileExplorer landmarks and names', () => {
   it("names the folder's trail and marks the open folder", async () => {
     await renderExplorer(FOLDER_A)
     const trail = await screen.findByRole('navigation', { name: 'Location' })
-    const current = within(trail).getByText('a')
-    expect(current).toHaveAttribute('aria-current', 'location')
+    expect(trail.querySelector('[aria-current]')).toHaveAttribute('aria-current', 'location')
+    expect(trail.querySelector('[aria-current]')).toHaveTextContent(/^a$/)
     expect(within(trail).getAllByRole('listitem').length).toBeGreaterThan(1)
+  })
+
+  it('goes back up the trail with buttons when the host keeps no path in its URL', async () => {
+    const onPathChange = vi.fn()
+    render(
+      <FileExplorerProvider>
+        <FileExplorer
+          getProviderAndClient={scriptedStorage().getProviderAndClient}
+          storages={[storage]}
+          selectedPath={FOLDER_A}
+          onPathChange={onPathChange}
+        />
+      </FileExplorerProvider>,
+    )
+    await act(async () => {})
+    const trail = screen.getByRole('navigation', { name: 'Location' })
+    expect(within(trail).queryByRole('link')).toBeNull()
+    fireEvent.click(within(trail).getByRole('button', { name: 'bucket' }))
+    expect(onPathChange).toHaveBeenCalledWith(`${ROOT}/`)
   })
 
   it('names the file grid and the folder tree from the provider', async () => {

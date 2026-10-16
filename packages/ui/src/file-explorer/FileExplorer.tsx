@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { AppLink } from '../components/AppLink'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { Button } from '../components/Button'
 import { buttonClasses } from '../components/buttonClasses'
 import { Callout } from '../components/Callout'
@@ -38,7 +38,6 @@ import { formatBytes, formatDateTime } from '../format'
 import {
   AccessIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   CollapseIcon,
   DownloadIcon,
   FileIcon,
@@ -194,9 +193,6 @@ type IFileExplorerProps = ExplorerNavigation & {
   /** Host content for the selected folder's header, before its badges. */
   headerAccessory?: ((node: TreeNode, storage: TStorage | undefined) => ReactNode) | undefined
 }
-
-const breadcrumbClass =
-  'max-w-[16rem] cursor-pointer truncate text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)'
 
 /** `href` resolved against the page, as the browser's "Copy link" gives it. */
 function absoluteUrl(href: string | undefined): string | undefined {
@@ -1204,47 +1200,20 @@ export default function FileExplorer({
       return null
     }
     return (
-      <nav
-        aria-label={t.chrome.location}
-        className="flex min-w-0 flex-1 overflow-hidden text-[13px]"
-      >
-        <ol className="flex min-w-0 items-center gap-1">
-          {chain.map((node, i) => {
-            const isLast = i === chain.length - 1
-            const label = node.displayName || node.name
-            return (
-              <li key={node.path} className="flex min-w-0 items-center gap-1">
-                {i > 0 && (
-                  <ChevronRightIcon
-                    aria-hidden="true"
-                    className="h-3 w-3 shrink-0 text-(--theme-muted-text-color) rtl:rotate-180"
-                  />
-                )}
-                {isLast ? (
-                  <span
-                    aria-current="location"
-                    className="truncate font-semibold text-(--theme-app)"
-                  >
-                    {label}
-                  </span>
-                ) : pathHref ? (
-                  <AppLink href={pathHref(node.path)} className={breadcrumbClass}>
-                    {label}
-                  </AppLink>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTreeItem(node.path, node)}
-                    className={breadcrumbClass}
-                  >
-                    {label}
-                  </button>
-                )}
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
+      <Breadcrumbs
+        label={t.chrome.location}
+        current="location"
+        crumbs={chain.map((node) => ({
+          label: node.displayName || node.name,
+          href: pathHref?.(node.path),
+        }))}
+        onSelect={(_, i) => {
+          const node = chain[i]
+          if (node) {
+            handleSelectTreeItem(node.path, node)
+          }
+        }}
+      />
     )
   }
 

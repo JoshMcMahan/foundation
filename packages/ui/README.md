@@ -74,6 +74,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | Free text with suggestions, or tags | `Autocomplete`; `Combobox` with `multiple creatable` |
 | A range | `Slider` |
 | A page's breadcrumbs, title and commands | `PageHeader`, shown by the shell's `PageHeaderBar` (see [Page header](#page-header)) |
+| A trail anywhere else, such as a folder's path in a panel | `Breadcrumbs`, which folds as the header's trail does |
 | An action in the page header | `PageHeaderAction`; `PageHeaderAddButton` for "+ Add" or "+ Create"; `PageHeaderMenu` for the "…" menu |
 | A titled part of a page or form | `Section` |
 | More detail under a line | `Disclosure` |
@@ -173,7 +174,12 @@ A page declares its header in one place, and the shell shows it:
   trail is a list in a `nav` landmark named by the strings' `breadcrumb`. A
   trail too wide for its bar folds its ancestors into a "…" menu of links
   (named by `showFullPath`), keeping the parent when it fits beside the page's
-  name; the name truncates last, with the full name on hover.
+  name; the name truncates last, with the full name on hover. The bar draws it
+  with `Breadcrumbs`, which renders the same trail anywhere else: in a flex
+  row it takes the room the row's other items leave it, and elsewhere its
+  container's width. `current="location"` marks a place within the page, such
+  as the open folder, and `heading` makes the last crumb the page's `h1`, as
+  the bar does.
 - **`titleActions`** sit beside the title, for actions on the page's subject.
   **`actions`** sit at the end of the bar, for the page's commands: a detail
   page's Start, Stop or Terminal go here, not in a row of buttons below it.
@@ -479,6 +485,7 @@ where it opens elsewhere, and renders it through `AppLink`:
 | `Button`, `IconButton`, `Card` | `href` |
 | Menu rows, `RowAction`s (a list row's menu and pinned buttons), `ToolbarAction`s | `href` on the action, with `target: '_blank'` for a new tab |
 | `PageHeaderAction`, `PageHeaderAddButton`, `PageHeader` breadcrumbs | `href`; `external` opens a new tab |
+| `Breadcrumbs` | `href` on the crumb; `onSelect` only for a place with no URL, as the explorer's trail without `pathHref` |
 | `Tabs` that are pages, `Pagination` | `href` on the item, `pageHref` |
 | A list row | `ListRow` `href` with a `NameCell` of the same `href`: the name's link covers the row |
 | A toast's action | `action: { label, href }` |

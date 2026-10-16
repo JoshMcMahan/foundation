@@ -12,6 +12,7 @@ export {
   type AvatarStatus,
   avatarInitials,
 } from './components/Avatar'
+export { type Breadcrumb, Breadcrumbs, type BreadcrumbsProps } from './components/Breadcrumbs'
 export { Button, type ButtonProps, MethodButton } from './components/Button'
 export {
   type ButtonSize,
@@ -126,7 +127,6 @@ export { NumberInput, type NumberInputProps } from './components/NumberInput'
 export { OneTimeCodeInput, type OneTimeCodeInputProps } from './components/OneTimeCodeInput'
 export { Overview, type OverviewProps } from './components/Overview'
 export {
-  type Breadcrumb,
   PageHeader,
   PageHeaderBar,
   type PageHeaderBarProps,

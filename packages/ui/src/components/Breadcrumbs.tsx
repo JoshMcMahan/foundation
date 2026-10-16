@@ -1,0 +1,282 @@
+import { useLayoutEffect, useState } from 'react'
+import { cx } from '../cx'
+import { ChevronRightIcon, MoreIcon } from '../icons'
+import { ActionMenu } from './ActionMenu'
+import { AppLink } from './AppLink'
+import { buttonClasses } from './buttonClasses'
+import { keyedByContent } from './keys'
+import type { MenuEntry } from './MenuEntries'
+import { useStrings } from './Provider'
+import { Skeleton } from './Skeleton'
+import { Tooltip } from './Tooltip'
+
+/** One step of the trail to the current page. */
+export interface Breadcrumb {
+  /** Empty while the name is still loading: the trail shows a placeholder. */
+  label: string
+  href?: string | undefined
+}
+
+export interface BreadcrumbsProps {
+  /** The trail, ending with where the reader is. A crumb with an empty label,
+   *  such as a name still loading, shows a placeholder. */
+  crumbs: readonly Breadcrumb[]
+  /** Goes to a crumb that has no `href`: a place with no URL, such as a folder
+   *  in a view that keeps its path out of the URL. A crumb with a URL takes
+   *  `href` instead, so it opens in a new tab. Without either, a crumb is
+   *  text. */
+  onSelect?: ((crumb: Breadcrumb, index: number) => void) | undefined
+  /** What the last crumb is: the page itself, or a place within the page, such
+   *  as the open folder. */
+  current?: 'page' | 'location' | undefined
+  /** Makes the last crumb the page's `h1`, as `PageHeader` does. A page has
+   *  one. */
+  heading?: boolean | undefined
+  /** Names the landmark; the strings' `breadcrumb` by default. */
+  label?: string | undefined
+  className?: string | undefined
+}
+
+/**
+ * The trail to where the reader is, as a list in a `nav` landmark. A trail too
+ * wide for its room folds its ancestors into a "…" menu, keeping the parent
+ * when it fits beside the last crumb, which truncates last, with its full name
+ * on hover. In a flex row its room is what the row's other items leave it;
+ * elsewhere it fills its container's width.
+ */
+export function Breadcrumbs({
+  crumbs,
+  onSelect,
+  current = 'page',
+  heading = false,
+  label,
+  className,
+}: BreadcrumbsProps) {
+  const { common } = useStrings()
+  const [nav, setNav] = useState<HTMLElement | null>(null)
+  const [natural, setNatural] = useState<HTMLElement | null>(null)
+  const fit = useTrailFit(nav, natural)
+  const last = crumbs[crumbs.length - 1]
+  const ancestors = crumbs.slice(0, -1)
+  // When the trail doesn't fit, every ancestor but the parent, the way back,
+  // folds into one menu, and the parent too when even it can't fit beside the
+  // last crumb, so the crumbs left stay readable rather than each truncating
+  // to a few letters.
+  const folded = fit === 'none' ? ancestors : fit === 'parent' ? ancestors.slice(0, -1) : []
+  const shown = ancestors.slice(folded.length)
+  const Last = heading ? 'h1' : 'span'
+
+  const menuItem = (crumb: Breadcrumb, index: number): MenuEntry => {
+    const name = crumb.label || common.loading
+    if (crumb.href) {
+      return { label: name, href: crumb.href }
+    }
+    if (onSelect) {
+      return { label: name, onClick: () => onSelect(crumb, index) }
+    }
+    // Still part of the path, so it shows, but there is nowhere to go.
+    return { label: name, disabled: true, onClick: () => {} }
+  }
+
+  return (
+    <nav
+      ref={setNav}
+      aria-label={label ?? common.breadcrumb}
+      className={cx('relative min-w-0', className)}
+    >
+      <ol className="m-0 flex min-w-0 list-none items-center gap-1.5 p-0 text-[13px] leading-none">
+        {folded.length > 0 && (
+          <li className="flex shrink-0 items-center gap-1.5">
+            <ActionMenu
+              label={common.showFullPath}
+              align="start"
+              items={folded.map(menuItem)}
+              triggerClassName={buttonClasses({ variant: 'ghost', size: 'xs', iconOnly: true })}
+            >
+              <MoreIcon />
+            </ActionMenu>
+            <Separator />
+          </li>
+        )}
+        {keyedByContent(shown, (c) => c.href ?? c.label).map(({ key, item: crumb }, i) => {
+          const index = folded.length + i
+          return (
+            <li
+              key={key}
+              // Once folded, the parent keeps up to 9rem rather than shrinking to
+              // a letter beside a long name, which truncates instead.
+              className={cx(
+                'flex items-center gap-1.5',
+                folded.length > 0 ? 'min-w-0 max-w-36 shrink-0' : 'min-w-0',
+              )}
+            >
+              {crumb.label === '' ? (
+                <CrumbPlaceholder />
+              ) : (
+                <Tooltip content={crumb.label} overflowOnly>
+                  {crumb.href ? (
+                    <AppLink href={crumb.href} className={cx(crumbText, crumbLink, 'max-w-48')}>
+                      {crumb.label}
+                    </AppLink>
+                  ) : onSelect ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(crumb, index)}
+                      className={cx(crumbText, crumbLink, 'max-w-48 cursor-pointer text-start')}
+                    >
+                      {crumb.label}
+                    </button>
+                  ) : (
+                    <span className={cx(crumbText, 'max-w-48')}>{crumb.label}</span>
+                  )}
+                </Tooltip>
+              )}
+              <Separator />
+            </li>
+          )
+        })}
+        {last && (
+          <li className="flex min-w-0 items-center">
+            {last.label === '' ? (
+              <Last aria-current={current} className="m-0">
+                <CrumbPlaceholder />
+              </Last>
+            ) : (
+              // The last resort, once only the parent is left beside it.
+              <Tooltip content={last.label} overflowOnly>
+                <Last
+                  aria-current={current}
+                  className="m-0 block truncate text-[13px] font-medium leading-none text-(--theme-app)"
+                >
+                  {last.label}
+                </Last>
+              </Tooltip>
+            )}
+          </li>
+        )}
+      </ol>
+      {/* The trail at its natural width, for measuring only. Clipped, so it
+          takes no room and scrolls nothing. */}
+      <div aria-hidden className="pointer-events-none invisible absolute inset-0 overflow-hidden">
+        <div
+          ref={setNatural}
+          className="flex w-max items-center gap-1.5 whitespace-nowrap text-[13px] leading-none"
+        >
+          {crumbs.map((crumb, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a static copy that never reorders
+            <span key={i} className="flex items-center gap-1.5">
+              <span
+                className={cx(
+                  i < crumbs.length - 1 && 'max-w-48 truncate',
+                  i === crumbs.length - 1 && 'font-medium',
+                )}
+              >
+                {crumb.label || ' '.repeat(6)}
+              </span>
+              {i < crumbs.length - 1 && <Separator />}
+            </span>
+          ))}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+const crumbText = 'block truncate text-(--theme-muted-text-color)'
+const crumbLink =
+  'rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-link)'
+
+function Separator() {
+  return (
+    <ChevronRightIcon className="size-3 shrink-0 text-(--theme-muted-text-color) opacity-60 rtl:rotate-180" />
+  )
+}
+
+function CrumbPlaceholder() {
+  const { common } = useStrings()
+  return (
+    <span className="flex items-center">
+      <Skeleton width="6rem" height="0.8125rem" />
+      <span className="sr-only">{common.loading}</span>
+    </span>
+  )
+}
+
+// What a folded trail adds before its crumbs: the "…" button, its chevron and
+// their gaps.
+const FOLD_WIDTH = 48
+// A folded parent's widest (max-w-36), and the least of the last crumb worth
+// keeping beside it.
+const PARENT_MAX_WIDTH = 144
+const LAST_MIN_WIDTH = 128
+
+/** How many of the trail's ancestors fit: all, the parent alone, or none. */
+type TrailFit = 'all' | 'parent' | 'none'
+
+const px = (value: string) => Number.parseFloat(value) || 0
+
+/** The width the trail may take. A flex row sizes the trail to its content, so
+ *  its room is what the row leaves beside its other items; anywhere else the
+ *  `nav` is a block that fills its container. */
+function roomFor(nav: HTMLElement, row: HTMLElement): number {
+  const style = getComputedStyle(row)
+  if (!style.display.endsWith('flex') || style.flexDirection.startsWith('column')) {
+    return nav.clientWidth
+  }
+  const gap = px(style.columnGap)
+  let room = row.clientWidth - px(style.paddingLeft) - px(style.paddingRight)
+  for (const child of row.children) {
+    if (child !== nav) {
+      room -= child.getBoundingClientRect().width + gap
+    }
+  }
+  return room
+}
+
+/**
+ * Fits the trail to its room. It measures a hidden copy of the trail at its
+ * natural width, so the answer doesn't depend on how the trail is folded at the
+ * moment.
+ */
+function useTrailFit(nav: HTMLElement | null, natural: HTMLElement | null): TrailFit {
+  const [fit, setFit] = useState<TrailFit>('all')
+  useLayoutEffect(() => {
+    const row = nav?.parentElement
+    if (!nav || !natural || !row) {
+      return
+    }
+    const measure = () => {
+      const room = roomFor(nav, row)
+      if (natural.scrollWidth <= room) {
+        setFit('all')
+        return
+      }
+      const steps = [...natural.children]
+      const width = (el: Element | undefined) => el?.getBoundingClientRect().width ?? 0
+      const parent = Math.min(width(steps[steps.length - 2]), PARENT_MAX_WIDTH)
+      const last = Math.min(width(steps[steps.length - 1]), LAST_MIN_WIDTH)
+      setFit(FOLD_WIDTH + parent + last <= room ? 'parent' : 'none')
+    }
+    const resize = new ResizeObserver(measure)
+    // The row resizing, a sibling growing, such as actions that load, or a
+    // label changing, such as a name that loads, each changes the fit.
+    const observe = () => {
+      for (const el of [row, nav, natural, ...row.children]) {
+        resize.observe(el)
+      }
+    }
+    // A sibling that comes later takes room without resizing the row.
+    const added = new MutationObserver(() => {
+      observe()
+      measure()
+    })
+    measure()
+    observe()
+    added.observe(row, { childList: true })
+    return () => {
+      resize.disconnect()
+      added.disconnect()
+    }
+  }, [nav, natural])
+  return fit
+}

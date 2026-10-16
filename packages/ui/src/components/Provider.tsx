@@ -672,7 +672,7 @@ export interface UIData {
 }
 
 import type { FieldComponent } from '../form/fieldRegistry'
-import type { Breadcrumb } from './pageHeaderStore'
+import type { Breadcrumb } from './Breadcrumbs'
 
 /** An internal navigation link, which hosts bind to their router's Link. Its
  *  `href` is a full in-app URL that may carry a search and a hash, such as

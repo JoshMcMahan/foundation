@@ -1,9 +1,4 @@
-/** One step of the trail to the current page. */
-export interface Breadcrumb {
-  /** Empty while the name is still loading: the bar shows a placeholder. */
-  label: string
-  href?: string | undefined
-}
+import type { Breadcrumb } from './Breadcrumbs'
 
 export type PageHeaderRegion = 'titleActions' | 'actions' | 'toolbar'
 
