@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.56.0](https://github.com/parallelworks/foundation/compare/ui-v0.55.0...ui-v0.56.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** access drawer supports people, owners and inherited roles ([#322](https://github.com/parallelworks/foundation/issues/322))
+* **ui:** control edges hold 3:1 against the page in both modes ([#320](https://github.com/parallelworks/foundation/issues/320))
+
+### Features
+
+* **ui:** access drawer supports people, owners and inherited roles ([#322](https://github.com/parallelworks/foundation/issues/322)) ([555dc71](https://github.com/parallelworks/foundation/commit/555dc719f6b25f72d174fe2409c4db5c1479821f))
+
+
+### Bug Fixes
+
+* **ui:** a modal or popup opened in a fullscreen element portals into it ([#323](https://github.com/parallelworks/foundation/issues/323)) ([627ac42](https://github.com/parallelworks/foundation/commit/627ac420d382064e16783b6a21fa3cfc392ba26d))
+* **ui:** control edges hold 3:1 against the page in both modes ([#320](https://github.com/parallelworks/foundation/issues/320)) ([8e9a745](https://github.com/parallelworks/foundation/commit/8e9a745a1d31bd67b440fe17fd9c4ccf82aee0fc))
+
 ## [0.55.0](https://github.com/parallelworks/foundation/compare/ui-v0.54.0...ui-v0.55.0) (2026-10-15)
 
 
