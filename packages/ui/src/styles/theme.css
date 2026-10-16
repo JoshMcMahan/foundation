@@ -183,6 +183,17 @@
   text-align: left !important;
 }
 
+/* Base UI hides the native scrollbar of a select or scroll area with this
+ * class, and would inject the rule as an inline <style>, which a same-origin
+ * style policy blocks. UIProvider turns that off, so the rule ships here. */
+.base-ui-disable-scrollbar {
+  scrollbar-width: none;
+}
+
+.base-ui-disable-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Theme-aware scrollbars */
 .theme-scrollbar {
   scrollbar-width: thin;

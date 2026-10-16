@@ -47,9 +47,59 @@ interface OpCode {
   j2: number
 }
 
-// LCS-based opcodes over lines (difflib.GetOpCodes semantics). Inputs are
-// capped by callers, so quadratic DP is fine.
+// The LCS table's size, in cells, past which an edit is diffed coarsely. The
+// table is quadratic in time and memory, and an edit's strings are whatever the
+// agent sent: rewriting a generated file of tens of thousands of lines would
+// otherwise allocate gigabytes and freeze the transcript. A million cells is a
+// few milliseconds.
+export const MAX_DIFF_CELLS = 1_000_000
+
+// Opcodes over lines (difflib.GetOpCodes semantics). Within MAX_DIFF_CELLS the
+// diff is exact. Past it, the common prefix and suffix are matched first, as
+// most large edits change a small middle; a middle still too large becomes one
+// replace, so its counts are the changed region's line counts rather than the
+// minimal edit.
 function getOpCodes(a: string[], b: string[]): OpCode[] {
+  if (a.length * b.length <= MAX_DIFF_CELLS) {
+    return lcsOpCodes(a, b)
+  }
+  let start = 0
+  while (start < a.length && start < b.length && a[start] === b[start]) {
+    start++
+  }
+  let endA = a.length
+  let endB = b.length
+  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
+    endA--
+    endB--
+  }
+  const midA = a.slice(start, endA)
+  const midB = b.slice(start, endB)
+  const middle: OpCode[] =
+    midA.length * midB.length <= MAX_DIFF_CELLS
+      ? lcsOpCodes(midA, midB)
+      : [{ tag: 'r', i1: 0, i2: midA.length, j1: 0, j2: midB.length }]
+  const ops: OpCode[] = []
+  if (start > 0) {
+    ops.push({ tag: 'e', i1: 0, i2: start, j1: 0, j2: start })
+  }
+  for (const op of middle) {
+    ops.push({
+      tag: op.tag,
+      i1: op.i1 + start,
+      i2: op.i2 + start,
+      j1: op.j1 + start,
+      j2: op.j2 + start,
+    })
+  }
+  if (endA < a.length) {
+    ops.push({ tag: 'e', i1: endA, i2: a.length, j1: endB, j2: b.length })
+  }
+  return ops
+}
+
+// The exact LCS diff, quadratic in time and memory.
+function lcsOpCodes(a: string[], b: string[]): OpCode[] {
   const n = a.length
   const m = b.length
   // lcs[i][j] = LCS length of a[i:], b[j:]
@@ -165,9 +215,13 @@ export function wordEmphasisRanges(
 
 // Added/removed line counts for the whole edit (uncapped), for the outcome row.
 export function lineDelta(oldLines: string[], newLines: string[]): [number, number] {
+  return countLines(getOpCodes(oldLines, newLines))
+}
+
+function countLines(ops: OpCode[]): [number, number] {
   let added = 0
   let removed = 0
-  for (const op of getOpCodes(oldLines, newLines)) {
+  for (const op of ops) {
     if (op.tag === 'd' || op.tag === 'r') {
       removed += op.i2 - op.i1
     }
@@ -207,8 +261,9 @@ export function computeEditDiff(
 ): EditDiffModel {
   const oldLines = splitLines(oldString)
   const newLines = splitLines(newString)
-  const [added, removed] = lineDelta(oldLines, newLines)
+  // One diff serves both the rows and the counts.
   const ops = getOpCodes(oldLines, newLines)
+  const [added, removed] = countLines(ops)
 
   const numbered = startLine > 0
   const rows: DiffRow[] = []

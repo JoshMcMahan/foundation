@@ -30,4 +30,16 @@ describe('ExternalLink', () => {
     )
     expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
+
+  it('drops an href that would run script', () => {
+    // Built up so the lint that flags a script URL in source lets the test name one.
+    const script = ['javascript', 'alert(1)'].join(':')
+    render(<ExternalLink href={script}>Bad</ExternalLink>)
+    expect(screen.getByText('Bad').closest('a')).not.toHaveAttribute('href')
+  })
+
+  it('keeps a safe href as given', () => {
+    render(<ExternalLink href="mailto:help@example.com">Email</ExternalLink>)
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'mailto:help@example.com')
+  })
 })

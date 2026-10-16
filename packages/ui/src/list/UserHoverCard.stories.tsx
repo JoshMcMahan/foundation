@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { AvatarSize } from '../components/Avatar'
 import { Avatar } from '../components/Avatar'
@@ -36,6 +36,12 @@ export const Avatars: StoryObj = {
         <Avatar status="offline" />
         <Avatar name="Alan" status="busy" />
         <Avatar name="Katherine Johnson" status="away" />
+      </div>
+      {/* Initials are whole characters, so a name that starts with an emoji or a flag keeps it. */}
+      <div className="flex items-center gap-3">
+        <Avatar name="🦊 Fox" />
+        <Avatar name="Ada 🇬🇧" />
+        <Avatar name="👩‍💻 dev" size="xs" />
       </div>
     </div>
   ),
@@ -201,5 +207,50 @@ export const CopyEmail: StoryObj = {
     const button = await screen.findByRole('button', { name: 'Copy email' })
     await userEvent.hover(screen.getByText('ada.lovelace@example.com'))
     await expect(button).toBeInTheDocument()
+  },
+}
+
+/** A card opened from inside a clickable row. A press in the card is the
+ * card's: it neither opens the row nor its context menu. */
+function ClickableRow() {
+  const [opened, setOpened] = useState(0)
+  return (
+    <div className="flex flex-col gap-2">
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stands in for a list row, which links by its name cell */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: stands in for a list row, which links by its name cell */}
+      <div
+        onClick={() => setOpened((n) => n + 1)}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setOpened((n) => n + 1)
+        }}
+        className="flex w-96 cursor-pointer items-center gap-3 rounded-md border theme-border px-3 py-2 text-sm"
+      >
+        <Opened
+          anchor="alovelace"
+          card={
+            <UserHoverCard username="alovelace" name="Ada Lovelace" href="/users/alovelace">
+              <Rows />
+            </UserHoverCard>
+          }
+        />
+        <span className="theme-muted-text">analytical-engine</span>
+      </div>
+      <output className="text-xs theme-muted-text">Row opened {opened} times</output>
+    </div>
+  )
+}
+
+export const InClickableRow: StoryObj = {
+  name: 'In a clickable row',
+  render: () => <ClickableRow />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await screen.findByText('Joined Dec 10, 2015'))
+    await userEvent.pointer({
+      keys: '[MouseRight]',
+      target: screen.getByText('Joined Dec 10, 2015'),
+    })
+    await expect(canvas.getByText('Row opened 0 times')).toBeInTheDocument()
   },
 }

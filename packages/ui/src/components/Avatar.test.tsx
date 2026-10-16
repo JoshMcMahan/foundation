@@ -12,9 +12,23 @@ describe('avatarInitials', () => {
     expect(avatarInitials('')).toBe('?')
     expect(avatarInitials(undefined)).toBe('?')
   })
+
+  it('takes whole characters, not halves of one', () => {
+    expect(avatarInitials('😀 Smile')).toBe('😀S')
+    expect(avatarInitials('Ada 🇬🇧')).toBe('A🇬🇧')
+    expect(avatarInitials('👩‍💻 dev')).toBe('👩‍💻D')
+    // An accent typed as its own code point stays with its letter.
+    expect(avatarInitials('e\u0301mile zola')).toBe('E\u0301Z')
+    expect(avatarInitials('𝒜da')).toBe('𝒜')
+  })
 })
 
 describe('Avatar', () => {
+  it('shows one whole character at the smallest size', () => {
+    render(<Avatar name="😀 Smile" size="xs" />)
+    expect(screen.getByRole('img', { name: '😀 Smile' })).toHaveTextContent(/^😀$/)
+  })
+
   it('shows initials without an image, named for the person', () => {
     render(<Avatar name="Ada Lovelace" />)
     expect(screen.getByRole('img', { name: 'Ada Lovelace' })).toHaveTextContent('AL')

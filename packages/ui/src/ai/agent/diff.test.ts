@@ -5,6 +5,7 @@ import {
   computeWriteRows,
   editSummary,
   lineDelta,
+  MAX_DIFF_CELLS,
   MAX_EDIT_DIFF_LINES,
   MAX_WRITE_DIFF_LINES,
   wordEmphasisRanges,
@@ -60,6 +61,55 @@ describe('computeEditDiff', () => {
     expect(d.truncated).toBe(true)
     expect(d.added).toBe(300)
     expect(d.removed).toBe(300)
+  })
+})
+
+describe('a diff too large for the exact table', () => {
+  const lines = (n: number, prefix: string) => Array.from({ length: n }, (_, i) => `${prefix}${i}`)
+
+  it('finds a small change between long shared runs exactly', () => {
+    const same = lines(10_000, 's')
+    const old = [...same, 'before', ...same].join('\n')
+    const next = [...same, 'after', ...same].join('\n')
+    expect(20_001 ** 2).toBeGreaterThan(MAX_DIFF_CELLS)
+    const d = computeEditDiff(old, next)
+    expect([d.added, d.removed]).toEqual([1, 1])
+    expect(d.rows.map((r) => r.kind)).toEqual([
+      'gap',
+      'ctx',
+      'ctx',
+      'ctx',
+      'del',
+      'add',
+      'ctx',
+      'ctx',
+      'ctx',
+      'gap',
+    ])
+    expect(d.truncated).toBe(false)
+  })
+
+  it('replaces a changed middle too large to diff whole, and finishes fast', () => {
+    const old = ['head', ...lines(20_000, 'o'), 'tail'].join('\n')
+    const next = ['head', ...lines(30_000, 'n'), 'tail'].join('\n')
+    const started = performance.now()
+    const d = computeEditDiff(old, next)
+    expect(performance.now() - started).toBeLessThan(1000)
+    // The counts are the changed region's, and the rows its first lines.
+    expect([d.added, d.removed]).toEqual([30_000, 20_000])
+    expect(d.rows[0]).toEqual({ kind: 'ctx', text: 'head' })
+    expect(d.rows[1]).toEqual({ kind: 'del', text: 'o0' })
+    expect(d.rows).toHaveLength(MAX_EDIT_DIFF_LINES)
+    expect(d.truncated).toBe(true)
+    expect(lineDelta(lines(20_000, 'o'), lines(30_000, 'n'))).toEqual([30_000, 20_000])
+  })
+
+  it('gives a very long line no word emphasis rather than stalling', () => {
+    const old = Array.from({ length: 5_000 }, (_, i) => `a${i}`).join(' ')
+    const next = Array.from({ length: 5_000 }, (_, i) => `b${i}`).join(' ')
+    const started = performance.now()
+    expect(wordEmphasisRanges(old, next)).toBeNull()
+    expect(performance.now() - started).toBeLessThan(1000)
   })
 })
 

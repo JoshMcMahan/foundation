@@ -162,15 +162,28 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
 function EditDiffBlock({ part }: { part: ToolCallPart }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
-  const a = parseEditArgs(part.args)
-  if (!a) {
+  // A streaming transcript re-renders this block on every token; the diff is
+  // the costly part, so it runs once per edit.
+  const diff = useMemo(() => {
+    const a = parseEditArgs(part.args)
+    if (!a) {
+      return null
+    }
+    if (part.name === 'EditFile') {
+      const model = computeEditDiff(a.old_string ?? '', a.new_string ?? '', part.startLine)
+      // The model's counts are the whole edit's, so the outcome needs no second diff.
+      return { a, model, outcome: strings.tools.edited(model.added, model.removed) }
+    }
+    return {
+      a,
+      model: computeWriteRows(a.content ?? ''),
+      outcome: editSummary(part.name, part.args, strings.tools),
+    }
+  }, [part.name, part.args, part.startLine, strings.tools])
+  if (!diff) {
     return null
   }
-  const outcome = editSummary(part.name, part.args, strings.tools)
-  const model =
-    part.name === 'EditFile'
-      ? computeEditDiff(a.old_string ?? '', a.new_string ?? '', part.startLine)
-      : computeWriteRows(a.content ?? '')
+  const { a, model, outcome } = diff
   return (
     <div className="mt-1.5 space-y-1">
       {outcome && <div className="text-xs theme-muted-text">{outcome}</div>}
@@ -280,13 +293,18 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
   const header = toolHeaderFor(part.name)
   const argSummary = summarizeToolArgs(header.arg, part.args)
   const isDiff = isEditDiffTool(part.name)
-  const summary =
-    part.status === 'running'
-      ? t.running
-      : toolSummary(part.name, part.args, part.result ?? '', part.status === 'error', {
-          editSummary,
-          strings: strings.tools,
-        })
+  // An edit's summary diffs its strings, so it is worked out once per change to
+  // the part rather than on every render of a streaming transcript.
+  const summary = useMemo(
+    () =>
+      part.status === 'running'
+        ? t.running
+        : toolSummary(part.name, part.args, part.result ?? '', part.status === 'error', {
+            editSummary,
+            strings: strings.tools,
+          }),
+    [part.status, part.name, part.args, part.result, t.running, strings.tools],
+  )
   return (
     <div className="py-1.5 text-sm" data-testid="tool-call-part">
       <Disclosure

@@ -21,15 +21,25 @@ export type AppLinkProps = Omit<ComponentPropsWithRef<'a'>, 'href' | 'target'> &
   }
 
 // An absolute URL to another origin (or a scheme the router can't serve, such
-// as blob:) is not the host router's to handle.
+// as blob:) is not the host router's to handle. The URL is resolved as the
+// browser would resolve the href rather than matched by its spelling: a
+// browser reads a backslash as a slash, so `/\evil.example` is another
+// host, and a router given it would hand that host to a modified or middle
+// click as if it were a path in the app.
 function leavesApp(url: string): boolean {
-  if (!/^([a-z][a-z\d+.-]*:|\/\/)/i.test(url)) {
-    return false
-  }
   if (typeof window === 'undefined') {
+    // No page to resolve against while rendering on a server: anything with a
+    // scheme or a leading pair of slashes, either way round, may leave.
+    return /^([a-z][a-z\d+.-]*:|[/\\]{2})/i.test(url.replace(/[\t\n\r]/g, '').trimStart())
+  }
+  const { origin, protocol } = window.location
+  try {
+    const resolved = new URL(url, window.location.href)
+    // A blob: URL carries this origin but is no route.
+    return resolved.origin !== origin || resolved.protocol !== protocol
+  } catch {
     return true
   }
-  return new URL(url, window.location.href).origin !== window.location.origin
 }
 
 /** True for a click the browser would open in place: the primary button with

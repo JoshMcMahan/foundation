@@ -4,6 +4,7 @@ import {
   type Ref,
   useCallback,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react'
@@ -36,6 +37,9 @@ export interface Attachment {
 interface AttachmentUploadProps {
   conversationId?: string | undefined
   attachments: Attachment[]
+  /** The list with a change. Keep its entries as given: an upload's result
+   *  replaces its pending entry by identity, on the list as it is when the
+   *  upload finishes. */
   onAttachmentsChange: (attachments: Attachment[]) => void
   disabled?: boolean
   maxFiles?: number
@@ -74,23 +78,36 @@ export default function AttachmentUpload({
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const validateFile = useCallback(
-    (file: File): string | null => {
-      if (file.size > maxFileSize) {
-        return t.fileTooLarge(formatBytes(maxFileSize))
-      }
-      if (attachments.length >= maxFiles) {
-        return t.maxFilesAllowed(maxFiles)
-      }
-      return null
+  // The list as it stands now: the one last rendered, or the one this
+  // component last handed up that the host hasn't rendered yet. An upload
+  // finishes long after it starts, and its result belongs on the list as it is
+  // then, with whatever was removed or added meanwhile, not as it was when the
+  // upload began.
+  const latest = useRef(attachments)
+  useLayoutEffect(() => {
+    latest.current = attachments
+  }, [attachments])
+  const commit = useCallback(
+    (next: Attachment[]) => {
+      latest.current = next
+      onAttachmentsChange(next)
     },
-    [attachments.length, maxFileSize, maxFiles, t],
+    [onAttachmentsChange],
   )
 
   const uploadFile = useCallback(
-    async (file: File): Promise<Attachment | null> => {
+    async (file: File): Promise<Attachment> => {
+      const failed = (error: string): Attachment => ({
+        file,
+        filename: file.name,
+        mimeType: file.type,
+        size: file.size,
+        error,
+      })
       if (!adapter.attachments) {
-        return null
+        // Said on the file rather than dropping it, so the person knows it
+        // won't be sent.
+        return failed(t.uploadUnavailable)
       }
       try {
         const uploaded = await adapter.attachments.upload(file, conversationId)
@@ -105,61 +122,51 @@ export default function AttachmentUpload({
           uploaded: true,
         }
       } catch (error) {
-        return {
-          file,
-          filename: file.name,
-          mimeType: file.type,
-          size: file.size,
-          error: error instanceof Error ? error.message : String(error),
-        }
+        return failed(error instanceof Error ? error.message : String(error))
       }
     },
-    [adapter, conversationId],
+    [adapter, conversationId, t],
   )
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const fileArray = Array.from(files)
-      const newAttachments: Attachment[] = []
-
-      for (const file of fileArray) {
-        const error = validateFile(file)
-        if (error) {
-          toast.error(error)
+      const pending: Attachment[] = []
+      // Counted down across the batch, so one drop can't exceed the limit.
+      let room = maxFiles - latest.current.length
+      let overLimit = false
+      for (const file of Array.from(files)) {
+        if (file.size > maxFileSize) {
+          toast.error(t.fileTooLarge(formatBytes(maxFileSize)))
           continue
         }
-
-        // Add with uploading state
-        const pendingAttachment: Attachment = {
+        if (room <= 0) {
+          overLimit = true
+          continue
+        }
+        room--
+        pending.push({
           file,
           filename: file.name,
           mimeType: file.type,
           size: file.size,
           uploading: true,
-        }
-        newAttachments.push(pendingAttachment)
+        })
       }
+      if (overLimit) {
+        toast.error(t.maxFilesAllowed(maxFiles))
+      }
+      if (pending.length === 0) {
+        return
+      }
+      commit([...latest.current, ...pending])
 
-      // Update immediately with pending state
-      onAttachmentsChange([...attachments, ...newAttachments])
-
-      // Upload files
-      const uploaded = await Promise.all(
-        newAttachments.map(async (a) => {
-          if (a.file) {
-            return uploadFile(a.file)
-          }
-          return a
-        }),
-      )
-
-      // Replace pending with uploaded
-      const finalAttachments = attachments.concat(
-        uploaded.filter((a): a is Attachment => a !== null),
-      )
-      onAttachmentsChange(finalAttachments)
+      const results = await Promise.all(pending.map((a) => uploadFile(a.file as File)))
+      // Each pending entry becomes its result where it stands now; one removed
+      // while it uploaded stays removed.
+      const resultOf = new Map(pending.map((a, i) => [a, results[i]]))
+      commit(latest.current.map((a) => resultOf.get(a) ?? a))
     },
-    [attachments, onAttachmentsChange, uploadFile, validateFile],
+    [commit, maxFileSize, maxFiles, t, uploadFile],
   )
 
   const handleDragOver = useCallback((e: DragEvent) => {
@@ -195,11 +202,10 @@ export default function AttachmentUpload({
   )
 
   const handleRemove = useCallback(
-    (index: number) => {
-      const updated = attachments.filter((_, i) => i !== index)
-      onAttachmentsChange(updated)
+    (attachment: Attachment) => {
+      commit(latest.current.filter((a) => a !== attachment))
     },
-    [attachments, onAttachmentsChange],
+    [commit],
   )
 
   // Expose addFiles method to parent
@@ -255,7 +261,7 @@ export default function AttachmentUpload({
                   )}
                   <button
                     type="button"
-                    onClick={() => handleRemove(index)}
+                    onClick={() => handleRemove(attachment)}
                     className="p-0.5 rounded hover:bg-(--theme-error-muted)"
                     title={common.remove}
                     disabled={disabled}

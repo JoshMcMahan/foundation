@@ -291,6 +291,29 @@ describe('AppLink', () => {
     expect(screen.getByRole('link', { name: 'Own' })).toHaveAttribute('data-router-link')
   })
 
+  it.each([
+    ['//evil.example/a'],
+    ['/\\evil.example/a'],
+    ['\\\\evil.example/a'],
+    ['\\/evil.example/a'],
+    [' //evil.example/a'],
+  ])('hands %j, which a browser opens on another host, to the browser', (href) => {
+    renderWithRouter(<AppLink href={href}>Away</AppLink>)
+    const link = screen.getByRole('link', { name: 'Away' })
+    expect(new URL(link.getAttribute('href') ?? '', window.location.href).host).toBe('evil.example')
+    expect(link).not.toHaveAttribute('data-router-link')
+  })
+
+  it.each([['/ok'], ['?q=1'], ['#a'], ['runs/42']])('routes %j in the app', (href) => {
+    renderWithRouter(<AppLink href={href}>Here</AppLink>)
+    expect(screen.getByRole('link', { name: 'Here' })).toHaveAttribute('data-router-link')
+  })
+
+  it('hands a blob: URL on this origin to the browser', () => {
+    renderWithRouter(<AppLink href={`blob:${window.location.origin}/0f1e`}>File</AppLink>)
+    expect(screen.getByRole('link', { name: 'File' })).not.toHaveAttribute('data-router-link')
+  })
+
   it('is a focusable link that goes nowhere while disabled', () => {
     const onClick = vi.fn()
     renderWithRouter(

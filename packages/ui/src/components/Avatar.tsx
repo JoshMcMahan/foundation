@@ -35,11 +35,29 @@ const STATUS_CLASSES: Record<AvatarStatus, string> = {
   away: 'bg-(--theme-warning)',
 }
 
+// One user-perceived character: a name can start with an emoji, a flag or a
+// letter and its accent, which span several UTF-16 units, and half of one
+// renders as a replacement box.
+const graphemes =
+  typeof Intl !== 'undefined' && 'Segmenter' in Intl
+    ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    : undefined
+function firstCharacter(text: string | undefined): string | undefined {
+  if (!text) {
+    return undefined
+  }
+  if (graphemes) {
+    return graphemes.segment(text)[Symbol.iterator]().next().value?.segment
+  }
+  // Whole code points at least, where segmenting by grapheme isn't available.
+  return Array.from(text)[0]
+}
+
 /** Up to two initials: the first and last word of a name split on spaces and dots. */
 export function avatarInitials(name: string | undefined): string {
   const parts = (name ?? '').split(/[\s.]+/).filter(Boolean)
-  const first = parts[0]?.charAt(0)
-  const last = parts.at(-1)?.charAt(0)
+  const first = firstCharacter(parts[0])
+  const last = firstCharacter(parts.at(-1))
   if (parts.length >= 2 && first && last) {
     return (first + last).toUpperCase()
   }
@@ -88,7 +106,7 @@ export function Avatar({ src, name, colorKey, size = 'md', status, className }: 
           )}
         >
           {/* Two letters crowd a 16px circle and sit under the status dot. */}
-          {size === 'xs' ? avatarInitials(name).charAt(0) : avatarInitials(name)}
+          {size === 'xs' ? firstCharacter(avatarInitials(name)) : avatarInitials(name)}
         </BaseAvatar.Fallback>
       </BaseAvatar.Root>
       {status && (

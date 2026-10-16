@@ -530,16 +530,30 @@ export function makeToolCallPart(options?: {
   }
 }
 
-export function makeEditDiffPart(options?: { startLine?: number }): ToolCallPart {
+/** An EditFile call. `rewriteLines` instead rewrites a generated table of that
+ *  many lines, every one changed, for an edit too large to diff exactly. */
+export function makeEditDiffPart(options?: {
+  startLine?: number
+  rewriteLines?: number
+}): ToolCallPart {
+  const rewrite = options?.rewriteLines
+  const table = (version: number) =>
+    Array.from(
+      { length: rewrite ?? 0 },
+      (_, i) => `\t{ID: ${i + 1}, Name: "region-${i + 1}", Weight: ${(i * 7 + version) % 100}},`,
+    ).join('\n')
   return {
     kind: 'tool_call',
     id: nextId('tool'),
     name: 'EditFile',
     args: JSON.stringify({
-      file_path: 'internal/server/server.go',
-      old_string: 'const idleTimeout = 60 * time.Second\nconst shutdownTimeout = 15 * time.Second',
-      new_string:
-        'const idleTimeout = 90 * time.Second\nconst shutdownTimeout = 30 * time.Second\nconst drainTimeout = 5 * time.Second',
+      file_path: rewrite ? 'internal/server/regions_gen.go' : 'internal/server/server.go',
+      old_string: rewrite
+        ? table(0)
+        : 'const idleTimeout = 60 * time.Second\nconst shutdownTimeout = 15 * time.Second',
+      new_string: rewrite
+        ? table(1)
+        : 'const idleTimeout = 90 * time.Second\nconst shutdownTimeout = 30 * time.Second\nconst drainTimeout = 5 * time.Second',
     }),
     status: 'ok',
     result: 'Edited internal/server/server.go',

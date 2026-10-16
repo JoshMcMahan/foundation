@@ -106,6 +106,25 @@ export const EditDiff: StoryObj<{ startLine: number }> = {
   ),
 }
 
+export const LargeEditDiff: StoryObj<{ lines: number }> = {
+  name: 'Edit too large to diff exactly',
+  args: { lines: 5000 },
+  argTypes: {
+    lines: {
+      control: { type: 'range', min: 1000, max: 50000, step: 1000 },
+      description: 'Lines rewritten, each one changed',
+    },
+  },
+  render: ({ lines }) => (
+    <AgentMessageParts
+      message={makeMessage({
+        content: null,
+        parts: [makeEditDiffPart({ startLine: 1, rewriteLines: lines })],
+      })}
+    />
+  ),
+}
+
 export const Subagents: StoryObj<{ count: number }> = {
   args: { count: 3 },
   argTypes: { count: { control: { type: 'range', min: 1, max: 8 } } },

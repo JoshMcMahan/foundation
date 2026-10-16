@@ -1,3 +1,4 @@
+import { CSPProvider } from '@base-ui/react/csp-provider'
 import { dequal } from 'dequal'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { createContext, use, useCallback, useContext, useEffect, useRef, useState } from 'react'
@@ -1488,6 +1489,11 @@ export interface UIProviderProps {
   /** The engine, or a loader that resolves to it. A loader is called once, the first one
    *  passed, so it may be written inline. */
   engine?: WorkflowEngineSource | undefined
+  /** The nonce the page's Content Security Policy allows inline scripts by,
+   *  for a host that renders on the server: a few components emit a script
+   *  that places them before hydration. The components render no inline
+   *  `<style>`, so a policy without 'unsafe-inline' styles needs none. */
+  nonce?: string | undefined
   children: React.ReactNode
 }
 
@@ -1516,6 +1522,7 @@ export function UIProvider({
   data,
   slots,
   engine: engineProp,
+  nonce,
   children,
 }: UIProviderProps) {
   // A loader is the first one passed: an inline arrow is a new function each render, and each
@@ -1551,8 +1558,13 @@ export function UIProvider({
         <DataContext value={mergedData}>
           <SlotsContext value={stableSlots}>
             <EngineContext value={engine}>
-              <TooltipProvider>{children}</TooltipProvider>
-              <Toaster />
+              {/* Base UI hides a select's or scroll area's own scrollbar with an
+                  inline <style>, which a same-origin style policy blocks and
+                  reports. theme.css ships that rule instead. */}
+              <CSPProvider nonce={nonce} disableStyleElements>
+                <TooltipProvider>{children}</TooltipProvider>
+                <Toaster />
+              </CSPProvider>
             </EngineContext>
           </SlotsContext>
         </DataContext>

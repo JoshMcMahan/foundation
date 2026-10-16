@@ -41,6 +41,12 @@ package navigates and never re-renders anything. Define slot components and
 string functions outside a component: one made each render is a new value, and
 a new slot component remounts what it renders.
 
+Under `UIProvider` the components render no inline `<style>`, so they run
+under a Content Security Policy whose `style-src` is `'self'` alone; the one
+rule a select or scroll area would inject ships in `theme.css`. A host that
+renders on the server passes its policy's `nonce`, which the few components
+that emit a script to place themselves before hydration put on it.
+
 ## Which component?
 
 Each need has one component. Reach for it before styling markup by hand.
@@ -354,8 +360,19 @@ leaves unset follows the `color-scheme` it sets:
 ```css
 /* In a Tailwind v4 build: */
 @import '@parallelworks/ui/theme.css';
-@source '../node_modules/@parallelworks/ui/src/**/*.{ts,tsx}';
+@source '../node_modules/@parallelworks/ui/dist/components';
+@source '../node_modules/@parallelworks/ui/dist/list';
 ```
+
+The package publishes only `dist`, built one JavaScript module per source
+module under the same folders as its subpaths (`dist/components`, `dist/list`,
+`dist/form`, `dist/ai` and so on), so `@source` points at those modules. List
+the folders of the subpaths the host imports: each one adds the utilities of
+every component in it. Scanning all of `dist` works too, but also reads the
+editor's bundled workers in `dist/assets`. A host that wants only a few
+components can name their modules one by one, such as
+`dist/components/Avatar.js`, as long as it also names the modules they style
+through, such as `dist/components/floating.js` for a popup's panel.
 
 Consumers without a Tailwind build can import the compiled standalone
 stylesheet instead:

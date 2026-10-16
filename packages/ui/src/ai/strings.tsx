@@ -144,6 +144,8 @@ export interface ChatStrings {
     addFiles: string
     maxSizePerFile: (size: string) => string
     uploading: string
+    /** On a file added where the chat has nowhere to upload it. */
+    uploadUnavailable: string
   }
   attachmentManager: {
     title: string
@@ -416,6 +418,7 @@ export const defaultChatStrings: ChatStrings = {
     addFiles: 'Add files (drag or click)',
     maxSizePerFile: (size) => `Max ${size} per file`,
     uploading: 'Uploading…',
+    uploadUnavailable: 'Attachments can’t be uploaded here',
   },
   attachmentManager: {
     title: 'Attachments',
