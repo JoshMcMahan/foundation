@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/parallelworks/foundation/compare/dev/v0.17.0...dev/v0.17.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **dev:** dev clean --install waits for launchd to let go of the old job ([#348](https://github.com/parallelworks/foundation/issues/348)) ([676faee](https://github.com/parallelworks/foundation/commit/676faeeb4361544b3c3a664023633287790931b6))
+
 ## [0.17.0](https://github.com/parallelworks/foundation/compare/dev/v0.16.0...dev/v0.17.0) (2026-10-16)
 
 
