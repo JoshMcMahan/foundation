@@ -60,7 +60,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A record's details, such as in a drawer or a card: names and values on their own | `DescriptionList` of `DescriptionListItem`s; `copy` on an ID, `mono` on a path, `variant="card"` to frame them; titled lists in a `DescriptionListGroup` to share one label column |
 | An error beside a control outside a `Field` | `ErrorText` |
 | A dense field in a toolbar or a table cell | any field control with `size="sm"`; a width in `className` wins, and `cx` merges classes the same way |
-| On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on |
+| On or off | `Switch`; `Checkbox` in a list of things to tick, several of which may be on; either in a `Field` with `controlFirst` to read control, label, then its help and description |
 | One of a few choices, all shown | `RadioGroup` in a form; `SegmentedControl` in a toolbar, or as a field's control in a `Field group` |
 | Narrowing a list by values, such as statuses: several at once, or one or none | `ToggleGroup` |
 | Narrowing what is shown by typing | `SearchInput`; `ListSearchControl` on a list page's toolbar |

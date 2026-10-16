@@ -446,6 +446,163 @@ export const FrameDisabled: StoryObj<FrameArgs> = {
   args: { ...Frame.args, disabled: true } as FrameArgs,
 }
 
+interface ControlFirstArgs {
+  layout: FieldLayout
+  size: FieldBoxSize
+  /** Off shows the label-first frame a checkbox had before, label then ? then box. */
+  controlFirst: boolean
+  help: string
+  description: string
+  error: string
+  disabled: boolean
+  /** A label long enough to wrap, which the control stays on the first line of. */
+  longLabel: boolean
+}
+
+/** A checkbox or a switch reads control first: the control, its label and ?, then the
+ *  description and error under the label, lined up with its text. A click on the label sets
+ *  the control. Inline, it sits in the control column under an empty label column. */
+export const ControlFirst: StoryObj<ControlFirstArgs> = {
+  args: {
+    layout: 'stacked',
+    size: 'md',
+    controlFirst: true,
+    help: 'Finished runs move to the archive after 30 days.',
+    description: 'Archived runs keep their logs.',
+    error: '',
+    disabled: false,
+    longLabel: false,
+  },
+  argTypes: {
+    layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+  },
+  decorators: [roomAbove],
+  render: ({ layout, size, controlFirst, help, description, error, disabled, longLabel }) => (
+    <div className={cx('flex flex-col gap-4', longLabel ? 'max-w-sm' : 'max-w-lg')}>
+      <Field label="Cluster" layout={layout} size={size} disabled={disabled}>
+        <Input defaultValue="training-a" size={size} disabled={disabled} />
+      </Field>
+      <Field
+        label={
+          longLabel
+            ? 'Archive finished runs automatically, along with their outputs and logs, once they are a month old'
+            : 'Archive finished runs'
+        }
+        controlFirst={controlFirst}
+        help={help || undefined}
+        description={description || undefined}
+        error={error || undefined}
+        disabled={disabled}
+        layout={layout}
+        size={size}
+      >
+        <Checkbox defaultChecked disabled={disabled} />
+      </Field>
+      <Field
+        label="Monitoring"
+        controlFirst={controlFirst}
+        help={help ? 'Collects usage every minute.' : undefined}
+        disabled={disabled}
+        layout={layout}
+        size={size}
+      >
+        <Switch size={size} defaultChecked disabled={disabled} />
+      </Field>
+      <Field
+        label="Email me when a run fails"
+        controlFirst={controlFirst}
+        disabled={disabled}
+        layout={layout}
+        size={size}
+      >
+        <Checkbox disabled={disabled} />
+      </Field>
+    </div>
+  ),
+}
+
+/** A click on the label sets the control, as a click on the control would. */
+export const ControlFirstLabelToggles: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const box = canvas.getByRole('checkbox', { name: /Archive finished runs/ })
+    await expect(box).toHaveAttribute('aria-checked', 'true')
+    await expect(box).toHaveAccessibleDescription(/keep their logs.*after 30 days/)
+    await userEvent.click(canvas.getByText('Archive finished runs'))
+    await expect(box).toHaveAttribute('aria-checked', 'false')
+    const monitoring = canvas.getByRole('switch', { name: 'Monitoring' })
+    await userEvent.click(canvas.getByText('Monitoring'))
+    await expect(monitoring).toHaveAttribute('aria-checked', 'false')
+  },
+}
+
+/** Side by side, as a settings form: the label column stays empty, and the control and its
+ *  label sit in the control column, on the line of the labels beside it. */
+export const ControlFirstInline: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, layout: 'inline' } as ControlFirstArgs,
+}
+
+/** Before: a checkbox in a label-first frame reads label, ?, then box. */
+export const ControlFirstOff: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, controlFirst: false } as ControlFirstArgs,
+}
+
+export const ControlFirstWithoutHelp: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, help: '', description: '' } as ControlFirstArgs,
+}
+
+/** A long label wraps beside the control, which stays on its first line; the ? follows the
+ *  last word. */
+export const ControlFirstLongLabel: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, longLabel: true } as ControlFirstArgs,
+}
+
+export const ControlFirstLongLabelInline: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, longLabel: true, layout: 'inline' } as ControlFirstArgs,
+}
+
+export const ControlFirstWithError: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: {
+    ...ControlFirst.args,
+    error: 'Archiving is off for this workspace.',
+  } as ControlFirstArgs,
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByRole('checkbox', { name: /Archive finished runs/ })
+    await expect(box).toHaveAttribute('aria-invalid', 'true')
+    await expect(box).toHaveAccessibleDescription(/Archiving is off/)
+  },
+}
+
+export const ControlFirstDisabled: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, disabled: true } as ControlFirstArgs,
+}
+
+export const ControlFirstSmallInline: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  args: { ...ControlFirst.args, size: 'sm', layout: 'inline' } as ControlFirstArgs,
+}
+
+/** Tabbing to the checkbox opens its help beside the row, over nothing the row needs. */
+export const ControlFirstHelpOnKeyboardFocus: StoryObj<ControlFirstArgs> = {
+  ...ControlFirst,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect(canvas.getByRole('checkbox', { name: /Archive finished runs/ })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/after 30 days/))
+  },
+}
+
 /** A secret's box shows what was typed only while its eye is pressed. */
 export const Secret: StoryObj = {
   render: () => <Input label="Token" type="password" defaultValue="s3cret" className="max-w-sm" />,

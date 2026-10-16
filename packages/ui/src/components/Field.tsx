@@ -102,6 +102,12 @@ export interface FieldProps {
   size?: FieldBoxSize | undefined
   /** A set of controls, such as radios or checkboxes, that a legend names instead of a label. */
   group?: boolean | undefined
+  /** Puts a checkbox, a switch or a lone radio before its label, as such a control reads: the
+   *  control, then its label and ?, with the description and error under the label. A click on
+   *  the label sets the control. Inline, or in a row of fields, it sits in the control column,
+   *  its first line on the line of the labels beside it. Not for a `group`, whose options are
+   *  each a `FieldOption`. */
+  controlFirst?: boolean | undefined
   /** The control's id; one is made up when left out. */
   id?: string | undefined
   className?: string | undefined
@@ -112,14 +118,22 @@ export interface FieldProps {
   children: ReactNode | ((control: FieldControlProps) => ReactNode)
 }
 
-// A compact control reads first, so its label steps back to a caption.
+// A compact control reads first, so its label steps back to a caption. `inlineLine` pads a
+// control-first field's first line into the middle of an inline row: half of what the row's
+// height leaves over a line of the label's text.
 const labelSizes = {
   sm: {
     text: 'text-xs text-(--theme-muted-text-color)',
     inlineHeight: 'min-h-7',
     stackGap: 'gap-1',
+    inlineLine: 'py-1.5',
   },
-  md: { text: 'text-sm text-(--theme-app)', inlineHeight: 'min-h-9', stackGap: 'gap-1.5' },
+  md: {
+    text: 'text-sm text-(--theme-app)',
+    inlineHeight: 'min-h-9',
+    stackGap: 'gap-1.5',
+    inlineLine: 'py-2',
+  },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 const labelClassName = 'flex items-center gap-1 font-medium'
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
@@ -153,6 +167,7 @@ export function Field({
   compact = false,
   size = 'md',
   group = false,
+  controlFirst = false,
   id: ownId,
   className,
   children,
@@ -240,36 +255,29 @@ export function Field({
     inline && cx(labelSize.inlineHeight, 'shrink-0', compact ? 'mr-2 w-fit' : 'w-52 pr-3'),
     inRow && 'row-start-1 self-end',
   )
-  const labelContent = (
+  const nameContent = (
     <>
-      <span>
-        {label}
-        {required && <RequiredMark />}
-      </span>
+      {label}
+      {required && <RequiredMark />}
+    </>
+  )
+  // Beside the label rather than in it, so a help button doesn't name the control.
+  const labelExtras = (
+    <>
       {helpTip}
       {hint}
       {actions && <span className={actionsClassName}>{actions}</span>}
     </>
   )
   const placed = typeof children === 'function' ? children(control) : children
-  const body = (
-    <div
-      ref={help ? setControlBox : undefined}
-      className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}
-      {...helpFocus}
-    >
-      {/* A field inside this one, such as in a group, starts its own row. */}
-      <FieldRowContext value={false}>
-        <ControlContext value={controlContext}>
-          {inline ? (
-            // A control shorter than the label's row, such as a switch or a row of radios,
-            // centers on it. A grid rather than a flex row, so a control still fills the width.
-            <div className={cx('grid items-center', labelSize.inlineHeight)}>{placed}</div>
-          ) : (
-            placed
-          )}
-        </ControlContext>
-      </FieldRowContext>
+  // A field inside this one, such as in a group, starts its own row.
+  const controlInContext = (
+    <FieldRowContext value={false}>
+      <ControlContext value={controlContext}>{placed}</ControlContext>
+    </FieldRowContext>
+  )
+  const messages = (
+    <>
       {description && (
         <BaseField.Description
           id={descriptionId}
@@ -291,6 +299,84 @@ export function Field({
           {error}
         </BaseField.Error>
       )}
+    </>
+  )
+  const fieldLabel = (className?: string) => (
+    <BaseField.Label
+      // A Base UI control tells the label its id; a function's control takes the one made here.
+      // One named by the label's id has no `for` to take, so a click focuses it instead.
+      {...(labelledBy > 0
+        ? {
+            htmlFor: undefined,
+            onClick: () => document.getElementById(id)?.focus(),
+          }
+        : typeof children === 'function' || ownId !== undefined
+          ? { htmlFor: id }
+          : {})}
+      id={labelId}
+      className={className}
+      data-field-label
+    >
+      {nameContent}
+    </BaseField.Label>
+  )
+
+  if (controlFirst && !group) {
+    const lined = inline || inRow
+    return (
+      <BaseField.Root
+        invalid={isInvalid}
+        disabled={disabled}
+        className={inRow ? cx('contents', className) : cx('flex w-full items-start', className)}
+        data-field-row={inRow || undefined}
+      >
+        {/* The label column stays empty, so the control lines up with the controls under it. */}
+        {inline && !compact && <div aria-hidden="true" className="w-52 shrink-0" />}
+        <div
+          ref={help ? setControlBox : undefined}
+          className={cx(
+            'flex w-fit max-w-full min-w-0 items-start gap-2',
+            lined && labelSize.inlineLine,
+            inRow && 'row-start-2',
+          )}
+        >
+          {/* As tall as the label's first line, which the control centers on however the
+              label wraps. */}
+          <div className={cx('flex h-lh shrink-0 items-center', labelSize.text)} {...helpFocus}>
+            {controlInContext}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            {/* Text flow rather than a flex row, so the ? follows the label's last word as it
+                wraps. */}
+            <div className={cx('font-medium', labelSize.text, disabled && 'opacity-60')}>
+              {fieldLabel(disabled ? 'cursor-not-allowed' : 'cursor-pointer')}
+              {(help || hint || actions) && (
+                <span className="ms-1 inline-flex items-center gap-1 align-[-0.125em]">
+                  {labelExtras}
+                </span>
+              )}
+            </div>
+            {messages}
+          </div>
+        </div>
+      </BaseField.Root>
+    )
+  }
+
+  const body = (
+    <div
+      ref={help ? setControlBox : undefined}
+      className={cx('flex w-full min-w-0 flex-col gap-1', inRow && 'row-start-2')}
+      {...helpFocus}
+    >
+      {inline ? (
+        // A control shorter than the label's row, such as a switch or a row of radios,
+        // centers on it. A grid rather than a flex row, so a control still fills the width.
+        <div className={cx('grid items-center', labelSize.inlineHeight)}>{controlInContext}</div>
+      ) : (
+        controlInContext
+      )}
+      {messages}
     </div>
   )
   const frame = inRow
@@ -312,7 +398,8 @@ export function Field({
       >
         <div className={frame}>
           <Fieldset.Legend id={labelId} className={labelBox}>
-            {labelContent}
+            <span>{nameContent}</span>
+            {labelExtras}
           </Fieldset.Legend>
           {body}
         </div>
@@ -326,28 +413,9 @@ export function Field({
       className={frame}
       data-field-row={inRow || undefined}
     >
-      {/* The hint sits beside the label rather than in it, so a help button doesn't name the control. */}
       <div className={labelBox}>
-        <BaseField.Label
-          // A Base UI control tells the label its id; a function's control takes the one made here.
-          // One named by the label's id has no `for` to take, so a click focuses it instead.
-          {...(labelledBy > 0
-            ? {
-                htmlFor: undefined,
-                onClick: () => document.getElementById(id)?.focus(),
-              }
-            : typeof children === 'function' || ownId !== undefined
-              ? { htmlFor: id }
-              : {})}
-          id={labelId}
-          data-field-label
-        >
-          {label}
-          {required && <RequiredMark />}
-        </BaseField.Label>
-        {helpTip}
-        {hint}
-        {actions && <span className={actionsClassName}>{actions}</span>}
+        {fieldLabel()}
+        {labelExtras}
       </div>
       {body}
     </BaseField.Root>

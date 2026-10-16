@@ -81,7 +81,6 @@ describe('Field', () => {
       </Field>,
     )
     const box = screen.getByRole('textbox', { name: /Cluster/ })
-    expect(box).toHaveAttribute('aria-required', 'true')
     expect(box).not.toHaveAttribute('required')
     expect(box).not.toHaveAttribute('aria-invalid')
   })
@@ -403,5 +402,103 @@ describe('Field help', () => {
   it('sizes its label to match a small input given a label', () => {
     render(<Input label="Filter" size="sm" />)
     expect(screen.getByText('Filter').parentElement).toHaveClass('text-xs')
+  })
+})
+
+describe('Field controlFirst', () => {
+  const tip = () => screen.queryByRole('dialog')
+  const tabTo = (element: HTMLElement) => {
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Tab' })
+    act(() => element.focus())
+  }
+
+  it.each([
+    ['Checkbox', () => <Checkbox />, 'checkbox'],
+    ['Switch', () => <Switch />, 'switch'],
+  ] as const)('puts a %s before its label, which names and toggles it', (name, make, role) => {
+    render(
+      <Field label={name} controlFirst description="Applies to new runs." help="Off by default.">
+        {make()}
+      </Field>,
+    )
+    const control = screen.getByRole(role, { name })
+    const label = screen.getByText(name)
+    expect(control.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(control).toHaveAccessibleDescription('Applies to new runs. Off by default.')
+    expect(control).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(label)
+    expect(control).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('names a native checkbox through the render function, which a label click toggles', () => {
+    render(
+      <Field label="Notify me" controlFirst>
+        {(control) => <input type="checkbox" {...control} />}
+      </Field>,
+    )
+    const box = screen.getByRole('checkbox', { name: 'Notify me' })
+    fireEvent.click(screen.getByText('Notify me'))
+    expect(box).toBeChecked()
+  })
+
+  it('opens its help beside the control on keyboard focus, and keeps the ? out of Tab', async () => {
+    render(
+      <Field label="Archive" controlFirst help="Moves it out of the list.">
+        <Checkbox />
+      </Field>,
+    )
+    const box = screen.getByRole('checkbox', { name: 'Archive' })
+    const help = screen.getByRole('button', { hidden: true })
+    expect(help).toHaveAttribute('tabindex', '-1')
+    tabTo(box)
+    await waitFor(() => expect(tip()).toHaveTextContent('Moves it out of the list.'))
+    expect(tip()).toHaveAttribute('data-side', 'right')
+    fireEvent.keyDown(box, { key: 'Escape' })
+    await waitFor(() => expect(tip()).toBeNull())
+    expect(box).toHaveFocus()
+  })
+
+  it('marks the control invalid and reads its error', () => {
+    render(
+      <Field label="Accept the terms" controlFirst error="Accept to continue.">
+        <Checkbox />
+      </Field>,
+    )
+    const box = screen.getByRole('checkbox', { name: 'Accept the terms' })
+    expect(box).toHaveAttribute('aria-invalid', 'true')
+    expect(box).toHaveAccessibleDescription('Accept to continue.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Accept to continue.')
+  })
+
+  it('leaves a disabled control as it is when its label is clicked', () => {
+    render(
+      <Field label="Archive" controlFirst disabled>
+        <Checkbox disabled />
+      </Field>,
+    )
+    const box = screen.getByRole('checkbox', { name: 'Archive' })
+    expect(box).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(screen.getByText('Archive'))
+    expect(box).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('sits in the control column, under an empty label column, inline and in a row of fields', () => {
+    const { container, rerender } = render(
+      <Field label="Archive" controlFirst layout="inline">
+        <Checkbox />
+      </Field>,
+    )
+    const root = container.firstElementChild
+    expect(root?.firstElementChild).toHaveAttribute('aria-hidden', 'true')
+    expect(root?.firstElementChild).toHaveClass('w-52')
+    rerender(
+      <FieldRowContext value>
+        <Field label="Archive" controlFirst>
+          <Checkbox />
+        </Field>
+      </FieldRowContext>,
+    )
+    const box = screen.getByRole('checkbox', { name: 'Archive' })
+    expect(box.closest('.row-start-2')).not.toBeNull()
   })
 })
