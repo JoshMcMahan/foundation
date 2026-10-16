@@ -12,6 +12,7 @@ import { defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
 import { cx } from '../cx'
 import { CODE_THEMES } from './codeTheme'
 import { ExternalLink } from './ExternalLink'
+import { rehypeHttpsImagesOnly } from './httpsImages'
 import type { MarkdownProps } from './Markdown'
 import { rehypeCodeBreaks } from './markdownCodeBreaks'
 import { readIsDark } from './useCssIsDark'
@@ -48,11 +49,20 @@ function loadMermaid(): Promise<void> {
 // so its own plugins go first.
 const rehypePlugins = [...Object.values(defaultRehypePlugins), rehypeCodeBreaks]
 
+const httpsImagesRehypePlugins = [
+  ...Object.entries(defaultRehypePlugins).flatMap(([name, plugin]) =>
+    name === 'harden' ? [rehypeHttpsImagesOnly, plugin] : [plugin],
+  ),
+  rehypeCodeBreaks,
+]
+
 export default function MarkdownImpl({
   children,
   isStreaming,
   controls,
   components,
+  httpsImagesOnly,
+  compact,
 }: MarkdownProps) {
   const needsMermaid = !!children && children.includes('```mermaid')
   const [, setMermaidReady] = useState(() => !!pluginsWithMermaid)
@@ -72,14 +82,16 @@ export default function MarkdownImpl({
   }, [needsMermaid])
   const plugins = needsMermaid && pluginsWithMermaid ? pluginsWithMermaid : basePlugins
   return (
-    <div className="markdown whitespace-normal text-start w-full">
+    <div
+      className={cx('markdown whitespace-normal text-start w-full', compact && 'markdown-compact')}
+    >
       <Streamdown
         mode={isStreaming ? 'streaming' : 'static'}
         isAnimating={isStreaming ?? false}
         {...(isStreaming ? ({ caret: 'block', className: 'markdown-streaming' } as const) : {})}
         {...(controls ? { controls } : {})}
         plugins={plugins}
-        rehypePlugins={rehypePlugins}
+        rehypePlugins={httpsImagesOnly ? httpsImagesRehypePlugins : rehypePlugins}
         shikiTheme={CODE_THEMES}
         components={{
           a: ({ node, ...props }) => (

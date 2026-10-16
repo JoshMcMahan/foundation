@@ -192,6 +192,7 @@ import {
   Save,
   Scale,
   ScanEye,
+  ScrollText,
   Search,
   Send,
   Server,
@@ -526,6 +527,7 @@ export const StopIcon = /* @__PURE__ */ icon(Square)
 export const StorageIcon = /* @__PURE__ */ icon(Database)
 export const SubdomainIcon = /* @__PURE__ */ icon(AtSign)
 export const SuccessIcon = /* @__PURE__ */ icon(CircleCheck)
+export const SummaryIcon = /* @__PURE__ */ icon(ScrollText)
 export const SunIcon = /* @__PURE__ */ icon(Sun)
 export const SupportIcon = /* @__PURE__ */ icon(Headset)
 export const SwapIcon = /* @__PURE__ */ icon(ArrowLeftRight)

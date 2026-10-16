@@ -3,7 +3,7 @@ import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../compo
 import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { FileTextIcon, OpenInNewGraphIcon } from '../icons'
+import { FileTextIcon, OpenInNewGraphIcon, SummaryIcon } from '../icons'
 import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
 import type { WorkflowJob, WorkflowSubworkflow } from './types'
@@ -66,7 +66,7 @@ export function Joblist(
     editableSteps?: boolean
   },
 ) {
-  const { jobActions } = useStrings()
+  const { dag, jobActions } = useStrings()
   const engine = useWorkflowEngine()
   return inputs.jobNames.map((jobName) => {
     // Skip synthetic matrix group nodes — rendered by the caller, not Joblist
@@ -121,6 +121,14 @@ export function Joblist(
                 >
                   {inputs.preview ? '↳' : <RunStatusIcon status={step.status} />}
                   <div>{stepLabel}</div>
+                  {step.summary && !inputs.preview && (
+                    <Tooltip content={dag.hasSummary}>
+                      <SummaryIcon
+                        aria-label={dag.hasSummary}
+                        className="w-[1.1em] h-[1.1em] shrink-0 text-(--theme-muted-text-color)"
+                      />
+                    </Tooltip>
+                  )}
                 </button>
               )
               return (

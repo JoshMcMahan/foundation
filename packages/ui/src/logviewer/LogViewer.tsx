@@ -746,13 +746,10 @@ export function LogViewer({
             : 'theme-panel',
         )}
       >
-        <div
-          className={cx(
-            'w-full flex flex-row gap-x-2 items-center',
-            hideExpand && 'justify-between',
-          )}
-        >
-          <div className="flex gap-x-2 w-full">
+        {/* A narrow viewer wraps its controls onto more rows rather than running
+            them off the edge, and the filter takes whatever a row leaves it. */}
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          <div className="flex flex-auto flex-wrap gap-2">
             {!inline && (
               <>
                 <Button
@@ -924,7 +921,7 @@ export function LogViewer({
             label={t.filterLogs}
             value={filter}
             onValueChange={handleFilterChange}
-            className="w-48"
+            className="min-w-40 flex-1 sm:w-48 sm:flex-none"
           />
           <Button
             variant="secondary"

@@ -34,6 +34,7 @@ export interface WorkflowStep {
   startedAt?: string
   completedAt?: string
   annotations?: WorkflowAnnotation[]
+  summary?: { bytes: number }
   subworkflow?: WorkflowSubworkflow | undefined
 }
 

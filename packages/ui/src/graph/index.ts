@@ -24,6 +24,7 @@ export { type ListedProblem, ProblemsButton } from './ProblemsButton'
 export type { SettingsView } from './settingsViews'
 export { type WorkflowActions, withFields } from './stepWith'
 export type { RunLink } from './types'
+export { jobLabel } from './util'
 export {
   INPUT_FORM_FIELDS,
   LINK_FIELDS,

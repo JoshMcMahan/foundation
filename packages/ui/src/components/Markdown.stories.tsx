@@ -2,8 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor, within } from 'storybook/test'
 import Markdown from './Markdown'
 
-const meta: Meta = {
+const meta: Meta<typeof Markdown> = {
   title: 'UI/Markdown',
+  component: Markdown,
+  argTypes: {
+    httpsImagesOnly: { control: 'boolean' },
+    compact: { control: 'boolean' },
+  },
 }
 export default meta
 
@@ -11,6 +16,34 @@ interface MarkdownArgs {
   children: string
   isStreaming: boolean
 }
+
+const REPORT = [
+  '## Tests',
+  '',
+  '| Suite | Passed | Failed |',
+  '| --- | --- | --- |',
+  '| unit | 120 | 3 |',
+  '| integration | 42 | 0 |',
+  '',
+  '- [x] Build',
+  '- [ ] Deploy',
+  '',
+  '<details><summary>3 failures</summary>',
+  '',
+  '```python',
+  'assert residual < 1e-6',
+  '```',
+  '',
+  '</details>',
+].join('\n')
+
+const DIAGRAM = ['```mermaid', 'graph LR', '  build --> test --> deploy', '```'].join('\n')
+
+const IMAGES = [
+  '![Residuals over https](https://example.com/residuals.png)',
+  '![Residuals over http](http://example.com/residuals.png)',
+  '![Residuals by relative path](residuals.png)',
+].join('\n\n')
 
 // A single dollar stays text, so a price in an answer is never read as math:
 // inline math takes $$ inside a sentence, display math $$ on lines of its own.
@@ -46,6 +79,18 @@ const playMath: StoryObj<MarkdownArgs>['play'] = async ({ canvasElement }) => {
   const mathml = canvasElement.querySelector('.katex-mathml')
   await waitFor(() => expect(mathml && getComputedStyle(mathml).position).toBe('absolute'))
   await expect(canvas.getByText(/costs \$5 an hour/)).toBeVisible()
+}
+
+export const Report: StoryObj<typeof Markdown> = {
+  args: { children: REPORT },
+}
+
+export const MermaidDiagram: StoryObj<typeof Markdown> = {
+  args: { children: DIAGRAM },
+}
+
+export const HttpsImagesOnly: StoryObj<typeof Markdown> = {
+  args: { children: IMAGES, httpsImagesOnly: true },
 }
 
 /** Inline and display math in light mode. */

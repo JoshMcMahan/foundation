@@ -4,7 +4,7 @@ import type { WorkflowJob } from './types'
 export const NODE_CONNECTOR_Y = 37
 
 /** A job as people read it: `run_tests` is "Run tests", a matrix member "Build (2/4)". */
-export function jobLabel(jobName: string, job?: WorkflowJob): string {
+export function jobLabel(jobName: string, job?: Pick<WorkflowJob, '_matrix'>): string {
   const matrix = job?._matrix
   if (matrix?.originaljob && matrix.totalingroup !== 1) {
     return `${capitalize(matrix.originaljob)} (${(matrix.index ?? 0) + 1}/${matrix.totalingroup ?? '?'})`

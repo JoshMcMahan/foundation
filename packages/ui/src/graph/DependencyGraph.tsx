@@ -28,6 +28,7 @@ import { Modal } from '../components/Modal'
 import { useRunFile, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
 import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Elapsed } from '../components/relativeTime'
+import { Tabs } from '../components/Tabs'
 import { cx } from '../cx'
 import type { GraphLayout } from '../editing'
 import type { RunStatus, WorkflowEngine } from '../engine'
@@ -38,6 +39,7 @@ import {
   ArrowRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CloseIcon,
   FileTextIcon,
   ZoomInIcon,
   ZoomOutIcon,
@@ -69,6 +71,7 @@ import { type JobHandlers, Joblist } from './JobSummary'
 import { Lineage, LineageContext } from './lineage'
 import { MatrixGroupNode, MatrixGroupSummaryItem } from './MatrixGroup'
 import { Reveal } from './Reveal'
+import { StepSummary } from './StepSummary'
 import { Store, useStore } from './store'
 import TreeView from './TreeView'
 import { isJobRecord, type RunLink, type WorkflowJob, type WorkflowStep } from './types'
@@ -89,6 +92,16 @@ import {
 } from './viewport'
 
 export type ViewMode = 'dag' | 'tree'
+
+type StepTab = 'summary' | 'logs' | 'script'
+
+const stepTabFiles: Record<StepTab, string> = {
+  summary: 'summary.md',
+  logs: 'logs.out',
+  script: 'script-unstable-redacted.sh',
+}
+
+const fileBeside = (path: string, file: string) => path.slice(0, path.lastIndexOf('/') + 1) + file
 
 function ViewToggle({
   viewMode,
@@ -326,6 +339,15 @@ function offsetWithin(el: HTMLElement, ancestor: HTMLElement | null) {
     cur = cur.offsetParent as HTMLElement | null
   }
   return { x, y }
+}
+
+// Where `el` sits with nothing scrolled, so a page scrolled down to content under it never stretches it.
+function unscrolledTop(el: HTMLElement) {
+  let top = el.getBoundingClientRect().top
+  for (let cur = el.parentElement; cur; cur = cur.parentElement) {
+    top += cur.scrollTop
+  }
+  return top
 }
 
 // Turn a namespaced subworkflow prefix (`subworkflows/{job}/step_{idx}/...`) back
@@ -1138,6 +1160,10 @@ export default function DependencyGraph({
   inputs,
   workflow,
   fixedHeight,
+  openStep,
+  onCloseLog,
+  sidebarStickyTop,
+  children,
 }: {
   run: GraphRun
   preview?: boolean
@@ -1151,6 +1177,14 @@ export default function DependencyGraph({
   /** The workflow as written, for what the editor's expressions can read. */
   workflow?: Record<string, unknown> | undefined
   fixedHeight?: string | undefined
+  /** A step to open; `prefix` is its `subworkflows/<job>/step_<n>/` chain when it runs inside a subworkflow. */
+  openStep?: { job: string; step: number; prefix?: string | undefined } | undefined
+  /** Called when the log dialog closes, so a host can forget the step it asked to open. */
+  onCloseLog?: (() => void) | undefined
+  /** Pins the job list this many pixels below the top of the page's scroll area, under the host's own pinned bars. */
+  sidebarStickyTop?: number | undefined
+  /** Shown under the annotations, above the graph. */
+  children?: ReactNode
 }) {
   const engine = useWorkflowEngine()
   // Animation timing constant (seconds) — controls line draw, dot transitions, and stagger delay
@@ -1205,7 +1239,7 @@ export default function DependencyGraph({
           return
         }
         setTopOffset((prev) => {
-          const next = cur.getBoundingClientRect().top
+          const next = unscrolledTop(cur)
           return prev === next ? prev : next
         })
       }
@@ -1258,6 +1292,7 @@ export default function DependencyGraph({
   }, [preview, fixedHeight])
 
   const { common, dag: dagStrings } = useStrings()
+  const stepHeaderRef = useRef<HTMLDivElement>(null)
   const slots = useSlots()
   const [executedJobsPath, setExecutedJobsPath] = useState<(string | number)[][]>([[]])
   const [executedJobsPathIdx, setExecutedJobsPathIdx] = useState<number>(0)
@@ -1335,11 +1370,79 @@ export default function DependencyGraph({
     [invalidateConnectors],
   )
 
+  const nestingDepth = currentPath.length / 5
+  const levelPrefixes: string[] = []
+  for (let i = 0; i < nestingDepth; i++) {
+    levelPrefixes.push(`subworkflows/${currentPath[5 * i]}/step_${currentPath[5 * i + 2]}/`)
+  }
+  const pathAppend = levelPrefixes.join('')
+  // For subworkflows, the "general log" is the parent step's log file
+  // (the new executor doesn't create a logs.out at the subworkflow root)
+  let generalLogPath = 'logs.out'
+  if (nestingDepth > 0) {
+    const lastJob = String(currentPath[5 * (nestingDepth - 1)] ?? '')
+    const lastStep = currentPath[5 * (nestingDepth - 1) + 2] ?? ''
+    generalLogPath = engine.stepLogPath(levelPrefixes.slice(0, -1).join(''), lastJob, lastStep)
+  }
+
+  const openJob = openStep?.job
+  const openStepIndex = openStep?.step
+  const openPrefix = openStep?.prefix ?? ''
+  useEffect(() => {
+    if (openJob !== undefined && openStepIndex !== undefined) {
+      setSublogOpen(
+        fileBeside(engine.stepLogPath(openPrefix, openJob, openStepIndex), 'summary.md'),
+      )
+    }
+  }, [engine, openJob, openStepIndex, openPrefix])
+
+  const [sublogJob = '', sublogStepDir] = sublogOpen.split('/').slice(-3, -1)
+  const sublogStep = sublogStepDir === undefined ? undefined : (sublogStepDir.split('_')[1] ?? '')
+  // Paging needs a path naming a job and step. A subworkflow's general log is its
+  // parent step's log so it qualifies; a run's own logs.out has no step_ to read.
+  const sublogIsStep = sublogStep !== undefined
+  // A step's log path names it from the run's root, whatever level the graph shows or expands.
+  // A subworkflow's general log stays a plain step's, though it is its parent step's log.
+  const sublogJobs =
+    sublogOpen === generalLogPath
+      ? jobs
+      : walkJobPath(rootJobs, parsePrefixToPath(sublogOpen.split('/').slice(0, -4).join('/')))
+  const sublogStepData = sublogIsStep ? sublogJobs[sublogJob]?.steps[Number(sublogStep)] : undefined
+  const stepTitle = sublogIsStep
+    ? `${jobLabel(sublogJob, sublogJobs[sublogJob])} › ${engine.stepLabel(sublogStepData ?? {}, Number(sublogStep))}`
+    : ''
+  const sublogIsSubworkflow = !!sublogStepData?.subworkflow
+  // A step's summary, log and script sit side by side in its directory; the tabs swap between them.
+  const sublogDir = sublogOpen.slice(0, sublogOpen.lastIndexOf('/') + 1)
+  const sublogFile = sublogOpen.slice(sublogDir.length)
+  const sublogHasSummary = !preview && !!sublogStepData?.summary
+  // Paging from a summary to a step without one shows that step's log.
+  const sublogTab: StepTab =
+    sublogFile === 'summary.md' && sublogHasSummary
+      ? 'summary'
+      : sublogFile === 'logs.out' || sublogFile === 'summary.md'
+        ? 'logs'
+        : 'script'
+  const stepTabs: StepTab[] =
+    !sublogIsStep || preview || sublogIsSubworkflow
+      ? []
+      : sublogHasSummary
+        ? ['summary', 'logs', 'script']
+        : ['logs', 'script']
+
   const {
     data: sublogs,
     isLoading: sublogsLoading,
     error: sublogsError,
-  } = useRunFile(runSlug, sublogOpen || null, preview ? undefined : { refreshInterval: 2000 })
+  } = useRunFile(
+    runSlug,
+    sublogOpen === '' || sublogTab === 'summary'
+      ? null
+      : sublogFile === 'summary.md'
+        ? `${sublogDir}logs.out`
+        : sublogOpen,
+    preview ? undefined : { refreshInterval: 2000 },
+  )
 
   // Runs executed before the redacted sibling existed only have the raw script.
   useEffect(() => {
@@ -1351,20 +1454,6 @@ export default function DependencyGraph({
       setSublogOpen(sublogOpen.replace(/script-unstable-redacted\.sh$/, 'script-unstable.sh'))
     }
   }, [sublogOpen, sublogs, sublogsError, sublogsLoading])
-
-  const [sublogJob = '', sublogStepDir] = sublogOpen.split('/').slice(-3, -1)
-  const sublogStep = sublogStepDir === undefined ? undefined : (sublogStepDir.split('_')[1] ?? '')
-  // Paging needs a path naming a job and step. A subworkflow's general log is its
-  // parent step's log so it qualifies; a run's own logs.out has no step_ to read.
-  const sublogIsStep = sublogStep !== undefined
-  const sublogStepData = sublogIsStep ? jobs[sublogJob]?.steps[Number(sublogStep)] : undefined
-  const logName = sublogIsStep
-    ? `Job: ${jobLabel(sublogJob)} \nStep: ${sublogStepData?.name || `Step ${sublogStep}`}`
-    : ''
-  const sublogIsSubworkflow = !!sublogStepData?.subworkflow
-  // The step's log and its script sit side by side; the toggle swaps one for the other.
-  const sublogFileStart = sublogOpen.lastIndexOf('/') + 1
-  const sublogShowsLog = sublogOpen.slice(sublogFileStart) === 'logs.out'
 
   // The root level, laid out once for its Subgraph and to know whether there's a graph to draw.
   const rootGraph = useMemo(
@@ -1610,21 +1699,6 @@ export default function DependencyGraph({
     return () => cancelAnimationFrame(raf)
   }, [preview, fitGraph, windowSize, executedJobsPathIdx])
 
-  const nestingDepth = currentPath.length / 5
-  const levelPrefixes: string[] = []
-  for (let i = 0; i < nestingDepth; i++) {
-    levelPrefixes.push(`subworkflows/${currentPath[5 * i]}/step_${currentPath[5 * i + 2]}/`)
-  }
-  const pathAppend = levelPrefixes.join('')
-  // For subworkflows, the "general log" is the parent step's log file
-  // (the new executor doesn't create a logs.out at the subworkflow root)
-  let generalLogPath = 'logs.out'
-  if (nestingDepth > 0) {
-    const lastJob = String(currentPath[5 * (nestingDepth - 1)] ?? '')
-    const lastStep = currentPath[5 * (nestingDepth - 1) + 2] ?? ''
-    generalLogPath = engine.stepLogPath(levelPrefixes.slice(0, -1).join(''), lastJob, lastStep)
-  }
-
   // A failed fetch, an end reason, and a truly empty log need distinct wording.
   const missingLogText = sublogIsSubworkflow
     ? 'Subworkflows generally have no logs/scripts at this level.\nClick on the "Open in new graph" icon on the subworkflow step to open the subworkflow graph.'
@@ -1718,6 +1792,21 @@ export default function DependencyGraph({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // Arrows already mean something in the tabs, a field, or a menu; paging
+      // there would move the step out from under the person.
+      const target = e.target instanceof Element ? e.target : null
+      if (
+        e.defaultPrevented ||
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.shiftKey ||
+        target?.closest(
+          'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="tablist"], [role="listbox"], [role="menu"], [role="slider"], [role="radiogroup"]',
+        )
+      ) {
+        return
+      }
       if (e.key === 'ArrowRight') {
         nextStep(false)
       } else if (e.key === 'ArrowLeft') {
@@ -1783,49 +1872,117 @@ export default function DependencyGraph({
 
   const startDt = run.createdAt ? DateTime.fromISO(run.createdAt) : shownAt
 
-  const additionalBottomLeftBarComponents = sublogIsStep ? (
-    <>
+  // Where the open step falls among every step at this level, counted the way the pager walks them.
+  const jobNames = Object.keys(jobs)
+  const stepCount = jobNames.reduce((n, name) => n + (jobs[name]?.steps.length ?? 0), 0)
+  const stepPosition =
+    jobNames
+      .slice(0, Math.max(0, jobNames.indexOf(sublogJob)))
+      .reduce((n, name) => n + (jobs[name]?.steps.length ?? 0), 0) +
+    Number(sublogStep ?? 0) +
+    1
+  // The pager sits in the header beside the step it pages from, so the dialog needs no footer.
+  const stepPager = sublogIsStep ? (
+    <div className="flex shrink-0 items-center">
       <IconButton
-        variant="outline"
         icon={<ArrowLeftIcon />}
         label={dagStrings.previousStep}
         onClick={() => nextStep(true)}
       />
       <IconButton
-        variant="outline"
         icon={<ArrowRightIcon />}
         label={dagStrings.nextStep}
         onClick={() => nextStep(false)}
       />
-      <span className="pt-0.5 whitespace-pre-wrap text-xs">{logName}</span>
-    </>
+    </div>
   ) : undefined
-
-  const additionalBottomRightBarComponents =
-    (!preview || sublogIsSubworkflow) && sublogIsStep ? (
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => {
-          if (sublogIsSubworkflow) {
+  const stepCounter =
+    sublogIsStep && sublogJobs === jobs ? dagStrings.stepOf(stepPosition, stepCount) : undefined
+  const stepTabLabels: Record<StepTab, string> = {
+    summary: dagStrings.summaryTab,
+    logs: dagStrings.logsTab,
+    script: dagStrings.scriptTab,
+  }
+  const closeLog = () => {
+    setSublogOpen('')
+    onCloseLog?.()
+  }
+  // A phone keeps the pager, name and close on one row and gives the tabs the full width under it.
+  const narrowDialog = windowSize.w < 640
+  const stepHeader = sublogIsStep ? (
+    <div
+      ref={stepHeaderRef}
+      className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-(--theme-border) px-2 py-2 sm:flex sm:gap-x-3"
+    >
+      {stepPager}
+      <div className="flex min-w-0 items-baseline gap-x-2.5 sm:flex-1">
+        <h2 className="min-w-0 truncate font-semibold" title={stepTitle}>
+          {stepTitle}
+        </h2>
+        {stepCounter && (
+          <span className="hidden shrink-0 text-xs tabular-nums theme-muted-text sm:inline">
+            {stepCounter}
+          </span>
+        )}
+      </div>
+      {sublogIsSubworkflow && (
+        <Button
+          className={narrowDialog ? 'col-span-3 row-start-2 justify-self-start' : undefined}
+          variant="secondary"
+          size="sm"
+          onClick={() => {
             openInNewGraph(pathAppend, sublogJob, parseInt(sublogStep ?? '', 10))
             setSublogOpen('')
-          } else {
-            setSublogOpen(
-              sublogOpen.slice(0, sublogFileStart) +
-                (sublogShowsLog ? 'script-unstable-redacted.sh' : 'logs.out'),
-            )
-          }
-        }}
-      >
-        {sublogIsSubworkflow ? 'Open Subworkflow' : sublogShowsLog ? 'Show Script' : 'Show Logs'}
-      </Button>
-    ) : undefined
+          }}
+        >
+          {dagStrings.openSubworkflow}
+        </Button>
+      )}
+      {stepTabs.length > 0 && (
+        <Tabs
+          className={narrowDialog ? 'col-span-3 row-start-2 [&>[role=tablist]]:flex-1' : undefined}
+          label={stepTitle}
+          variant="segmented"
+          fill={narrowDialog}
+          items={stepTabs.map((tab) => ({ value: tab, label: stepTabLabels[tab] }))}
+          value={sublogTab}
+          onValueChange={(tab) => setSublogOpen(sublogDir + stepTabFiles[tab])}
+        />
+      )}
+      <IconButton
+        className="col-start-3 row-start-1"
+        icon={<CloseIcon />}
+        label={common.close}
+        onClick={closeLog}
+      />
+    </div>
+  ) : undefined
+  const sublogLoading = sublogsLoading && (!sublogs || !runNumber)
+  const sublogLoader = <Loader label={dagStrings.loadingLogs} size={70} />
+  const stepLogViewer = (
+    <LogViewer
+      log={currentSublog.slice(-100000)}
+      height={sublogIsStep ? '100%' : windowSize.h / 1.2}
+      width={sublogIsStep ? '100%' : windowSize.w / 1.2}
+      hideExpand={true}
+      enableWorkflowCommands
+    />
+  )
 
   const graph = (
     <div className="flex flex-col lg:flex-row w-full">
       {!preview && (
-        <div className="hidden lg:block lg:w-[280px] flex-shrink-0 lg:mr-1">
+        <div
+          className={cx(
+            'hidden lg:block lg:w-[280px] flex-shrink-0 lg:mr-1',
+            sidebarStickyTop !== undefined && 'lg:sticky lg:self-start lg:overflow-y-auto',
+          )}
+          style={
+            sidebarStickyTop !== undefined
+              ? { top: sidebarStickyTop, maxHeight: `calc(100dvh - ${sidebarStickyTop + 24}px)` }
+              : undefined
+          }
+        >
           {slots.runSessions && (
             <div className="mb-4 overflow-y-auto">
               {slots.runSessions({
@@ -1915,6 +2072,7 @@ export default function DependencyGraph({
           </div>
         )}
         {!preview && <AnnotationBanner executedJobs={jobs} />}
+        {children}
         {viewMode === 'tree' && !preview ? (
           <div className="panel w-full border">
             <TreeView
@@ -2038,51 +2196,65 @@ export default function DependencyGraph({
       </div>
       <Modal
         open={sublogOpen !== ''}
-        onClose={() => setSublogOpen('')}
-        aria-label={logName.replace(/\s+/g, ' ') || sublogOpen.slice(sublogFileStart)}
+        onClose={closeLog}
+        aria-label={stepTitle || sublogFile}
+        // Opening a step lands on its current tab, not the first button in the header.
+        initialFocus={() =>
+          stepHeaderRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ??
+          true
+        }
         align="center"
-        className="max-h-full overflow-y-auto p-4 sm:p-6"
+        // A step's dialog is one surface: its header, then its tab's content to the edges.
+        className={
+          sublogIsStep
+            ? 'max-h-full overflow-hidden bg-(--theme-panel-bg) p-0'
+            : 'max-h-full overflow-y-auto p-4 sm:p-6'
+        }
       >
-        <div className="flex w-full">
-          {sublogsLoading && (!sublogs || !runNumber) ? (
-            <Loader label={dagStrings.loadingLogs} size={70} />
-          ) : preview ? (
-            <div>
-              {slots.yamlViewer?.({
-                value: currentSublog,
-                height: window.innerHeight / 1.4,
-                width: window.innerWidth / 1.4,
-                contentKey: `editor_${sublogOpen}`,
-              }) ?? (
-                <pre
-                  className="h-full overflow-auto text-xs p-4"
-                  style={{
-                    height: window.innerHeight / 1.4,
-                    width: window.innerWidth / 1.4,
-                  }}
-                >
-                  {currentSublog}
-                </pre>
-              )}
-              <div className="flex theme-panel select-none items-center gap-x-2 p-2">
-                <div className="w-full flex flex-row gap-x-2 items-center">
-                  <div className="flex gap-x-2 w-full">{additionalBottomLeftBarComponents}</div>
-                </div>
-                {additionalBottomRightBarComponents}
+        {sublogIsStep ? (
+          <div
+            className="flex flex-col"
+            style={
+              preview
+                ? { width: window.innerWidth / 1.4 }
+                : { width: windowSize.w / 1.2, height: windowSize.h / 1.2 }
+            }
+          >
+            {stepHeader}
+            {preview ? (
+              sublogLoading ? (
+                <div className="flex justify-center py-16">{sublogLoader}</div>
+              ) : (
+                (slots.yamlViewer?.({
+                  value: currentSublog,
+                  height: window.innerHeight / 1.4,
+                  width: window.innerWidth / 1.4,
+                  contentKey: `editor_${sublogOpen}`,
+                }) ?? (
+                  <pre
+                    className="overflow-auto p-4 text-xs"
+                    style={{ height: window.innerHeight / 1.4 }}
+                  >
+                    {currentSublog}
+                  </pre>
+                ))
+              )
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col">
+                {sublogTab === 'summary' ? (
+                  <StepSummary runSlug={runSlug} path={`${sublogDir}summary.md`} />
+                ) : sublogLoading ? (
+                  // The header stays while a tab's file loads, so the tabs never vanish under the pointer.
+                  <div className="flex flex-1 items-center justify-center">{sublogLoader}</div>
+                ) : (
+                  stepLogViewer
+                )}
               </div>
-            </div>
-          ) : (
-            <LogViewer
-              log={currentSublog.slice(-100000)}
-              height={windowSize.h / 1.2}
-              width={windowSize.w / 1.2}
-              hideExpand={true}
-              additionalBottomLeftBarComponents={additionalBottomLeftBarComponents}
-              additionalBottomRightBarComponents={additionalBottomRightBarComponents}
-              enableWorkflowCommands
-            />
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex w-full">{sublogLoading ? sublogLoader : stepLogViewer}</div>
+        )}
       </Modal>
     </div>
   )

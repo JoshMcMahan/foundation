@@ -182,6 +182,44 @@
 .markdown [data-streamdown="table"] tbody tr:last-child {
   border-bottom: 0;
 }
+/* Markdown set inside other UI, such as a step's summary, reads at the page's
+ * text size, its headings a step above it rather than at a document's sizes. */
+.markdown-compact {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.markdown-compact :is(h1, h2, h3, h4, h5, h6) {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+.markdown-compact :is(h1, h2) {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.markdown-compact [data-streamdown="table-wrapper"] table,
+.markdown-compact [data-streamdown="table"] :is(th, td) {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+/* A summary's tables are mostly a few short columns of counts: they hug their
+ * content so each number sits by its label, and a phone fits them unscrolled. */
+.markdown-compact table[data-streamdown="table"] {
+  width: auto;
+  min-width: min(100%, 20rem);
+}
+.markdown-compact [data-streamdown="table"] :is(th, td) {
+  min-width: 0;
+  padding-inline-end: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+.markdown-compact [data-streamdown="table"] th {
+  font-weight: 500;
+  color: var(--theme-muted-text-color);
+}
+.markdown-compact :not(pre) > code {
+  font-size: 0.8125rem;
+}
 @media (prefers-reduced-motion: reduce) {
   .markdown [data-streamdown="table-wrapper"] > div:first-child {
     transition: none;

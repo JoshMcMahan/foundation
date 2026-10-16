@@ -10,7 +10,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import type { ReactNode, Ref } from 'react'
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { testEngine } from '../test/engine'
 
 // jsdom lacks these; the graph relies on them for connector recompute + fit.
@@ -67,23 +67,7 @@ vi.mock('react-zoom-pan-pinch', async () => {
 // Heavy leaf that only appears inside the log modal; render the log it was
 // handed so the modal's message states are assertable.
 vi.mock('../logviewer', () => ({
-  LogViewer: ({
-    log,
-    additionalBottomLeftBarComponents,
-    additionalBottomRightBarComponents,
-  }: {
-    log: string
-    additionalBottomLeftBarComponents?: React.ReactNode
-    additionalBottomRightBarComponents?: React.ReactNode
-  }) => (
-    <>
-      <pre data-testid="log">{log}</pre>
-      <div data-testid="log-footer">
-        {additionalBottomLeftBarComponents}
-        {additionalBottomRightBarComponents}
-      </div>
-    </>
-  ),
+  LogViewer: ({ log }: { log: string }) => <pre data-testid="log">{log}</pre>,
 }))
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
@@ -538,6 +522,238 @@ describe('DependencyGraph step log states', () => {
   })
 })
 
+describe('DependencyGraph step summary', () => {
+  // The summary's markdown renderer loads lazily; loading it up front keeps a busy run in time.
+  beforeAll(() => import('../components/MarkdownImpl'), 60_000)
+
+  const summaryRun = {
+    ...run,
+    executedJobs: {
+      report: {
+        status: 'completed',
+        steps: [
+          { name: 'test', status: 'completed', summary: { bytes: 9 } },
+          { name: 'lint', status: 'completed' },
+        ],
+      },
+    },
+  }
+
+  const tab = (name: string) => screen.getByRole('tab', { name })
+
+  const renderOpen = (step: number) => {
+    const calls: [string | null, { refreshInterval?: number } | undefined][] = []
+    render(
+      <UIProvider
+        data={{
+          useRunFile: (_slug, path, options) => {
+            calls.push([path, options])
+            return {
+              data: path?.endsWith('/summary.md') ? '## Tests\n' : 'step log',
+              isLoading: false,
+              error: undefined,
+            }
+          },
+        }}
+      >
+        <DependencyGraph run={summaryRun} openStep={{ job: 'report', step }} />
+      </UIProvider>,
+    )
+    return calls
+  }
+
+  it('opens the step on its summary without polling, and swaps to its log and script', async () => {
+    const calls = renderOpen(0)
+    expect(await screen.findByRole('heading', { name: 'Tests' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Report › test' })).toBeInTheDocument()
+    expect(tab('Summary')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByTestId('log')).not.toBeInTheDocument()
+    expect(calls).toContainEqual(['logs/report/step_0/summary.md', undefined])
+    expect(calls.some(([path]) => path?.endsWith('logs.out'))).toBe(false)
+    fireEvent.click(tab('Logs'))
+    expect(screen.getByTestId('log')).toHaveTextContent('step log')
+    expect(screen.queryByRole('heading', { name: 'Tests' })).not.toBeInTheDocument()
+    fireEvent.click(tab('Script'))
+    expect(tab('Script')).toHaveAttribute('aria-selected', 'true')
+    expect(calls).toContainEqual([
+      'logs/report/step_0/script-unstable-redacted.sh',
+      { refreshInterval: 2000 },
+    ])
+  })
+
+  it('opens a step without a summary on its log, with no summary to show', () => {
+    const calls = renderOpen(1)
+    expect(screen.getByTestId('log')).toHaveTextContent('step log')
+    expect(tab('Logs')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: 'Summary' })).not.toBeInTheDocument()
+    expect(calls.some(([path]) => path?.endsWith('summary.md'))).toBe(false)
+  })
+
+  it('keeps the step and its tabs on screen while a tab loads', () => {
+    render(
+      <UIProvider
+        data={{ useRunFile: () => ({ data: undefined, isLoading: true, error: undefined }) }}
+      >
+        <DependencyGraph run={summaryRun} openStep={{ job: 'report', step: 1 }} />
+      </UIProvider>,
+    )
+    expect(screen.getByRole('status', { name: 'Loading logs' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Report › lint' })).toBeInTheDocument()
+    expect(tab('Logs')).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('pages from a summary to the log of a step without one, and back', async () => {
+    renderOpen(0)
+    await screen.findByRole('heading', { name: 'Tests' })
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(screen.getByRole('heading', { name: 'Report › lint' })).toBeInTheDocument()
+    expect(screen.getByTestId('log')).toHaveTextContent('step log')
+    fireEvent.click(screen.getByRole('button', { name: 'Previous step' }))
+    expect(await screen.findByRole('heading', { name: 'Tests' })).toBeInTheDocument()
+  })
+
+  it('tells the host when the step it opened is closed', async () => {
+    const onCloseLog = vi.fn()
+    render(
+      <UIProvider
+        data={{ useRunFile: () => ({ data: 'step log', isLoading: false, error: undefined }) }}
+      >
+        <DependencyGraph
+          run={summaryRun}
+          openStep={{ job: 'report', step: 1 }}
+          onCloseLog={onCloseLog}
+        />
+      </UIProvider>,
+    )
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('data-closed')
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    // This file stubs requestAnimationFrame, so the dialog's exit transition never finishes unmounting it.
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveAttribute('data-closed'))
+    expect(onCloseLog).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens a step inside a subworkflow with its own name and summary', async () => {
+    const calls: (string | null)[] = []
+    const nestedRun = {
+      ...run,
+      executedJobs: {
+        report: {
+          status: 'completed',
+          steps: [
+            {
+              name: 'mesh study',
+              status: 'completed',
+              subworkflow: {
+                jobs: {
+                  mesh: {
+                    status: 'completed',
+                    steps: [{ name: 'refine', status: 'completed', summary: { bytes: 9 } }],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    }
+    render(
+      <UIProvider
+        data={{
+          useRunFile: (_slug, path) => {
+            calls.push(path)
+            return {
+              data: path?.endsWith('/summary.md') ? '## Refined\n' : 'step log',
+              isLoading: false,
+              error: undefined,
+            }
+          },
+        }}
+      >
+        <DependencyGraph
+          run={nestedRun}
+          openStep={{ job: 'mesh', step: 0, prefix: 'subworkflows/report/step_0/' }}
+        />
+      </UIProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Refined' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Mesh › refine' })).toBeInTheDocument()
+    expect(calls).toContain('subworkflows/report/step_0/logs/mesh/step_0/summary.md')
+  })
+
+  it('keeps its height when content under it opens on a scrolled page', () => {
+    const frames: FrameRequestCallback[] = []
+    const raf = vi.spyOn(global, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame)
+      return 0
+    })
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ top: -300 } as DOMRect)
+    const { container } = render(
+      <div data-testid="scroller">
+        <UIProvider>
+          <DependencyGraph run={summaryRun}>
+            <p>Below the graph</p>
+          </DependencyGraph>
+        </UIProvider>
+      </div>,
+    )
+    Object.defineProperty(screen.getByTestId('scroller'), 'scrollTop', { value: 500 })
+    act(() => {
+      for (const frame of frames.splice(0)) {
+        frame(0)
+      }
+    })
+    const panel = container.querySelector<HTMLElement>('.panel.overflow-hidden')
+    expect(panel?.style.height).toBe(`${window.innerHeight - 200 - 16}px`)
+    raf.mockRestore()
+    rect.mockRestore()
+  })
+
+  it('marks the steps that wrote a summary in the job list', () => {
+    render(
+      <UIProvider>
+        <DependencyGraph run={summaryRun} />
+      </UIProvider>,
+    )
+    fireEvent.click(screen.getAllByText('Report')[0]!)
+    // The sidebar and the graph list the job's steps alike.
+    const marked = screen.getAllByRole('img', { name: 'Has a summary' })
+    expect(marked.map((icon) => icon.closest('button')?.textContent)).toEqual(['test', 'test'])
+  })
+
+  it('shows what the host puts above the graph', () => {
+    const { container } = render(
+      <UIProvider>
+        <DependencyGraph run={summaryRun}>
+          <p>Above the graph</p>
+        </DependencyGraph>
+      </UIProvider>,
+    )
+    const panel = container.querySelector('.panel.overflow-hidden')
+    expect(panel?.compareDocumentPosition(screen.getByText('Above the graph')) ?? 0).toBe(
+      Node.DOCUMENT_POSITION_PRECEDING,
+    )
+  })
+
+  it('pins the job list under the host bars only when asked', () => {
+    const { rerender } = render(
+      <UIProvider>
+        <DependencyGraph run={summaryRun} />
+      </UIProvider>,
+    )
+    const sidebar = () => screen.getByText('Summary').parentElement as HTMLElement
+    expect(sidebar().style.top).toBe('')
+    rerender(
+      <UIProvider>
+        <DependencyGraph run={summaryRun} sidebarStickyTop={92} />
+      </UIProvider>,
+    )
+    expect(sidebar().style.top).toBe('92px')
+    expect(sidebar()).toHaveClass('lg:sticky')
+  })
+})
+
 describe('DependencyGraph general log', () => {
   // The reason a run ended is the host's to phrase; the graph only places it.
   const renderGraph = (r: object) =>
@@ -584,30 +800,44 @@ describe('DependencyGraph general log', () => {
     expect(screen.getByTestId('log')).toHaveTextContent('No log found')
   })
 
-  const footerButtons = () =>
-    [...screen.getByTestId('log-footer').querySelectorAll('button')].map(
-      (b) => b.getAttribute('aria-label') ?? b.textContent?.trim(),
-    )
+  const pagerButtons = () =>
+    ['Previous step', 'Next step'].filter((name) => screen.queryByRole('button', { name }))
 
   // The run's logs.out belongs to no job or step, so paging off it read step_ off
   // undefined and threw inside the click handler.
   it('offers no step paging on the run own general log', () => {
     renderGraph(run)
     fireEvent.click(screen.getByRole('button', { name: 'General log' }))
-    expect(footerButtons()).toEqual([])
+    expect(pagerButtons()).toEqual([])
   })
 
   // A subworkflow's general log IS its parent step's log file, so paging and the
-  // script toggle do belong there.
+  // script tab do belong there.
   it('keeps step paging on a subworkflow general log', () => {
     renderGraph(run)
     fireEvent.click(screen.getAllByText('Build')[0]!)
     fireEvent.click(screen.getAllByRole('button', { name: 'Open in new graph' })[0]!)
     fireEvent.click(screen.getByRole('button', { name: 'General log' }))
-    expect(footerButtons()).toEqual(['Previous step', 'Next step', 'Show Script'])
+    expect(pagerButtons()).toEqual(['Previous step', 'Next step'])
+    expect(screen.getByRole('tab', { name: 'Script' })).toBeInTheDocument()
     // And paging still resolves to a real step rather than throwing.
     fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
-    expect(footerButtons()).toEqual(['Previous step', 'Next step', 'Show Script'])
+    expect(pagerButtons()).toEqual(['Previous step', 'Next step'])
+  })
+
+  // The tabs move between themselves on the arrows, so paging there too would
+  // swap the step out from under the person choosing a tab.
+  it('pages on the arrows only when focus is not on the tabs', () => {
+    renderGraph(run)
+    fireEvent.click(screen.getAllByText('Build')[0]!)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open in new graph' })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'General log' }))
+    const title = () => screen.getByRole('heading', { level: 2 }).textContent
+    const before = title()
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Script' }), { key: 'ArrowRight' })
+    expect(title()).toBe(before)
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+    expect(title()).not.toBe(before)
   })
 })
 
