@@ -1,7 +1,8 @@
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useContext, useRef } from 'react'
 import { cx } from '../cx'
 import { SortDownIcon, SortUnsortedIcon, SortUpIcon } from '../icons'
 import { Loader } from './Loader'
+import { useStickyTop } from './stickyTop'
 
 /** Which way a column sorts, as `aria-sort` names it. */
 export type SortDirection = 'ascending' | 'descending' | 'none'
@@ -118,11 +119,13 @@ interface TableProps {
   roundedBottom?: boolean
   isLoading?: boolean
   /** The header row stays in view while the rows scroll under it. It sticks
-   *  to the nearest scrolling ancestor, `--table-header-top` below its top
-   *  edge (0 unless an ancestor sets it), so the table no longer scrolls or
-   *  clips on its own: a box that scrolls itself is all a sticky header can
-   *  stick to. Its ancestor scrolls it sideways as well as down. Rows pass
-   *  under the header, so a `theadClassName` of your own needs a background. */
+   *  to the nearest scrolling ancestor, just below whatever that ancestor
+   *  already pins at its top, such as a page header, a toolbar or tabs, which
+   *  it finds and follows by itself; in a box that scrolls on its own it pins
+   *  at the box's top. So the table no longer scrolls or clips on its own: a
+   *  box that scrolls itself is all a sticky header can stick to. Its ancestor
+   *  scrolls it sideways as well as down. Rows pass under the header, so a
+   *  `theadClassName` of your own needs a background. */
   stickyHeader?: boolean | undefined
   /** Forwarded to the `<table>`, for attributes that must sit on the element owning
    *  the rows — `role='grid'`, aria-activedescendant, aria-rowcount. `className` is
@@ -166,6 +169,8 @@ export function Table({
   tableProps,
 }: TableProps) {
   const childList = React.Children.toArray(children)
+  const thead = useRef<HTMLTableSectionElement>(null)
+  useStickyTop(thead, stickyHeader && !isLoading)
   const hasOverflow = wrapperClassName.split(' ').some((cls) => cls.startsWith('overflow-'))
 
   return (
@@ -196,12 +201,14 @@ export function Table({
           >
             <table className={cx('min-w-full divide-y theme-border', className)} {...tableProps}>
               <thead
+                ref={thead}
                 className={cx(
                   // Collapsed borders stay where the row was, so the line under
                   // a stuck header is a shadow that moves with it. It sits on
-                  // the sticky layer, under menus and popovers.
+                  // the sticky layer, under menus and popovers. Its `top` is set
+                  // as it renders, below the chrome pinned above it.
                   stickyHeader &&
-                    'sticky top-(--table-header-top,0px) z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
+                    'sticky top-0 z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
                   theadClassName,
                 )}
               >

@@ -344,7 +344,9 @@ describe('ListColumns sorting', () => {
     render(<SortableList />)
     const thead = screen.getAllByRole('rowgroup')[0]
     expect(thead?.tagName).toBe('THEAD')
-    expect(thead).toHaveClass('sticky', 'top-(--table-header-top,0px)', 'z-(--layer-sticky)')
+    expect(thead).toHaveClass('sticky', 'z-(--layer-sticky)')
+    // Nothing else is pinned in the list's scroller, so it pins at the top.
+    expect(thead).toHaveStyle({ top: '0px' })
   })
 })
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Table } from './Table'
 
 // FileTableHeaders depends on both of these: it is a wrapper opting in via
@@ -122,5 +122,146 @@ describe('Table layout', () => {
     expect(cell).toHaveClass('py-2.5', 'px-6')
     expect(cell).not.toHaveClass('py-1.5', 'px-3')
     expect(cell).toHaveAttribute('colspan', '2')
+  })
+})
+
+describe('Table sticky header', () => {
+  // jsdom lays nothing out, so each box reports the height its test gives it.
+  let observers: ResizeObserverCallback[] = []
+  beforeEach(() => {
+    observers = []
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const height = Number(this.dataset['height'] ?? 0)
+      return { height, width: 0, top: 0, left: 0, right: 0, bottom: height } as DOMRect
+    })
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          observers.push(callback)
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  const pinned = (top: number, height: number, label: string) => (
+    <div style={{ position: 'sticky', top }} data-height={height}>
+      {label}
+    </div>
+  )
+
+  function Rows() {
+    return (
+      <Table stickyHeader>
+        <Table.Header>Name</Table.Header>
+        <tr>
+          <Table.Item>ada</Table.Item>
+        </tr>
+      </Table>
+    )
+  }
+
+  const thead = () => screen.getAllByRole('rowgroup')[0] as HTMLElement
+
+  it('pins below the page header and toolbar its scroller pins, not behind them', () => {
+    render(
+      <div style={{ overflow: 'auto' }}>
+        {pinned(0, 44, 'Page header')}
+        <div>
+          {pinned(44, 40, 'Toolbar')}
+          <section>
+            <h2>Nodes</h2>
+            <Rows />
+          </section>
+        </div>
+      </div>,
+    )
+    expect(thead()).toHaveStyle({ top: '84px' })
+  })
+
+  it('pins at the top of a box that scrolls on its own, whatever the page pins', () => {
+    render(
+      <div style={{ overflow: 'auto' }}>
+        {pinned(0, 44, 'Page header')}
+        <div style={{ overflow: 'auto', height: 200 }}>
+          <Rows />
+        </div>
+      </div>,
+    )
+    expect(thead()).toHaveStyle({ top: '0px' })
+  })
+
+  it('leaves out what stops pinning before the table passes, or pins only after it', () => {
+    render(
+      <div style={{ overflow: 'auto' }}>
+        {pinned(0, 44, 'Page header')}
+        {/* Pinned only within its own section, which ends above the table. */}
+        <section>{pinned(44, 40, 'Section toolbar')}</section>
+        <Rows />
+        {pinned(44, 40, 'Later toolbar')}
+        {/* Pinned to the bottom, not the top. */}
+        <div style={{ position: 'sticky', bottom: 0 }} data-height={40} />
+      </div>,
+    )
+    expect(thead()).toHaveStyle({ top: '44px' })
+  })
+
+  it('finds a tab row whose root is display: contents', () => {
+    render(
+      <div style={{ overflow: 'auto' }}>
+        <div style={{ display: 'contents' }}>{pinned(44, 37, 'Tabs')}</div>
+        <Rows />
+      </div>,
+    )
+    expect(thead()).toHaveStyle({ top: '81px' })
+  })
+
+  it('follows chrome as it wraps to a new height, appears or goes', async () => {
+    function Page({ toolbar }: { toolbar: boolean }) {
+      return (
+        <div style={{ overflow: 'auto' }}>
+          {pinned(0, 44, 'Page header')}
+          {toolbar && pinned(44, 40, 'Toolbar')}
+          <Rows />
+        </div>
+      )
+    }
+    const { rerender } = render(<Page toolbar={false} />)
+    expect(thead()).toHaveStyle({ top: '44px' })
+
+    rerender(<Page toolbar />)
+    await waitFor(() => expect(thead()).toHaveStyle({ top: '84px' }))
+
+    // The toolbar wraps to a second row on a narrow screen.
+    screen.getByText('Toolbar').dataset['height'] = '76'
+    for (const observer of observers) {
+      observer([], {} as ResizeObserver)
+    }
+    expect(thead()).toHaveStyle({ top: '120px' })
+
+    rerender(<Page toolbar={false} />)
+    await waitFor(() => expect(thead()).toHaveStyle({ top: '44px' }))
+  })
+
+  it('pins nothing when the header does not stick', () => {
+    render(
+      <div style={{ overflow: 'auto' }}>
+        {pinned(0, 44, 'Page header')}
+        <Table>
+          <Table.Header>Name</Table.Header>
+        </Table>
+      </div>,
+    )
+    expect(thead()).not.toHaveClass('sticky')
+    expect(thead().style.top).toBe('')
   })
 })

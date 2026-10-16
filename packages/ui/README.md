@@ -576,12 +576,19 @@ root:
 | ------------------- | ----------------------------------------------------------------------- |
 | `--app-inset-top`   | The height of a fixed top bar. Drawers and toasts start below it.       |
 | `--app-inset-start` | The width of a fixed sidebar on the start side. Toasts center over the page beside it, and a drawer at its widest leaves that strip, and never less than 2.5rem. Update it when the sidebar collapses. |
-| `--table-header-top` | How far below the top of its scrolling box a table's sticky header row stops (`Table stickyHeader`, which list tables use). Set it on the scrolling box, or an ancestor, when something else sticks at that box's top, such as a page header in a page that scrolls as a whole. Inside `ListPage` the rows scroll in their own box below the header and toolbar, so it stays 0. |
 
 ```ts
 document.documentElement.style.setProperty('--app-inset-top', '56px')
 document.documentElement.style.setProperty('--app-inset-start', '220px')
 ```
+
+A table's sticky header row (`Table stickyHeader`, which list tables use) needs
+no variable. It stops just below whatever its scrolling box already pins at the
+top, such as a page header, a toolbar and tabs: it finds each element there with
+`position: sticky` and a `top` whose parent also holds the table, so it stays
+pinned while the table passes, and follows it as it wraps to a new height or
+comes and goes. In a box that scrolls on its own, such as a fixed-height panel
+or `ListPage`'s rows, it pins at the box's top.
 
 Everything the package lays over the page stacks on one scale, set on the
 document root by `base.css`. Give the host's own fixed elements a place on it,
