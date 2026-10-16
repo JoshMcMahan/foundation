@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.59.0](https://github.com/parallelworks/foundation/compare/ui-v0.58.0...ui-v0.59.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** sticky toolbars and tabs stack under the chrome above them ([#333](https://github.com/parallelworks/foundation/issues/333))
+
+### Features
+
+* **ui:** Field controlFirst puts a checkbox or switch before its label ([#334](https://github.com/parallelworks/foundation/issues/334)) ([e9449c6](https://github.com/parallelworks/foundation/commit/e9449c630b0fa5483a3ceacea4eec5a9dc0be3e5))
+* **ui:** sticky toolbars and tabs stack under the chrome above them ([#333](https://github.com/parallelworks/foundation/issues/333)) ([26186b1](https://github.com/parallelworks/foundation/commit/26186b1fb40bf87a5bec7b7aceb768e652a79094))
+
+
+### Bug Fixes
+
+* **ui:** copying a folder's path leaves off the trailing slash ([#332](https://github.com/parallelworks/foundation/issues/332)) ([961d72d](https://github.com/parallelworks/foundation/commit/961d72d42c9dbc8fe8249f95fdbd4a056e45bc53))
+* **ui:** safe links, contained hover cards, bounded diffs and CSP-safe selects ([#336](https://github.com/parallelworks/foundation/issues/336)) ([644cbff](https://github.com/parallelworks/foundation/commit/644cbff9a4497e94a1dbcdc8826bdfeceeed4f37))
+
 ## [0.58.0](https://github.com/parallelworks/foundation/compare/ui-v0.57.0...ui-v0.58.0) (2026-10-16)
 
 
