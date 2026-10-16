@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.60.0](https://github.com/parallelworks/foundation/compare/ui-v0.59.0...ui-v0.60.0) (2026-10-16)
+
+
+### Features
+
+* **ui:** ThemeEditor swaps the background and the accent ([#338](https://github.com/parallelworks/foundation/issues/338)) ([5accec6](https://github.com/parallelworks/foundation/commit/5accec66834e185ff5855b596b2ea8530a7cf7f0))
+
+
+### Bug Fixes
+
+* **ui:** a sidebar's active item keeps its hue under a white sidebar accent ([#339](https://github.com/parallelworks/foundation/issues/339)) ([9f617ac](https://github.com/parallelworks/foundation/commit/9f617ac47a50bc3fd51e25336733dfea1f10bcdc))
+
 ## [0.59.0](https://github.com/parallelworks/foundation/compare/ui-v0.58.0...ui-v0.59.0) (2026-10-16)
 
 
