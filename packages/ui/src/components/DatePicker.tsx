@@ -7,6 +7,7 @@ import { buttonClasses } from './buttonClasses'
 import { useFieldLabelledControl } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
+import { useFullscreenContainer } from './fullscreen'
 import { useStrings } from './Provider'
 
 export interface DatePickerProps {
@@ -130,6 +131,7 @@ export function DatePicker({
   size = 'md',
   className,
 }: DatePickerProps) {
+  const fullscreen = useFullscreenContainer()
   const t = useStrings().datePicker
   const { common } = useStrings()
   // The trigger is a button Base UI doesn't name from a Field's label, so it reads the Field.
@@ -187,7 +189,7 @@ export function DatePicker({
             {day ? shownDay.format(day) : (placeholder ?? t.pickDate)}
           </span>
         </Popover.Trigger>
-        <Popover.Portal>
+        <Popover.Portal container={fullscreen}>
           <Popover.Positioner align="start" sideOffset={4} className={positionerClassName}>
             <Popover.Popup className={panelClassName}>
               <DayPicker

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { RunStatus } from '../engine'
 import { formatBytes } from '../format'
@@ -206,6 +206,45 @@ export const ModalLongBody: StoryObj = {
     const done = within(dialog).getByRole('button', { name: 'Done' })
     const bottom = done.getBoundingClientRect().bottom
     await expect(bottom).toBeLessThanOrEqual(window.innerHeight)
+  },
+}
+
+function FullscreenModalDemo() {
+  const stage = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  return (
+    <div
+      ref={stage}
+      className="flex h-48 items-center justify-center gap-3 rounded-lg bg-black p-6 text-white"
+    >
+      <Button variant="secondary" onClick={() => stage.current?.requestFullscreen()}>
+        Enter fullscreen
+      </Button>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Open modal
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        align="center"
+        title="Restart session?"
+        description="This will stop and restart the desktop process."
+        confirmLabel="Restart"
+        onConfirm={() => setOpen(false)}
+      />
+    </div>
+  )
+}
+
+/** While an element is fullscreen the browser shows only its subtree, so a modal opened
+ *  there portals into it rather than the body. Enter fullscreen, then open the modal. */
+export const ModalInFullscreen: StoryObj = {
+  name: 'Modal, inside fullscreen',
+  render: () => <FullscreenModalDemo />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Restart session?' })
+    await waitFor(() => expect(dialog).toBeVisible())
   },
 }
 

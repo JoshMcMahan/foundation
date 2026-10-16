@@ -48,6 +48,34 @@ describe('Modal', () => {
   })
 })
 
+describe('Modal inside fullscreen', () => {
+  let fullscreen: Element | null = null
+  beforeAll(() => {
+    Object.defineProperty(document, 'fullscreenElement', {
+      configurable: true,
+      get: () => fullscreen,
+    })
+  })
+  afterEach(() => {
+    fullscreen = null
+  })
+
+  it('portals into the fullscreen element, where the browser still shows it', async () => {
+    const stage = document.createElement('div')
+    document.body.appendChild(stage)
+    fullscreen = stage
+    render(<Modal open onClose={vi.fn()} title="Restart session?" />)
+    expect(stage).toContainElement(await screen.findByRole('dialog', { name: 'Restart session?' }))
+    act(() => {
+      fullscreen = null
+      document.dispatchEvent(new Event('fullscreenchange'))
+    })
+    await waitFor(() => expect(stage).not.toContainElement(screen.queryByRole('dialog')))
+    expect(screen.getByRole('dialog', { name: 'Restart session?' })).toBeInTheDocument()
+    stage.remove()
+  })
+})
+
 describe('ConfirmModal', () => {
   it('is an alertdialog when destructive, with the confirm button named for the action', async () => {
     render(

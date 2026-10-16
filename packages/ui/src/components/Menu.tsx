@@ -8,6 +8,7 @@ import {
   panelListClassName,
   positionerClassName,
 } from './floating'
+import { useFullscreenContainer } from './fullscreen'
 
 // Root, Trigger, Group, RadioGroup and FilterProvider carry no styles, so callers
 // use Base UI's directly; the parts below give every menu one look.
@@ -36,8 +37,9 @@ export function MenuPopup({
   anchor,
   keepMounted = false,
 }: MenuPopupProps) {
+  const fullscreen = useFullscreenContainer()
   return (
-    <BaseMenu.Portal keepMounted={keepMounted}>
+    <BaseMenu.Portal container={fullscreen} keepMounted={keepMounted}>
       <BaseMenu.Positioner
         side={side}
         align={align}

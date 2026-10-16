@@ -1,6 +1,7 @@
 import { PreviewCard } from '@base-ui/react/preview-card'
 import type { ReactElement, ReactNode } from 'react'
 import { cardClassName, positionerClassName } from './floating'
+import { useFullscreenContainer } from './fullscreen'
 
 export interface HoverCardProps {
   /** Mounted only while open, so a card that loads its own data loads on first hover. */
@@ -16,10 +17,11 @@ export interface HoverCardProps {
  *  reachable another way, such as the page the anchor links to. The card
  *  stays open while the pointer is over it. */
 export function HoverCard({ card, children, defaultOpen = false }: HoverCardProps) {
+  const fullscreen = useFullscreenContainer()
   return (
     <PreviewCard.Root defaultOpen={defaultOpen}>
       <PreviewCard.Trigger delay={350} closeDelay={150} render={children} />
-      <PreviewCard.Portal>
+      <PreviewCard.Portal container={fullscreen}>
         <PreviewCard.Positioner
           side="bottom"
           align="start"

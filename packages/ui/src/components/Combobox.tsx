@@ -27,6 +27,7 @@ import {
 } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
+import { useFullscreenContainer } from './fullscreen'
 import { Loader } from './Loader'
 import { OptionDescription } from './OptionDescription'
 import { useStrings } from './Provider'
@@ -665,6 +666,7 @@ function ListPopup<Value>({
   collisionBoundary?: Element | null | undefined
   renderItem: (entry: Entry<Value>, row: RowProps) => ReactElement
 }) {
+  const fullscreen = useFullscreenContainer()
   const withDetails = details !== undefined
   const list = (
     <>
@@ -695,7 +697,7 @@ function ListPopup<Value>({
     </>
   )
   return (
-    <BaseCombobox.Portal>
+    <BaseCombobox.Portal container={fullscreen}>
       <BaseCombobox.Positioner
         align="start"
         sideOffset={4}

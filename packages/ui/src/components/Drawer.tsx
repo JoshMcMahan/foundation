@@ -3,6 +3,7 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { ArrowLeftIcon, CloseIcon } from '../icons'
 import { closeHandler, dialogFooterClassName } from './dismiss'
+import { useFullscreenContainer } from './fullscreen'
 import { IconButton } from './IconButton'
 import { useStrings } from './Provider'
 import { useSplitter } from './splitter'
@@ -80,6 +81,7 @@ export function Drawer({
   children,
   ...popupProps
 }: DrawerProps) {
+  const fullscreen = useFullscreenContainer()
   const { common } = useStrings()
   const container = useRef<HTMLDivElement>(null)
   const viewport = useRef<HTMLDivElement>(null)
@@ -111,7 +113,7 @@ export function Drawer({
     >
       {contained && <div ref={container} className="contents" />}
       <BaseDrawer.Portal
-        {...(contained ? { container } : {})}
+        container={contained ? container : fullscreen}
         keepMounted={keepMounted}
         className={contained ? 'contents' : undefined}
       >

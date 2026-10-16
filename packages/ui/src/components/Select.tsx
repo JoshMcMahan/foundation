@@ -5,6 +5,7 @@ import { CheckIcon, ChevronDownIcon } from '../icons'
 import { type ComboboxItem, optionNaming, pickerItemClassName } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelListClassName, positionerClassName } from './floating'
+import { useFullscreenContainer } from './fullscreen'
 import { OptionDescription } from './OptionDescription'
 import { Tooltip } from './Tooltip'
 
@@ -55,6 +56,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   onItemHighlighted,
   ...rootProps
 }: SelectProps<Value, Multiple>) {
+  const fullscreen = useFullscreenContainer()
   const uid = useId()
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   const triggerProps = {
@@ -98,7 +100,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
           </BaseSelect.Icon>
         </BaseSelect.Trigger>
       )}
-      <BaseSelect.Portal>
+      <BaseSelect.Portal container={fullscreen}>
         <BaseSelect.Positioner
           alignItemWithTrigger={false}
           sideOffset={4}

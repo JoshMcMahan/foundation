@@ -3,6 +3,7 @@ import { Dialog } from '@base-ui/react/dialog'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { closeHandler, dialogFooterClassName } from './dismiss'
+import { useFullscreenContainer } from './fullscreen'
 
 /** The panel a modal draws by default; pass `panel={false}` to paint your own. */
 export const modalPanelClassName =
@@ -76,12 +77,13 @@ export function Modal({
   children,
   ...popupProps
 }: ModalProps) {
+  const fullscreen = useFullscreenContainer()
   const onOpenChange = closeHandler(dismissible, onClose)
   const header = title !== undefined || description !== undefined
   const body = children !== undefined && children !== null && children !== false
   const laidOut = header || footer !== undefined
   const content = (
-    <Dialog.Portal>
+    <Dialog.Portal container={fullscreen}>
       <Dialog.Backdrop className={cx('fixed inset-0 z-(--layer-modal)', backdropClassName)} />
       <Dialog.Viewport
         className={cx(
