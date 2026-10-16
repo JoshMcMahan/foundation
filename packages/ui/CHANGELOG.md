@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.63.0](https://github.com/parallelworks/foundation/compare/ui-v0.62.0...ui-v0.63.0) (2026-10-16)
+
+
+### Features
+
+* **ui:** a run's step summaries show as cards under its graph, which fits its jobs ([#337](https://github.com/parallelworks/foundation/issues/337)) ([6b2c888](https://github.com/parallelworks/foundation/commit/6b2c888d3c0dde867597e7917bef205eb82ad049))
+
 ## [0.62.0](https://github.com/parallelworks/foundation/compare/ui-v0.61.0...ui-v0.62.0) (2026-10-16)
 
 
