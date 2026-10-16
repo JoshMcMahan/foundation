@@ -19,6 +19,7 @@ import {
   Bell,
   BellOff,
   BellRing,
+  BookOpenText,
   BookUser,
   Bot,
   Boxes,
@@ -68,6 +69,7 @@ import {
   CornerUpRight,
   Cpu,
   CreditCard,
+  createLucideIcon,
   Database,
   DatabaseSearch,
   DatabaseZap,
@@ -286,7 +288,26 @@ function icon(Glyph: LucideIcon, defaults?: LucideProps): IconType {
 // A filled glyph marks a state its outline doesn't have, such as pinned.
 const filled: LucideProps = { fill: 'currentColor' }
 
+// Glyphs lucide doesn't draw, built from its own shapes on its 24px grid so
+// they sit with the rest.
+
+// Wallet's two strokes with a plus inside, where FolderPlus puts its own, so
+// adding an allocation reads as AddProjectIcon and AddUserIcon do.
+const WalletPlus = /* @__PURE__ */ createLucideIcon('wallet-plus', [
+  [
+    'path',
+    {
+      d: 'M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1',
+      key: 'wallet-flap',
+    },
+  ],
+  ['path', { d: 'M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4', key: 'wallet-body' }],
+  ['path', { d: 'M10 11v6', key: 'plus-stem' }],
+  ['path', { d: 'M7 14h6', key: 'plus-bar' }],
+])
+
 export const AccessIcon = /* @__PURE__ */ icon(UserLock)
+export const AddAllocationIcon = /* @__PURE__ */ icon(WalletPlus)
 export const AddIcon = /* @__PURE__ */ icon(Plus)
 export const AddProjectIcon = /* @__PURE__ */ icon(FolderPlus)
 export const AddUserIcon = /* @__PURE__ */ icon(UserPlus)
@@ -298,6 +319,7 @@ export const ArrowDownIcon = /* @__PURE__ */ icon(ArrowDown)
 export const ArrowLeftIcon = /* @__PURE__ */ icon(ArrowLeft)
 export const ArrowRightIcon = /* @__PURE__ */ icon(ArrowRight)
 export const ArrowUpIcon = /* @__PURE__ */ icon(ArrowUp)
+export const ArticleIcon = /* @__PURE__ */ icon(BookOpenText)
 export const AttachmentIcon = /* @__PURE__ */ icon(Paperclip)
 export const AuthenticationIcon = /* @__PURE__ */ icon(Fingerprint)
 export const BillingIcon = /* @__PURE__ */ icon(CreditCard)
