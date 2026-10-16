@@ -623,9 +623,10 @@ function EdgesDemo({ accent }: EdgesArgs) {
   )
 }
 
-/** The edge or track of every control holds WCAG 1.4.11's 3:1 against the surfaces it sits on,
- *  in each state, so an empty box or an off switch still shows where it is. A checked control's
- *  edge holds it too, even under an accent too pale to show on the page. */
+/** The edge or track of a checkbox, radio, switch or slider holds WCAG 1.4.11's 3:1 against the
+ *  surfaces it sits on, in each state, so an empty box or an off switch still shows where it is.
+ *  A checked control's edge holds it too, even under an accent too pale to show on the page. A
+ *  text field's edge rests quieter until pointed at; see `FormEdges`. */
 export const ControlEdges: StoryObj<EdgesArgs> = {
   args: { accent: '' },
   argTypes: {
@@ -647,6 +648,73 @@ export const ControlEdges: StoryObj<EdgesArgs> = {
 export const ControlEdgesPaleAccent: StoryObj<EdgesArgs> = {
   ...ControlEdges,
   args: { accent: '#fafafa' },
+}
+
+interface FormEdgesArgs {
+  /** The theme's contrast, from 0 to 100, on the page's own base and accent. */
+  contrast: number
+}
+
+function FormEdgesDemo({ contrast }: FormEdgesArgs) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) {
+      return
+    }
+    const page = getComputedStyle(document.documentElement)
+    const base = page.getPropertyValue('--theme-app-bg').trim() || '#ffffff'
+    const accent = page.getPropertyValue('--theme-accent').trim() || '#0d6efd'
+    applyTheme(el, generateTheme({ interface: { base, accent, contrast } }))
+  }, [contrast])
+  const form = (
+    <div className="flex w-80 flex-col gap-4">
+      <Field label="Name" description="Letters, numbers and dashes.">
+        <Input placeholder="my-cluster" />
+      </Field>
+      <Field label="Owner">
+        <Input defaultValue="Ada Lovelace" />
+      </Field>
+      <Field label="Zone">
+        <Select<string> placeholder="Zone" items={zones} />
+      </Field>
+      <Field label="Notes">
+        <Textarea placeholder="What it is for" rows={3} />
+      </Field>
+      <Field label="Zones" group>
+        <CheckboxGroup defaultValue={['east']} className="flex gap-4">
+          {zones.map((zone) => (
+            <FieldOption key={zone.value} className="flex items-center gap-2 text-sm">
+              <Checkbox value={zone.value} />
+              {zone.label}
+            </FieldOption>
+          ))}
+        </CheckboxGroup>
+      </Field>
+      <Field label="Monitoring">
+        <Switch />
+      </Field>
+      <Field label="Alerts">
+        <Switch defaultChecked />
+      </Field>
+    </div>
+  )
+  return (
+    <div ref={ref} className="flex flex-wrap gap-4 bg-(--theme-app-bg) p-2 text-(--theme-app)">
+      <div className="p-4">{form}</div>
+      <div className="rounded-lg bg-(--theme-panel-bg) p-4 shadow-sm">{form}</div>
+    </div>
+  )
+}
+
+/** A form of fields rests on a quieter edge than a checkbox or an off switch: a field is also
+ *  found by its label, size and text, while a checkbox's edge is all that shows it. Pointing at
+ *  a field raises its edge to the control's 3:1, and at contrast 100 the resting edge reaches
+ *  3:1 too. */
+export const FormEdges: StoryObj<FormEdgesArgs> = {
+  args: { contrast: 30 },
+  argTypes: { contrast: { control: { type: 'range', min: 0, max: 100, step: 10 } } },
+  render: (args) => <FormEdgesDemo {...args} />,
 }
 
 function PlaceholdersDemo() {

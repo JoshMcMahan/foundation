@@ -172,6 +172,8 @@ function pairs(vars: Partial<ThemeVariables>): [ThemeToken, Shown, number, numbe
   on('--theme-focus', ['--theme-app-bg', '--theme-panel-bg', '--theme-input-bg'], 3)
   // A control's edge or off track: WCAG 1.4.11's 3:1, on its surfaces and its own fill.
   on('--theme-border-strong', CONTROL_ON, 3)
+  // A text field's resting edge: quieter than a control's, above a divider's.
+  on('--theme-border-field', CONTROL_ON, 1.3)
   on('--theme-accent-text', ['--theme-accent', '--theme-accent-hover'], 4.5)
   for (const status of STATUSES) {
     // Both shades also sit on the status's own muted fill, as in a badge or a callout.
@@ -326,6 +328,39 @@ describe('generateTheme', () => {
           }
           // Cards, dividers and table lines keep their quieter line.
           expect(contrastRatio(v['--theme-border'], v['--theme-app-bg']), at).toBeLessThan(3)
+        }
+      }
+    }
+  })
+
+  it("rests a text field's edge between a divider and a control's, reaching 3:1 at high contrast", () => {
+    for (const preset of THEME_PRESETS) {
+      for (const mode of ['light', 'dark'] as const) {
+        const scheme = schemeFor(preset.theme, mode)
+        for (const contrast of CONTRASTS) {
+          const v = deriveTheme({ ...scheme, interface: { ...scheme.interface, contrast } })
+          const at = `${preset.name} ${mode} at ${contrast}`
+          for (const surface of CONTROL_ON) {
+            const on = (token: ThemeToken) => contrastRatio(v[token], v[surface])
+            const field = on('--theme-border-field')
+            expect(field, `field on ${surface}, ${at}`).toBeGreaterThanOrEqual(
+              { 0: 1.3, 30: 1.5, 100: 3 }[contrast] as number,
+            )
+            expect(field, `field above a divider on ${surface}, ${at}`).toBeGreaterThan(
+              on('--theme-border'),
+            )
+            // Hover raises the edge to the control's, which must read as a step up.
+            expect(on('--theme-border-strong'), `hover on ${surface}, ${at}`).toBeGreaterThan(
+              field * 1.3,
+            )
+          }
+          // A form of fields stays calm: at the default contrast and below, a field's edge
+          // keeps under 2:1 on the page.
+          if (contrast <= 30) {
+            expect(contrastRatio(v['--theme-border-field'], v['--theme-app-bg']), at).toBeLessThan(
+              2,
+            )
+          }
         }
       }
     }

@@ -24,10 +24,11 @@ const sizes = {
 export const focusOutline =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)'
 
-// The edge is often all that shows where a box is, so it takes the control edge the theme solves
-// to 3:1 on every surface, not the decorative border cards and dividers draw.
+// A field rests on its own edge, quieter than a checkbox's: its label, size and text already
+// show where it is, and a form of 3:1 boxes reads heavy. Pointing at it raises the edge to the
+// 3:1 control edge, and focus to the focus color.
 const base =
-  'w-full min-w-0 rounded-md border border-(--theme-border-strong) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder)'
+  'w-full min-w-0 rounded-md border border-(--theme-border-field) bg-(--theme-input-bg) text-(--theme-app) outline-none transition-colors placeholder:text-(--theme-placeholder) hover:border-(--theme-border-strong)'
 
 // One look for every state, on the control itself, or on the box around it with `within`. Focus
 // takes the focus color rather than the accent, which is the color picked for buttons' fill and
@@ -35,15 +36,15 @@ const base =
 const own = cx(
   'focus-visible:border-(--theme-focus) focus-visible:ring-1 focus-visible:ring-(--theme-focus)',
   'aria-invalid:border-(--theme-error) aria-invalid:focus-visible:ring-(--theme-error)',
-  'disabled:cursor-not-allowed disabled:bg-(--theme-input-disabled-bg) disabled:text-(--theme-placeholder)',
-  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
+  'disabled:cursor-not-allowed disabled:hover:border-(--theme-border-field) disabled:bg-(--theme-input-disabled-bg) disabled:text-(--theme-placeholder)',
+  'data-disabled:cursor-not-allowed data-disabled:hover:border-(--theme-border-field) data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
 )
 const inside = cx(
   'has-[:focus-visible]:border-(--theme-focus) has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-(--theme-focus)',
   'has-[[aria-invalid=true]]:border-(--theme-error) has-[[aria-invalid=true]:focus-visible]:ring-(--theme-error)',
   // The input, not a stepper or clear button that disables itself at a limit.
-  'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-placeholder)',
-  'data-disabled:cursor-not-allowed data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
+  'has-[input:disabled]:cursor-not-allowed has-[input:disabled]:hover:border-(--theme-border-field) has-[input:disabled]:bg-(--theme-input-disabled-bg) has-[input:disabled]:text-(--theme-placeholder)',
+  'data-disabled:cursor-not-allowed data-disabled:hover:border-(--theme-border-field) data-disabled:bg-(--theme-input-disabled-bg) data-disabled:text-(--theme-placeholder)',
 )
 
 /** The box every input-like control draws: text inputs, textareas, and the triggers of

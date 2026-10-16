@@ -368,7 +368,7 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: Mode }) {
           <span
             className={cx(
               fieldBox({ size: 'sm' }),
-              'flex flex-1 cursor-default items-center text-(--theme-placeholder) border-(--theme-border-strong)',
+              'flex flex-1 cursor-default items-center text-(--theme-placeholder)',
             )}
           >
             {t.previewSearch}

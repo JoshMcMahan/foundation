@@ -23,6 +23,7 @@
   --theme-placeholder: light-dark(#7e8796, #9da5ad);
   --theme-link: light-dark(#06354f, #9dd7ff);
   --theme-border: light-dark(#cacdd0, #30363d);
+  --theme-border-field: light-dark(#bdc0c3, #3a4148);
   --theme-border-strong: light-dark(#848689, #676e76);
   --theme-accent: light-dark(#06354f, #5b9ccf);
   --theme-accent-text: light-dark(#ffffff, #000000);

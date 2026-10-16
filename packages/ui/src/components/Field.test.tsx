@@ -152,6 +152,15 @@ describe('fieldBox', () => {
     expect(fieldBox({ within: true })).toContain('has-[[aria-invalid=true]]:border-(--theme-error)')
     expect(fieldBox({ multiline: true })).toContain('min-h-9')
   })
+
+  it("rests on the field edge and takes a control's edge on hover, unless disabled", () => {
+    for (const within of [false, true]) {
+      const box = fieldBox({ within }).split(' ')
+      expect(box).toContain('border-(--theme-border-field)')
+      expect(box).toContain('hover:border-(--theme-border-strong)')
+      expect(box).toContain('data-disabled:hover:border-(--theme-border-field)')
+    }
+  })
 })
 
 describe('Checkbox', () => {

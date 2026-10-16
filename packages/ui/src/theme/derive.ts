@@ -48,6 +48,7 @@ export const THEME_TOKENS = [
   '--theme-link',
   // Lines
   '--theme-border',
+  '--theme-border-field',
   '--theme-border-strong',
   // Accent
   '--theme-accent',
@@ -188,6 +189,10 @@ function targets(k: number) {
     // A focus indicator, a status icon or dot, and a control's boundary are UI, which WCAG 2
     // holds to 3:1 (1.4.11) at every contrast.
     graphic: { wcag: byContrast(k, [3, 3, 4.5]) },
+    // A text field's resting edge. The field is also told by its label, its size and its own
+    // fill, so its edge sits between a divider and a control's 3:1 until high contrast, where
+    // it reaches 3:1 as well.
+    field: { wcag: byContrast(k, [1.3, 1.5, 3]) },
     label: { wcag: 4.5 },
   }
 }
@@ -368,12 +373,19 @@ function build(
     meets(toHex(accent), focusOn.map(hexOf), t.graphic) ? t.graphic : { wcag: t.secondary.wcag },
   )
   set('--theme-focus-ring', focus, dark ? 0.35 : 0.25)
-  // A control's edge: the box of an input or a checkbox, the off track of a switch or a slider.
-  // It is often all that shows where the control is, so it holds a graphic's 3:1 on every
-  // surface a control sits on, and on the input fill inside it. It starts from the decorative
-  // border and moves only as far as that needs, while cards, dividers and table lines keep
-  // the quieter `--theme-border`.
+  // A control's edge: a checkbox's box, a radio's ring, the off track of a switch or a slider.
+  // It is all that shows where the control is and whether it is on, so it holds a graphic's
+  // 3:1 on every surface a control sits on, and on the input fill inside it. It starts from
+  // the decorative border and moves only as far as that needs, while cards, dividers and
+  // table lines keep the quieter `--theme-border`.
   solved('--theme-border-strong', border, CONTROL_ON, t.graphic)
+  // A text field's edge: inputs, selects, textareas and pickers. A field is a wide box with a
+  // label above it and text or a placeholder inside, so it is found without its edge, and a
+  // form of them drawn at 3:1 reads as heavy rows of dark boxes. Its edge rests quieter, rises
+  // with contrast to 3:1 at the top of the range, and takes the 3:1 edge on hover. The input
+  // fill matches the panel in every preset, so the edge is solved on the same surfaces as a
+  // control's; a darker fill would read as the disabled one.
+  solved('--theme-border-field', border, CONTROL_ON, t.field)
 
   set('--theme-accent', accent)
   const white = contrastRatio('#ffffff', toHex(accent)) >= 4.5
