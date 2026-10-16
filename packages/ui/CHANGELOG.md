@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.57.0](https://github.com/parallelworks/foundation/compare/ui-v0.56.0...ui-v0.57.0) (2026-10-16)
+
+
+### Features
+
+* **ui:** AddAllocationIcon and ArticleIcon ([#324](https://github.com/parallelworks/foundation/issues/324)) ([ba02798](https://github.com/parallelworks/foundation/commit/ba027982300b3e05bf763a8ff202c217c7dc059c))
+
+
+### Bug Fixes
+
+* **ui:** text fields rest on a quieter edge than checkboxes ([#328](https://github.com/parallelworks/foundation/issues/328)) ([d8577cf](https://github.com/parallelworks/foundation/commit/d8577cfffa0dbe9a653a5f488496ba61fda91402))
+
 ## [0.56.0](https://github.com/parallelworks/foundation/compare/ui-v0.55.0...ui-v0.56.0) (2026-10-16)
 
 
