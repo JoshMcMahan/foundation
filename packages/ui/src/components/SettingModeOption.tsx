@@ -19,7 +19,7 @@ export function SettingModeOption({
   return (
     <label
       className={cx(
-        'flex items-start gap-3 px-5 py-4',
+        'flex items-start gap-3 p-4',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         'border-t border-(--theme-border) first:border-t-0',
       )}

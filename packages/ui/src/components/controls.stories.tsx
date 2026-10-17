@@ -266,9 +266,13 @@ export const Cards: StoryObj<{
         title="Connect a cluster"
         description="Bring an existing cluster online"
       />
-      <p className="text-sm text-(--theme-muted-text-color)">
-        Body content sits on the card surface.
-      </p>
+      <div className="flex flex-col gap-4">
+        <Input label="Cluster name" placeholder="gpu-west" />
+        <Input label="Address" placeholder="https://cluster.example.com" />
+        <Button variant="primary" className="w-full">
+          Connect
+        </Button>
+      </div>
     </Card>
   ),
 }
@@ -278,11 +282,10 @@ export const CardsPressable: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-4">
       <Card size="sm" href="#cloud">
-        <CardHeader align="left" title="In the cloud" description="Start new machines for it" />
+        <CardHeader title="In the cloud" description="Start new machines for it" />
       </Card>
       <Card size="sm" render={<button type="button" />}>
         <CardHeader
-          align="left"
           title="On my own hardware"
           description="Connect machines you run"
         />

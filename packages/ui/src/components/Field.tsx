@@ -130,9 +130,9 @@ const labelSizes = {
   },
   md: {
     text: 'text-sm text-(--theme-app)',
-    inlineHeight: 'min-h-9',
+    inlineHeight: 'min-h-8',
     stackGap: 'gap-1.5',
-    inlineLine: 'py-2',
+    inlineLine: 'py-1.5',
   },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 const labelClassName = 'flex items-center gap-1 font-medium'
@@ -496,7 +496,7 @@ export function FieldValue({ size = 'md', className, children, ...props }: Field
       {...props}
       className={cx(
         'flex min-w-0 items-center break-words text-(--theme-app)',
-        size === 'sm' ? 'min-h-7 text-xs' : 'min-h-9 text-sm',
+        size === 'sm' ? 'min-h-7 text-xs' : 'min-h-8 text-sm',
         className,
       )}
     >

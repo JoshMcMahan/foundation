@@ -38,7 +38,7 @@ export function SettingsCard({
     <HeadingLevel value={(headingLevel + 1) as 3 | 4}>
       <section className={cx('mt-10 first:mt-0', className)}>
         {(title || action) && (
-          <div className="mb-3 px-0.5">
+          <div className="mb-4 px-0.5">
             <div
               className={cx(
                 'flex items-center gap-1.5',
@@ -46,7 +46,7 @@ export function SettingsCard({
               )}
             >
               {title && (
-                <Heading className="text-[15px] leading-none font-semibold theme-text">
+                <Heading className="text-base leading-none font-semibold theme-text">
                   {title}
                 </Heading>
               )}
@@ -74,7 +74,7 @@ export function SettingsCard({
 export function SettingsHeading({ children }: { children: ReactNode }) {
   const Heading = `h${useContext(HeadingLevel)}` as const
   return (
-    <Heading className="px-5 py-3 text-sm font-semibold tracking-wider uppercase theme-muted-panel theme-muted-text">
+    <Heading className="px-4 py-3 text-sm font-semibold tracking-wider uppercase theme-muted-panel theme-muted-text">
       {children}
     </Heading>
   )
@@ -106,7 +106,7 @@ export function SettingRow({
       role="none"
       onClick={onClick}
       className={cx(
-        'grid grid-cols-1 gap-x-8 gap-y-2 px-5 py-5',
+        'grid grid-cols-1 gap-x-8 gap-y-2 p-4',
         fill ? 'md:grid-cols-[200px_1fr]' : 'md:grid-cols-[1fr_auto]',
         onClick && 'cursor-pointer transition-colors select-none hover:theme-hover',
       )}

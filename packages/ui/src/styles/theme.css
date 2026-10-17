@@ -137,7 +137,7 @@
 
 /* The bordered panel graphs and settings cards sit in; graph circles hide connectors with its color. */
 @utility panel {
-  @apply border-solid rounded-2xl border border-(--theme-border) theme-panel;
+  @apply border-solid rounded-xl border border-(--theme-border) theme-panel;
 }
 
 @utility theme-muted-panel {

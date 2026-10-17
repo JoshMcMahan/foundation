@@ -15,7 +15,7 @@ export interface FieldBoxOptions {
 
 const sizes = {
   sm: { height: 'h-7', minHeight: 'min-h-7', px: 'px-2', py: 'py-1', text: 'text-xs' },
-  md: { height: 'h-9', minHeight: 'min-h-9', px: 'px-3', py: 'py-2', text: 'text-sm' },
+  md: { height: 'h-8', minHeight: 'min-h-8', px: 'px-3', py: 'py-1.5', text: 'text-sm' },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 
 /** The keyboard focus ring of a control that isn't a box, such as a checkbox, switch or slider

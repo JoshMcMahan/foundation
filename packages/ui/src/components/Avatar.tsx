@@ -21,8 +21,8 @@ export interface AvatarProps {
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
   xs: 'size-4 text-[9px]',
-  sm: 'size-6 text-xs',
-  md: 'size-8 text-sm',
+  sm: 'size-5 text-[9px]',
+  md: 'size-7 text-xs',
   lg: 'size-10 text-base',
   xl: 'size-12 text-lg',
   '2xl': 'size-16 text-xl',
@@ -115,7 +115,7 @@ export function Avatar({ src, name, colorKey, size = 'md', status, className }: 
           className={cx(
             'absolute right-0 bottom-0 block rounded-full ring-2 ring-(--theme-app-bg)',
             STATUS_CLASSES[status],
-            size === 'xs' || size === 'sm' ? 'size-1.5' : 'size-2.5',
+            size === 'xs' || size === 'sm' ? 'size-1.5' : size === 'md' ? 'size-2' : 'size-2.5',
           )}
         />
       )}

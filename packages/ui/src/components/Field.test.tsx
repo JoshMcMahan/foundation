@@ -49,7 +49,7 @@ describe('Field', () => {
       document.querySelector(`label[for="${screen.getByRole('textbox', { name }).id}"]`)
         ?.parentElement
     expect(labelRow('Allocation')).toHaveClass('min-h-7', 'text-xs')
-    expect(labelRow('Zone')).toHaveClass('min-h-9', 'text-sm')
+    expect(labelRow('Zone')).toHaveClass('min-h-8', 'text-sm')
   })
 
   it('puts actions on the label row, out of the control’s name', () => {
@@ -146,10 +146,10 @@ describe('RevealToggle', () => {
 describe('fieldBox', () => {
   it('sizes a box and follows aria-invalid and disabled rather than classes of its own', () => {
     expect(fieldBox({ size: 'sm' })).toContain('h-7')
-    expect(fieldBox()).toContain('h-9')
+    expect(fieldBox()).toContain('h-8')
     expect(fieldBox()).toContain('aria-invalid:border-(--theme-error)')
     expect(fieldBox({ within: true })).toContain('has-[[aria-invalid=true]]:border-(--theme-error)')
-    expect(fieldBox({ multiline: true })).toContain('min-h-9')
+    expect(fieldBox({ multiline: true })).toContain('min-h-8')
   })
 
   it("rests on the field edge and takes a control's edge on hover, unless disabled", () => {

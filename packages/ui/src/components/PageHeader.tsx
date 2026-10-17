@@ -232,7 +232,7 @@ function HeaderLayout({
       <div
         className={cx(
           'flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
-          compact ? 'h-8' : 'h-11',
+          compact ? 'h-8' : 'h-12',
         )}
       >
         {/* Grows to the room the actions leave, so the trail can measure it. */}

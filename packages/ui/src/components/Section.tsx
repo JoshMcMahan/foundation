@@ -39,17 +39,17 @@ const rootClasses: Record<SectionVariant, string> = {
 }
 
 const headerClasses: Record<SectionVariant, string> = {
-  plain: 'mb-2 flex w-full items-center gap-2 border-b border-(--theme-border) pb-1',
-  card: 'flex w-full items-center gap-2 px-3 py-3',
+  plain: 'mb-4 flex w-full items-center gap-2 border-b border-(--theme-border) pb-1',
+  card: 'flex w-full items-center gap-2 p-4',
 }
 
 // A card frames its content, so it pads it in line with the header. The padding sits
 // inside the folding panel, whose own height animates to nothing.
-const cardBodyClassName = 'px-3 pb-3'
+const cardBodyClassName = 'px-4 pb-4'
 
 const titleClasses: Record<SectionVariant, string> = {
-  plain: 'text-lg font-semibold',
-  card: 'text-sm font-bold',
+  plain: 'text-base font-semibold',
+  card: 'text-base font-semibold',
 }
 
 // A folded card's title recedes, so the open ones stand out in a long page. A

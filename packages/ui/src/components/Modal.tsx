@@ -106,7 +106,7 @@ export function Modal({
           {laidOut ? (
             <>
               {header && (
-                <div className={cx('shrink-0 px-5 pt-5', !body && 'pb-5')}>
+                <div className={cx('shrink-0 px-4 pt-4', !body && 'pb-4')}>
                   {title !== undefined && (
                     <ModalTitle className="m-0 text-lg font-semibold">{title}</ModalTitle>
                   )}
@@ -119,7 +119,7 @@ export function Modal({
               )}
               {body && (
                 // A short window scrolls the body alone, keeping the title and the actions in view.
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
                   {children}
                 </div>
               )}

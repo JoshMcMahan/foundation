@@ -44,7 +44,7 @@ export function Card({
     render: render ?? <div />,
     props: {
       className: cx(
-        'block w-full rounded-2xl border border-(--theme-border) bg-(--theme-panel-bg) backdrop-blur-xl',
+        'block w-full rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) backdrop-blur-xl',
         elevated ? 'shadow-(--theme-shadow-xl)' : 'shadow-(--theme-shadow)',
         sizeClasses[size],
         render &&
@@ -61,6 +61,8 @@ export interface CardHeaderProps {
   title: string
   description?: ReactNode
   className?: string
+  /** `left` starts the title on the same edge as the labels and fields under it; `center`
+   *  suits a card whose content is centred too. */
   align?: 'center' | 'left'
   /** The title's level in the page's outline: 1 for a card that is the page, such
    *  as sign-in; 2 or 3 for a card among others under the page's own title. */
@@ -72,7 +74,7 @@ export function CardHeader({
   title,
   description,
   className = '',
-  align = 'center',
+  align = 'left',
   headingLevel = 1,
 }: CardHeaderProps) {
   const Heading = `h${headingLevel}` as const

@@ -27,4 +27,4 @@ export function closeHandler(dismissible: boolean, onClose: () => void) {
 
 /** The row of a dialog's actions along its bottom edge, ruled off from its body. */
 export const dialogFooterClassName =
-  'flex shrink-0 items-center justify-end gap-2 border-t border-(--theme-border) px-5 py-3'
+  'flex shrink-0 items-center justify-end gap-2 border-t border-(--theme-border) px-4 py-3'

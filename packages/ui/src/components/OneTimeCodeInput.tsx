@@ -69,7 +69,7 @@ export function OneTimeCodeInput({
           className={cx(
             fieldBox({ size }),
             'px-0 text-center font-mono tabular-nums',
-            size === 'sm' ? 'w-7' : 'w-9 text-base',
+            size === 'sm' ? 'w-7' : 'w-8 text-base',
           )}
         />
       ))}

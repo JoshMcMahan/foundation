@@ -194,9 +194,9 @@ export function Table({
               !stickyHeader && 'overflow-x-auto',
               panel && 'theme-panel',
               !borderless && 'border theme-border',
-              rounded && 'rounded-2xl',
-              roundedBottom && 'rounded-b-2xl',
-              roundedTop && 'rounded-t-2xl',
+              rounded && 'rounded-xl',
+              roundedBottom && 'rounded-b-xl',
+              roundedTop && 'rounded-t-xl',
             )}
           >
             <table className={cx('min-w-full divide-y theme-border', className)} {...tableProps}>

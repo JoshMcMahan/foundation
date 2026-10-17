@@ -196,7 +196,7 @@ export function ListCount({
 }) {
   const { list: t } = useStrings()
   return (
-    <div className="flex items-center h-9">
+    <div className="flex items-center h-8">
       {/* A status, so a screen reader hears the count change as a filter narrows it. */}
       <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
         {filterActive
