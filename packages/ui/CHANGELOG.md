@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.65.2](https://github.com/parallelworks/foundation/compare/ui-v0.65.1...ui-v0.65.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ui:** on a phone the chat composer's pickers are cut to a letter and its balance covers send, and a tool result runs off the screen ([#366](https://github.com/parallelworks/foundation/issues/366)) ([0cb1920](https://github.com/parallelworks/foundation/commit/0cb19209aa00669e15682f966c2071c8660172b9))
+
 ## [0.65.1](https://github.com/parallelworks/foundation/compare/ui-v0.65.0...ui-v0.65.1) (2026-10-17)
 
 
