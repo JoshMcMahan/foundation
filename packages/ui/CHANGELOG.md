@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.65.1](https://github.com/parallelworks/foundation/compare/ui-v0.65.0...ui-v0.65.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ui:** a form on a phone squeezes its fields beside a 208px label, and the sign-in card crowds its title ([#364](https://github.com/parallelworks/foundation/issues/364)) ([9d6ef23](https://github.com/parallelworks/foundation/commit/9d6ef23dd55fa8190b30a01605945b0cdcaf7358))
+
 ## [0.65.0](https://github.com/parallelworks/foundation/compare/ui-v0.64.1...ui-v0.65.0) (2026-10-17)
 
 
