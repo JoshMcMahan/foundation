@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.64.0](https://github.com/parallelworks/foundation/compare/ui-v0.63.0...ui-v0.64.0) (2026-10-17)
+
+
+### Features
+
+* **ui:** one scale shared with the apps: 32px fields, 48px header, 16px titles, 12px panels, 16px padding ([#343](https://github.com/parallelworks/foundation/issues/343)) ([3cc75a4](https://github.com/parallelworks/foundation/commit/3cc75a4ecbf1941b349478f49602dafdd4d42a97))
+
 ## [0.63.0](https://github.com/parallelworks/foundation/compare/ui-v0.62.0...ui-v0.63.0) (2026-10-16)
 
 
