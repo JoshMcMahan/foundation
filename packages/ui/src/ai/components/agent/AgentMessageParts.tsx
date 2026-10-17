@@ -333,7 +333,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
       {!isDiff && !expanded && (
         <div
           className={cx(
-            'ml-5 mt-0.5 text-[13px]',
+            'ml-5 mt-0.5 truncate text-[13px]',
             part.status === 'error' ? 'text-(--theme-error-text)' : 'theme-muted-text',
           )}
         >

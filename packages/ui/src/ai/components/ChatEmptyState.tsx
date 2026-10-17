@@ -12,7 +12,7 @@ import type { AttachmentMeta } from '../types'
 import BlockedGroupBanner from './BlockedGroupBanner'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatStage from './ChatStage'
-import { ComposerControls, ConnectToolsLink } from './ComposerChrome'
+import { ComposerControls, ComposerUsage, ConnectToolsLink } from './ComposerChrome'
 import DragOverlay from './DragOverlay'
 import ProviderIssueBanner from './ProviderIssueBanner'
 
@@ -183,7 +183,7 @@ export default function ChatEmptyState({
               settingsLeft={<ConnectToolsLink />}
               settingsRight={
                 <>
-                  {slots.composerUsage}
+                  <ComposerUsage>{slots.composerUsage}</ComposerUsage>
                   <ComposerControls targetSession={targetSession} />
                 </>
               }

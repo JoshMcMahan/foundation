@@ -218,7 +218,9 @@ export default function ModelSelector({
             <>
               <span className="truncate font-medium theme-text">{getModelLabel(selected)}</span>
               {selected.provider && (
-                <span className="max-w-[45%] shrink-0 truncate text-xs">{selected.provider}</span>
+                <span className="hidden max-w-[45%] shrink-0 truncate text-xs @md:inline">
+                  {selected.provider}
+                </span>
               )}
               {issue && <WarningIcon className="h-3.5 w-3.5 shrink-0 text-(--theme-warning)" />}
             </>
