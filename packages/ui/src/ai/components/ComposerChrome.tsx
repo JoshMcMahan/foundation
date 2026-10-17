@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ConnectIcon, SettingsIcon } from '../../icons'
+import { useHasChatTools } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import AllocationSelector from './AllocationSelector'
 import ModelSelector from './ModelSelector'
@@ -62,9 +63,12 @@ export function ManageProvidersLink() {
   )
 }
 
+/** Where the reader connects more tools, under the composer. While the
+ *  adapter lists tools it sits at the foot of the composer's + menu instead. */
 export function ConnectToolsLink() {
   const { extraLinks, LinkComponent, strings } = useChatConfig()
-  if (!extraLinks.connectTools) {
+  const inMenu = useHasChatTools()
+  if (!extraLinks.connectTools || inMenu) {
     return null
   }
   return (

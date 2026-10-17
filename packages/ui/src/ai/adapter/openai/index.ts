@@ -1,6 +1,7 @@
 export {
   createOpenAICompatibleStream,
   type OpenAIStreamConfig,
+  TOOLS_HEADER,
 } from './createOpenAIStream'
 export {
   apiErrorMessage,

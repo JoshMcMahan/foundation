@@ -32,10 +32,14 @@ const chatState = {
   queuedMessages: [] as unknown[],
   flushQueuedMessages: vi.fn(),
   isSelectedModelAvailable: true,
+  tools: [] as unknown[],
+  enabledToolIds: [] as string[],
+  setToolEnabled: vi.fn(),
 }
 
 vi.mock('../core/ChatProvider', () => ({
   useChat: () => chatState,
+  useHasChatTools: () => false,
 }))
 
 const storage = new Map<string, string>()

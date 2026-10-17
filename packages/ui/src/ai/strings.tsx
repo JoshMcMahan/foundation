@@ -51,6 +51,27 @@ export interface ChatStrings {
     /** Sending before a model is chosen. */
     selectFirst: string
   }
+  composerMenu: {
+    /** Names the composer's + button while it opens a menu of files and tools. */
+    label: string
+    /** Opens the attachments panel from the menu. */
+    addFiles: string
+    /** Heads the host's tools in the menu, and names the + when it holds only tools. */
+    tools: string
+    /** Beside the + while the reader has turned some of the host's tools off. */
+    someToolsOff: string
+    /** Beside Tools: how many of the host's tools are on. */
+    toolsOn: (enabled: number, total: number) => string
+    /** Under the title of the modal that lists every tool. */
+    toolsDescription: string
+    searchTools: string
+    /** The modal's search matched no tool. */
+    noToolsMatch: string
+    turnAllOn: string
+    turnAllOff: string
+    /** Closes the tools modal; each switch takes effect as it is flipped. */
+    done: string
+  }
   allocationPicker: {
     choose: string
     placeholder: string
@@ -338,6 +359,19 @@ export const defaultChatStrings: ChatStrings = {
     notResponding: 'Not responding',
     manageProvider: 'Manage provider',
     selectFirst: 'Select a model first',
+  },
+  composerMenu: {
+    label: 'Add files and tools',
+    addFiles: 'Add files',
+    tools: 'Tools',
+    someToolsOff: 'Some tools are off',
+    toolsOn: (enabled, total) => `${enabled.toLocaleString()}/${total.toLocaleString()}`,
+    toolsDescription: 'What the assistant may look up for you.',
+    searchTools: 'Search tools',
+    noToolsMatch: 'No tools match',
+    turnAllOn: 'Turn all on',
+    turnAllOff: 'Turn all off',
+    done: 'Done',
   },
   allocationPicker: {
     choose: 'Allocation',

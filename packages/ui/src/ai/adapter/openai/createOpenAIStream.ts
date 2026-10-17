@@ -3,6 +3,32 @@ import { errorMessageFromResponse } from './errors'
 import { buildResponsesRequestBody, parseResponsesSSELine } from './responses'
 import { processSSEStream } from './sse'
 
+// Names the host's tools the reader left on, comma-separated. Sent empty when
+// every tool is off, and left out when the request carries no tool choice.
+export const TOOLS_HEADER = 'X-Platform-Tools'
+
+function requestHeaders(
+  hostHeaders: Record<string, string> | undefined,
+  tools: string[] | undefined,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  }
+  const toolsKey = TOOLS_HEADER.toLowerCase()
+  for (const [name, value] of Object.entries(hostHeaders ?? {})) {
+    // The reader's choice for this request wins over a host's own value,
+    // whatever case the host spelled it in.
+    if (tools === undefined || name.toLowerCase() !== toolsKey) {
+      headers[name] = value
+    }
+  }
+  if (tools !== undefined) {
+    headers[TOOLS_HEADER] = tools.join(',')
+  }
+  return headers
+}
+
 export interface OpenAIStreamConfig {
   completionsUrl: string
   // Enables the OpenAI Responses API transport for requests with
@@ -30,11 +56,7 @@ export function createOpenAICompatibleStream(config: OpenAIStreamConfig): Stream
     const doFetch = config.fetch ?? globalThis.fetch.bind(globalThis)
     const res = await doFetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-        ...config.buildHeaders?.(req),
-      },
+      headers: requestHeaders(config.buildHeaders?.(req), req.tools),
       ...(config.credentials ? { credentials: config.credentials } : {}),
       body: JSON.stringify(body),
       ...(signal ? { signal } : {}),

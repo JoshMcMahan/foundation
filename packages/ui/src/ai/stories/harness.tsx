@@ -4,7 +4,7 @@
 // here and a story that calls it. See ../../.storybook/CONTRIBUTING.md.
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import type { ChatAdapter, StreamHandlers } from '../adapter/types'
+import type { ChatAdapter, ChatToolOption, StreamHandlers } from '../adapter/types'
 import type { ComposerPastes, PasteUploadResult } from '../components/usePasteCards'
 import { ChatProvider, type ChatProviderProps } from '../core/ChatProvider'
 import type { ChatLinkProps, ChatUIConfig } from '../core/config'
@@ -262,6 +262,8 @@ export function makeStaticAdapter(options?: {
   unreachableSessions?: { name: string; owner: string }[]
   /** Offered for an organization model ("org:" providers). */
   allocations?: Allocation[]
+  /** The host's own tools, for the composer's tools menu. */
+  tools?: ChatToolOption[]
 }): ChatAdapter {
   const conversations = options?.conversations ?? [makeConversation()]
   const summaries =
@@ -435,6 +437,10 @@ export function makeStaticAdapter(options?: {
   if (allocations) {
     adapter.allocations = { list: async () => allocations }
   }
+  const tools = options?.tools
+  if (tools) {
+    adapter.tools = { list: async () => tools }
+  }
   return adapter
 }
 
@@ -458,6 +464,19 @@ function attachmentUrl(id: string): string {
     pictureUrls.set(id, url)
   }
   return url
+}
+
+/** Tools a host's backend runs itself, as the composer's tools menu lists them. */
+export function makeTools(): ChatToolOption[] {
+  return [
+    {
+      id: 'list_clusters',
+      label: 'List clusters',
+      description: 'Names your clusters and their state',
+    },
+    { id: 'list_storage', label: 'List storage', description: 'Names your buckets and disks' },
+    { id: 'read_docs', label: 'Read the docs' },
+  ]
 }
 
 /** Files as a store lists them: two pictures, a document and a log; ids that
@@ -945,4 +964,21 @@ export function useStreamedText(
     return () => clearInterval(timer)
   }, [words, durationMs, run])
   return { text: words.slice(0, shown).join(' '), done: shown >= words.length }
+}
+
+/** More tools than the menu holds, so the composer lists them in a modal. */
+export function makeManyTools(): ChatToolOption[] {
+  return [
+    ...makeTools(),
+    {
+      id: 'list_runs',
+      label: 'List workflow runs',
+      description: 'Your recent runs and their status',
+    },
+    { id: 'list_sessions', label: 'List sessions', description: 'Desktops and apps you have open' },
+    { id: 'list_costs', label: 'Read costs', description: 'Spend by cluster and group' },
+    { id: 'list_workflows', label: 'List workflows', description: 'Workflows you can run' },
+    { id: 'list_buckets', label: 'List buckets', description: 'Buckets you can read' },
+    { id: 'read_logs', label: 'Read run logs', description: 'The output of a workflow run' },
+  ]
 }

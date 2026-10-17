@@ -46,6 +46,9 @@ export interface StreamRequest {
   // Use the OpenAI Responses API transport (models advertising
   // supports_responses); reasoning items replay across turns.
   useResponses?: boolean
+  // The ids of the host's tools the reader left on, possibly none. Absent
+  // when the adapter lists no tools, or before the list has loaded.
+  tools?: string[]
 }
 
 export interface StreamHandlers {
@@ -162,6 +165,18 @@ export interface AllocationsAdapter {
   list(): Promise<Allocation[]>
 }
 
+// A tool the host's backend runs itself while it answers. The label and
+// description arrive in the reader's language.
+export interface ChatToolOption {
+  id: string
+  label: string
+  description?: string
+}
+
+export interface ChatToolsAdapter {
+  list(): Promise<ChatToolOption[]>
+}
+
 // The backend boundary for the chat UI. Optional capability groups hide their
 // corresponding UI affordances when absent.
 export interface ChatAdapter {
@@ -172,4 +187,5 @@ export interface ChatAdapter {
   attachments?: AttachmentsAdapter
   sharing?: SharingAdapter
   allocations?: AllocationsAdapter
+  tools?: ChatToolsAdapter
 }

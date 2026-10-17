@@ -13,7 +13,7 @@ import {
 import { usePersistedState } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import type { CompletionMessage } from '../adapter/openai/wire'
-import type { ChatAdapter, PartDelta } from '../adapter/types'
+import type { ChatAdapter, ChatToolOption, PartDelta } from '../adapter/types'
 import type {
   AttachmentMeta,
   AttachmentRef,
@@ -129,6 +129,9 @@ interface ChatContextValue {
   selectedProvider: string | null
   isSelectedModelAvailable: boolean
   selectedAllocation: string | null
+  /** The host's tools the reader may turn on or off; empty when it lists none. */
+  tools: ChatToolOption[]
+  enabledToolIds: string[]
   isLoading: boolean
   isLoadingConversation: boolean
   isLoadingModels: boolean
@@ -158,6 +161,7 @@ interface ChatContextValue {
   retryMessage: (messageId: string) => Promise<boolean>
   setSelectedProvider: (providerId: string | null) => void
   setSelectedAllocation: (allocation: string | null) => void
+  setToolEnabled: (id: string, enabled: boolean) => void
   stopStreaming: () => void
   removeQueuedMessage: (id: string) => void
   flushQueuedMessages: () => void
@@ -183,6 +187,8 @@ export interface ChatStream {
   thinkingStartTime: number | null
 }
 
+const NO_TOOLS: ChatToolOption[] = []
+
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
 const ChatStreamContext = createContext<ChatStream | undefined>(undefined)
 
@@ -192,6 +198,12 @@ export function useChat() {
     throw new Error('useChat must be used within a ChatProvider')
   }
   return context
+}
+
+/** True while the adapter lists tools of its own, which the composer's +
+ *  menu offers; false outside a ChatProvider. */
+export function useHasChatTools(): boolean {
+  return (useContext(ChatContext)?.tools.length ?? 0) > 0
 }
 
 /** The reply being streamed. A component that reads it re-renders on every
@@ -259,6 +271,48 @@ export function ChatProvider({
   const [storedModel, storeModel] = usePersistedState<string | null>('aiChat.model', null)
   const storedModelRef = useRef(storedModel)
   storedModelRef.current = storedModel
+
+  // Null until the host's list loads, so a request sent before then leaves
+  // the choice to the backend rather than turning every tool off.
+  const [tools, setTools] = useState<ChatToolOption[] | null>(null)
+  // The tools turned off rather than on, so one the host adds later starts on.
+  const [disabledToolIds, storeDisabledToolIds] = usePersistedState<string[]>(
+    `aiChat.disabledTools.${currentUser.id}`,
+    [],
+  )
+  useEffect(() => {
+    if (!adapter.tools) {
+      setTools(null)
+      return
+    }
+    let current = true
+    adapter.tools.list().then(
+      (listed) => {
+        if (current) {
+          setTools(listed)
+        }
+      },
+      (error: unknown) => {
+        console.error('Failed to load tools:', error)
+      },
+    )
+    return () => {
+      current = false
+    }
+  }, [adapter])
+  const enabledToolIds = useMemo(
+    () => (tools ?? []).filter((t) => !disabledToolIds.includes(t.id)).map((t) => t.id),
+    [tools, disabledToolIds],
+  )
+  const setToolEnabled = useCallback(
+    (id: string, enabled: boolean) => {
+      storeDisabledToolIds((previous) => {
+        const others = previous.filter((other) => other !== id)
+        return enabled ? others : [...others, id]
+      })
+    },
+    [storeDisabledToolIds],
+  )
 
   const selectedProviderRef = useRef(state.selectedProvider)
   useEffect(() => {
@@ -744,6 +798,7 @@ export function ChatProvider({
             userMessageId,
             allocation: state.selectedAllocation,
             useResponses,
+            ...(tools ? { tools: enabledToolIds } : {}),
           },
           {
             onContent: (chunk: string) => {
@@ -891,6 +946,8 @@ export function ChatProvider({
       state.selectedAllocation,
       state.currentConversation,
       state.models,
+      tools,
+      enabledToolIds,
       currentUser,
       createConversation,
       loadConversations,
@@ -1166,6 +1223,8 @@ export function ChatProvider({
       selectedProvider: state.selectedProvider,
       isSelectedModelAvailable,
       selectedAllocation: state.selectedAllocation,
+      tools: tools ?? NO_TOOLS,
+      enabledToolIds,
       isLoading: state.isLoading,
       isLoadingConversation: state.isLoadingConversation,
       isLoadingModels: state.isLoadingModels,
@@ -1188,6 +1247,7 @@ export function ChatProvider({
       retryMessage,
       setSelectedProvider,
       setSelectedAllocation,
+      setToolEnabled,
       stopStreaming,
       removeQueuedMessage,
       flushQueuedMessages,
@@ -1211,6 +1271,8 @@ export function ChatProvider({
       state.providerIssues,
       state.selectedProvider,
       state.selectedAllocation,
+      tools,
+      enabledToolIds,
       state.isLoading,
       state.isLoadingConversation,
       state.isLoadingModels,
@@ -1233,6 +1295,7 @@ export function ChatProvider({
       retryMessage,
       setSelectedProvider,
       setSelectedAllocation,
+      setToolEnabled,
       stopStreaming,
       removeQueuedMessage,
       flushQueuedMessages,

@@ -1,5 +1,5 @@
 import { createMemoryConversationStore } from '../memoryStore'
-import type { ChatAdapter, StreamResult } from '../types'
+import type { ChatAdapter, ChatToolOption, StreamResult } from '../types'
 
 const CANNED_REPLIES = [
   "Here's a canned reply from the mock adapter. It streams word by word so the typewriter animation, cancel behavior, and background streams all exercise the same code paths as a real backend.\n\n- No network requests are made\n- Conversations persist in localStorage\n- Try canceling mid-stream: the partial reply is kept",
@@ -9,6 +9,17 @@ const CANNED_REPLIES = [
 
 const TOOL_REPLY =
   'Two clusters are running: **gpu-a** with 4 nodes, and **cpu-batch**, idle and scaled to zero.'
+
+const TOOLS_OFF_REPLY =
+  "Listing clusters is turned off in the tools menu, so I can't check which clusters are running. Turn it back on and ask again."
+
+const LIST_CLUSTERS = 'list_clusters'
+
+const MOCK_TOOLS: ChatToolOption[] = [
+  { id: LIST_CLUSTERS, label: 'List clusters', description: 'Names your clusters and their state' },
+  { id: 'list_storage', label: 'List storage', description: 'Names your buckets and disks' },
+  { id: 'read_docs', label: 'Read the docs' },
+]
 
 const THINKING_PREAMBLE =
   'Thinking about the question, weighing a few canned options, and picking the next reply in the rotation...'
@@ -39,6 +50,11 @@ export function createMockChatAdapter(options?: { storageKey?: string }): ChatAd
 
   return {
     conversations: store.conversations,
+    tools: {
+      async list() {
+        return MOCK_TOOLS
+      },
+    },
     models: {
       async list() {
         return {
@@ -88,7 +104,9 @@ export function createMockChatAdapter(options?: { storageKey?: string }): ChatAd
           }
         }
 
-        const usesTools = req.model.includes('tools')
+        const toolsModel = req.model.includes('tools')
+        const usesTools =
+          toolsModel && (req.tools === undefined || req.tools.includes(LIST_CLUSTERS))
         if (usesTools) {
           const id = `call-${crypto.randomUUID()}`
           handlers.onPart?.({ type: 'tool_start', id, name: 'list_clusters', args: '{}' })
@@ -105,7 +123,9 @@ export function createMockChatAdapter(options?: { storageKey?: string }): ChatAd
 
         const reply = usesTools
           ? TOOL_REPLY
-          : (CANNED_REPLIES[replyIndex++ % CANNED_REPLIES.length] ?? '')
+          : toolsModel
+            ? TOOLS_OFF_REPLY
+            : (CANNED_REPLIES[replyIndex++ % CANNED_REPLIES.length] ?? '')
 
         await sleep(250, signal)
         let content = ''

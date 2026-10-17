@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ChatAdapterError, type PartDelta, type StreamRequest } from '../types'
-import { createOpenAICompatibleStream } from './createOpenAIStream'
+import { createOpenAICompatibleStream, TOOLS_HEADER } from './createOpenAIStream'
 
 function sseResponse(lines: string[]): Response {
   const body = new ReadableStream<Uint8Array>({
@@ -165,6 +165,50 @@ describe('createOpenAICompatibleStream', () => {
     await expect(promise).rejects.toMatchObject({
       message: 'quota exhausted',
       status: 429,
+    })
+  })
+
+  describe('the tools header', () => {
+    async function headersFor(
+      req: StreamRequest,
+      hostHeaders?: Record<string, string>,
+    ): Promise<Record<string, string>> {
+      const fetchMock = vi.fn<typeof globalThis.fetch>(async () => sseResponse(['data: [DONE]']))
+      const stream = createOpenAICompatibleStream({
+        completionsUrl: '/v1/chat/completions',
+        ...(hostHeaders ? { buildHeaders: () => hostHeaders } : {}),
+        fetch: fetchMock,
+      })
+      await stream(req, { onContent: () => {} })
+      return fetchMock.mock.calls[0]![1]?.headers as Record<string, string>
+    }
+
+    it('names the enabled tools', async () => {
+      const headers = await headersFor(baseRequest({ tools: ['list_clusters', 'read_docs'] }))
+      expect(headers[TOOLS_HEADER]).toBe('list_clusters,read_docs')
+    })
+
+    it('is sent empty when every tool is off', async () => {
+      const headers = await headersFor(baseRequest({ tools: [] }))
+      expect(headers).toHaveProperty(TOOLS_HEADER, '')
+    })
+
+    it('is left out when the request carries no tool choice', async () => {
+      const headers = await headersFor(baseRequest(), { 'X-Conversation-Id': 'conv-1' })
+      expect(Object.keys(headers).map((name) => name.toLowerCase())).not.toContain(
+        TOOLS_HEADER.toLowerCase(),
+      )
+      expect(headers['X-Conversation-Id']).toBe('conv-1')
+    })
+
+    it("wins over the host's own value", async () => {
+      const headers = await headersFor(baseRequest({ tools: ['read_docs'] }), {
+        'x-platform-tools': 'list_clusters',
+        Authorization: 'Bearer t',
+      })
+      expect(headers).not.toHaveProperty('x-platform-tools')
+      expect(headers[TOOLS_HEADER]).toBe('read_docs')
+      expect(headers['Authorization']).toBe('Bearer t')
     })
   })
 })

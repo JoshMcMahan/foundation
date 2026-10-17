@@ -697,3 +697,87 @@ describe('model selection', () => {
     expect(adapter.streamCompletion).not.toHaveBeenCalled()
   })
 })
+
+describe('host tools', () => {
+  const DISABLED_TOOLS_KEY = `aiChat.disabledTools.${currentUser.id}`
+  const hostTools = [
+    { id: 'list_clusters', label: 'List clusters' },
+    { id: 'list_storage', label: 'List storage', description: 'Buckets and disks' },
+    { id: 'read_docs', label: 'Read the docs' },
+  ]
+
+  function toolsAdapter(overrides?: Partial<ChatAdapter>) {
+    return makeAdapter({ tools: { list: vi.fn(async () => hostTools) }, ...overrides })
+  }
+
+  it('starts with every listed tool enabled', async () => {
+    await renderProvider(toolsAdapter())
+
+    expect(chat.tools).toEqual(hostTools)
+    expect(chat.enabledToolIds).toEqual(['list_clusters', 'list_storage', 'read_docs'])
+  })
+
+  it('remembers the tools turned off, so a tool listed later starts enabled', async () => {
+    storage.set(DISABLED_TOOLS_KEY, JSON.stringify(['list_storage', 'retired_tool']))
+    await renderProvider(toolsAdapter())
+    expect(chat.enabledToolIds).toEqual(['list_clusters', 'read_docs'])
+
+    act(() => {
+      chat.setToolEnabled('read_docs', false)
+    })
+    act(() => {
+      chat.setToolEnabled('list_storage', true)
+    })
+
+    expect(JSON.parse(storage.get(DISABLED_TOOLS_KEY) ?? '[]')).toEqual([
+      'retired_tool',
+      'read_docs',
+    ])
+    expect(chat.enabledToolIds).toEqual(['list_clusters', 'list_storage'])
+  })
+
+  it('sends the enabled tools with each request, even when none are', async () => {
+    const adapter = toolsAdapter()
+    await renderProvider(adapter)
+
+    act(() => {
+      chat.setToolEnabled('list_storage', false)
+    })
+    await act(async () => {
+      await chat.sendMessage('what is running')
+    })
+    for (const tool of hostTools) {
+      act(() => {
+        chat.setToolEnabled(tool.id, false)
+      })
+    }
+    await act(async () => {
+      await chat.sendMessage('and now')
+    })
+
+    const calls = vi.mocked(adapter.streamCompletion).mock.calls
+    expect(calls[0]![0].tools).toEqual(['list_clusters', 'read_docs'])
+    expect(calls[1]![0].tools).toEqual([])
+  })
+
+  it('sends no tool choice for an adapter without tools', async () => {
+    const adapter = makeAdapter()
+    await renderProvider(adapter)
+    await act(async () => {
+      await chat.sendMessage('hi')
+    })
+
+    expect(chat.tools).toEqual([])
+    expect(vi.mocked(adapter.streamCompletion).mock.calls[0]![0]).not.toHaveProperty('tools')
+  })
+
+  it('leaves the choice to the backend while the list has not loaded', async () => {
+    const adapter = toolsAdapter({ tools: { list: () => new Promise(() => {}) } })
+    await renderProvider(adapter)
+    await act(async () => {
+      await chat.sendMessage('hi')
+    })
+
+    expect(vi.mocked(adapter.streamCompletion).mock.calls[0]![0]).not.toHaveProperty('tools')
+  })
+})
