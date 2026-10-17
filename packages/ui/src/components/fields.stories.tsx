@@ -618,6 +618,136 @@ export const ControlFirstHelpOnKeyboardFocus: StoryObj<ControlFirstArgs> = {
   },
 }
 
+interface SwitchCenteringArgs {
+  layout: FieldLayout
+  size: FieldBoxSize
+}
+
+/** The center of a line box, from the first or a later rectangle of an element's text, which is
+ *  as far from the line's top as from its bottom. */
+function lineOf(element: Element, index = 0) {
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  const rect = range.getClientRects()[index]
+  if (!rect) {
+    throw new Error(`no line ${index} in ${element.textContent}`)
+  }
+  const height = Number.parseFloat(getComputedStyle(element).lineHeight)
+  const center = rect.top + rect.height / 2
+  return { top: center - height / 2, bottom: center + height / 2 }
+}
+
+/** Where a control's middle sits, and the middle of the text lines it should center on: the
+ *  label's first line, its first two lines, or the label's line and the description's first. */
+function centers(canvasElement: HTMLElement, role: 'switch' | 'checkbox', name: string | RegExp) {
+  const control = within(canvasElement).getByRole(role, { name })
+  const labelledBy = control.getAttribute('aria-labelledby')
+  const label = labelledBy ? document.getElementById(labelledBy) : null
+  const describedBy = control.getAttribute('aria-describedby')?.split(' ') ?? []
+  const descriptionId = describedBy.find((id) => id.endsWith('description'))
+  const description = descriptionId ? document.getElementById(descriptionId) : null
+  if (!label) {
+    throw new Error(`no label for ${name}`)
+  }
+  const box = control.getBoundingClientRect()
+  const middle = (a: { top: number }, b: { bottom: number }) => (a.top + b.bottom) / 2
+  const first = lineOf(label)
+  return {
+    control: box.top + box.height / 2,
+    firstLine: middle(first, first),
+    twoLabelLines: () => middle(first, lineOf(label, 1)),
+    labelAndDescription: () => {
+      if (!description) {
+        throw new Error(`no description for ${name}`)
+      }
+      return middle(first, lineOf(description))
+    },
+  }
+}
+
+/** A switch centers on its text's first two lines: the label alone, the label and a one-line
+ *  description, a label that wraps, and a description of several lines, where it stays on the
+ *  label and the description's first line. A checkbox keeps to its label's first line. */
+export const ControlFirstSwitchCentering: StoryObj<SwitchCenteringArgs> = {
+  args: { layout: 'stacked', size: 'md' },
+  argTypes: {
+    layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+  },
+  render: ({ layout, size }) => (
+    <div className={cx('flex flex-col gap-4', layout === 'inline' ? 'max-w-2xl' : 'max-w-sm')}>
+      <Field label="Monitoring" controlFirst layout={layout} size={size}>
+        <Switch size={size} defaultChecked />
+      </Field>
+      <Field
+        label="Keep scratch files"
+        description="Kept files count toward the project quota."
+        controlFirst
+        layout={layout}
+        size={size}
+      >
+        <Switch size={size} />
+      </Field>
+      <Field
+        label="Archive finished runs automatically, with their outputs and logs, after a month"
+        controlFirst
+        layout={layout}
+        size={size}
+      >
+        <Switch size={size} defaultChecked />
+      </Field>
+      <Field
+        label="Cache images"
+        description="Nodes keep the images their runs pull, so the next run on the node starts sooner. A cached image counts toward the node's disk, and the oldest ones are removed when it fills."
+        controlFirst
+        layout={layout}
+        size={size}
+      >
+        <Switch size={size} defaultChecked />
+      </Field>
+      <Field
+        label="I agree to the terms of use"
+        description="The terms cover every run in this workspace."
+        controlFirst
+        layout={layout}
+        size={size}
+      >
+        <Checkbox />
+      </Field>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const near = async (actual: number, expected: number) =>
+      expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1)
+    const alone = centers(canvasElement, 'switch', 'Monitoring')
+    await near(alone.control, alone.firstLine)
+    const described = centers(canvasElement, 'switch', 'Keep scratch files')
+    const onTwo = described.labelAndDescription()
+    await near(described.control, onTwo)
+    const wrapped = centers(canvasElement, 'switch', /Archive finished runs/)
+    await near(wrapped.control, wrapped.twoLabelLines())
+    // Under several lines it stays where it is beside a one-line description, measured from the
+    // top of its own row.
+    const long = centers(canvasElement, 'switch', 'Cache images')
+    await near(long.control, long.labelAndDescription())
+    await near(long.control - long.firstLine, described.control - described.firstLine)
+    const checkbox = centers(canvasElement, 'checkbox', 'I agree to the terms of use')
+    await near(checkbox.control, checkbox.firstLine)
+  },
+}
+
+/** The same at the small size, whose label and description lines are both 16px. */
+export const ControlFirstSwitchCenteringSmall: StoryObj<SwitchCenteringArgs> = {
+  ...ControlFirstSwitchCentering,
+  args: { layout: 'stacked', size: 'sm' },
+}
+
+/** Inline, in the control column under an empty label column. */
+export const ControlFirstSwitchCenteringInline: StoryObj<SwitchCenteringArgs> = {
+  ...ControlFirstSwitchCentering,
+  args: { layout: 'inline', size: 'md' },
+}
+
 /** A secret's box shows what was typed only while its eye is pressed. */
 export const Secret: StoryObj = {
   render: () => <Input label="Token" type="password" defaultValue="s3cret" className="max-w-sm" />,

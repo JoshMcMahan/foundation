@@ -5,6 +5,7 @@ import { ChevronRightIcon } from '../icons'
 import { collapsePanelClassName } from './Disclosure'
 
 export type SectionVariant = 'plain' | 'card'
+export type SectionSpacing = 'regular' | 'tight'
 
 export interface SectionProps {
   title: ReactNode
@@ -18,6 +19,10 @@ export interface SectionProps {
   /** `plain` rules the title off from the content under it; `card` frames the
    *  section as a panel. */
   variant?: SectionVariant | undefined
+  /** The room between a `plain` section's rule and its content. `tight` suits content that
+   *  spaces itself tightly, such as a form with its labels over its fields, so the first row
+   *  sits as far under the rule as the rows under it sit under one another. */
+  spacing?: SectionSpacing | undefined
   /** False shows the content always, under a title that doesn't fold. */
   collapsible?: boolean | undefined
   /** Hold the state, such as a remembered preference, with `open` and
@@ -39,9 +44,12 @@ const rootClasses: Record<SectionVariant, string> = {
 }
 
 const headerClasses: Record<SectionVariant, string> = {
-  plain: 'mb-4 flex w-full items-center gap-2 border-b border-(--theme-border) pb-1',
+  plain: 'flex w-full items-center gap-2 border-b border-(--theme-border) pb-1',
   card: 'flex w-full items-center gap-2 p-4',
 }
+
+// Only under a rule: a card's header pads itself.
+const ruleGaps: Record<SectionSpacing, string> = { regular: 'mb-4', tight: 'mb-1.5' }
 
 // A card frames its content, so it pads it in line with the header. The padding sits
 // inside the folding panel, whose own height animates to nothing.
@@ -73,6 +81,7 @@ export function Section({
   beside,
   actions,
   variant = 'plain',
+  spacing = 'regular',
   collapsible = true,
   open,
   onOpenChange,
@@ -90,7 +99,10 @@ export function Section({
   // With nothing else in the header, the whole row folds the section.
   const fill = !beside && !actions
   const header = (heading: ReactNode) => (
-    <div className={headerClasses[variant]}>
+    <div
+      className={cx(headerClasses[variant], variant === 'plain' && ruleGaps[spacing])}
+      data-section-header
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
           {heading}

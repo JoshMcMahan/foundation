@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 import { Disclosure } from './Disclosure'
 import { InfoTip } from './InfoTip'
-import { Section, type SectionVariant } from './Section'
+import { Section, type SectionSpacing, type SectionVariant } from './Section'
 import { StatusDot } from './StatusBadge'
 import { StickyBar } from './StickyBar'
 import { Switch } from './Switch'
@@ -22,11 +22,15 @@ const body = (
 
 export const Sections: StoryObj<{
   variant: SectionVariant
+  spacing: SectionSpacing
   collapsible: boolean
   description: string
 }> = {
-  args: { variant: 'plain', collapsible: true, description: 'Name and owner.' },
-  argTypes: { variant: { control: 'inline-radio', options: ['plain', 'card'] } },
+  args: { variant: 'plain', spacing: 'regular', collapsible: true, description: 'Name and owner.' },
+  argTypes: {
+    variant: { control: 'inline-radio', options: ['plain', 'card'] },
+    spacing: { control: 'inline-radio', options: ['regular', 'tight'] },
+  },
   render: ({ description, ...args }) => (
     <div className="flex max-w-xl flex-col gap-6">
       <Section {...args} title="General" description={description}>
@@ -57,6 +61,13 @@ export const Sections: StoryObj<{
     await userEvent.click(trigger)
     await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'))
   },
+}
+
+/** Tight spacing, for content that spaces itself tightly, such as a form with its labels over
+ *  its fields: the content starts close under the rule. */
+export const SectionsTight: typeof Sections = {
+  ...Sections,
+  args: { ...Sections.args, spacing: 'tight' },
 }
 
 // A page of settings: each a card that can't fold, with what it holds said under

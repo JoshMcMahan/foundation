@@ -26,7 +26,7 @@ import { Button } from '../components/Button'
 import { FieldRowContext } from '../components/Field'
 import { Loader } from '../components/Loader'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
-import { Section } from '../components/Section'
+import { Section, type SectionSpacing } from '../components/Section'
 import { cx } from '../cx'
 import type { WorkflowVariables } from '../engine'
 import { FormLayout, LayoutCSSContext } from './FormLayout'
@@ -667,7 +667,13 @@ const FormField = memo(function FormField({
   if (field.type === 'group') {
     const meta = resolveMetaOverrides(field.options, labelPosition, spaceCompact)
     const group = (
-      <Section title={field.label} collapsible={!field.noCollapse} defaultOpen={!field.collapsed}>
+      <Section
+        title={field.label}
+        collapsible={!field.noCollapse}
+        defaultOpen={!field.collapsed}
+        spacing={sectionSpacing(meta.labelPosition)}
+        className={sectionAbove}
+      >
         <EditingScope editing={editing} path={path}>
           {/* A group's fields flow on their own, outside the row the group sits in. */}
           <FieldRowContext value={false}>
@@ -747,7 +753,11 @@ const FormField = memo(function FormField({
           ? // Passes the row's label and control tracks to the field; a field that doesn't take
             // them, such as a group or one with its label beside it, spans both.
             'grid grid-rows-subgrid [&>:not([data-field-row])]:row-span-2'
-          : cx('flex w-full', labelPosition === 'left' ? 'mb-[15px]' : 'mb-[5px]')
+          : cx(
+              'flex w-full',
+              labelPosition === 'left' ? 'mb-[15px]' : 'mb-[5px]',
+              fieldObj.type === 'object' && sectionAbove,
+            )
       }
     >
       <RequiredFieldContext value={required ? { name, message: strings.required } : null}>
@@ -778,6 +788,18 @@ const FormField = memo(function FormField({
     </editing.Row>
   )
 })
+
+// A section's heading starts what follows it, so it sits further from the rows above than its
+// rule does from its own first row; the form's row gap alone left it closer to the rows above,
+// as if it closed them. Not at the top of a list, where nothing sits above it. Padding rather than
+// a margin, which would collapse into the margin under the row above.
+const sectionAbove = 'not-first:pt-3'
+
+/** A section's rule sits as far over its first row as the form's rows sit apart: tight with the
+ *  labels over the fields, and the regular gap, close to the 15px between side-labeled rows. */
+export function sectionSpacing(labelPosition: 'left' | 'top' | undefined): SectionSpacing {
+  return labelPosition === 'top' ? 'tight' : 'regular'
+}
 
 /** The message under a field for its error, if it has one of its own rather than errors in fields
  *  inside it. */

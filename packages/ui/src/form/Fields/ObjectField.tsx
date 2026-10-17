@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { InfoTip } from '../../components/InfoTip'
 import { Section } from '../../components/Section'
-import { FieldsFromOptions, resolveMetaOverrides } from '../Form'
+import { FieldsFromOptions, resolveMetaOverrides, sectionSpacing } from '../Form'
 import type { FieldComponentProps } from '../types/fieldComponentTypes'
 import type { BaseField, DynamicFormSchema } from '../types/fieldTypes'
 
@@ -29,6 +29,7 @@ export default function ObjectField({
       beside={help && <InfoTip text={help} />}
       collapsible={!field.noCollapse}
       defaultOpen={!field.collapsed}
+      spacing={sectionSpacing(meta.labelPosition)}
     >
       <FieldsFromOptions
         options={field.options}
