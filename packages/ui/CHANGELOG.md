@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.65.0](https://github.com/parallelworks/foundation/compare/ui-v0.64.1...ui-v0.65.0) (2026-10-17)
+
+
+### Features
+
+* **ui:** readers choose which of the host's tools the chat assistant may use ([#358](https://github.com/parallelworks/foundation/issues/358)) ([13e42ed](https://github.com/parallelworks/foundation/commit/13e42ede90af87c05ad30858b66b88068ea16f26))
+
+
+### Bug Fixes
+
+* **ui:** control-first rows keep one rhythm, with or without a description ([#357](https://github.com/parallelworks/foundation/issues/357)) ([a9ba74e](https://github.com/parallelworks/foundation/commit/a9ba74e2e09594606e6f097d21fd815948494b7c))
+
 ## [0.64.1](https://github.com/parallelworks/foundation/compare/ui-v0.64.0...ui-v0.64.1) (2026-10-17)
 
 
