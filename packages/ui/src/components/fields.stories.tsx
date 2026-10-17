@@ -232,6 +232,13 @@ export const FrameInline: StoryObj<FrameArgs> = {
   args: { ...Frame.args, layout: 'inline' } as FrameArgs,
 }
 
+/** On a phone a 208px label column would leave the control a sliver, so an inline field stacks
+ *  its label above the control, as `stacked` does. */
+export const FrameInlineOnPhone: StoryObj<FrameArgs> = {
+  ...FrameInline,
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+}
+
 /** At `sm` the label is a small, muted caption that keeps to the height of `sm` controls. */
 export const FrameSmall: StoryObj<FrameArgs> = {
   ...Frame,

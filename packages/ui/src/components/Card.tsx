@@ -5,8 +5,8 @@ import { AppLink, type LinkTarget } from './AppLink'
 
 const sizeClasses = {
   sm: 'max-w-[400px] p-6',
-  md: 'max-w-[520px] p-10',
-  lg: 'max-w-[560px] p-8',
+  md: 'max-w-[520px] p-6 sm:p-10',
+  lg: 'max-w-[560px] p-6 sm:p-8',
 }
 
 export interface CardProps extends LinkTarget {

@@ -130,6 +130,7 @@ const labelSizes = {
     text: 'text-xs text-(--theme-muted-text-color)',
     inlineHeight: 'min-h-7',
     stackGap: 'gap-1',
+    narrowStack: 'max-sm:flex-col max-sm:items-stretch max-sm:gap-1',
     inlineLine: 'pt-1',
     controlFirstHeight: 'min-h-5',
     controlFirstStackedHeight: 'min-h-6',
@@ -138,6 +139,7 @@ const labelSizes = {
     text: 'text-sm text-(--theme-app)',
     inlineHeight: 'min-h-8',
     stackGap: 'gap-1.5',
+    narrowStack: 'max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5',
     inlineLine: 'pt-1',
     controlFirstHeight: 'min-h-6',
     controlFirstStackedHeight: 'min-h-7',
@@ -273,7 +275,12 @@ export function Field({
   const labelBox = cx(
     labelClassName,
     labelSize.text,
-    inline && cx(labelSize.inlineHeight, 'shrink-0', compact ? 'mr-2 w-fit' : 'w-52 pr-3'),
+    inline &&
+      cx(
+        labelSize.inlineHeight,
+        'shrink-0',
+        compact ? 'mr-2 w-fit' : 'w-52 pr-3 max-sm:min-h-0 max-sm:w-full max-sm:pr-0',
+      ),
     inRow && 'row-start-1 self-end',
   )
   const nameContent = (
@@ -366,7 +373,7 @@ export function Field({
         data-field-row={inRow || undefined}
       >
         {/* The label column stays empty, so the control lines up with the controls under it. */}
-        {inline && !compact && <div aria-hidden="true" className="w-52 shrink-0" />}
+        {inline && !compact && <div aria-hidden="true" className="w-52 shrink-0 max-sm:hidden" />}
         <div
           ref={help ? setControlBox : undefined}
           className={cx(
@@ -440,13 +447,23 @@ export function Field({
   )
   const frame = inRow
     ? cx('contents', className)
-    : cx('flex w-full', inline ? 'items-start' : cx('flex-col', labelSize.stackGap), className)
+    : cx(
+        'flex w-full',
+        // Below sm an inline field stacks too: beside a 208px label, a phone leaves the control
+        // a sliver.
+        inline
+          ? cx('items-start', !compact && labelSize.narrowStack)
+          : cx('flex-col', labelSize.stackGap),
+        className,
+      )
 
   if (group) {
     return (
       <BaseField.Root
         invalid={isInvalid}
         disabled={disabled}
+        // A fieldset sizes to its content in a flex row, so it takes the row's width itself.
+        className="w-full min-w-0"
         // The fieldset is the group itself, so a set of checkboxes needs no second one inside.
         render={
           <Fieldset.Root
