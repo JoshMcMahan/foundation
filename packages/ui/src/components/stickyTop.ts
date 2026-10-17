@@ -87,6 +87,7 @@ function pinnedBottom(chrome: HTMLElement): number {
  * paints. Chrome that uses it stacks: each piece pins under the ones before
  * it, and its own `top` moving is a change the pieces after it follow.
  * In a box that scrolls on its own, nothing sits above, so it pins at 0.
+ * It also sets `--sticky-top` on the element, for a height that leaves room.
  */
 export function useStickyTop(el: HTMLElement | null, enabled: boolean) {
   useLayoutEffect(() => {
@@ -100,6 +101,7 @@ export function useStickyTop(el: HTMLElement | null, enabled: boolean) {
       // everything pinned below this element to look for its chrome again.
       if (el.style.top !== top) {
         el.style.top = top
+        el.style.setProperty('--sticky-top', top)
       }
     }
     // Observing a box reports its size once, so only a change to the page,
@@ -133,6 +135,7 @@ export function useStickyTop(el: HTMLElement | null, enabled: boolean) {
       resizes.disconnect()
       changes.disconnect()
       el.style.top = ''
+      el.style.removeProperty('--sticky-top')
     }
   }, [el, enabled])
 }

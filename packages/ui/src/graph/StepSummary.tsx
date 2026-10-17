@@ -16,7 +16,8 @@ export function StepSummary({ runSlug, path }: { runSlug: string; path: string }
         <p className="text-xs theme-muted-text">{dag.summaryLoadFailed}</p>
       ) : (
         // A summary is prose and tables; past a reading measure its lines get hard to follow.
-        <div className="max-w-[72ch]">
+        // Streamdown scrolls a table past 300px inside itself, which in a dialog this tall reads as cut off.
+        <div className="max-w-[72ch] [&_[data-streamdown=table-wrapper]>div]:max-h-none!">
           <Markdown httpsImagesOnly compact>
             {data}
           </Markdown>

@@ -766,21 +766,32 @@ describe('DependencyGraph step summary', () => {
     expect(screen.queryByRole('region', { name: 'Step summaries' })).toBeNull()
   })
 
-  it('pins the job list under the host bars only when asked', () => {
-    const { rerender } = render(
+  it('pins the job list under the bars the page pins, only when asked', () => {
+    // jsdom lays nothing out: the page's pinned header reports its height, and a stylesheet pins it.
+    const sheet = document.createElement('style')
+    sheet.textContent = '.sticky { position: sticky } .top-0 { top: 0 }'
+    document.head.append(sheet)
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const height = this.dataset['testid'] === 'header' ? 44 : 0
+        return { height, width: 0, top: 0, left: 0, right: 0, bottom: height } as DOMRect
+      })
+    const page = (stickySidebar?: boolean) => (
       <UIProvider>
-        <DependencyGraph run={summaryRun} />
-      </UIProvider>,
+        <div data-testid="header" className="sticky top-0" />
+        <DependencyGraph run={summaryRun} stickySidebar={stickySidebar} />
+      </UIProvider>
     )
+    const { rerender } = render(page())
     const sidebar = () => screen.getByText('Summary').parentElement as HTMLElement
     expect(sidebar().style.top).toBe('')
-    rerender(
-      <UIProvider>
-        <DependencyGraph run={summaryRun} sidebarStickyTop={92} />
-      </UIProvider>,
-    )
-    expect(sidebar().style.top).toBe('92px')
+    rerender(page(true))
+    expect(sidebar().style.top).toBe('44px')
+    expect(sidebar().style.getPropertyValue('--sticky-top')).toBe('44px')
     expect(sidebar()).toHaveClass('lg:sticky')
+    rect.mockRestore()
+    sheet.remove()
   })
 })
 

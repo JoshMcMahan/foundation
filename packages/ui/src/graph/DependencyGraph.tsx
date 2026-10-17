@@ -28,6 +28,7 @@ import { Modal } from '../components/Modal'
 import { useRunFile, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
 import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Elapsed } from '../components/relativeTime'
+import { useStickyTop } from '../components/stickyTop'
 import { Tabs } from '../components/Tabs'
 import { cx } from '../cx'
 import type { GraphLayout } from '../editing'
@@ -1166,7 +1167,7 @@ export default function DependencyGraph({
   fixedHeight,
   openStep,
   onCloseLog,
-  sidebarStickyTop,
+  stickySidebar,
 }: {
   run: GraphRun
   preview?: boolean
@@ -1184,8 +1185,8 @@ export default function DependencyGraph({
   openStep?: { job: string; step: number; prefix?: string | undefined } | undefined
   /** Called when the log dialog closes, so a host can forget the step it asked to open. */
   onCloseLog?: (() => void) | undefined
-  /** Pins the job list this many pixels below the top of the page's scroll area, under the host's own pinned bars. */
-  sidebarStickyTop?: number | undefined
+  /** Pins the job list as the page scrolls, under whatever the page already pins at its top. */
+  stickySidebar?: boolean | undefined
 }) {
   const engine = useWorkflowEngine()
   // Animation timing constant (seconds) — controls line draw, dot transitions, and stagger delay
@@ -1297,6 +1298,8 @@ export default function DependencyGraph({
   const { common, dag: dagStrings } = useStrings()
   const stepHeaderRef = useRef<HTMLDivElement>(null)
   const slots = useSlots()
+  const [sidebarEl, setSidebarEl] = useState<HTMLDivElement | null>(null)
+  useStickyTop(sidebarEl, !!stickySidebar && !preview)
   const [executedJobsPath, setExecutedJobsPath] = useState<(string | number)[][]>([[]])
   const [executedJobsPathIdx, setExecutedJobsPathIdx] = useState<number>(0)
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set())
@@ -1975,15 +1978,12 @@ export default function DependencyGraph({
     <div className="flex flex-col lg:flex-row w-full">
       {!preview && (
         <div
+          ref={setSidebarEl}
           className={cx(
             'hidden lg:block lg:w-[280px] flex-shrink-0 lg:mr-1',
-            sidebarStickyTop !== undefined && 'lg:sticky lg:self-start lg:overflow-y-auto',
+            stickySidebar &&
+              'lg:sticky lg:self-start lg:overflow-y-auto lg:max-h-[calc(100dvh-var(--sticky-top,0px)-24px)]',
           )}
-          style={
-            sidebarStickyTop !== undefined
-              ? { top: sidebarStickyTop, maxHeight: `calc(100dvh - ${sidebarStickyTop + 24}px)` }
-              : undefined
-          }
         >
           {slots.runSessions && (
             <div className="mb-4 overflow-y-auto">

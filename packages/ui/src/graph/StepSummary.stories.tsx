@@ -1,7 +1,8 @@
 import { createWorkflowEngine } from '@parallelworks/workflow-parser'
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, screen, userEvent, within } from 'storybook/test'
 import { type RunFileResult, UIProvider } from '../components/Provider'
+import { StickyBar } from '../components/StickyBar'
 import DependencyGraph from './DependencyGraph'
 
 const engine = createWorkflowEngine()
@@ -38,7 +39,7 @@ const useRunFile = (_slug: string, path: string | null): RunFileResult => ({
 const meta: Meta<typeof DependencyGraph> = {
   title: 'UI/Workflow/DependencyGraph',
   component: DependencyGraph,
-  argTypes: { openStep: { control: 'object' }, sidebarStickyTop: { control: 'number' } },
+  argTypes: { openStep: { control: 'object' }, stickySidebar: { control: 'boolean' } },
   decorators: [
     (Story) => (
       <UIProvider engine={engine} data={{ useRunFile }}>
@@ -196,23 +197,38 @@ const SWEEP_RUN = {
 }
 
 // Each step that wrote a summary gets a card under the graph, in the order its job completed.
+// Serves the run's summaries and logs from RUN_FILES.
+const withRunFiles: Decorator = (Story) => (
+  <UIProvider
+    engine={engine}
+    data={{
+      useRunFile: (_slug, path) => ({
+        data: path ? RUN_FILES[path] : undefined,
+        isLoading: false,
+        error: undefined,
+      }),
+    }}
+  >
+    <Story />
+  </UIProvider>
+)
+
 export const StepSummariesUnderGraph: StoryObj<typeof DependencyGraph> = {
   args: { run: SWEEP_RUN },
+  decorators: [withRunFiles],
+}
+
+// Scrolled, the job list stays in view under the bar the page pins, wherever that bar ends.
+export const JobListPinnedUnderPageBar: StoryObj<typeof DependencyGraph> = {
+  args: { run: SWEEP_RUN, stickySidebar: true },
   decorators: [
     (Story) => (
-      <UIProvider
-        engine={engine}
-        data={{
-          useRunFile: (_slug, path) => ({
-            data: path ? RUN_FILES[path] : undefined,
-            isLoading: false,
-            error: undefined,
-          }),
-        }}
-      >
+      <>
+        <StickyBar className="border-b px-4 py-3 text-sm font-medium">solver-sweep #12</StickyBar>
         <Story />
-      </UIProvider>
+      </>
     ),
+    withRunFiles,
   ],
 }
 

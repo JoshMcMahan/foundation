@@ -285,10 +285,7 @@ export const CardsPressable: StoryObj = {
         <CardHeader title="In the cloud" description="Start new machines for it" />
       </Card>
       <Card size="sm" render={<button type="button" />}>
-        <CardHeader
-          title="On my own hardware"
-          description="Connect machines you run"
-        />
+        <CardHeader title="On my own hardware" description="Connect machines you run" />
       </Card>
     </div>
   ),
