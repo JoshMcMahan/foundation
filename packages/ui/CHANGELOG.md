@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.64.1](https://github.com/parallelworks/foundation/compare/ui-v0.64.0...ui-v0.64.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ui:** the job list pins under the page's own bars, and a step's dialog shows its whole summary table ([#360](https://github.com/parallelworks/foundation/issues/360)) ([8486cd8](https://github.com/parallelworks/foundation/commit/8486cd817339da6ed10cafa2fa8249883bfff906))
+
 ## [0.64.0](https://github.com/parallelworks/foundation/compare/ui-v0.63.0...ui-v0.64.0) (2026-10-17)
 
 
