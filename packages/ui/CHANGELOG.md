@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.67.0](https://github.com/parallelworks/foundation/compare/ui-v0.66.1...ui-v0.67.0) (2026-10-18)
+
+
+### Features
+
+* **ui:** a network share icon, so a shared folder differs from a parallel filesystem ([#376](https://github.com/parallelworks/foundation/issues/376)) ([948f7c3](https://github.com/parallelworks/foundation/commit/948f7c39b0a6eb0978164f0659f5175a54203b15))
+
 ## [0.66.1](https://github.com/parallelworks/foundation/compare/ui-v0.66.0...ui-v0.66.1) (2026-10-18)
 
 
