@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.66.1](https://github.com/parallelworks/foundation/compare/ui-v0.66.0...ui-v0.66.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ui:** a toast covers an open menu, so its items under the toast can't be clicked ([#372](https://github.com/parallelworks/foundation/issues/372)) ([58a46ee](https://github.com/parallelworks/foundation/commit/58a46eeb2254db6db344d2d783d4621f3631b742))
+* **ui:** an avatar's initials sit above the middle of its circle ([#375](https://github.com/parallelworks/foundation/issues/375)) ([c712fdd](https://github.com/parallelworks/foundation/commit/c712fddce090967928c2b028fb6f8df7d91bb71d))
+* **ui:** step summaries in a scrolling panel start loading only once on screen ([#371](https://github.com/parallelworks/foundation/issues/371)) ([6ea84c7](https://github.com/parallelworks/foundation/commit/6ea84c703ae37cfdc6948b157012b79ac3ade58c))
+* **ui:** the more-actions dots are too faint to see, and the pin and play icons read smaller than their neighbours ([#370](https://github.com/parallelworks/foundation/issues/370)) ([f66107f](https://github.com/parallelworks/foundation/commit/f66107fb24306870ad076d7eba23f4cdbbcd688a))
+
 ## [0.66.0](https://github.com/parallelworks/foundation/compare/ui-v0.65.2...ui-v0.66.0) (2026-10-18)
 
 
