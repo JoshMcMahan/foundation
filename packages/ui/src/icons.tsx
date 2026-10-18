@@ -466,6 +466,9 @@ export const NavigationIcon = /* @__PURE__ */ drawn('M2.5 4.5h11M2.5 8h11M2.5 11
 export const NetworkInterfaceIcon = /* @__PURE__ */ drawn(
   'M10 13.5l2-2h.5a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H4l2 2ZM5 6v.75M8 6v.75M11 6v.75',
 )
+export const NetworkShareIcon = /* @__PURE__ */ drawn(
+  'M2.5 3.5a1 1 0 0 1 1-1h2.25L7 3.75h5.5a1 1 0 0 1 1 1V8.5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1ZM8 9.5v2.25M8 14.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5ZM2.5 13h4.25M9.25 13h4.25',
+)
 export const NewChatIcon = /* @__PURE__ */ drawn(
   'M7.5 2.5h-4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-4M11.75 2.75a1.06 1.06 0 0 1 1.5 1.5L8 9.5l-2 .5.5-2Z',
 )

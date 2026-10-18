@@ -687,6 +687,8 @@ glyph per meaning across the apps.
   `DisableUserIcon` turns off their account. `ChangesRequestedIcon` asks for
   changes to something sent, while `FlaggedIcon` marks an item for attention.
   `ProjectIcon` is a project, while `FolderIcon` is a folder of files.
+  `FilesystemIcon` is a filesystem many machines mount together, such as a
+  parallel one, while `NetworkShareIcon` is a folder shared over the network.
   `LibraryIcon` is a collection of write-ups to browse, `ArticleIcon` one
   write-up to read, such as a case study, and `NotebookIcon` one notebook.
   `PendingIcon` is a requirement not met yet and `NotRunningIcon` a run not
