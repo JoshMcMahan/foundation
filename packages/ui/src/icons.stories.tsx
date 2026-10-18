@@ -12,10 +12,10 @@ interface GalleryArgs {
 
 const meta: Meta<GalleryArgs> = {
   title: 'UI/Icons',
-  args: { size: 20, strokeWidth: 2 },
+  args: { size: 20, strokeWidth: 1.5 },
   argTypes: {
     size: { control: { type: 'range', min: 12, max: 48, step: 2 } },
-    strokeWidth: { control: { type: 'range', min: 1, max: 3, step: 0.25 } },
+    strokeWidth: { control: { type: 'range', min: 1, max: 2.5, step: 0.25 } },
   },
 }
 export default meta

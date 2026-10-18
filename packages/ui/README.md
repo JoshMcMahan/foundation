@@ -663,10 +663,11 @@ import { AddIcon, TrashIcon } from '@parallelworks/ui/icons'
 ```
 
 `@parallelworks/ui/icons` is the one import point for interface icons. Each
-name is a meaning, such as `RetryIcon` or `WarningIcon`, drawn from
-[Lucide](https://lucide.dev), so every icon shares one 24px grid and one 2px
-stroke. Don't import `lucide-react` directly: a name here keeps one glyph per
-meaning across the apps.
+name is a meaning, such as `RetryIcon` or `WarningIcon`. Every icon is drawn
+for this module by one hand: one path on a 16px grid with a 1.5px stroke, in
+fewer and simpler shapes than a 24px set so it stays crisp at the 16px it's
+mostly shown at. Don't bring in another icon library: a name here keeps one
+glyph per meaning across the apps.
 
 - **Size and color:** an icon is `1em` square in `currentColor`, so it follows
   the text around it. A class such as `size-4` or `h-3 w-3` sets another size,
@@ -690,10 +691,13 @@ meaning across the apps.
   write-up to read, such as a case study, and `NotebookIcon` one notebook.
   `PendingIcon` is a requirement not met yet and `NotRunningIcon` a run not
   started; they share the empty circle, so keep them out of the same list.
-- **Adding an icon:** pick the [Lucide glyph](https://lucide.dev/icons) and add
-  `export const NameIcon = /* @__PURE__ */ icon(Glyph)` to `src/icons.tsx`,
-  named for what it means rather than what it shows. Reuse an existing name
-  when the meaning is the same.
+- **Adding an icon:** draw it as one path on the 16px grid and add
+  `export const NameIcon = /* @__PURE__ */ drawn('M…')` to `src/icons.tsx`,
+  named for what it means rather than what it shows. Reuse the existing parts
+  (the status circle, the person, the file and folder outlines, the
+  bottom-right corner for a plus, minus, check or X) so families match, and
+  check it at 16px beside its neighbours in the `UI/Icons` story. Reuse an
+  existing name when the meaning is the same.
 
 Logos of other companies' products, such as `GitHubIcon` or `UbuntuIcon`, are
 in `@parallelworks/ui/brand-icons`. They take the same props, are filled in the

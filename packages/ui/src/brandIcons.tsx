@@ -35,8 +35,6 @@ function brand(viewBox: string, ...paths: string[]): IconType {
     color = 'currentColor',
     // Stroke settings are for outline icons; a logo is filled.
     strokeWidth: _strokeWidth,
-    absoluteStrokeWidth: _absoluteStrokeWidth,
-    nonScalingStroke: _nonScalingStroke,
     children,
     ...props
   }: IconProps) {

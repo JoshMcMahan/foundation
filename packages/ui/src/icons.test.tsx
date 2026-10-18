@@ -2,7 +2,11 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { GitHubIcon } from './brandIcons'
-import { AddAllocationIcon, PinFilledIcon, TrashIcon } from './icons'
+import type { IconType } from './icons'
+import * as allIcons from './icons'
+import { PinFilledIcon, TrashIcon } from './icons'
+
+const icons = allIcons as unknown as Record<string, IconType>
 
 describe('icons', () => {
   it('take the text size and hide from assistive technology by default', () => {
@@ -10,9 +14,16 @@ describe('icons', () => {
     const svg = container.querySelector('svg')
     expect(svg).toHaveAttribute('width', '1em')
     expect(svg).toHaveAttribute('height', '1em')
-    expect(svg).toHaveAttribute('stroke-width', '2')
+    expect(svg).toHaveAttribute('stroke-width', '1.5')
     expect(svg).toHaveAttribute('aria-hidden', 'true')
     expect(svg).toHaveClass('text-red-600')
+  })
+
+  it('take a stroke width on their 16px grid', () => {
+    const { container } = render(<TrashIcon strokeWidth={2} />)
+    const svg = container.querySelector('svg')
+    expect(svg).toHaveAttribute('viewBox', '0 0 16 16')
+    expect(svg).toHaveAttribute('stroke-width', '2')
   })
 
   it('are named by a title', () => {
@@ -30,14 +41,16 @@ describe('icons', () => {
     expect(container.querySelector('svg')).toHaveAttribute('fill', 'currentColor')
   })
 
-  it('draw a glyph of their own at the same size and weight', () => {
-    const { container } = render(<AddAllocationIcon />)
-    const svg = container.querySelector('svg')
-    expect(svg).toHaveAttribute('viewBox', '0 0 24 24')
-    expect(svg).toHaveAttribute('width', '1em')
-    expect(svg).toHaveAttribute('stroke-width', '2')
-    expect(svg).toHaveAttribute('aria-hidden', 'true')
-    expect(svg?.querySelectorAll('path')).toHaveLength(4)
+  it('are all drawn as one path on one grid at one weight', () => {
+    for (const [name, Icon] of Object.entries(icons)) {
+      if (!name.endsWith('Icon')) continue
+      const { container, unmount } = render(<Icon />)
+      const svg = container.querySelector('svg')
+      expect(svg, name).toHaveAttribute('viewBox', '0 0 16 16')
+      expect(svg, name).toHaveAttribute('stroke-width', '1.5')
+      expect(svg?.querySelectorAll('path'), name).toHaveLength(1)
+      unmount()
+    }
   })
 
   it('take a size', () => {
