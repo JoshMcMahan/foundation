@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { DisplayIcon, FilterIcon, KeyboardIcon, MoreIcon } from '../icons'
+import { onTop } from '../test/stacking'
 import { ActionMenu } from './ActionMenu'
 import { Button } from './Button'
 import { Drawer, type DrawerProps } from './Drawer'
@@ -331,13 +332,6 @@ export const IconButtonTriggers: StoryObj<{ dot: boolean }> = {
   },
 }
 
-/** Whether the element drawn at an element's center is that element or inside it, so nothing covers it. */
-const onTop = (el: Element) => {
-  const box = el.getBoundingClientRect()
-  const drawn = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
-  return drawn !== null && el.contains(drawn)
-}
-
 const sizes = [
   { value: 'small', label: 'Small' },
   { value: 'medium', label: 'Medium' },
@@ -382,7 +376,7 @@ function PopupsInDialogs() {
 }
 
 /** Menus, selects and popovers open over the modal or drawer they belong to,
- *  however deep, and a toast stays above them all. */
+ *  however deep, and over a toast, which stays above the modal. */
 export const PopupsInDialogsStory: StoryObj = {
   name: 'Popups in dialogs',
   render: () => <PopupsInDialogs />,
@@ -397,10 +391,11 @@ export const PopupsInDialogsStory: StoryObj = {
     const modal = await screen.findByRole('dialog', { name: 'Resize' })
     await userEvent.click(within(modal).getByRole('combobox', { name: 'Size' }))
     await shows('option', 'Large')
-    toast.info('Over the open select')
+    toast.info('Over the modal')
     const region = screen.getByRole('region', { name: 'Notifications' })
-    const shown = await within(region).findByText('Over the open select')
+    const shown = await within(region).findByText('Over the modal')
     await waitFor(() => expect(onTop(shown)).toBe(true))
+    await shows('option', 'Large')
     toast.dismiss()
     await userEvent.keyboard('{Escape}')
     await userEvent.click(within(modal).getByRole('button', { name: 'Modal actions' }))

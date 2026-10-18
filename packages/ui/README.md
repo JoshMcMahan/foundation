@@ -647,8 +647,8 @@ such as `z-index: 100` for a top bar, rather than a z-index chosen to win:
 | `--layer-overlay` | 1000    | a panel over the page, such as a full-screen log       |
 | `--layer-drawer`  | 1100    | drawers                                                |
 | `--layer-modal`   | 1200    | modals                                                 |
-| `--layer-popover` | 1300    | menus, selects, popovers, hover cards and tooltips, so one opens over the dialog it belongs to |
-| `--layer-toast`   | 1400    | toasts                                                 |
+| `--layer-toast`   | 1300    | toasts, so one stays usable while a modal is open      |
+| `--layer-popover` | 1400    | menus, selects, popovers, hover cards and tooltips, so one opens over the dialog it belongs to and over a toast |
 
 In Tailwind, `z-(--layer-modal)` reads one. Override a value on `:root` to move
 a layer; the defaults sit in a cascade layer, so the host's own rule wins.

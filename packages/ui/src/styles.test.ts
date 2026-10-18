@@ -50,6 +50,16 @@ describe('package names', () => {
 
 describe('stacking', () => {
   const code = sources.filter(([file]) => !/\.(test|stories)\.tsx?$/.test(file))
+  const base = readFileSync(join(import.meta.dirname, 'styles/base.css'), 'utf8')
+  const zIndexOf = (layer: string) =>
+    Number(base.match(new RegExp(`--layer-${layer}:\\s*(\\d+)`))?.[1])
+
+  // A menu is open only because someone just opened it, so a toast that lands on it must not
+  // swallow the press meant for an item; a toast still floats over a modal, which can stay open.
+  it('opens a popup over a toast, and a toast over a modal', () => {
+    expect(zIndexOf('popover')).toBeGreaterThan(zIndexOf('toast'))
+    expect(zIndexOf('toast')).toBeGreaterThan(zIndexOf('modal'))
+  })
 
   // Whatever lies over the page takes its z-index from the --layer-* scale in base.css; a number
   // picked to win fights the host's chrome and the package's other layers.
@@ -63,7 +73,6 @@ describe('stacking', () => {
   })
 
   it('reads only layers base.css defines', () => {
-    const base = readFileSync(join(import.meta.dirname, 'styles/base.css'), 'utf8')
     const defined = new Set(base.match(/--layer-[a-z]+(?=:)/g))
     const used = new Set(code.flatMap(([, source]) => source.match(/--layer-[a-z]+/g) ?? []))
     expect([...used].filter((layer) => !defined.has(layer))).toEqual([])
