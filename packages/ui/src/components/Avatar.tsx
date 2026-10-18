@@ -105,8 +105,13 @@ export function Avatar({ src, name, colorKey, size = 'md', status, className }: 
               : 'bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-accent-text)',
           )}
         >
-          {/* Two letters crowd a 16px circle and sit under the status dot. */}
-          {size === 'xs' ? firstCharacter(avatarInitials(name)) : avatarInitials(name)}
+          {/* Centring a line box leaves capitals high, over the room it keeps for
+              descenders; trimming it to the cap height and the baseline centres
+              the letters themselves. */}
+          <span className="leading-none [text-box:trim-both_cap_alphabetic]">
+            {/* Two letters crowd a 16px circle and sit under the status dot. */}
+            {size === 'xs' ? firstCharacter(avatarInitials(name)) : avatarInitials(name)}
+          </span>
         </BaseAvatar.Fallback>
       </BaseAvatar.Root>
       {status && (
