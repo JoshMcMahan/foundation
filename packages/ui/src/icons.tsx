@@ -211,7 +211,7 @@ export const DownloadIcon = /* @__PURE__ */ drawn(
   'M8 2.5v8M4.75 7.5 8 10.75l3.25-3.25M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2',
 )
 export const DragHandleIcon = /* @__PURE__ */ drawn(
-  'M4 6h.01M8 6h.01M12 6h.01M4 10h.01M8 10h.01M12 10h.01',
+  'M4 5.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM8 5.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM12 5.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM4 9.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM8 9.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM12 9.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2Z',
 )
 export const DuplicateIcon = /* @__PURE__ */ drawn(
   'M6.5 5.5h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1ZM10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2M9.5 7.75v3.5M7.75 9.5h3.5',
@@ -373,7 +373,7 @@ export const InstanceTypeIcon = /* @__PURE__ */ drawn(
   'M2.75 3.75h10.5a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1v-4.5a1 1 0 0 1 1-1ZM5 6.25v1.5M8 6.25v1.5M11 6.25v1.5M3.5 10.25v2M6.5 10.25v2M9.5 10.25v2M12.5 10.25v2',
 )
 export const IpAddressIcon = /* @__PURE__ */ drawn(
-  'M8 14.25s4.5-4 4.5-7.75a4.5 4.5 0 0 0-9 0C3.5 10.25 8 14.25 8 14.25ZM8 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  'M8 14.5s5-4.25 5-8a5 5 0 0 0-10 0c0 3.75 5 8 5 8ZM8 8.25a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z',
 )
 export const IssueIcon = /* @__PURE__ */ drawn(
   'M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12ZM8 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
@@ -425,7 +425,7 @@ export const MailVerifiedIcon = /* @__PURE__ */ drawn(
   'M8.75 12.25H2.5v-8.5h11v5M2.75 4.25 8 8.5l5.25-4.25M10.5 12.5l1.25 1.25 2.5-3',
 )
 export const MapPinIcon = /* @__PURE__ */ drawn(
-  'M8 14.25s4.5-4 4.5-7.75a4.5 4.5 0 0 0-9 0C3.5 10.25 8 14.25 8 14.25ZM8 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  'M8 14.5s5-4.25 5-8a5 5 0 0 0-10 0c0 3.75 5 8 5 8ZM8 8.25a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z',
 )
 export const MarketplaceIcon = /* @__PURE__ */ drawn(
   'M2.5 2.5h11l.75 3.5a2.08 1.5 0 0 1-4.17 0 2.08 1.5 0 0 1-4.16 0 2.08 1.5 0 0 1-4.17 0ZM3 7.5v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-5M6.5 13.5V11a1.5 1.5 0 0 1 3 0v2.5',
@@ -453,7 +453,9 @@ export const MoneyIcon = /* @__PURE__ */ drawn(
   'M8 1.75v12.5M11 4.5H6.75a2 2 0 0 0 0 4h2.5a2 2 0 0 1 0 4H4.75',
 )
 export const MoonIcon = /* @__PURE__ */ drawn('M8 2a4 4 0 0 0 6 6 6 6 0 1 1-6-6Z')
-export const MoreIcon = /* @__PURE__ */ drawn('M3.5 8h.01M8 8h.01M12.5 8h.01')
+export const MoreIcon = /* @__PURE__ */ drawn(
+  'M3.5 7.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM8 7.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2ZM12.5 7.4a.6.6 0 1 0 0 1.2.6.6 0 0 0 0-1.2Z',
+)
 export const MusicIcon = /* @__PURE__ */ drawn(
   'M6.25 12.25V3.75l7.25-1.25V11M4.5 14a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5ZM11.75 12.75a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z',
 )
@@ -648,7 +650,7 @@ export const SplitIcon = /* @__PURE__ */ drawn(
 export const SpreadsheetIcon = /* @__PURE__ */ drawn(
   'M3.5 2.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM2.5 6.25h11M2.5 9.75h11M6.25 6.25v7.25M9.75 6.25v7.25',
 )
-export const StartIcon = /* @__PURE__ */ drawn('M4.5 2.75v10.5L13 8Z')
+export const StartIcon = /* @__PURE__ */ drawn('M4.25 2.5v11L13.75 8Z')
 export const StopIcon = /* @__PURE__ */ drawn(
   'M4 3h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z',
 )
