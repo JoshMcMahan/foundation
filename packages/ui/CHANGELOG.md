@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.66.0](https://github.com/parallelworks/foundation/compare/ui-v0.65.2...ui-v0.66.0) (2026-10-18)
+
+
+### Features
+
+* **ui:** every interface icon is drawn in one hand on a 16px grid ([#368](https://github.com/parallelworks/foundation/issues/368)) ([b312f8a](https://github.com/parallelworks/foundation/commit/b312f8aedbbaf9a0f8e21dcd310d417b136c2c1b))
+
 ## [0.65.2](https://github.com/parallelworks/foundation/compare/ui-v0.65.1...ui-v0.65.2) (2026-10-17)
 
 
