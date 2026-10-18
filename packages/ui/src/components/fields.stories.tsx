@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { cx } from '../cx'
 import { ExpressionIcon, UndoIcon } from '../icons'
+import { overlaps } from '../test/stacking'
 import { applyTheme, generateTheme, THEME_TOKENS } from '../theme'
 import { Checkbox, CheckboxGroup } from './Checkbox'
 import { ColorInput } from './ColorInput'
@@ -354,10 +355,6 @@ export const FrameWithHelpOnKeyboardFocus: StoryObj<FrameArgs> = {
     await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/cannot change later/))
   },
 }
-
-// Whether two boxes share any area; a box with none, as in a test DOM, overlaps nothing.
-const overlaps = (a: DOMRect, b: DOMRect) =>
-  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
 
 function HelpForm() {
   return (

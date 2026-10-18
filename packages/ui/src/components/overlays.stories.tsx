@@ -376,7 +376,8 @@ function PopupsInDialogs() {
 }
 
 /** Menus, selects and popovers open over the modal or drawer they belong to,
- *  however deep, and over a toast, which stays above the modal. */
+ *  however deep. A toast shows over the modal, and an open select stays open and
+ *  uncovered. */
 export const PopupsInDialogsStory: StoryObj = {
   name: 'Popups in dialogs',
   render: () => <PopupsInDialogs />,

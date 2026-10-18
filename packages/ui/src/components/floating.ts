@@ -1,6 +1,6 @@
 // One look for everything that floats: menus, selects, comboboxes, tooltips, infotips and hover cards.
 
-/** Above dialogs and sticky chrome; hidden while its anchor is scrolled out of view. */
+/** Above dialogs, toasts and sticky chrome; hidden while its anchor is scrolled out of view. */
 export const positionerClassName = 'z-(--layer-popover) outline-none data-anchor-hidden:invisible'
 
 // With reduced motion a popup only fades: the scale is the movement.

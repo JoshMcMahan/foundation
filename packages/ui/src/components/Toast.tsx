@@ -118,8 +118,8 @@ function show(kind: Kind) {
 }
 
 /** Shows toasts from anywhere, a component or not. They render in the
- *  `UIProvider`'s viewport, over dialogs and popups, and stay usable while a
- *  modal is open. */
+ *  `UIProvider`'s viewport, over dialogs and under an open popup such as a menu,
+ *  and stay usable while a modal is open. */
 export const toast: Toaster = {
   info: show('info'),
   success: show('success'),

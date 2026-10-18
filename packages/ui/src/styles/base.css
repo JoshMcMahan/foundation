@@ -7,8 +7,10 @@
    * as a top bar at 100. Toasts sit above dialogs, so one stays usable while a
    * modal is open. Popups sit above both: a select inside a modal opens over it,
    * and a menu opens over a toast, since it is open only because someone just
-   * opened it and closes on their next press. In this layer, so a host's own
-   * :root values win. */
+   * opened it and closes on their next press. A popup that stays open while it is
+   * used, such as a hover card, a popover or a select that picks several, can
+   * keep a toast that shows meanwhile under it until it closes. In this layer, so
+   * a host's own :root values win. */
   :root {
     --layer-sticky: 10; /* toolbars and tab strips that stick as their page scrolls */
     --layer-header: 20; /* the page header, which sticks above them */
