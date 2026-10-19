@@ -107,12 +107,16 @@ export { NoticeBar, NoticeCard, type NoticeTone, OutputCard } from './ui/Notice'
 export {
   RenameDialog,
   type RowDialogStrings,
+  type SessionMenuAction,
+  SidebarEmpty,
   SidebarGroupHeading,
   SidebarPanel,
   SidebarRailItem,
   SidebarRow,
+  SidebarRowBody,
   SidebarRowTitle,
   SidebarToggle,
   useRowDialogs,
+  useSessionMenu,
 } from './ui/sidebar'
 export { isMac, isOrgModel } from './utils'

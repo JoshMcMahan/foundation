@@ -2,13 +2,15 @@ import { type CSSProperties, type ReactNode, useState } from 'react'
 import { AppLink, isPlainClick } from '../../components/AppLink'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import type { OpenMenu } from '../../components/ContextMenu'
+import { EmptyState } from '../../components/EmptyState'
 import { fieldBox } from '../../components/fieldBox'
 import { focusOnMount } from '../../components/focus'
 import { IconButton } from '../../components/IconButton'
-import type { MenuEntry } from '../../components/MenuEntries'
+import { type MenuEntry, menuDivider } from '../../components/MenuEntries'
+import { useStrings } from '../../components/Provider'
 import { Tooltip } from '../../components/Tooltip'
 import { cx } from '../../cx'
-import { SidebarIcon } from '../../icons'
+import { DownloadIcon, RenameIcon, ShareIcon, SidebarIcon, TrashIcon } from '../../icons'
 import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../../list/index'
 
 const SIDEBAR_RAIL_WIDTH_PX = 48
@@ -122,6 +124,82 @@ export function SidebarRowTitle({
         <span className="min-w-8 shrink-0 text-[11px] tabular-nums theme-muted-text">{time}</span>
       )}
     </span>
+  )
+}
+
+/** A row's content: an optional mark before it (a status dot, a shared
+ *  icon), the title with its time, and an optional line under it for what the
+ *  mark cannot say, such as the machine or a state that needs the reader. */
+export function SidebarRowBody({
+  leading,
+  title,
+  time,
+  detail,
+}: {
+  leading?: ReactNode
+  title: ReactNode
+  time?: ReactNode
+  detail?: ReactNode
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 items-start gap-2">
+      {leading && <span className="mt-1 flex h-3 shrink-0 items-center">{leading}</span>}
+      <span className="min-w-0 flex-1">
+        <SidebarRowTitle time={time}>{title}</SidebarRowTitle>
+        {detail && (
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px]">{detail}</span>
+        )}
+      </span>
+    </span>
+  )
+}
+
+/** An action a row's menu offers, and why it is unavailable when it is. */
+export interface SessionMenuAction {
+  onClick: () => void
+  disabledReason?: string | undefined
+}
+
+/** A row's menu in one order wherever a list of conversations or sessions
+ *  shows: rename, share, download, then delete apart. Each is left out unless given. */
+export function useSessionMenu(): (actions: {
+  rename?: SessionMenuAction | undefined
+  share?: SessionMenuAction | undefined
+  download?: SessionMenuAction | undefined
+  remove?: SessionMenuAction | undefined
+}) => MenuEntry[] {
+  const { common } = useStrings()
+  return ({ rename, share, download, remove }) => {
+    const entry = (label: string, icon: ReactNode, action: SessionMenuAction) => ({
+      label,
+      icon,
+      onClick: action.onClick,
+      ...(action.disabledReason ? { disabled: true, disabledReason: action.disabledReason } : {}),
+    })
+    const items: MenuEntry[] = [
+      ...(rename ? [entry(common.rename, <RenameIcon />, rename)] : []),
+      ...(share ? [entry(common.share, <ShareIcon />, share)] : []),
+      ...(download ? [entry(common.download, <DownloadIcon />, download)] : []),
+    ]
+    if (remove) {
+      if (items.length > 0) {
+        items.push(menuDivider)
+      }
+      items.push({ ...entry(common.delete, <TrashIcon />, remove), destructive: true })
+    }
+    return items
+  }
+}
+
+/** In place of a list with nothing to show: none yet, nothing matching, or
+ *  why it could not load. */
+export function SidebarEmpty({ title, error }: { title: string; error?: string | undefined }) {
+  return (
+    <EmptyState
+      variant="bare"
+      title={error ?? title}
+      {...(error ? { testId: 'sidebar-list-error' } : {})}
+    />
   )
 }
 

@@ -1,7 +1,6 @@
 import { type MouseEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { isPlainClick } from '../../components/AppLink'
 import type { OpenMenu } from '../../components/ContextMenu'
-import { EmptyState } from '../../components/EmptyState'
 import type { MenuEntry } from '../../components/MenuEntries'
 import { RelativeTime } from '../../components/relativeTime'
 import { SearchInput } from '../../components/SearchInput'
@@ -12,7 +11,7 @@ import { useChatConfig } from '../core/config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from '../core/events'
 import type { ConversationSummary } from '../types'
 import { ConversationSidebar } from '../ui/ConversationSidebar'
-import { SidebarRow, SidebarRowTitle } from '../ui/sidebar'
+import { SidebarEmpty, SidebarRow, SidebarRowBody } from '../ui/sidebar'
 import { ManageProvidersLink } from './ComposerChrome'
 import { groupConversationsByDate, useConversationActions } from './conversationActions'
 
@@ -36,21 +35,22 @@ function ConversationRow({
     <SidebarRow selected={isCurrent} menuItems={menuItems} openMenu={openMenu}>
       <LinkComponent
         target={{ kind: 'conversation', id: conv.id }}
-        className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left"
+        className="flex min-w-0 flex-1 py-1 text-left"
         onClick={(e) => {
           if (isPlainClick(e)) {
             onOpen()
           }
         }}
       >
-        {conv.isOwner === false && (
-          <UsersIcon className="h-3 w-3 shrink-0 theme-muted-text" title={t.sharedWithYou} />
-        )}
-        <SidebarRowTitle
+        <SidebarRowBody
+          leading={
+            conv.isOwner === false && (
+              <UsersIcon className="h-3 w-3 theme-muted-text" title={t.sharedWithYou} />
+            )
+          }
+          title={conv.title || t.untitled}
           time={<RelativeTime value={conv.updatedAt ?? conv.createdAt} format="compact" />}
-        >
-          {conv.title || t.untitled}
-        </SidebarRowTitle>
+        />
       </LinkComponent>
     </SidebarRow>
   )
@@ -180,8 +180,7 @@ export default function ChatSidebar({
       )}
       loading={isLoading}
       placeholder={
-        <EmptyState
-          variant="bare"
+        <SidebarEmpty
           title={conversations.length === 0 ? tSidebar.noConversations : strings.chrome.noMatches}
         />
       }

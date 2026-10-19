@@ -1,15 +1,14 @@
 import { DateTime } from 'luxon'
 import { type ReactNode, useState } from 'react'
 import { type OpenMenu, useContextMenu } from '../../components/ContextMenu'
-import type { MenuAction, MenuEntry } from '../../components/MenuEntries'
+import type { MenuEntry } from '../../components/MenuEntries'
 import { useStrings } from '../../components/Provider'
 import { toast } from '../../components/Toast'
-import { DownloadIcon, RenameIcon, ShareIcon, TrashIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { conversationToMarkdown, downloadText, exportFilename } from '../core/exportConversation'
 import type { ConversationSummary } from '../types'
-import { useRowDialogs } from '../ui/sidebar'
+import { useRowDialogs, useSessionMenu } from '../ui/sidebar'
 import ShareDialog from './ShareDialog'
 
 export type ConversationGroupKey =
@@ -19,11 +18,12 @@ export type ConversationGroupKey =
   | 'groupThisMonth'
   | 'groupOlder'
 
-/** Conversations by how long ago they started, newest group first, leaving
- *  out the groups with none. Each key names its label in the sidebar strings. */
-export function groupConversationsByDate<T extends { createdAt: string }>(
-  conversations: T[],
-): { key: ConversationGroupKey; items: T[] }[] {
+/** Conversations by how long ago they last changed, the time each row shows,
+ *  newest group first, leaving out the groups with none. Each key names its
+ *  label in the sidebar strings. */
+export function groupConversationsByDate<
+  T extends { createdAt: string; updatedAt?: string | null | undefined },
+>(conversations: T[]): { key: ConversationGroupKey; items: T[] }[] {
   const now = DateTime.now()
   const groups: Record<ConversationGroupKey, T[]> = {
     groupToday: [],
@@ -33,7 +33,7 @@ export function groupConversationsByDate<T extends { createdAt: string }>(
     groupOlder: [],
   }
   for (const conv of conversations) {
-    const days = now.diff(DateTime.fromISO(conv.createdAt), 'days').days
+    const days = now.diff(DateTime.fromISO(conv.updatedAt ?? conv.createdAt), 'days').days
     const key: ConversationGroupKey =
       days < 1
         ? 'groupToday'
@@ -89,34 +89,18 @@ export function useConversationActions(): {
     }
   }
 
-  const menuItems = (conv: ConversationSummary): MenuEntry[] => [
-    {
-      label: common.rename,
-      icon: <RenameIcon />,
-      onClick: () => requestRename(conv),
-    },
-    // Only the owner can change who a conversation is shared with.
-    ...(adapter.sharing && conv.isOwner !== false
-      ? [
-          {
-            label: common.share,
-            icon: <ShareIcon />,
-            onClick: () => setSharing(conv.id),
-          } satisfies MenuAction,
-        ]
-      : []),
-    {
-      label: common.download,
-      icon: <DownloadIcon />,
-      onClick: () => void download(conv.id),
-    },
-    {
-      label: common.delete,
-      icon: <TrashIcon />,
-      destructive: true,
-      onClick: () => requestDelete(conv),
-    },
-  ]
+  const sessionMenu = useSessionMenu()
+  const menuItems = (conv: ConversationSummary): MenuEntry[] =>
+    sessionMenu({
+      rename: { onClick: () => requestRename(conv) },
+      // Only the owner can change who a conversation is shared with.
+      share:
+        adapter.sharing && conv.isOwner !== false
+          ? { onClick: () => setSharing(conv.id) }
+          : undefined,
+      download: { onClick: () => void download(conv.id) },
+      remove: { onClick: () => requestDelete(conv) },
+    })
 
   const overlays = (
     <>

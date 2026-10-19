@@ -17,3 +17,15 @@ describe('groupConversationsByDate', () => {
     ])
   })
 })
+
+describe('groupConversationsByDate by last activity', () => {
+  it('files a conversation by when it last changed, the time its row shows', () => {
+    const revived = {
+      id: 'old-but-active',
+      createdAt: DateTime.now().minus({ days: 40 }).toISO() ?? '',
+      updatedAt: DateTime.now().toISO() ?? '',
+    }
+    const groups = groupConversationsByDate([revived])
+    expect(groups.map((g) => g.key)).toEqual(['groupToday'])
+  })
+})
