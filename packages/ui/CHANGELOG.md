@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.73.0](https://github.com/parallelworks/foundation/compare/ui-v0.72.0...ui-v0.73.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** StageList for start pages, and conversation shortcuts any view can bind ([#390](https://github.com/parallelworks/foundation/issues/390)) ([02ec4f7](https://github.com/parallelworks/foundation/commit/02ec4f731e53f716ba11dd6a2a52c2a62c5f8ad1))
+
+
+### Bug Fixes
+
+* **ui:** a form group's description never shows under its title ([#393](https://github.com/parallelworks/foundation/issues/393)) ([8436b42](https://github.com/parallelworks/foundation/commit/8436b42565cdc9b581ad4b0ff19d3ca29b7cada7))
+
 ## [0.72.0](https://github.com/parallelworks/foundation/compare/ui-v0.71.0...ui-v0.72.0) (2026-10-19)
 
 
