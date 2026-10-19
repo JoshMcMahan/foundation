@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/parallelworks/foundation/compare/dev/v0.17.1...dev/v0.18.0) (2026-10-19)
+
+
+### Features
+
+* **dev:** dev clean keeps the disk from filling between runs and never trims the Go cache under a running build ([#389](https://github.com/parallelworks/foundation/issues/389)) ([8b39ef8](https://github.com/parallelworks/foundation/commit/8b39ef89a50a7ed60dbde3398c132f64ca7c5542))
+
 ## [0.17.1](https://github.com/parallelworks/foundation/compare/dev/v0.17.0...dev/v0.17.1) (2026-10-16)
 
 
