@@ -266,25 +266,28 @@ worth keeping.
 
 Then Go's build cache is trimmed to `--go-cache` (default 60GB), least
 recently used first, keeping anything used in the last hour. Entries are
-content-addressed, so one removed is rebuilt when needed. While the disk
+content-addressed, so one removed is rebuilt when needed; the fuzzing corpus
+beside them is not, and stays. While the disk
 holding the cache has less than `--min-free` free (default 50GB), the trim
 goes below `--go-cache`, oldest first, until the disk has that much free or
 the cache is empty, so a burst of builds between runs cannot fill the disk.
 `--min-free 0` sets no floor, and `--go-cache 0` leaves the cache alone.
 
 Removing entries under a running build breaks it ("could not import ...: no
-such file or directory"), so while any `go build`, `test`, `vet`, `run`,
-`install`, `list` or `generate`, a compiler or linker, or `golangci-lint` is
-running, the trim is skipped with a note naming the process, and a later run
-does it. A `go run` whose program has started counts as done building, and
-`gopls` does not count. Worktrees are cleaned either way.
+such file or directory"), so while any `go build`, `test`, `vet`, `fix`,
+`run`, `install`, `list` or `generate`, a compiler or linker, or
+`golangci-lint` is running, the trim keeps everything used since an hour
+before the oldest of them started, with a note naming it. Builds that run
+back to back still let it trim what none of them can be reading. A `go run`
+whose program has started counts as done building, and `gopls` does not
+count.
 
 ### On a schedule
 
 `--install` runs `dev clean` every `--every` (default 15 minutes), and once now.
 A run with the cache under its limit, the disk above `--min-free` and no
-finished worktree changes nothing, and one during a build leaves the cache
-for the next, so running often is cheap and keeps up with bursts of builds.
+finished worktree changes nothing, and one during builds leaves what they may
+be reading, so running often is cheap and keeps up with bursts of builds.
 Each install adds its repositories (default: the one here) to those already
 scheduled, and the flags it is given replace the schedule's, while the rest
 keep their scheduled values; `--replace` schedules only this call's
@@ -310,10 +313,10 @@ The schedule is the launchd agent `~/Library/LaunchAgents/foundation.dev.clean.p
 on macOS, or the systemd user units `foundation-dev-clean.service` and `.timer`
 on Linux, logging to the journal. `dev clean` reads its repositories and flags
 back from there, so one edited by hand into something else, or removed with
-`launchctl` or `systemctl`, is simply replaced by the next `--install`. A schedule installed by an
-earlier dev keeps its interval, as any flag not given does, and runs with the
-default `--min-free`; `dev clean --install --every 15m` moves it to the new
-interval.
+`launchctl` or `systemctl`, is simply replaced by the next `--install`. A
+schedule installed by an earlier dev keeps its interval, as any flag not given
+does, and runs with the default `--min-free`; `dev clean --install --every
+15m` moves it to the new interval.
 
 ## Ports
 

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -288,44 +289,27 @@ func writable(dir string) {
 	})
 }
 
-// cacheGrace keeps entries used this recently, which a build running now
-// may be about to read.
-const cacheGrace = time.Hour
+// cacheGrace keeps the entries used this long before a build started, which
+// it may be reading: Go refreshes an entry's time on use only once that time
+// is an hour old, so it lags the last use by up to an hour, and the go command
+// looks up what its tools read before it starts them.
+const cacheGrace = 2 * time.Hour
 
 // trimGoCache removes the least recently used entries of Go's build cache in
 // dir until it holds at most limit bytes, and further while the disk holding
-// it has less than minFree bytes free (0: no floor). Go trims only entries
-// unused for five days, which never bounds the cache of a machine building
-// every day. Entries are content-addressed and written by rename, so a
-// removed one is rebuilt, never corrupt.
-func trimGoCache(dir string, limit, minFree int64, dryRun bool, out io.Writer) error {
-	type entry struct {
-		path string
-		size int64
-		used time.Time
-	}
-	var entries []entry
-	var total int64
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil //nolint:nilerr // an entry removed meanwhile, or unreadable: skip it
-		}
-		// Entries live in the two-hex-digit subdirectories; the cache's own
-		// README and trim stamp sit at its root.
-		if d.IsDir() || filepath.Dir(p) == dir {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return nil //nolint:nilerr // removed meanwhile
-		}
-		// Go refreshes an entry's time on use, as its own trimming relies on.
-		entries = append(entries, entry{p, info.Size(), info.ModTime()})
-		total += info.Size()
-		return nil
-	})
+// it has less than minFree bytes free (0: no floor). It keeps every entry used
+// within cacheGrace before since: now, or when the oldest build running
+// started. Go trims only entries unused for five days, which never bounds the
+// cache of a machine building every day. Entries are content-addressed and
+// written by rename, so a removed one is rebuilt, never corrupt.
+func trimGoCache(dir string, limit, minFree int64, since time.Time, dryRun bool, out io.Writer) error {
+	entries, err := goCacheEntries(dir)
 	if err != nil {
 		return err
+	}
+	var total int64
+	for _, e := range entries {
+		total += e.size
 	}
 	before := total
 	target, floor := limit, ""
@@ -339,13 +323,18 @@ func trimGoCache(dir string, limit, minFree int64, dryRun bool, out io.Writer) e
 			floor = fmt.Sprintf("; %s free, under --min-free %s", formatSize(free), formatSize(minFree))
 		}
 	}
-	slices.SortFunc(entries, func(a, b entry) int { return a.used.Compare(b.used) })
+	cutoff := since.Add(-cacheGrace)
+	slices.SortFunc(entries, func(a, b cacheEntry) int { return a.used.Compare(b.used) })
 	for _, e := range entries {
-		if total <= target || time.Since(e.used) < cacheGrace {
+		if total <= target || !e.used.Before(cutoff) {
 			break
 		}
 		if !dryRun {
-			if err := os.Remove(e.path); err != nil {
+			// A build that started since the walk refreshed what it looked up.
+			if fi, err := os.Lstat(e.path); err != nil || !fi.ModTime().Before(cutoff) {
+				continue
+			}
+			if err := os.RemoveAll(e.path); err != nil {
 				continue
 			}
 		}
@@ -359,6 +348,60 @@ func trimGoCache(dir string, limit, minFree int64, dryRun bool, out io.Writer) e
 	return nil
 }
 
+// cacheEntry is one entry of Go's build cache.
+type cacheEntry struct {
+	path string
+	size int64
+	used time.Time
+}
+
+// goCacheEntries lists the entries of Go's build cache in dir, as Go's own
+// trim finds them: the -a and -d files in its two-hex-digit subdirectories.
+// A -d directory is a cached executable, whose time Go refreshes on use
+// rather than the file's inside it. The fuzzing corpus beside them is not
+// rebuilt, and Go never trims it.
+func goCacheEntries(dir string) ([]cacheEntry, error) {
+	subdirs, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var entries []cacheEntry
+	for _, sub := range subdirs {
+		if !sub.IsDir() || len(sub.Name()) != 2 || strings.Trim(sub.Name(), "0123456789abcdef") != "" {
+			continue
+		}
+		names, err := os.ReadDir(filepath.Join(dir, sub.Name()))
+		if err != nil {
+			continue
+		}
+		for _, n := range names {
+			if !strings.HasSuffix(n.Name(), "-a") && !strings.HasSuffix(n.Name(), "-d") {
+				continue
+			}
+			p := filepath.Join(dir, sub.Name(), n.Name())
+			info, err := os.Lstat(p)
+			if err != nil {
+				continue // removed meanwhile
+			}
+			size := info.Size()
+			if info.IsDir() {
+				size = 0
+				files, _ := os.ReadDir(p)
+				for _, f := range files {
+					if fi, err := f.Info(); err == nil {
+						size += fi.Size()
+					}
+				}
+			}
+			entries = append(entries, cacheEntry{p, size, info.ModTime()})
+		}
+	}
+	return entries, nil
+}
+
 // diskFree is the space free to this user on the filesystem holding path; a
 // variable so that tests need no full disk.
 var diskFree = func(path string) (int64, error) {
@@ -370,23 +413,27 @@ var diskFree = func(path string) (int64, error) {
 	return int64(float64(st.Bavail) * float64(st.Bsize)), nil
 }
 
-// process is one running process, its command line split on spaces.
+// process is one running process, its command line split on spaces. A start
+// ps did not give is the zero time, as long ago as can be.
 type process struct {
 	pid, ppid int
+	start     time.Time
 	args      []string
 }
 
 // listProcesses lists the running processes; a variable so that tests do
 // not depend on what the machine is running.
 var listProcesses = func(ctx context.Context) ([]process, error) {
-	b, err := exec.CommandContext(ctx, "ps", "-A", "-o", "pid=,ppid=,args=").Output()
+	// -ww: ps would otherwise cut lines to an exported COLUMNS.
+	b, err := exec.CommandContext(ctx, "ps", "-A", "-ww", "-o", "pid=,ppid=,etime=,args=").Output()
 	if err != nil {
 		return nil, fmt.Errorf("ps: %w", err)
 	}
+	now := time.Now()
 	var procs []process
 	for line := range strings.SplitSeq(string(b), "\n") {
 		f := strings.Fields(line)
-		if len(f) < 3 {
+		if len(f) < 4 {
 			continue
 		}
 		pid, err1 := strconv.Atoi(f[0])
@@ -394,87 +441,136 @@ var listProcesses = func(ctx context.Context) ([]process, error) {
 		if err1 != nil || err2 != nil {
 			continue
 		}
-		procs = append(procs, process{pid, ppid, f[2:]})
+		p := process{pid: pid, ppid: ppid, args: f[3:]}
+		if up, err := parseElapsed(f[2]); err == nil {
+			p.start = now.Add(-up)
+		}
+		procs = append(procs, p)
 	}
 	return procs, nil
 }
 
+// parseElapsed reads ps's elapsed time, [[dd-]hh:]mm:ss.
+func parseElapsed(s string) (time.Duration, error) {
+	var days time.Duration
+	if d, rest, ok := strings.Cut(s, "-"); ok {
+		n, err := strconv.Atoi(d)
+		if err != nil {
+			return 0, fmt.Errorf("elapsed time %q: %w", s, err)
+		}
+		days, s = time.Duration(n)*24*time.Hour, rest
+	}
+	parts := strings.Split(s, ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return 0, fmt.Errorf("elapsed time %q", s)
+	}
+	var secs time.Duration
+	for _, part := range parts {
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			return 0, fmt.Errorf("elapsed time %q: %w", s, err)
+		}
+		secs = secs*60 + time.Duration(n)
+	}
+	return days + secs*time.Second, nil
+}
+
 // goCacheUsers are the go subcommands that read and write the build cache.
-var goCacheUsers = []string{"build", "test", "vet", "run", "install", "list", "generate"}
+var goCacheUsers = []string{"build", "test", "vet", "fix", "run", "install", "list", "generate"}
 
 // cacheTools read the cache's compiled packages as they run, from the go
 // command or on their own.
-var cacheTools = []string{"compile", "link", "vet", "asm", "cgo", "golangci-lint"}
+var cacheTools = []string{"compile", "link", "vet", "fix", "asm", "cgo", "golangci-lint"}
 
-// goBuilding returns a running process that reads Go's build cache, "" when
-// none does. Removing an entry under it breaks it: the go command hands
-// compile and the linters paths into the cache it has just looked up.
-func goBuilding(procs []process) string {
-	parents := map[int][]process{}
+// oldestBuild returns the process reading Go's build cache that started
+// first, nil when none runs. Removing an entry under it breaks it: the go
+// command hands compile and the linters paths into the cache it has just
+// looked up.
+func oldestBuild(procs []process) *process {
+	children := map[int][]process{}
 	for _, p := range procs {
-		parents[p.ppid] = append(parents[p.ppid], p)
+		children[p.ppid] = append(children[p.ppid], p)
 	}
-	for _, p := range procs {
-		name := filepath.Base(p.args[0])
-		if slices.Contains(cacheTools, name) {
-			return fmt.Sprintf("%d %s", p.pid, strings.Join(p.args, " "))
+	var oldest *process
+	for i, p := range procs {
+		if readsGoCache(p, children[p.pid]) && (oldest == nil || p.start.Before(oldest.start)) {
+			oldest = &procs[i]
 		}
-		if name != "go" {
-			continue
-		}
-		sub := ""
-		rest := p.args[1:]
-		if len(rest) > 1 && rest[0] == "-C" {
-			rest = rest[2:]
-		}
-		for i, a := range rest {
-			if !strings.HasPrefix(a, "-") {
-				sub, rest = a, rest[i+1:]
-				break
-			}
-		}
-		if sub == "tool" {
-			for _, a := range rest {
-				if !strings.HasPrefix(a, "-") {
-					sub = a
-					break
-				}
-			}
-			if !slices.Contains(cacheTools, sub) {
-				continue
-			}
-		} else if !slices.Contains(goCacheUsers, sub) {
-			continue
-		}
-		// go run waits on the program it built, done with the cache.
-		if sub == "run" && slices.ContainsFunc(parents[p.pid], func(c process) bool {
-			return strings.Contains(c.args[0], string(filepath.Separator)+"go-build")
-		}) {
-			continue
-		}
-		return fmt.Sprintf("%d %s", p.pid, strings.Join(p.args, " "))
 	}
-	return ""
+	return oldest
 }
 
-// cleanGoCache trims Go's build cache, unless a build is using it: the next
-// run trims it instead.
+// readsGoCache reports whether p, with its child processes, reads Go's build
+// cache.
+func readsGoCache(p process, children []process) bool {
+	name := filepath.Base(p.args[0])
+	if slices.Contains(cacheTools, name) {
+		return true
+	}
+	if name != "go" {
+		return false
+	}
+	sub, rest := firstWord(p.args[1:], "C")
+	switch sub {
+	case "tool":
+		tool, _ := firstWord(rest, "C", "modfile", "overlay")
+		return slices.Contains(cacheTools, path.Base(tool))
+	case "run":
+		// go run waits on the program it built, done with the cache.
+		return !slices.ContainsFunc(children, func(c process) bool {
+			return slices.ContainsFunc(c.args[:min(2, len(c.args))], goRunProgram)
+		})
+	}
+	return slices.Contains(goCacheUsers, sub)
+}
+
+// firstWord returns the first argument that is not a flag, and those after
+// it, passing over the value of each flag named in valued.
+func firstWord(args []string, valued ...string) (string, []string) {
+	for i := 0; i < len(args); i++ {
+		if !strings.HasPrefix(args[i], "-") {
+			return args[i], args[i+1:]
+		}
+		if slices.Contains(valued, strings.TrimLeft(args[i], "-")) {
+			i++
+		}
+	}
+	return "", nil
+}
+
+// goRunProgram reports whether exe is a program go run built: in its work
+// directory's exe, or, since Go 1.24, the copy it keeps in the build cache,
+// wherever GOCACHE is, under an entry named for its hash.
+func goRunProgram(exe string) bool {
+	dir := filepath.Dir(exe)
+	if filepath.Base(dir) == "exe" && strings.HasPrefix(filepath.Base(filepath.Dir(filepath.Dir(dir))), "go-build") {
+		return true
+	}
+	entry := filepath.Base(dir)
+	return len(entry) > 4 && strings.HasSuffix(entry, "-d") && filepath.Base(filepath.Dir(dir)) == entry[:2]
+}
+
+// cleanGoCache trims Go's build cache, keeping what the builds running may
+// read: everything used since an hour before the oldest of them started.
 func cleanGoCache(ctx context.Context, limit, minFree int64, dryRun bool, out io.Writer) error {
 	dir, err := goCacheDir(ctx)
 	if err != nil {
 		return err
 	}
-	if !dryRun {
-		procs, err := listProcesses(ctx)
-		if err != nil {
-			return fmt.Errorf("left Go's build cache untrimmed, as dev cannot tell whether a build is using it: %w", err)
-		}
-		if p := goBuilding(procs); p != "" {
-			fmt.Fprintf(out, "Go build cache: left untrimmed while a build uses it (%s); the next run trims it\n", p)
-			return nil
-		}
+	procs, err := listProcesses(ctx)
+	if err != nil {
+		return fmt.Errorf("left Go's build cache untrimmed, as dev cannot tell whether a build is using it: %w", err)
 	}
-	return trimGoCache(dir, limit, minFree, dryRun, out)
+	since := time.Now()
+	if p := oldestBuild(procs); p != nil {
+		since = p.start
+		when := "since " + p.start.Format(time.DateTime)
+		if p.start.IsZero() {
+			when = "since an unknown time"
+		}
+		fmt.Fprintf(out, "Go build cache: keeping what a build running %s may read (%d %s)\n", when, p.pid, strings.Join(p.args, " "))
+	}
+	return trimGoCache(dir, limit, minFree, since, dryRun, out)
 }
 
 // goCacheDir is Go's build cache, as the go command finds it.
@@ -540,8 +636,8 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 			"Then trim Go's build cache to --go-cache, least recently used first: Go itself only drops what has been " +
 			"unused for five days, which never bounds the cache of a machine that builds every day. " +
 			"While the disk holding the cache has less than --min-free free, trim further, until it has or the cache is empty. " +
-			"The trim waits for a later run while a go build, test, vet or similar, or golangci-lint, is running: " +
-			"removing entries under a build breaks it.\n\n" +
+			"While a go build, test, vet or similar, or golangci-lint, is running, the trim keeps everything used since " +
+			"an hour before it started: removing entries under a build breaks it.\n\n" +
 			"--install runs it on a schedule, every --every. It adds the repositories to those already scheduled, " +
 			"and the flags given replace the schedule's, while those not given keep their scheduled values; " +
 			"--replace schedules only this call's repositories and flags instead. " +

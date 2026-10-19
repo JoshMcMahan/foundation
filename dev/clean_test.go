@@ -162,22 +162,13 @@ func TestCleanRemovesFinishedWorktrees(t *testing.T) {
 func TestTrimGoCacheEvictsTheLeastRecentlyUsed(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "README"), "the cache's own")
-	entry := func(name string, used time.Duration) string {
-		p := filepath.Join(dir, name[:2], name)
-		write(t, p, strings.Repeat("x", 100))
-		then := time.Now().Add(-used)
-		if err := os.Chtimes(p, then, then); err != nil {
-			t.Fatal(err)
-		}
-		return p
-	}
-	oldest := entry("aa-oldest", 72*time.Hour)
-	older := entry("bb-older", 48*time.Hour)
-	recent := entry("cc-recent", 30*time.Minute)
-	newer := entry("dd-newer", 2*time.Hour)
+	oldest := goCacheEntry(t, dir, "aa-oldest", 72*time.Hour)
+	older := goCacheEntry(t, dir, "bb-older", 48*time.Hour)
+	recent := goCacheEntry(t, dir, "cc-recent", 90*time.Minute)
+	newer := goCacheEntry(t, dir, "dd-newer", 3*time.Hour)
 
 	var out strings.Builder
-	if err := trimGoCache(dir, 250, 0, false, &out); err != nil {
+	if err := trimGoCache(dir, 250, 0, time.Now(), false, &out); err != nil {
 		t.Fatal(err)
 	}
 	for p, stays := range map[string]bool{oldest: false, older: false, newer: true, recent: true, filepath.Join(dir, "README"): true} {
@@ -185,8 +176,9 @@ func TestTrimGoCacheEvictsTheLeastRecentlyUsed(t *testing.T) {
 			t.Errorf("%s exists = %v, want %v", filepath.Base(p), err == nil, stays)
 		}
 	}
-	// Entries a build may be reading now stay, over the limit if need be.
-	if err := trimGoCache(dir, 0, 0, false, &out); err != nil {
+	// Go marks an entry used at most once an hour, so one marked 90 minutes
+	// ago may have been read a moment ago: it stays, over the limit if need be.
+	if err := trimGoCache(dir, 0, 0, time.Now(), false, &out); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(recent); err != nil {
@@ -194,6 +186,43 @@ func TestTrimGoCacheEvictsTheLeastRecentlyUsed(t *testing.T) {
 	}
 	if _, err := os.Stat(newer); err == nil {
 		t.Error("kept an entry over the limit")
+	}
+}
+
+func TestTrimGoCacheTrimsOnlyItsEntries(t *testing.T) {
+	dir := t.TempDir()
+	old := time.Now().Add(-72 * time.Hour)
+	// The fuzzing corpus is no cache entry: Go never trims it.
+	corpus := filepath.Join(dir, "fuzz", "example.com", "p", "FuzzParse", "0123abcd")
+	write(t, corpus, "input")
+	// A cached executable is a -d directory, whose time Go refreshes on use
+	// rather than the file's inside it.
+	exe := func(name string, used time.Time) string {
+		entry := filepath.Join(dir, name[:2], name+"-d")
+		write(t, filepath.Join(entry, "server"), strings.Repeat("x", 100))
+		for _, p := range []string{filepath.Join(entry, "server"), entry} {
+			if err := os.Chtimes(p, old, old); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.Chtimes(entry, used, used); err != nil {
+			t.Fatal(err)
+		}
+		return entry
+	}
+	ran := exe("ee-ran", time.Now().Add(-10*time.Minute))
+	idle := exe("ff-idle", old)
+	if err := os.Chtimes(corpus, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := trimGoCache(dir, 0, 0, time.Now(), false, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	for p, stays := range map[string]bool{corpus: true, filepath.Join(ran, "server"): true, idle: false} {
+		if _, err := os.Stat(p); (err == nil) != stays {
+			t.Errorf("%s exists = %v, want %v", p, err == nil, stays)
+		}
 	}
 }
 
@@ -588,8 +617,9 @@ func TestCleanInstallCommand(t *testing.T) {
 	}
 }
 
-func TestGoBuilding(t *testing.T) {
+func TestOldestBuild(t *testing.T) {
 	ps := func(args ...string) process { return process{pid: 10, ppid: 1, args: args} }
+	child := func(args ...string) process { return process{pid: 11, ppid: 10, args: args} }
 	for _, tc := range []struct {
 		name  string
 		procs []process
@@ -597,21 +627,56 @@ func TestGoBuilding(t *testing.T) {
 	}{
 		{"go test", []process{ps("/usr/local/go/bin/go", "test", "-race", "./...")}, true},
 		{"go vet with flags first", []process{ps("go", "-C", "dev", "vet", "./...")}, true},
+		{"go fix", []process{ps("go", "fix", "./...")}, true},
 		{"compile", []process{ps("/usr/local/go/pkg/tool/darwin_arm64/compile", "-o", "x.a")}, true},
 		{"golangci-lint", []process{ps("/home/me/go/bin/golangci-lint", "run")}, true},
 		{"go tool golangci-lint", []process{ps("go", "tool", "-modfile=tools/go.mod", "golangci-lint", "run")}, true},
+		{"go tool with flag values apart", []process{ps("go", "tool", "-C", "tools", "-modfile", "go.mod", "golangci-lint", "run")}, true},
+		{"go tool by package path", []process{ps("go", "tool", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "run")}, true},
 		{"go run while building", []process{ps("go", "run", "./cmd/server")}, true},
-		{"go run once its program runs", []process{
+		{"go run compiling C", []process{ps("go", "run", "./cmd/server"), child("clang", "-o", "/tmp/go-build1/b001/_x001.o")}, true},
+		{"go run once its program runs", []process{ps("go", "run", "./cmd/server"), child("/tmp/go-build123/b001/exe/server")}, false},
+		{"go run of a program in the cache", []process{
 			ps("go", "run", "./cmd/server"),
-			{pid: 11, ppid: 10, args: []string{"/tmp/go-build123/b001/exe/server"}},
+			child("/data/gocache/3e/3e41b200732f1862386ddf5ad33ee45699d7bdeb1d86ec6083ec0b7f624636ab-d/server", "serve"),
 		}, false},
+		{"go run -exec", []process{ps("go", "run", "-exec", "sudo", "./cmd/server"), child("sudo", "/tmp/go-build1/b001/exe/server")}, false},
+		{"go tool dev", []process{ps("go", "-C", "tools", "tool", "dev", "mcp")}, false},
 		{"gopls", []process{ps("/home/me/go/bin/gopls", "serve")}, false},
 		{"go env", []process{ps("go", "env", "GOCACHE")}, false},
 		{"go tool pprof", []process{ps("go", "tool", "pprof", "cpu.out")}, false},
 		{"an editor", []process{ps("vim", "compile.go")}, false},
 	} {
-		if got := goBuilding(tc.procs) != ""; got != tc.want {
+		if got := oldestBuild(tc.procs) != nil; got != tc.want {
 			t.Errorf("%s: building = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+
+	now := time.Now()
+	procs := []process{
+		{pid: 1, args: []string{"go", "build", "./..."}, start: now.Add(-time.Minute)},
+		{pid: 2, args: []string{"go", "test", "./..."}, start: now.Add(-time.Hour)},
+		{pid: 3, args: []string{"gopls"}, start: now.Add(-48 * time.Hour)},
+	}
+	if p := oldestBuild(procs); p == nil || p.pid != 2 {
+		t.Errorf("oldest build = %+v, want the go test", p)
+	}
+}
+
+func TestParseElapsed(t *testing.T) {
+	for in, want := range map[string]time.Duration{
+		"00:07":       7 * time.Second,
+		"12:34":       12*time.Minute + 34*time.Second,
+		"02:03:04":    2*time.Hour + 3*time.Minute + 4*time.Second,
+		"27-18:19:24": 27*24*time.Hour + 18*time.Hour + 19*time.Minute + 24*time.Second,
+	} {
+		if got, err := parseElapsed(in); err != nil || got != want {
+			t.Errorf("parseElapsed(%q) = %v, %v; want %v", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "7", "x:07", "1-2-03:04"} {
+		if _, err := parseElapsed(in); err == nil {
+			t.Errorf("parseElapsed(%q) succeeded", in)
 		}
 	}
 }
@@ -619,7 +684,7 @@ func TestGoBuilding(t *testing.T) {
 // goCacheEntry writes a 100-byte cache entry last used ago in dir.
 func goCacheEntry(t *testing.T, dir, name string, ago time.Duration) string {
 	t.Helper()
-	p := filepath.Join(dir, name[:2], name)
+	p := filepath.Join(dir, name[:2], name+"-d")
 	write(t, p, strings.Repeat("x", 100))
 	then := time.Now().Add(-ago)
 	if err := os.Chtimes(p, then, then); err != nil {
@@ -628,37 +693,41 @@ func goCacheEntry(t *testing.T, dir, name string, ago time.Duration) string {
 	return p
 }
 
-func TestCleanGoCacheWaitsForBuilds(t *testing.T) {
+func TestCleanGoCacheKeepsWhatBuildsMayRead(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GOCACHE", dir)
 	old := goCacheEntry(t, dir, "aa-old", 48*time.Hour)
+	read := goCacheEntry(t, dir, "bb-read", 5*time.Hour)
 	var procs []process
 	list := listProcesses
 	listProcesses = func(context.Context) ([]process, error) { return procs, nil }
 	t.Cleanup(func() { listProcesses = list })
+	exists := func(p string) bool { _, err := os.Stat(p); return err == nil }
 
-	procs = []process{{pid: 42, ppid: 1, args: []string{"go", "test", "./..."}}}
+	// A go test running for four hours may read what was used since an hour
+	// before it started, but nothing older.
+	procs = []process{{pid: 42, ppid: 1, start: time.Now().Add(-4 * time.Hour), args: []string{"go", "test", "./..."}}}
 	var out strings.Builder
 	if err := cleanGoCache(t.Context(), 10, 0, false, &out); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(old); err != nil {
-		t.Errorf("trimmed the cache under a running build: %v", err)
+	if exists(old) || !exists(read) {
+		t.Errorf("old exists = %v, read exists = %v; want only what the build may read", exists(old), exists(read))
 	}
-	if !strings.Contains(out.String(), "left untrimmed while a build uses it (42 go test ./...)") {
-		t.Errorf("no word of the skipped trim:\n%s", out.String())
+	if !strings.Contains(out.String(), "keeping what a build running since ") || !strings.Contains(out.String(), "(42 go test ./...)") {
+		t.Errorf("no word of the build:\n%s", out.String())
 	}
 
 	procs = nil
-	if err := cleanGoCache(t.Context(), 10, 0, false, &out); err != nil {
+	if err := cleanGoCache(t.Context(), 10, 0, false, io.Discard); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(old); err == nil {
+	if exists(read) {
 		t.Error("left the cache over its limit with no build running")
 	}
 
 	listProcesses = func(context.Context) ([]process, error) { return nil, errors.New("no ps") }
-	goCacheEntry(t, dir, "bb-old", 48*time.Hour)
+	goCacheEntry(t, dir, "cc-old", 48*time.Hour)
 	if err := cleanGoCache(t.Context(), 10, 0, false, io.Discard); err == nil {
 		t.Error("trimmed without knowing whether a build runs")
 	}
@@ -679,7 +748,7 @@ func TestTrimGoCacheKeepsAFloorOfFreeSpace(t *testing.T) {
 	// Under its limit, with the disk above the floor, nothing goes.
 	free = 1000
 	var out strings.Builder
-	if err := trimGoCache(dir, 1000, 500, false, &out); err != nil {
+	if err := trimGoCache(dir, 1000, 500, time.Now(), false, &out); err != nil {
 		t.Fatal(err)
 	}
 	if !exists(oldest) || strings.Contains(out.String(), "min-free") {
@@ -689,7 +758,7 @@ func TestTrimGoCacheKeepsAFloorOfFreeSpace(t *testing.T) {
 	// 150 bytes short of the floor: the two oldest go, though under the limit.
 	free = 350
 	out.Reset()
-	if err := trimGoCache(dir, 1000, 500, false, &out); err != nil {
+	if err := trimGoCache(dir, 1000, 500, time.Now(), false, &out); err != nil {
 		t.Fatal(err)
 	}
 	for p, stays := range map[string]bool{oldest: false, older: false, newer: true, recent: true} {
@@ -703,7 +772,7 @@ func TestTrimGoCacheKeepsAFloorOfFreeSpace(t *testing.T) {
 
 	// Far short, it empties the cache but for what a build may be reading.
 	free = 0
-	if err := trimGoCache(dir, 1000, 500, false, io.Discard); err != nil {
+	if err := trimGoCache(dir, 1000, 500, time.Now(), false, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	if exists(newer) || !exists(recent) {
