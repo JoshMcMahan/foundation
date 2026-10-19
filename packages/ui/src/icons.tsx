@@ -104,6 +104,9 @@ export const BannerIcon = /* @__PURE__ */ drawn(
 export const BillingIcon = /* @__PURE__ */ drawn(
   'M3.5 3.5h9a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1ZM2.5 6.5h11M4.75 10h2',
 )
+export const BranchIcon = /* @__PURE__ */ drawn(
+  'M4.5 5.75a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5ZM4.5 13.75a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5ZM11.5 6.75a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5ZM4.5 5.75v4.5M11.5 6.75c0 2.75-7 1-7 3.5',
+)
 export const BriefcaseIcon = /* @__PURE__ */ drawn(
   'M3 5h10a1 1 0 0 1 1 1v6.75a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM10.25 13.75V3.25a1 1 0 0 0-1-1h-2.5a1 1 0 0 0-1 1v10.5',
 )
@@ -599,6 +602,9 @@ export const RenewIcon = /* @__PURE__ */ drawn(
 )
 export const ReportIcon = /* @__PURE__ */ drawn(
   'M10.5 3h1.5a1 1 0 0 1 1 1v9.25a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1.5M6 1.75h4a.5.5 0 0 1 .5.5v1.5a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5v-1.5a.5.5 0 0 1 .5-.5ZM5.5 11.25l1.75-2 1.5 1.25 2-2.75',
+)
+export const RepositoryIcon = /* @__PURE__ */ drawn(
+  'M3.5 12.25V3.5A1.5 1.5 0 0 1 5 2h7.5v9H5a1.5 1.5 0 0 0 0 3h7.5M6.5 5h3',
 )
 export const ResetIcon = /* @__PURE__ */ drawn(
   'M2.5 3.5h11M2.5 8h2.75M2.5 12.5h2.75M7.75 10.25a3 3 0 1 0 .875-2.125L7.75 8.875M7.75 7.25v1.625h1.625',

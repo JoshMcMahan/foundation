@@ -718,6 +718,9 @@ glyph per meaning across the apps.
   `SuccessIcon` is a run that succeeded. `OwnerIcon` is who owns a resource
   and `DefaultIcon` the one used when nothing else is chosen, while
   `FeaturedIcon` marks an item picked out to show first.
+  `RepositoryIcon` is a code repository, `BranchIcon` a branch in it,
+  `CommitIcon` one commit, `PullRequestIcon` a change asking to merge and
+  `ForkIcon` a copy of a repository.
   `NamespaceIcon`, `CommandShellIcon` and `QuickActionIcon` were
   `KubernetesNamespaceIcon`, `PowershellIcon` and `ZapIcon`; the old names
   still work but are deprecated.
