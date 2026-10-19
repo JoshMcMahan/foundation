@@ -88,6 +88,19 @@ export const Decisions: StoryObj = {
           note: 'directory whitelisted for session',
         },
       ],
+      [
+        'scancel --user=ana',
+        {
+          status: 'denied',
+          by: 'auto-reviewer',
+          at: minutesAgo(12),
+          reason: 'Cancels every job the user owns; the request was to cancel one benchmark job.',
+        },
+      ],
+      [
+        'kubectl delete ns staging',
+        { status: 'timed_out', by: 'auto-reviewer', at: minutesAgo(20) },
+      ],
       ['squeue -u ana', { status: 'expired', by: 'user', at: minutesAgo(70) }],
     ]
     return (

@@ -268,8 +268,9 @@ describe('tool decisions', () => {
     [{ status: 'approved', by: 'user' }, 'Allowed'],
     [{ status: 'approved', by: 'auto-reviewer' }, 'Allowed by the auto-reviewer'],
     [{ status: 'expired', by: 'user' }, 'Expired without an answer'],
-    [{ status: 'timed_out', by: 'user' }, 'No answer in time'],
-    [{ status: 'failed', by: 'auto-reviewer' }, 'The auto-reviewer could not decide'],
+    [{ status: 'timed_out', by: 'user' }, 'Denied: no answer in time'],
+    [{ status: 'timed_out', by: 'auto-reviewer' }, 'Denied: the auto-reviewer timed out'],
+    [{ status: 'failed', by: 'auto-reviewer' }, 'Denied: the auto-reviewer failed'],
   ])('says who settled the call: %o', (decision, label) => {
     renderParts([call(decision)])
     expect(screen.getByTestId('tool-decision')).toHaveTextContent(label)
@@ -288,6 +289,19 @@ describe('tool decisions', () => {
     const line = screen.getByTestId('tool-decision')
     expect(line.querySelector('time')).toBeInTheDocument()
     expect(line).toHaveTextContent('directory whitelisted for session')
+  })
+
+  it('shows why the auto-reviewer settled it', () => {
+    renderParts([
+      call({
+        status: 'denied',
+        by: 'auto-reviewer',
+        reason: 'Deleting shared scratch was not asked for.',
+      }),
+    ])
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent(
+      'Denied by the auto-reviewerDeleting shared scratch was not asked for.',
+    )
   })
 
   it('keeps an answered call out of a folded run', () => {

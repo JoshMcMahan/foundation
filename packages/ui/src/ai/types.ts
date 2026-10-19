@@ -91,6 +91,8 @@ export interface ToolDecision {
   /** ISO time of the answer. */
   at?: string
   note?: string
+  /** Why it was settled this way, such as the auto-reviewer's rationale. */
+  reason?: string
 }
 
 export interface ToolCallPart {

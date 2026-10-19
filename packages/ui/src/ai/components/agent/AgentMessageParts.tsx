@@ -368,32 +368,32 @@ function decisionLabel(d: ToolDecision, t: ChatStrings['agentTranscript']): stri
     case 'expired':
       return t.approvalExpired
     case 'timed_out':
-      return t.approvalTimedOut
+      return d.by === 'auto-reviewer' ? t.reviewTimedOut : t.approvalTimedOut
     case 'failed':
-      return t.reviewFailed
+      return d.by === 'auto-reviewer' ? t.reviewFailed : t.denied
   }
 }
 
 function DecisionLine({ decision }: { decision: ToolDecision }) {
   const { strings } = useChatConfig()
   return (
-    <div
-      className="ml-5 mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1 text-xs theme-muted-text"
-      data-testid="tool-decision"
-    >
-      <span>{decisionLabel(decision, strings.agentTranscript)}</span>
-      {decision.at && (
-        <>
-          <span aria-hidden="true">·</span>
-          <RelativeTime value={decision.at} className="shrink-0" />
-        </>
-      )}
-      {decision.note && (
-        <>
-          <span aria-hidden="true">·</span>
-          <span className="min-w-0 max-w-full truncate">{decision.note}</span>
-        </>
-      )}
+    <div className="ml-5 mt-0.5 text-xs theme-muted-text" data-testid="tool-decision">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+        <span>{decisionLabel(decision, strings.agentTranscript)}</span>
+        {decision.at && (
+          <>
+            <span aria-hidden="true">·</span>
+            <RelativeTime value={decision.at} className="shrink-0" />
+          </>
+        )}
+        {decision.note && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span className="min-w-0 max-w-full truncate">{decision.note}</span>
+          </>
+        )}
+      </div>
+      {decision.reason && <p className="mt-0.5 line-clamp-2">{decision.reason}</p>}
     </div>
   )
 }

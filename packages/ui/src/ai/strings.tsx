@@ -249,6 +249,7 @@ export interface ChatStrings {
     deniedByReviewer: string
     approvalExpired: string
     approvalTimedOut: string
+    reviewTimedOut: string
     reviewFailed: string
     writeOwnAnswer: string
     subagent: string
@@ -538,8 +539,9 @@ export const defaultChatStrings: ChatStrings = {
     allowedByReviewer: 'Allowed by the auto-reviewer',
     deniedByReviewer: 'Denied by the auto-reviewer',
     approvalExpired: 'Expired without an answer',
-    approvalTimedOut: 'No answer in time',
-    reviewFailed: 'The auto-reviewer could not decide',
+    approvalTimedOut: 'Denied: no answer in time',
+    reviewTimedOut: 'Denied: the auto-reviewer timed out',
+    reviewFailed: 'Denied: the auto-reviewer failed',
     writeOwnAnswer: 'Write my own answer…',
     subagent: 'Task',
     tasks: 'Tasks',
