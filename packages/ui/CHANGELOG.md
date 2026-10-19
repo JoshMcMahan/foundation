@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.75.0](https://github.com/parallelworks/foundation/compare/ui-v0.74.0...ui-v0.75.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** an answered tool call says who allowed or denied it, and when ([#398](https://github.com/parallelworks/foundation/issues/398)) ([5273d43](https://github.com/parallelworks/foundation/commit/5273d43e8b71e3850473d9abdde58a505a036fb7))
+* **ui:** the run graph lists a run's warnings and flags the jobs and steps they're about ([#395](https://github.com/parallelworks/foundation/issues/395)) ([af9d089](https://github.com/parallelworks/foundation/commit/af9d0893dd0c7eb9c777f4e2f0cd6719517b84dc))
+
 ## [0.74.0](https://github.com/parallelworks/foundation/compare/ui-v0.73.0...ui-v0.74.0) (2026-10-19)
 
 
