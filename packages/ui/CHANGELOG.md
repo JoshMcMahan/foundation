@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.69.0](https://github.com/parallelworks/foundation/compare/ui-v0.68.0...ui-v0.69.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** SessionView, one conversation view for the chat and for agent sessions ([#381](https://github.com/parallelworks/foundation/issues/381)) ([a507d89](https://github.com/parallelworks/foundation/commit/a507d8981e948655429ef07cd3c8879be9fd7a94))
+
 ## [0.68.0](https://github.com/parallelworks/foundation/compare/ui-v0.67.0...ui-v0.68.0) (2026-10-19)
 
 
