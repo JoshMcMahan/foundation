@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.68.0](https://github.com/parallelworks/foundation/compare/ui-v0.67.0...ui-v0.68.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** icons say what they're for, and no two meanings share a drawing ([#379](https://github.com/parallelworks/foundation/issues/379)) ([e6696dc](https://github.com/parallelworks/foundation/commit/e6696dc3ede63d797aa3ee7db44adf44321b1b04))
+
 ## [0.67.0](https://github.com/parallelworks/foundation/compare/ui-v0.66.1...ui-v0.67.0) (2026-10-18)
 
 
