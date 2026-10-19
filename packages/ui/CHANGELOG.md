@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.70.0](https://github.com/parallelworks/foundation/compare/ui-v0.69.0...ui-v0.70.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** verified, owner and default icons, so they stop borrowing a success check and a star ([#383](https://github.com/parallelworks/foundation/issues/383)) ([fc14cd1](https://github.com/parallelworks/foundation/commit/fc14cd175a74dd9f795b47c94b28417ef67a4e79))
+
 ## [0.69.0](https://github.com/parallelworks/foundation/compare/ui-v0.68.0...ui-v0.69.0) (2026-10-19)
 
 
