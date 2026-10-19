@@ -691,8 +691,32 @@ glyph per meaning across the apps.
   parallel one, while `NetworkShareIcon` is a folder shared over the network.
   `LibraryIcon` is a collection of write-ups to browse, `ArticleIcon` one
   write-up to read, such as a case study, and `NotebookIcon` one notebook.
-  `PendingIcon` is a requirement not met yet and `NotRunningIcon` a run not
-  started; they share the empty circle, so keep them out of the same list.
+  `PendingIcon` (a dashed circle) is a requirement not met yet and
+  `NotRunningIcon` (an empty circle) a run not started.
+  `ProvisionIcon` brings infrastructure up and `DeprovisionIcon` takes it down
+  but keeps its definition, while `DestroyIcon` breaks it apart for good.
+  `SharedIcon` is infrastructure someone else shared with you.
+  `WorkerIcon` is a machine that takes jobs, `WorkloadIcon` copies of one
+  thing running in a cluster, and `ServiceIcon` a long-running unit others
+  connect to. `WorkflowIcon` is a workflow as a thing, `RunWorkflowIcon`
+  running one and `BuildWorkflowIcon` editing one; `RunsIcon` lists runs and
+  `JobIcon` is one submitted job.
+  `RestartIcon` stops and starts something running, `RetryIcon` tries a failed
+  thing again, `RefreshIcon` reloads data, `ResetIcon` returns settings to
+  their defaults, `RollbackIcon` goes back to an earlier version and
+  `RestoreIcon` brings an archived item back. `LoadingIcon` is the interface
+  busy, while `RunningIcon` is a run in progress.
+  `KeyIcon` is an SSH or API key, `TokenIcon` a short-lived token and
+  `PasswordIcon` a password; `RevokeIcon` withdraws a credential or grant,
+  while `ReleaseIcon` gives back a reserved address or name.
+  `LogsIcon` is a live stream of log lines, `DefinitionIcon` the file that
+  defines a resource, `ConfigIcon` key-value configuration, `VariableIcon` a
+  named value and `ReportIcon` a report to open.
+  `WorkspaceMountIcon` is storage mounted into a workspace and
+  `CloudNetworkIcon` the private network hosts attach to.
+  `NamespaceIcon`, `CommandShellIcon` and `QuickActionIcon` were
+  `KubernetesNamespaceIcon`, `PowershellIcon` and `ZapIcon`; the old names
+  still work but are deprecated.
 - **Adding an icon:** draw it as one path on the 16px grid and add
   `export const NameIcon = /* @__PURE__ */ drawn('M…')` to `src/icons.tsx`,
   named for what it means rather than what it shows. Reuse the existing parts

@@ -53,6 +53,23 @@ describe('icons', () => {
     }
   })
 
+  it('give each meaning its own drawing', () => {
+    // Close and Remove share the X by convention; a filled twin marks a state.
+    const shared = new Set(['CloseIcon', 'RemoveIcon'])
+    const seen = new Map<string, string>()
+    for (const [name, Icon] of Object.entries(icons)) {
+      if (!name.endsWith('Icon') || shared.has(name)) continue
+      const { container, unmount } = render(<Icon />)
+      const svg = container.querySelector('svg')
+      const key = `${svg?.getAttribute('fill')} ${svg?.querySelector('path')?.getAttribute('d')}`
+      const other = seen.get(key)
+      // A deprecated name is the same icon, not a second meaning.
+      if (other && icons[other] !== Icon) expect.fail(`${name} is drawn the same as ${other}`)
+      seen.set(key, name)
+      unmount()
+    }
+  })
+
   it('take a size', () => {
     const { container } = render(<TrashIcon size={24} />)
     expect(container.querySelector('svg')).toHaveAttribute('width', '24')
