@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.74.0](https://github.com/parallelworks/foundation/compare/ui-v0.73.0...ui-v0.74.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** branch and repository icons, so code hosting has a full set ([#397](https://github.com/parallelworks/foundation/issues/397)) ([99fd0a7](https://github.com/parallelworks/foundation/commit/99fd0a750a47b8090689a7636ea092520bd92e07))
+
 ## [0.73.0](https://github.com/parallelworks/foundation/compare/ui-v0.72.0...ui-v0.73.0) (2026-10-19)
 
 
