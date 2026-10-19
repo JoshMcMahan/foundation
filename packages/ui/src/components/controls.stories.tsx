@@ -22,7 +22,7 @@ const meta: Meta = {
 export default meta
 
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'outline', 'ghost', 'danger']
-const SIZES: ButtonSize[] = ['xs', 'sm', 'md']
+const SIZES: ButtonSize[] = ['xs', 'sm', 'md', 'lg']
 
 /** The one button look: each variant at each size, its icon-only square, and
  *  the states every button shares. */

@@ -19,7 +19,8 @@ export interface NumberInputProps
   'aria-invalid'?: boolean | undefined
   /** Marks the field required for assistive technology without the native check `required` adds. */
   'aria-required'?: boolean | undefined
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   /** Applied to the box around the input and its steppers, such as a width. */
   className?: string | undefined

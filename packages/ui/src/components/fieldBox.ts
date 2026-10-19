@@ -1,6 +1,6 @@
 import { cx } from '../cx'
 
-export type FieldBoxSize = 'sm' | 'md'
+export type FieldBoxSize = 'sm' | 'md' | 'lg'
 
 export interface FieldBoxOptions {
   size?: FieldBoxSize | undefined
@@ -16,6 +16,7 @@ export interface FieldBoxOptions {
 const sizes = {
   sm: { height: 'h-7', minHeight: 'min-h-7', px: 'px-2', py: 'py-1', text: 'text-xs' },
   md: { height: 'h-8', minHeight: 'min-h-8', px: 'px-3', py: 'py-1.5', text: 'text-sm' },
+  lg: { height: 'h-10', minHeight: 'min-h-10', px: 'px-3', py: 'py-2', text: 'text-base' },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 
 /** The keyboard focus ring of a control that isn't a box, such as a checkbox, switch or slider

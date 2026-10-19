@@ -30,7 +30,8 @@ export type SelectProps<Value, Multiple extends boolean | undefined = false> = O
   trigger?: ReactElement | undefined
   /** A hint on the trigger button. */
   triggerTooltip?: ReactNode
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   /** The item a person is on as they move through the open list, then undefined once it
    *  closes, such as to preview a theme before it is chosen. */

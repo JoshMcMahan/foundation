@@ -33,7 +33,8 @@ export interface DatePickerProps {
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   /** On the row that holds the date and the time: its width or margin. */
   className?: string | undefined

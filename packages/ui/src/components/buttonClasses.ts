@@ -5,7 +5,7 @@ import { cx } from '../cx'
  *  `danger` confirms what can't be undone. */
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
 
-export type ButtonSize = 'xs' | 'sm' | 'md'
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 export interface ButtonStyle {
   variant?: ButtonVariant | undefined
@@ -39,12 +39,14 @@ const sizes: Record<ButtonSize, string> = {
   xs: 'h-6 px-2 text-xs [&_svg]:size-3',
   sm: 'h-7 px-2.5 text-xs [&_svg]:size-3.5',
   md: 'h-8 px-3 text-sm [&_svg]:size-4',
+  lg: 'h-10 px-4 text-base [&_svg]:size-5',
 }
 
 const squares: Record<ButtonSize, string> = {
   xs: 'size-6 text-xs [&_svg]:size-3',
   sm: 'size-7 text-xs [&_svg]:size-3.5',
   md: 'size-8 text-sm [&_svg]:size-4',
+  lg: 'size-10 text-base [&_svg]:size-5',
 }
 
 /** The one look for anything pressed: a button, or a link or popup trigger

@@ -144,6 +144,15 @@ const labelSizes = {
     controlFirstHeight: 'min-h-6',
     controlFirstStackedHeight: 'min-h-7',
   },
+  lg: {
+    text: 'text-sm text-(--theme-app)',
+    inlineHeight: 'min-h-10',
+    stackGap: 'gap-2',
+    narrowStack: 'max-sm:flex-col max-sm:items-stretch max-sm:gap-2',
+    inlineLine: 'pt-2',
+    controlFirstHeight: 'min-h-6',
+    controlFirstStackedHeight: 'min-h-7',
+  },
 } satisfies Record<FieldBoxSize, Record<string, string>>
 const labelClassName = 'flex items-center gap-1 font-medium'
 const actionsClassName = 'ml-auto flex shrink-0 items-center gap-1'
@@ -569,7 +578,7 @@ export function FieldValue({ size = 'md', className, children, ...props }: Field
       {...props}
       className={cx(
         'flex min-w-0 items-center break-words text-(--theme-app)',
-        size === 'sm' ? 'min-h-7 text-xs' : 'min-h-8 text-sm',
+        { sm: 'min-h-7 text-xs', md: 'min-h-8 text-sm', lg: 'min-h-10 text-base' }[size],
         className,
       )}
     >

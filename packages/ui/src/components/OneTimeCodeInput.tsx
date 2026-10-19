@@ -8,7 +8,8 @@ export interface OneTimeCodeInputProps
   extends Omit<OTPField.Root.Props, 'className' | 'render' | 'children' | 'length' | 'style'> {
   /** How many characters the code has. */
   length?: number | undefined
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
@@ -69,7 +70,7 @@ export function OneTimeCodeInput({
           className={cx(
             fieldBox({ size }),
             'px-0 text-center font-mono tabular-nums',
-            size === 'sm' ? 'w-7' : 'w-8 text-base',
+            { sm: 'w-7', md: 'w-8 text-base', lg: 'w-10 text-lg' }[size],
           )}
         />
       ))}

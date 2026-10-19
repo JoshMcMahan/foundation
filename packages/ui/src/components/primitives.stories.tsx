@@ -21,7 +21,7 @@ import { CreateModal, CreateModalSwitch } from './CreateModal'
 import { DatePicker } from './DatePicker'
 import { EmptyState } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
-import { fieldBox } from './fieldBox'
+import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
 import { positionKeys } from './keys'
@@ -842,7 +842,7 @@ function SelectsDemo({
 }: {
   disabled: boolean
   invalid: boolean
-  size: 'sm' | 'md'
+  size: FieldBoxSize
 }) {
   const [instance, setInstance] = useState<string | null>(null)
   const [regions, setRegions] = useState<string[]>(['us-east'])
@@ -877,9 +877,9 @@ function SelectsDemo({
   )
 }
 
-export const Selects: StoryObj<{ disabled: boolean; invalid: boolean; size: 'sm' | 'md' }> = {
+export const Selects: StoryObj<{ disabled: boolean; invalid: boolean; size: FieldBoxSize }> = {
   args: { disabled: false, invalid: false, size: 'md' },
-  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
   render: (args) => <SelectsDemo {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

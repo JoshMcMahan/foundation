@@ -21,7 +21,8 @@ export interface ColorInputProps {
   /** Help under the field. */
   description?: ReactNode
   error?: ReactNode
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   /** The hex field's id, which a label names. */
   id?: string | undefined

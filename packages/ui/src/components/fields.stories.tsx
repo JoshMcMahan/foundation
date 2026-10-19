@@ -5,6 +5,7 @@ import { cx } from '../cx'
 import { ExpressionIcon, UndoIcon } from '../icons'
 import { overlaps } from '../test/stacking'
 import { applyTheme, generateTheme, THEME_TOKENS } from '../theme'
+import { Button } from './Button'
 import { Checkbox, CheckboxGroup } from './Checkbox'
 import { ColorInput } from './ColorInput'
 import { Autocomplete, Combobox } from './Combobox'
@@ -135,7 +136,7 @@ function Boxes({ size, invalid, disabled }: BoxArgs) {
 /** Every box a value is typed or picked in shares one recipe: size, focus ring, invalid and disabled. */
 export const Box: StoryObj<BoxArgs> = {
   args: { size: 'md', invalid: false, disabled: false },
-  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
   render: (args) => <Boxes {...args} />,
 }
 
@@ -149,9 +150,32 @@ export const BoxDisabled: StoryObj<BoxArgs> = {
   args: { size: 'sm', invalid: false, disabled: true },
 }
 
+export const BoxLarge: StoryObj<BoxArgs> = {
+  ...Box,
+  args: { size: 'lg', invalid: false, disabled: false },
+}
+
+/** A form that stands alone, such as sign-in, takes `lg` fields and a matching `lg` button. */
+export const SignInForm: StoryObj = {
+  render: () => (
+    <form className="flex max-w-sm flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+      <Input size="lg" label="Username or email" autoComplete="username" />
+      <Input size="lg" label="Password" type="password" autoComplete="current-password" />
+      <Button variant="primary" size="lg" type="submit">
+        Sign in
+      </Button>
+    </form>
+  ),
+  play: async ({ canvasElement }) => {
+    const field = within(canvasElement).getByLabelText('Username or email')
+    await expect(field.getBoundingClientRect().height).toBe(40)
+    await expect(getComputedStyle(field).fontSize).toBe('16px')
+  },
+}
+
 interface FrameArgs {
   layout: FieldLayout
-  size: FieldBoxSize
+  size: 'sm' | 'md'
   required: boolean
   disabled: boolean
   error: string
@@ -452,7 +476,7 @@ export const FrameDisabled: StoryObj<FrameArgs> = {
 
 interface ControlFirstArgs {
   layout: FieldLayout
-  size: FieldBoxSize
+  size: 'sm' | 'md'
   /** Off shows the label-first frame a checkbox had before, label then ? then box. */
   controlFirst: boolean
   help: string
@@ -624,7 +648,7 @@ export const ControlFirstHelpOnKeyboardFocus: StoryObj<ControlFirstArgs> = {
 
 interface SwitchCenteringArgs {
   layout: FieldLayout
-  size: FieldBoxSize
+  size: 'sm' | 'md'
 }
 
 /** The center of a line box, from the first or a later rectangle of an element's text, which is
@@ -1102,7 +1126,7 @@ function DenseDemo({ size }: DenseArgs) {
  *  the kit; a width in `className` wins over the box's own `w-full`. */
 export const Dense: StoryObj<DenseArgs> = {
   args: { size: 'sm' },
-  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
   render: (args) => <DenseDemo {...args} />,
 }
 
@@ -1177,7 +1201,7 @@ function ReadOnlyDemo({ layout, size }: ReadOnlyArgs) {
 const readOnly: StoryObj<ReadOnlyArgs> = {
   argTypes: {
     layout: { control: 'inline-radio', options: ['stacked', 'inline'] },
-    size: { control: 'inline-radio', options: ['sm', 'md'] },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
   },
   render: (args) => <ReadOnlyDemo {...args} />,
 }
@@ -1238,7 +1262,7 @@ function ColorDemo({ size, disabled, error, actions }: ColorArgs) {
  *  marked, until it parses. */
 export const Color: StoryObj<ColorArgs> = {
   args: { size: 'md', disabled: false, error: '', actions: false },
-  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md'] } },
+  argTypes: { size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } },
   render: (args) => <ColorDemo {...args} />,
 }
 
@@ -1266,7 +1290,7 @@ const oneTimeCode: StoryObj<CodeArgs> = {
   args: { length: 6, size: 'md', disabled: false, error: '', autoFocus: false },
   argTypes: {
     length: { control: { type: 'number', min: 4, max: 8 } },
-    size: { control: 'inline-radio', options: ['sm', 'md'] },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
   },
   render: ({ length, size, disabled, error, autoFocus }) => (
     <Field

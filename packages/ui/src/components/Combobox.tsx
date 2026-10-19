@@ -51,7 +51,8 @@ interface FieldProps {
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
   'aria-required'?: boolean | undefined
-  /** `sm` for dense places such as toolbars and table cells. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. */
   size?: FieldBoxSize | undefined
   /** Classes for the field box: border, background, width. */
   className?: string | undefined

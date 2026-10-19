@@ -16,7 +16,8 @@ interface FramedProps {
   description?: ReactNode
   error?: ReactNode
   mono?: boolean
-  /** `sm` for dense places such as toolbars and table cells. With a label, the label matches. */
+  /** `sm` for dense places such as toolbars and table cells, `lg` for a form that stands alone,
+   *  such as sign-in. With a label, the label matches. */
   size?: FieldBoxSize | undefined
 }
 
