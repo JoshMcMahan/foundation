@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.72.0](https://github.com/parallelworks/foundation/compare/ui-v0.71.0...ui-v0.72.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** a large field and button size, for a form that stands alone such as sign-in ([#385](https://github.com/parallelworks/foundation/issues/385)) ([c1993fe](https://github.com/parallelworks/foundation/commit/c1993fe6f151ba8ddddf0c371897d08fb0f6de44))
+
 ## [0.71.0](https://github.com/parallelworks/foundation/compare/ui-v0.70.0...ui-v0.71.0) (2026-10-19)
 
 
