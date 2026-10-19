@@ -6,7 +6,14 @@ import { EditableJobRow } from './editorRows'
 import { GraphNode } from './GraphNode'
 import { type JobHandlers, Joblist } from './JobSummary'
 import { Reveal } from './Reveal'
+import { WarningMark } from './RunWarningsList'
+import { rowKey, useWarningMarks } from './runWarnings'
 import type { WorkflowJob } from './types'
+
+/** The warnings about any of a matrix's runs, for its group's row while it is closed. */
+function useMatrixWarnings(prefix: string, members: readonly string[]) {
+  return useWarningMarks().underAny(members.map((member) => rowKey(prefix, member)))
+}
 
 /** Matrix group item in the summary sidebar. */
 export function MatrixGroupSummaryItem({
@@ -27,6 +34,7 @@ export function MatrixGroupSummaryItem({
   preview: boolean
 }) {
   const { dag: t } = useStrings()
+  const warnings = useMatrixWarnings(handlers.pathPrefix, matrixGroup.members)
   return (
     <div className="py-1.5">
       <button
@@ -42,6 +50,7 @@ export function MatrixGroupSummaryItem({
             ({t.jobCount(matrixGroup.members.length)})
           </span>
         </div>
+        {!isExpanded && <WarningMark warnings={warnings} />}
       </button>
       <Reveal open={isExpanded}>
         <div className="ml-3 mt-0.5">
@@ -87,6 +96,7 @@ export const MatrixGroupNode = memo(function MatrixGroupNode({
   const { aggStatus, statusLabel } = useWorkflowEngine().matrixStatus(
     matrixMembers.map((m) => jobs[m]?.status),
   )
+  const warnings = useMatrixWarnings(idPrefix, matrixMembers)
   const header = (
     <button
       type="button"
@@ -109,6 +119,7 @@ export const MatrixGroupNode = memo(function MatrixGroupNode({
         <div className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1">
           {!preview && <RunStatusIcon status={aggStatus} />}
           <span>{preview ? t.jobCount(matrixMembers.length) : statusLabel}</span>
+          <WarningMark warnings={warnings} />
         </div>
       )}
     </button>

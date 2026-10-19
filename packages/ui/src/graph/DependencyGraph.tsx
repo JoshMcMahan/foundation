@@ -46,6 +46,7 @@ import {
   ZoomOutIcon,
 } from '../icons'
 import { LogViewer } from '../logviewer'
+import { prefersReducedMotion } from '../reducedMotion'
 import { AnnotationBanner } from './AnnotationBanner'
 import { ConnectorLayers } from './Connectors'
 import { type Box, type DrawnEdge, routeConnectors, sameBoxes } from './connectorGeometry'
@@ -72,6 +73,15 @@ import { type JobHandlers, Joblist } from './JobSummary'
 import { Lineage, LineageContext } from './lineage'
 import { MatrixGroupNode, MatrixGroupSummaryItem } from './MatrixGroup'
 import { Reveal } from './Reveal'
+import { RunWarningsList } from './RunWarningsList'
+import {
+  locateWarnings,
+  type RunWarning,
+  rowKey,
+  WarningMarks,
+  WarningMarksContext,
+  type WarningTarget,
+} from './runWarnings'
 import { StepSummaries } from './StepSummaries'
 import { StepSummary } from './StepSummary'
 import { Store, useStore } from './store'
@@ -80,13 +90,16 @@ import { isJobRecord, type RunLink, type WorkflowJob, type WorkflowStep } from '
 import { jobLabel, NODE_CONNECTOR_Y, toggled } from './util'
 import {
   type Bounds,
+  enclosing,
   FIT_MAX_SCALE,
   fitMargin,
   fitView,
   intoView,
   MAX_SCALE,
   MIN_SCALE,
+  type Rect,
   type View,
+  viewShowing,
   wheelFactor,
   ZOOM_STEP,
   zoomAround,
@@ -407,6 +420,7 @@ function jobHandlers({
   const openSummary = (j: string, s: number) =>
     setSublogOpen(fileBeside(engine.stepLogPath(pathPrefix, j, s), 'summary.md'))
   return {
+    pathPrefix,
     isStepsOpen,
     onJobClick: (j) => {
       const status = jobs[j]?.status ?? displayJobs[j]?.status
@@ -1113,6 +1127,9 @@ interface GraphRun {
   completedAt?: string | undefined
   executedJobs?: Record<string, unknown> | undefined
   links?: Record<string, RunLink> | undefined
+  /** What is probably wrong with the run's jobs and steps as written, listed over the graph and
+   *  marked on each job and step they're about, which matters most for one skipped without a log. */
+  warnings?: readonly RunWarning[] | null | undefined
 }
 
 function walkJobPath(
@@ -1151,6 +1168,36 @@ function graphBounds(content: HTMLElement): Bounds | null {
     bounds.maxY = Math.max(bounds.maxY, y + node.offsetHeight)
   }
   return bounds
+}
+
+// The least scale a node's text reads at, about 12px, which showing a job or step zooms in to.
+const READABLE_SCALE = 0.5
+
+/** Where a job or step a warning took the graph to shows: the panel below its view bar, which sits
+ *  over the graph. */
+function visibleArea(panel: HTMLElement, bar: HTMLElement | null): Rect {
+  const outer = panel.getBoundingClientRect()
+  const top = outer.top + panel.clientTop
+  const below = bar ? Math.max(top, bar.getBoundingClientRect().bottom) : top
+  return {
+    left: outer.left + panel.clientLeft,
+    top: below,
+    width: panel.clientWidth,
+    height: Math.max(0, top + panel.clientHeight - below),
+  }
+}
+
+// Rings a row for a moment in the warning tone, so the eye finds the job or step a warning took it to.
+function flash(row: HTMLElement) {
+  const tone = getComputedStyle(row).getPropertyValue('--theme-warning').trim()
+  if (!tone || typeof row.animate !== 'function') {
+    return
+  }
+  const ring = { outline: `3px solid ${tone}`, outlineOffset: '4px', borderRadius: '6px' }
+  row.animate([ring, { ...ring, offset: 0.7 }, { ...ring, outlineColor: 'transparent' }], {
+    duration: 2000,
+    easing: 'ease-in',
+  })
 }
 
 export default function DependencyGraph({
@@ -1196,6 +1243,21 @@ export default function DependencyGraph({
   const runSlug = run.slug ?? ''
   const workflowName = run.workflowName ?? ''
   const runStatus = toStatus(run.status)
+  const runWarnings = run.warnings
+  const warnings = useMemo(
+    () => (runWarnings?.length ? locateWarnings(runWarnings, rootJobs) : []),
+    [runWarnings, rootJobs],
+  )
+  // Every job list and tree row reads the marks, so they change only when what they mark does, not
+  // with each update to a running run's jobs.
+  const freshMarks = useMemo(
+    () => (warnings.length ? new WarningMarks(warnings) : WarningMarks.EMPTY),
+    [warnings],
+  )
+  const [marks, setMarks] = useState(freshMarks)
+  if (marks !== freshMarks && marks.signature !== freshMarks.signature) {
+    setMarks(freshMarks)
+  }
   const [sublogOpen, setSublogOpen] = useState<string>('')
   // Which jobs have their step list open, keyed by namespaced path
   // (`${pathPrefix}${jobName}`). A Set so multiple jobs — across nesting levels —
@@ -1470,6 +1532,10 @@ export default function DependencyGraph({
 
   // A job held for a connection, where it was on screen, which the next fit keeps it at instead.
   const held = useRef<{ job: string; x: number; y: number; at: number } | null>(null)
+  // A job or step a warning's link showed, and the rows of what it is in, outermost last, which the
+  // fits as what it opened settles keep in view.
+  const shown = useRef<{ keys: string[]; at: number } | null>(null)
+  const viewBarRef = useRef<HTMLDivElement>(null)
   // Once the user pans or zooms the editor's view, its edits keep that view until Fit refits it.
   const viewed = useRef(false)
   // A job's row on the graph, or none while it isn't drawn.
@@ -1480,6 +1546,14 @@ export default function DependencyGraph({
       ) ?? null,
     [],
   )
+  // The graph's row for a job or step by its key, or for its job while the step has none.
+  const runRowOf = useCallback((key: string, jobKey?: string) => {
+    const rows = [...(containerRef.current?.querySelectorAll<HTMLElement>('[data-run-row]') ?? [])]
+    return (
+      rows.find((el) => el.dataset['runRow'] === key) ??
+      (jobKey === undefined ? null : (rows.find((el) => el.dataset['runRow'] === jobKey) ?? null))
+    )
+  }, [])
   const nodeOf = useCallback(
     (job: string) => {
       const row = rowOf(job)
@@ -1515,6 +1589,26 @@ export default function DependencyGraph({
       const transform = transformRef.current
       const bounds = content ? graphBounds(content) : null
       if (!container || !content || !transform || !bounds) {
+        return
+      }
+      const showing =
+        shown.current && performance.now() - shown.current.at < HOLD_MS
+          ? shown.current.keys.flatMap((key) => runRowOf(key) ?? [])
+          : []
+      const [row] = showing
+      if (row) {
+        const { positionX, positionY, scale } = transform.instance.state
+        const view = viewShowing(
+          enclosing(showing.map((el) => el.getBoundingClientRect())),
+          row.getBoundingClientRect(),
+          visibleArea(container, viewBarRef.current),
+          (transform.instance.wrapperComponent ?? container).getBoundingClientRect(),
+          { x: positionX, y: positionY, scale },
+          READABLE_SCALE,
+        )
+        if (view) {
+          transform.setTransform(view.x, view.y, view.scale, animationMs, 'easeOut')
+        }
         return
       }
       const panel = { width: container.clientWidth, height: container.clientHeight }
@@ -1568,7 +1662,7 @@ export default function DependencyGraph({
       // Tell the library after paint so it doesn't overwrite our direct DOM change
       requestAnimationFrame(() => transform.setTransform(view.x, view.y, view.scale, 0))
     },
-    [nodeOf, editor],
+    [nodeOf, editor, runRowOf],
   )
 
   // Boxes open and close over CSS transitions, so a fit before they end measures them mid-way:
@@ -1613,6 +1707,64 @@ export default function DependencyGraph({
       'easeOut',
     )
   }, [])
+
+  // A warning's link opens what its job or step is in, the subworkflows and matrix around it and its
+  // job's steps, then brings it into view and moves focus to it. One in a subworkflow outside the
+  // graph on show goes back to the run's own graph first.
+  const canShowWarnings = viewMode !== 'tree' || !!setViewMode
+  const showWarning = (target: WarningTarget) => {
+    const elsewhere = !target.prefix.startsWith(pathAppend)
+    const via = elsewhere ? target.via : target.via.filter((v) => v.prefix.startsWith(pathAppend))
+    const jobKeys = via.map((v) => rowKey(v.prefix, v.job))
+    if (target.step !== undefined) {
+      jobKeys.push(rowKey(target.prefix, target.job))
+    }
+    const matrixKeys = [...via, target].flatMap(({ prefix, job }) => {
+      const origin = walkJobPath(rootJobs, parsePrefixToPath(prefix))[job]?._matrix?.originaljob
+      return origin ? [`${prefix}${origin}`] : []
+    })
+    shown.current = {
+      keys: [
+        target.key,
+        rowKey(target.prefix, target.job),
+        ...via.flatMap((v) => [rowKey(v.prefix, v.job, v.step), rowKey(v.prefix, v.job)]).reverse(),
+      ],
+      at: performance.now(),
+    }
+    flushSync(() => {
+      if (viewMode === 'tree') {
+        setViewMode?.('dag')
+      }
+      if (elsewhere) {
+        resetGraph()
+        setExecutedJobsPath((prev) => [[], ...prev.slice(executedJobsPathIdx, 10)])
+        setExecutedJobsPathIdx(0)
+      }
+      setStepsOpen((prev) => new Set([...prev, ...jobKeys]))
+      setExpandedSubworkflows(
+        (prev) => new Set([...prev, ...via.map((v) => `${v.prefix}${v.job}:${v.step}`)]),
+      )
+      setMatrixOpen((prev) => new Set([...prev, ...matrixKeys]))
+    })
+    const row = runRowOf(target.key, rowKey(target.prefix, target.job))
+    if (row) {
+      // The panel clips the graph, and only the pan and zoom may move it.
+      row.focus({ preventScroll: true })
+      flash(row)
+    }
+    // The panel is as tall as the graph at its first view, which on a narrow screen is too far out to
+    // read a job in, and too short to show one with what it is in once zoomed in. Zoomed in to read, it
+    // is as tall as the graph at that zoom, up to the window.
+    const first = fitViewRef.current
+    if (first && first.scale < READABLE_SCALE) {
+      fitViewRef.current = { ...first, scale: READABLE_SCALE }
+    }
+    containerRef.current?.scrollIntoView({
+      block: 'nearest',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
+    void fitWhenSettled()
+  }
 
   // A problem picked from any pane's list brings its job, or step, into view selected.
   const registerShow = editor?.registerShow
@@ -2073,6 +2225,13 @@ export default function DependencyGraph({
             )}
           </div>
         )}
+        {!preview && (
+          <RunWarningsList
+            warnings={warnings}
+            rootJobs={rootJobs}
+            onShow={canShowWarnings ? showWarning : undefined}
+          />
+        )}
         {!preview && <AnnotationBanner executedJobs={jobs} />}
         {viewMode === 'tree' && !preview ? (
           <div className="panel w-full border">
@@ -2122,7 +2281,10 @@ export default function DependencyGraph({
             >
               {() => (
                 <>
-                  <div className="absolute z-10 top-2 right-2 flex max-w-[calc(100%-1rem)] flex-col items-end gap-y-1">
+                  <div
+                    ref={viewBarRef}
+                    className="absolute z-10 top-2 right-2 flex max-w-[calc(100%-1rem)] flex-col items-end gap-y-1"
+                  >
                     <GraphViewControls
                       history={
                         executedJobsPath.length > 1
@@ -2269,7 +2431,11 @@ export default function DependencyGraph({
       </Modal>
     </div>
   )
-  return <GraphEditorProvider value={editorApi}>{graph}</GraphEditorProvider>
+  return (
+    <GraphEditorProvider value={editorApi}>
+      <WarningMarksContext value={marks}>{graph}</WarningMarksContext>
+    </GraphEditorProvider>
+  )
 }
 
 /** Jobs as a run evaluates them before it starts: each `strategy`, and a `needs` expression, from the inputs' defaults. */

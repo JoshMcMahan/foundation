@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  enclosing,
   FIT_MAX_SCALE,
   fitView,
   intoView,
   MAX_SCALE,
   MIN_SCALE,
+  type Rect,
+  viewShowing,
   wheelFactor,
   zoomAround,
   zoomLimit,
@@ -81,5 +84,91 @@ describe('intoView', () => {
     expect(intoView(60, 120, 0, 100)).toBe(-20)
     expect(intoView(10, 50, 0, 100)).toBe(0)
     expect(intoView(-10, 200, 0, 100)).toBe(0)
+  })
+})
+
+describe('viewShowing', () => {
+  // A panel 400 wide and 600 tall at (100, 100) on screen, whose top 50 a view bar covers.
+  const visible: Rect = { left: 100, top: 150, width: 400, height: 550 }
+  const origin = { left: 100, top: 100 }
+  // Where a box at (x, y, w, h) in the graph's own space is on screen under a view.
+  const onScreen = (view: { x: number; y: number; scale: number }, box: Rect): Rect => ({
+    left: origin.left + view.x + box.left * view.scale,
+    top: origin.top + view.y + box.top * view.scale,
+    width: box.width * view.scale,
+    height: box.height * view.scale,
+  })
+  const middle = (r: Rect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+
+  it('leaves a view that already shows the job and what it is in, readably', () => {
+    const view = { x: 0, y: 0, scale: 0.6 }
+    const region = onScreen(view, { left: 100, top: 200, width: 200, height: 100 })
+    expect(viewShowing(region, region, visible, origin, view, 0.5)).toBeNull()
+  })
+
+  it('brings a row under the view bar to the middle of what the bar leaves showing', () => {
+    const view = { x: 0, y: 0, scale: 0.6 }
+    // Its top row sits where the bar covers it.
+    const box = { left: 100, top: 20, width: 200, height: 100 }
+    const next = viewShowing(onScreen(view, box), onScreen(view, box), visible, origin, view, 0.5)
+    expect(next).not.toBeNull()
+    const after = middle(onScreen(next as typeof view, box))
+    expect(after.x).toBeCloseTo(middle(visible).x)
+    expect(after.y).toBeCloseTo(middle(visible).y)
+    expect(onScreen(next as typeof view, box).top).toBeGreaterThan(visible.top)
+  })
+
+  it('zooms a far-out view in to read, about the region', () => {
+    const view = { x: 10, y: 10, scale: 0.1 }
+    const box = { left: 300, top: 400, width: 600, height: 300 }
+    const next = viewShowing(onScreen(view, box), onScreen(view, box), visible, origin, view, 0.5)
+    expect(next?.scale).toBe(0.5)
+    expect(middle(onScreen(next as typeof view, box)).y).toBeCloseTo(middle(visible).y)
+  })
+
+  it('keeps the job or step in, under as much of what it is in as fits, where all of it can’t', () => {
+    const view = { x: 0, y: 0, scale: 0.6 }
+    const region = { left: 0, top: 0, width: 400, height: 3000 }
+    const target = { left: 100, top: 2800, width: 100, height: 30 }
+    const next = viewShowing(
+      onScreen(view, region),
+      onScreen(view, target),
+      visible,
+      origin,
+      view,
+      0.5,
+    ) as typeof view
+    const shown = onScreen(next, target)
+    const margin = Math.min(visible.width, visible.height) * 0.05
+    // At the bottom of what shows, so what it is in fills the rest above it.
+    expect(shown.top + shown.height).toBeCloseTo(visible.top + visible.height - margin)
+    expect(onScreen(next, region).top).toBeLessThan(visible.top)
+    // The region's width fits, so it stays in the middle across.
+    expect(middle(onScreen(next, region)).x).toBeCloseTo(middle(visible).x)
+  })
+
+  it('keeps the top of what the job or step is in where all of it fits but the panel is short', () => {
+    const view = { x: 0, y: 0, scale: 0.6 }
+    const region = { left: 0, top: 0, width: 400, height: 1000 }
+    const target = { left: 100, top: 100, width: 100, height: 30 }
+    const next = viewShowing(
+      onScreen(view, region),
+      onScreen(view, target),
+      visible,
+      origin,
+      view,
+      0.5,
+    ) as typeof view
+    const margin = Math.min(visible.width, visible.height) * 0.05
+    expect(onScreen(next, region).top).toBeCloseTo(visible.top + margin)
+  })
+
+  it('encloses every box', () => {
+    expect(
+      enclosing([
+        { left: 10, top: 40, width: 20, height: 10 },
+        { left: 0, top: 50, width: 5, height: 30 },
+      ]),
+    ).toEqual({ left: 0, top: 40, width: 30, height: 40 })
   })
 })

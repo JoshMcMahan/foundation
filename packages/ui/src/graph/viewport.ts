@@ -87,3 +87,88 @@ export function intoView(start: number, end: number, low: number, high: number) 
   }
   return end > high ? high - end : 0
 }
+
+/** A box on screen, as `getBoundingClientRect` gives it. */
+export interface Rect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** The smallest box around all of `rects`, which must not be empty. */
+export function enclosing(rects: readonly Rect[]): Rect {
+  const left = Math.min(...rects.map((r) => r.left))
+  const top = Math.min(...rects.map((r) => r.top))
+  const right = Math.max(...rects.map((r) => r.left + r.width))
+  const bottom = Math.max(...rects.map((r) => r.top + r.height))
+  return { left, top, width: right - left, height: bottom - top }
+}
+
+const within = (inner: Rect, outer: Rect, margin: number) =>
+  inner.left >= outer.left + margin &&
+  inner.top >= outer.top + margin &&
+  inner.left + inner.width <= outer.left + outer.width - margin &&
+  inner.top + inner.height <= outer.top + outer.height - margin
+
+// Where on one axis a view puts the start of a region, in `visible`'s span: the whole region in the
+// middle where it fits; otherwise the target in, with as much of the region before it as fits.
+function placeOnAxis(
+  region: { start: number; size: number },
+  target: { start: number; size: number },
+  visible: { start: number; size: number },
+  margin: number,
+): number {
+  const low = visible.start + margin
+  const high = visible.start + visible.size - margin
+  if (region.size <= high - low) {
+    return visible.start + (visible.size - region.size) / 2
+  }
+  const before = target.start - region.start
+  if (target.size > high - low) {
+    return visible.start + (visible.size - target.size) / 2 - before
+  }
+  return Math.min(low, high - target.size - before)
+}
+
+/**
+ * The view that shows `region`, a job or step and what it is in, in `visible`, zoomed in to `readable`
+ * if it is further out: all of it in the middle where it fits, or else `target`, a part of it, with as
+ * much of the rest before it as fits. None while all of it already shows, readable. Boxes are on screen,
+ * and a view's x and y count from `origin`, where the pan and zoom place the graph.
+ */
+export function viewShowing(
+  region: Rect,
+  target: Rect,
+  visible: Rect,
+  origin: { left: number; top: number },
+  view: View,
+  readable: number,
+): View | null {
+  const margin = fitMargin(visible)
+  if (view.scale >= readable && within(region, visible, margin)) {
+    return null
+  }
+  const scale = Math.max(view.scale, readable)
+  const grow = scale / view.scale
+  // In the graph's own space at the new scale, from its origin.
+  const x = (left: number) => ((left - origin.left - view.x) / view.scale) * scale
+  const y = (top: number) => ((top - origin.top - view.y) / view.scale) * scale
+  const left = placeOnAxis(
+    { start: x(region.left), size: region.width * grow },
+    { start: x(target.left), size: target.width * grow },
+    { start: visible.left, size: visible.width },
+    margin,
+  )
+  const top = placeOnAxis(
+    { start: y(region.top), size: region.height * grow },
+    { start: y(target.top), size: target.height * grow },
+    { start: visible.top, size: visible.height },
+    margin,
+  )
+  return {
+    x: left - origin.left - x(region.left),
+    y: top - origin.top - y(region.top),
+    scale,
+  }
+}

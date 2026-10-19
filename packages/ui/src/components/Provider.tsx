@@ -268,6 +268,9 @@ export interface UIStrings {
     annotationSource: (job: string, step: string) => string
     /** A step without a name, numbered from 0 as the run reports it. */
     stepNumber: (index: number) => string
+    /** How many warnings: the title of a run's list of warnings, and the name of the mark on a job
+     *  or step they're about, such as "2 warnings". */
+    warningCount: (count: number) => string
   }
   jobActions: {
     openSubworkflowLogs: string
@@ -994,6 +997,7 @@ const DEFAULTS: UIProviderValue = {
           .join(', ')}`,
       annotationSource: (job, step) => `in ${job} → ${step}`,
       stepNumber: (index) => `step ${index}`,
+      warningCount: (count) => (count === 1 ? '1 warning' : `${count} warnings`),
     },
     jobActions: {
       openSubworkflowLogs: 'Open subworkflow logs',

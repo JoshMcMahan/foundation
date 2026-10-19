@@ -96,6 +96,16 @@ describe('DependencyGraph on many jobs', () => {
     expect(lists.renders).toBe(0)
   })
 
+  it('re-renders no job list for a run fetched again with the same warnings', () => {
+    const warned = () =>
+      runOf(jobs, { warnings: [{ job: Object.keys(jobs)[0] ?? '', step: 0, message: 'warned' }] })
+    const { rerender } = render(<DependencyGraph run={warned()} />)
+    expect(screen.getAllByRole('img', { name: '1 warning' }).length).toBeGreaterThan(0)
+    lists.renders = 0
+    rerender(<DependencyGraph run={warned()} />)
+    expect(lists.renders).toBe(0)
+  })
+
   it('pans and zooms without re-rendering the graph', () => {
     render(<DependencyGraph run={runOf(jobs)} preview />)
     lists.renders = 0

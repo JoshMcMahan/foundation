@@ -99,7 +99,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A live relative time or duration | `RelativeTime`, `Elapsed` |
 | Rendered Markdown | `Markdown` |
 | Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
-| A run's jobs, steps, logs and annotations | `DependencyGraph` from `./graph`, as a graph or a list |
+| A run's jobs, steps, logs, annotations and warnings | `DependencyGraph` from `./graph`, as a graph or a list |
 | A workflow's jobs drawn from its YAML, or edited by hand | `DependencyGraphPreview` from `./graph`, editable with an `editor`; `InputsFormEditor` for its run form |
 | A value that survives a reload | `usePersistedState` |
 | Choosing the app's colors | `ThemeEditor`, applied with `useApplyTheme` |
@@ -774,6 +774,14 @@ near linear in jobs and needs; hovering a job re-renders only the nodes and conn
 highlight changes, and panning, zooming and a running run's clock re-render none. The view fits
 the whole graph, zooms out to 1% to show the shape of the largest, and in to 200% to read a node;
 the wheel zooms by the same factor at every scale, about the pointer.
+
+A run's `warnings` (`RunWarning`: a `message` about a `job`, or about one of its steps by `step`
+index, in the subworkflow its `path` of `[job, 'step_<n>', …]` names) are listed over the graph,
+each linking to its job or step: the link opens the subworkflows, matrix and job around it, brings
+it and what it is in into view below the graph's view bar, readable, and moves focus to it. Each job and step a warning is about, and each one it sits
+inside, carries a mark that lists the warnings on hover, so one skipped without a log is still
+flagged. A job name a matrix ran as several jobs marks each of them. `dag.warningCount` words the
+count.
 
 The editor checks YAML against the schemas a host registers with `configureEditorYaml` from
 `@parallelworks/ui/editor`. The job, step, input and settings dialogs edit their YAML at their own

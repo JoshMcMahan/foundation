@@ -6,6 +6,8 @@ import { cx } from '../cx'
 import { FileTextIcon, OpenInNewGraphIcon, SummaryIcon } from '../icons'
 import { AddStepButton, EditableJobRow, EditableStepRow } from './editorRows'
 import { Reveal } from './Reveal'
+import { WarningMark } from './RunWarningsList'
+import { rowKey, useWarningMarks } from './runWarnings'
 import type { WorkflowJob, WorkflowSubworkflow } from './types'
 import { jobLabel } from './util'
 
@@ -43,6 +45,8 @@ function UsesIcon({
 
 /** What a job list does when its jobs and steps are clicked, at one graph level. */
 export interface JobHandlers {
+  /** The level's `subworkflows/<job>/step_<n>/` chain, empty at the run's own jobs. */
+  pathPrefix: string
   isStepsOpen: (jobName: string) => boolean
   onJobClick: (jobName: string) => void
   onStepClick: (jobName: string, stepIndex: number) => void
@@ -69,6 +73,8 @@ export function Joblist(
 ) {
   const { dag, jobActions } = useStrings()
   const engine = useWorkflowEngine()
+  const marks = useWarningMarks()
+  const prefix = inputs.pathPrefix
   return inputs.jobNames.map((jobName) => {
     // Skip synthetic matrix group nodes — rendered by the caller, not Joblist
     if (inputs.jobs[jobName]?._matrixGroup) {
@@ -81,6 +87,7 @@ export function Joblist(
       <button
         type="button"
         aria-expanded={inputs.isStepsOpen(jobName)}
+        data-run-row={rowKey(prefix, jobName)}
         onClick={() => inputs.onJobClick(jobName)}
         className={cx(
           'flex items-center gap-x-1.5 w-full text-left',
@@ -91,6 +98,7 @@ export function Joblist(
       >
         {!inputs.preview && <RunStatusIcon status={jobStatus} />}
         <div className="font-medium">{label}</div>
+        <WarningMark warnings={marks.under(rowKey(prefix, jobName))} />
       </button>
     )
     return (
@@ -113,6 +121,7 @@ export function Joblist(
               const stepButton = (
                 <button
                   type="button"
+                  data-run-row={rowKey(prefix, jobName, i)}
                   onClick={() => inputs.onStepClick(jobName, i)}
                   className={cx(
                     inputs.preview ? 'ml-1.5' : 'ml-4',
@@ -122,6 +131,7 @@ export function Joblist(
                 >
                   {inputs.preview ? '↳' : <RunStatusIcon status={step.status} />}
                   <div>{stepLabel}</div>
+                  <WarningMark warnings={marks.under(rowKey(prefix, jobName, i))} />
                 </button>
               )
               return (
