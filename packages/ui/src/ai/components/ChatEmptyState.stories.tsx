@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
+import { StatusDot } from '../../components/StatusBadge'
 import { makeStaticAdapter, StoryChat, StoryViewport } from '../stories/harness'
 import ChatEmptyState from './ChatEmptyState'
 import ChatInput from './ChatInput'
-import ChatStage from './ChatStage'
+import ChatStage, { StageList, StageListRowContent, stageListRowClassName } from './ChatStage'
 import ChatThread from './ChatThread'
 
 const meta: Meta = {
@@ -103,16 +104,24 @@ export const HostStage: StoryObj<{ items: number }> = {
             subheading="Pick up where you left off or start fresh."
           >
             <ChatInput onSend={() => {}} attachments={false} conversationId="stage-story" />
-            <ul className="mx-auto max-w-[var(--chat-column,50rem)] px-8">
-              {Array.from({ length: args.items }, (_, i) => `Earlier task ${i + 1}`).map((task) => (
-                <li
-                  key={task}
-                  className="border-b py-2 text-sm theme-border theme-muted-text last:border-b-0"
-                >
-                  {task}
+            <StageList>
+              {Array.from({ length: args.items }, (_, i) => i + 1).map((n) => (
+                <li key={n}>
+                  <a href={`#task-${n}`} className={stageListRowClassName}>
+                    <StageListRowContent
+                      leading={n === 1 && <StatusDot variant="success" size={6} pulse />}
+                      label={`Earlier task ${n}`}
+                      meta={
+                        <>
+                          <span className="font-mono">gpu-box</span>
+                          <span>{n * 7}m</span>
+                        </>
+                      }
+                    />
+                  </a>
                 </li>
               ))}
-            </ul>
+            </StageList>
           </ChatStage>
         </div>
       </StoryViewport>

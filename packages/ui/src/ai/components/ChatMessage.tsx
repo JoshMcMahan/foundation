@@ -11,6 +11,7 @@ import { cx } from '../../cx'
 import { formatDuration } from '../../format'
 import { EditIcon, RetryIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
+import { replyText } from '../core/useKeyboardShortcuts'
 import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
 import { chatProseClasses } from '../ui/prose'
@@ -208,10 +209,7 @@ function ChatMessage({
 
   const hasParts = !!message.parts?.length
   if (hasParts && !message.content) {
-    // An agent's reply is its timeline; what it said is the text parts.
-    const said = message.parts
-      ?.flatMap((p) => (p.kind === 'text' && p.text.trim() ? [p.text.trim()] : []))
-      .join('\n\n')
+    const said = replyText(message)
     return (
       <div className={cx('group py-3 w-full', !flush && 'px-4')}>
         <AgentMessageParts

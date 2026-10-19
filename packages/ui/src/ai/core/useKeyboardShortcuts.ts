@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useStrings } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import type { ChatMessage } from '../types'
@@ -7,32 +7,108 @@ import { useChat } from './ChatProvider'
 import { useChatConfig } from './config'
 import { FOCUS_SIDEBAR_SEARCH_EVENT } from './events'
 
+/** What a reply said: its content, or for a reply that is a parts timeline
+ *  (an agent's turn), its text parts. */
+export function replyText(message: ChatMessage): string {
+  if (message.content) {
+    return message.content
+  }
+  return (message.parts ?? [])
+    .flatMap((p) => (p.kind === 'text' && p.text.trim() ? [p.text.trim()] : []))
+    .join('\n\n')
+}
+
 export function lastAssistantContent(messages: ChatMessage[]): string | null {
-  return messages.findLast((m) => m.role === 'assistant' && m.content)?.content ?? null
+  for (const m of messages.toReversed()) {
+    const text = m.role === 'assistant' ? replyText(m) : ''
+    if (text) {
+      return text
+    }
+  }
+  return null
 }
 
 export function lastUserMessage(messages: ChatMessage[]): ChatMessage | null {
   return messages.findLast((m) => m.role === 'user') ?? null
 }
 
+/** The conversation shortcuts wherever a conversation or session shows:
+ *  Cmd/Ctrl+Shift+O starts a new one, +C copies the last reply, +F searches. */
+export function useConversationShortcuts({
+  enabled = true,
+  onNew,
+  lastReply,
+  onSearch,
+}: {
+  enabled?: boolean
+  onNew: () => void
+  /** The last reply's text, or null when there is none. */
+  lastReply: () => string | null
+  onSearch: () => void
+}) {
+  const { common } = useStrings()
+  const { chrome: t } = useChatConfig().strings
+  // The latest handlers, so the listener needn't come and go with each render.
+  const handlers = useRef({ onNew, lastReply, onSearch })
+  handlers.current = { onNew, lastReply, onSearch }
+
+  const copyLastReply = useCallback(async () => {
+    const text = handlers.current.lastReply()
+    if (!text) {
+      toast.info(t.noResponseToCopy)
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(common.copiedToClipboard)
+    } catch {
+      toast.error(common.copyFailed)
+    }
+  }, [common, t])
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const cmdKey = isMac() ? e.metaKey : e.ctrlKey
+      if (!cmdKey || !e.shiftKey) {
+        return
+      }
+      if (e.key === 'O') {
+        e.preventDefault()
+        handlers.current.onNew()
+      } else if (e.key === 'C') {
+        e.preventDefault()
+        void copyLastReply()
+      } else if (e.key === 'F') {
+        e.preventDefault()
+        handlers.current.onSearch()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [enabled, copyLastReply])
+
+  return { copyLastReply }
+}
+
 interface UseKeyboardShortcutsOptions {
   enabled?: boolean
 }
 
+/** The conversation shortcuts for the chat provider's conversations; search
+ *  focuses the sidebar's, or whatever answers the focus event. */
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
   const { enabled = true } = options
   const { currentConversation, isStreaming, stopStreaming, clearCurrentConversation, navigation } =
     useChat()
-  const { common } = useStrings()
-  const { chrome: t } = useChatConfig().strings
 
-  // Get last assistant message for copy functionality
   const getLastAssistantMessage = useCallback(
     () => lastAssistantContent(currentConversation?.messages ?? []),
     [currentConversation?.messages],
   )
 
-  // Get last user message for edit functionality
   const getLastUserMessage = useCallback(
     () => lastUserMessage(currentConversation?.messages ?? []),
     [currentConversation?.messages],
@@ -43,66 +119,24 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     navigation.toNewChat()
   }, [clearCurrentConversation, navigation])
 
-  const handleCopyLastResponse = useCallback(async () => {
-    const content = getLastAssistantMessage()
-    if (content) {
-      try {
-        await navigator.clipboard.writeText(content)
-        toast.success(common.copiedToClipboard)
-      } catch {
-        toast.error(common.copyFailed)
-      }
-    } else {
-      toast.info(t.noResponseToCopy)
-    }
-  }, [getLastAssistantMessage, common, t])
-
   const handleStopGeneration = useCallback(() => {
     if (isStreaming) {
       stopStreaming()
     }
   }, [isStreaming, stopStreaming])
 
-  useEffect(() => {
-    if (!enabled) {
-      return
-    }
+  const { copyLastReply } = useConversationShortcuts({
+    enabled,
+    onNew: handleNewConversation,
+    lastReply: getLastAssistantMessage,
+    onSearch: () => document.dispatchEvent(new Event(FOCUS_SIDEBAR_SEARCH_EVENT)),
+  })
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const cmdKey = isMac() ? e.metaKey : e.ctrlKey
-
-      // Cmd/Ctrl + Shift + O - New conversation
-      if (cmdKey && e.shiftKey && e.key === 'O') {
-        e.preventDefault()
-        handleNewConversation()
-        return
-      }
-
-      // Cmd/Ctrl + Shift + C - Copy last response
-      if (cmdKey && e.shiftKey && e.key === 'C') {
-        e.preventDefault()
-        handleCopyLastResponse()
-        return
-      }
-
-      // Cmd/Ctrl + Shift + F - Focus conversation search in the sidebar
-      if (cmdKey && e.shiftKey && e.key === 'F') {
-        e.preventDefault()
-        document.dispatchEvent(new Event(FOCUS_SIDEBAR_SEARCH_EVENT))
-        return
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, handleNewConversation, handleCopyLastResponse])
-
-  // Return helper functions for components that need them
   return {
     getLastUserMessage,
     getLastAssistantMessage,
     handleNewConversation,
-    handleCopyLastResponse,
+    handleCopyLastResponse: copyLastReply,
     handleStopGeneration,
   }
 }
