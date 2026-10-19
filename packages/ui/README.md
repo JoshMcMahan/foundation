@@ -714,6 +714,10 @@ glyph per meaning across the apps.
   named value and `ReportIcon` a report to open.
   `WorkspaceMountIcon` is storage mounted into a workspace and
   `CloudNetworkIcon` the private network hosts attach to.
+  `VerifiedIcon` marks a verified item, publisher or domain, while
+  `SuccessIcon` is a run that succeeded. `OwnerIcon` is who owns a resource
+  and `DefaultIcon` the one used when nothing else is chosen, while
+  `FeaturedIcon` marks an item picked out to show first.
   `NamespaceIcon`, `CommandShellIcon` and `QuickActionIcon` were
   `KubernetesNamespaceIcon`, `PowershellIcon` and `ZapIcon`; the old names
   still work but are deprecated.
