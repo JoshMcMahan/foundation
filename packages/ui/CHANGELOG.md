@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.75.1](https://github.com/parallelworks/foundation/compare/ui-v0.75.0...ui-v0.75.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **ui:** an auto-reviewer that times out or fails reads as a denial, with its reason under the call ([#401](https://github.com/parallelworks/foundation/issues/401)) ([ae0556f](https://github.com/parallelworks/foundation/commit/ae0556f2c064f22ec9105282436ff1539648682e))
+
 ## [0.75.0](https://github.com/parallelworks/foundation/compare/ui-v0.74.0...ui-v0.75.0) (2026-10-19)
 
 
