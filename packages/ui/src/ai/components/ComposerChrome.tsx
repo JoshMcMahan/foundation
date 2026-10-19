@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ConnectIcon, SettingsIcon } from '../../icons'
 import { useHasChatTools } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
+import type { BoundSetting } from '../types'
 import AllocationSelector from './AllocationSelector'
 import ModelSelector from './ModelSelector'
 
@@ -35,11 +36,23 @@ export function ComposerUsage({ children }: { children: ReactNode }) {
 
 /** The two selectors every surface carries, reading as text beside whatever
  *  the surface puts next to them. */
-export function ComposerControls({ targetSession }: { targetSession?: string | null | undefined }) {
+export function ComposerControls({
+  targetSession,
+  model,
+  allocation,
+}: {
+  targetSession?: string | null | undefined
+  /** A session's own model and allocation, for a session that keeps them
+   *  apart from the chat's selection. */
+  model?: BoundSetting | undefined
+  allocation?: BoundSetting | undefined
+}) {
   return (
     <>
-      <ModelSelector targetSession={targetSession} />
-      <AllocationSelector />
+      <ModelSelector targetSession={targetSession} model={model} />
+      <AllocationSelector
+        {...(allocation ? { allocation, model: model ? model.value : undefined } : {})}
+      />
     </>
   )
 }

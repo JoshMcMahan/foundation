@@ -648,3 +648,34 @@ describe('turn duration row', () => {
     expect(screen.queryByText('because of reasons')).not.toBeInTheDocument()
   })
 })
+
+describe("an agent's reply", () => {
+  const reply = createMockMessage({
+    id: 'turn-1',
+    role: 'assistant',
+    content: null,
+    model: 'opus',
+    timestamp: '2026-10-18T10:00:00Z',
+    parts: [
+      { kind: 'text', text: 'Stopping gpu-a.' },
+      { kind: 'tool_call', id: 'c1', name: 'Bash', args: '{}', status: 'ok' },
+      { kind: 'text', text: 'It is stopped.' },
+    ],
+  })
+
+  it('offers copy of what it said, its model, and regenerate where the host supports it', () => {
+    const onRegenerate = vi.fn()
+    render(<ChatMessage {...defaultProps} message={reply} onRegenerate={onRegenerate} />)
+
+    expect(screen.getByTestId('agent-parts-mock')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copy/i })).toBeInTheDocument()
+    expect(screen.getByText('opus')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /regenerate/i }))
+    expect(onRegenerate).toHaveBeenCalledWith('turn-1')
+  })
+
+  it('shows no actions while it streams', () => {
+    render(<ChatMessage {...defaultProps} message={reply} isStreaming />)
+    expect(screen.queryByRole('button', { name: /copy/i })).not.toBeInTheDocument()
+  })
+})

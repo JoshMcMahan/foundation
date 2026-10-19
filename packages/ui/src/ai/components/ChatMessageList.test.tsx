@@ -317,6 +317,19 @@ describe('ChatMessageList queued messages', () => {
       'Queued · sends when this reply finishes',
       'Queued · sends when this reply finishes',
     ])
+
+    rerender(
+      <ChatMessageList
+        messages={[]}
+        allMessages={[]}
+        queuedMessages={queued}
+        queueDelivery={(id) => (id === 'steered' ? 'nextStep' : 'afterReply')}
+      />,
+    )
+    expect(getAllByTestId('queued-status').map((el) => el.textContent)).toEqual([
+      'Queued · reaches the agent after its current step',
+      'Queued · sends when this reply finishes',
+    ])
   })
 })
 

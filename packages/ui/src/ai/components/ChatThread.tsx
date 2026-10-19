@@ -1,25 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
-import useDragDrop from '../core/useDragDrop'
-import type { AttachmentMeta } from '../types'
+import type { AttachmentMeta, ChatMessage as Message } from '../types'
 import BlockedGroupBanner from './BlockedGroupBanner'
-import ChatInput, { type ChatInputHandle } from './ChatInput'
-import ChatMessageList from './ChatMessageList'
 import { ComposerControls, ComposerUsage, ConnectToolsLink } from './ComposerChrome'
-import DragOverlay from './DragOverlay'
 import ProviderIssueBanner from './ProviderIssueBanner'
+import SessionView from './SessionView'
 import { ShareButton } from './ShareDialog'
 
-interface EditingState {
-  messageId: string
-  parentId: string | null
-}
-
 export default function ChatThread({ conversationId }: { conversationId: string }) {
-  const chatInputRef = useRef<ChatInputHandle>(null)
-  const [editingState, setEditingState] = useState<EditingState | null>(null)
-
   const {
     adapter,
     currentUser,
@@ -49,103 +38,39 @@ export default function ChatThread({ conversationId }: { conversationId: string 
     }
   }, [conversationId, loadConversation, loadProviders])
 
-  const handleSendMessage = useCallback(
+  const messages = currentConversation?.messages ?? []
+  const canWrite = currentConversation?.canCollaborate !== false
+
+  const onSend = useCallback(
     (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => {
       sendMessage(content, attachmentIds, undefined, attachmentMeta)
     },
     [sendMessage],
   )
 
-  const handleEditMessage = useCallback(
-    (messageId: string) => {
-      const conversationMessages = currentConversation?.messages || []
-      const message = conversationMessages.find((m) => m.id === messageId)
-      if (message && message.role === 'user') {
-        setEditingState({
-          messageId: message.id,
-          parentId: message.parentId || null,
-        })
-      }
+  const onEdit = useCallback(
+    (message: Message, content: string) => {
+      sendMessage(content, undefined, message.parentId || undefined)
     },
-    [currentConversation?.messages],
+    [sendMessage],
   )
 
-  const handleSaveEdit = useCallback(
-    (_messageId: string, content: string) => {
-      if (!editingState) {
-        return
-      }
-      // Send with the parent of the edited message to create a branch
-      sendMessage(content, undefined, editingState.parentId || undefined)
-      setEditingState(null)
-    },
-    [sendMessage, editingState],
-  )
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingState(null)
-  }, [])
-
-  const handleEditLastMessage = useCallback(() => {
-    const conversationMessages = currentConversation?.messages || []
-    // Find the last user message
-    const lastUserMessage = conversationMessages.findLast((m) => m.role === 'user')
-    if (lastUserMessage) {
-      handleEditMessage(lastUserMessage.id)
-    }
-  }, [currentConversation?.messages, handleEditMessage])
-
-  const handleNavigateBranch = useCallback(
+  // A sibling of the reply, from the same user message.
+  const onRegenerate = useCallback(
     (messageId: string) => {
-      navigateToBranch?.(messageId)
-    },
-    [navigateToBranch],
-  )
-
-  const handleRegenerateMessage = useCallback(
-    (messageId: string) => {
-      const conversationMessages = currentConversation?.messages || []
-      // Find the assistant message that was clicked
-      const assistantMessage = conversationMessages.find((m) => m.id === messageId)
-      if (assistantMessage?.role !== 'assistant') {
+      const reply = messages.find((m) => m.id === messageId)
+      const asked = messages.find((m) => m.id === reply?.parentId)
+      if (reply?.role !== 'assistant' || asked?.role !== 'user') {
         return
       }
-
-      // Find its parent (the user message that prompted it)
-      const userMessage = conversationMessages.find((m) => m.id === assistantMessage.parentId)
-      if (userMessage?.role !== 'user') {
-        return
-      }
-
-      // Re-send the user's message content from the same parent to create a sibling branch
-      // This will generate a new assistant response as a sibling to the original
       sendMessage(
-        userMessage.content || '',
-        userMessage.attachments?.map((a) => a.id),
-        userMessage.parentId || undefined,
+        asked.content || '',
+        asked.attachments?.map((a) => a.id),
+        asked.parentId || undefined,
       )
     },
-    [currentConversation?.messages, sendMessage],
+    [messages, sendMessage],
   )
-
-  const handleRetryMessage = useCallback(
-    (messageId: string) => {
-      retryMessage(messageId)
-    },
-    [retryMessage],
-  )
-
-  const handleFilesDropped = useCallback((files: FileList) => {
-    chatInputRef.current?.addFiles(files)
-  }, [])
-
-  const { isDragging, dragHandlers } = useDragDrop({
-    onFilesDropped: handleFilesDropped,
-  })
-  const attachmentsAvailable = !!adapter.attachments
-
-  // Get messages from current conversation
-  const messages = currentConversation?.messages || []
 
   // Show author attribution when multiple authors or viewing a shared conversation
   const showAuthor = useMemo(() => {
@@ -153,84 +78,45 @@ export default function ChatThread({ conversationId }: { conversationId: string 
     return uniqueAuthors.size > 1 || currentConversation?.isOwner === false
   }, [messages, currentConversation?.isOwner])
 
-  // Loading state - only show full loading screen if we have no conversation at all
-  if (isLoadingConversation && !currentConversation) {
-    return (
-      <div className="flex flex-col h-full bg-(--theme-panel-bg)">
-        <div className="flex-1" />
-        <ChatInput
-          ref={chatInputRef}
-          onSend={handleSendMessage}
-          disabled
-          conversationId={conversationId}
-          settingsLeft={<ConnectToolsLink />}
-          settingsRight={
-            <>
-              <ComposerUsage>{slots.composerUsage}</ComposerUsage>
-              <ComposerControls />
-            </>
-          }
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="flex h-full relative bg-(--theme-panel-bg)">
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0" {...(attachmentsAvailable ? dragHandlers : {})}>
-        {/* Global drag overlay */}
-        {isDragging && attachmentsAvailable && <DragOverlay className="rounded-lg" />}
-        <BlockedGroupBanner />
-        <ProviderIssueBanner />
-        <ChatMessageList
-          messages={messages}
-          allMessages={messages}
-          queuedMessages={queuedMessages}
-          onRemoveQueued={removeQueuedMessage}
-          editingMessageId={editingState?.messageId}
-          showAuthor={showAuthor}
-          currentUsername={currentUser.username}
-          onNavigateBranch={handleNavigateBranch}
-          onEditMessage={
-            currentConversation?.canCollaborate !== false ? handleEditMessage : undefined
-          }
-          onRegenerateMessage={
-            currentConversation?.canCollaborate !== false ? handleRegenerateMessage : undefined
-          }
-          onRetryMessage={
-            currentConversation?.canCollaborate !== false ? handleRetryMessage : undefined
-          }
-          onSaveEdit={handleSaveEdit}
-          onCancelEdit={handleCancelEdit}
-          inputElement={
-            <ChatInput
-              ref={chatInputRef}
-              onSend={handleSendMessage}
-              disabled={isLoadingConversation || currentConversation?.canCollaborate === false}
-              placeholder={
-                currentConversation?.canCollaborate === false ? strings.thread.viewOnly : undefined
-              }
-              conversationId={conversationId}
-              onEditLastMessage={handleEditLastMessage}
-              settingsLeft={
-                <>
-                  {currentConversation?.isOwner !== false && (
-                    <ShareButton conversationId={conversationId} />
-                  )}
-                  <ConnectToolsLink />
-                </>
-              }
-              settingsRight={
-                <>
-                  <ComposerUsage>{slots.composerUsage}</ComposerUsage>
-                  <ComposerControls />
-                </>
-              }
-            />
-          }
-        />
-      </div>
-    </div>
+    <SessionView
+      sessionKey={conversationId}
+      messages={messages}
+      queuedMessages={queuedMessages}
+      onRemoveQueued={removeQueuedMessage}
+      onSend={onSend}
+      {...(canWrite
+        ? { onEdit, onRegenerate, onRetry: (id: string) => void retryMessage(id) }
+        : {})}
+      onNavigateBranch={navigateToBranch}
+      showAuthor={showAuthor}
+      currentUsername={currentUser.username}
+      loading={isLoadingConversation && !currentConversation}
+      dropFiles={!!adapter.attachments}
+      banners={
+        <>
+          <BlockedGroupBanner />
+          <ProviderIssueBanner />
+        </>
+      }
+      composer={{
+        disabled: isLoadingConversation || !canWrite,
+        ...(canWrite ? {} : { placeholder: strings.thread.viewOnly }),
+        settingsLeft: (
+          <>
+            {currentConversation && currentConversation.isOwner !== false && (
+              <ShareButton conversationId={conversationId} />
+            )}
+            <ConnectToolsLink />
+          </>
+        ),
+        settingsRight: (
+          <>
+            <ComposerUsage>{slots.composerUsage}</ComposerUsage>
+            <ComposerControls />
+          </>
+        ),
+      }}
+    />
   )
 }

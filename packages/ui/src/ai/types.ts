@@ -1,6 +1,14 @@
 // Package-owned chat domain types. Adapters map backend responses into these
 // shapes; no generated API client types cross the package boundary.
 
+/** A turn setting a session owns, shown in place of the chat's own selection. */
+export interface BoundSetting {
+  value: string | null | undefined
+  onChange: (value: string) => void
+  /** The session cannot take a change right now, such as while it is unreachable. */
+  disabled?: boolean | undefined
+}
+
 export interface ChatUser {
   id: string
   username: string

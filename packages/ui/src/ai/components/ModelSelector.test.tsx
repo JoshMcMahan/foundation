@@ -46,6 +46,23 @@ describe('ModelSelector', () => {
     },
   )
 
+  it("picks a session's own model without moving the chat's selection", async () => {
+    const onChange = vi.fn()
+    render(
+      <StoryChat adapter={makeStaticAdapter({ providers: [PROVIDERS[0]] })}>
+        <ModelSelector model={{ value: null, onChange }} />
+      </StoryChat>,
+    )
+    const trigger = await screen.findByRole('combobox', { name: 'Model' })
+    await vi.waitFor(() => expect(trigger).toBeEnabled())
+    fireEvent.click(trigger)
+    const option = (await within(await screen.findByRole('listbox')).findAllByRole('option'))[0]!
+    fireEvent.click(option)
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(trigger).toHaveTextContent('Select a model')
+  })
+
   it('shows sessions that did not answer as headings with no models', async () => {
     const adapter = makeStaticAdapter({
       providers: [PROVIDERS[0]],

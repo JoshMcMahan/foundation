@@ -66,6 +66,9 @@ interface ChatInputProps {
   /** A turn the chat provider does not run, such as an agent session's: it
    *  drives the Stop button in place of the provider's stream and queue. */
   turn?: { running: boolean; onStop: () => void; stopping?: boolean }
+  /** False where the chat's tools do not apply, such as starting an agent
+   *  session, which brings its own. */
+  tools?: boolean
   pastes?: ComposerPastes | undefined
   ref?: Ref<ChatInputHandle> | undefined
 }
@@ -187,6 +190,7 @@ export default function ChatInput({
   settingsRight = <ComposerControls />,
   hint,
   turn,
+  tools: toolsAllowed = true,
   pastes,
   ref,
 }: ChatInputProps) {
@@ -371,7 +375,7 @@ export default function ChatInput({
   })
 
   // A turn the provider doesn't run, such as an agent's, can't use its tools.
-  const toolsAvailable = !turn && tools.length > 0
+  const toolsAvailable = toolsAllowed && !turn && tools.length > 0
   const toolbar = attachmentsAvailable || toolsAvailable || !!settingsRight
   const action =
     isStreaming && !input.trim() ? (
@@ -490,7 +494,7 @@ export default function ChatInput({
                       attachmentsAvailable ? () => setShowAttachments(!showAttachments) : undefined
                     }
                     disabled={disabled}
-                    withTools={!turn}
+                    withTools={toolsAllowed && !turn}
                   />
                   {/* Send stays in the box however wide the host's controls
                     are; they give up their room first. */}

@@ -6,7 +6,7 @@ import { ChevronDownIcon, CloudIcon, RetryIcon, WarningIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { issueDetail, issueLabel, providerIssueFor } from '../core/providerIssues'
-import type { ChatModel, CspKind, ProviderInfo } from '../types'
+import type { BoundSetting, ChatModel, CspKind, ProviderInfo } from '../types'
 import { chipClassName } from '../ui/chip'
 
 // ProviderInfo.user for a provider the organization manages rather than a user.
@@ -83,16 +83,19 @@ function groupModelsByProvider(models: ChatModel[]): Map<string, ChatModel[]> {
  *  so the reader sees why their models are missing. */
 export default function ModelSelector({
   targetSession,
+  model,
 }: {
   /** A session, as "owner:name", whose models the reader is waiting for. */
   targetSession?: string | null | undefined
+  /** The model a session owns, in place of the chat's own selection. */
+  model?: BoundSetting | undefined
 }) {
   const {
     providers,
     models,
     unreachableSessions,
     providerIssues,
-    selectedProvider,
+    selectedProvider: chatSelection,
     setSelectedProvider,
     isLoadingModels,
     hasLoadedModels,
@@ -103,6 +106,7 @@ export default function ModelSelector({
   const { strings } = useChatConfig()
   const { common } = useStrings()
   const t = strings.modelPicker
+  const selectedProvider = model ? (model.value ?? null) : chatSelection
 
   const targetSessionFound =
     !!targetSession && models.some((m) => m.id.startsWith(`session:${targetSession}/`))
@@ -205,8 +209,8 @@ export default function ModelSelector({
       placeholder={t.search}
       items={groups}
       value={selectedProvider}
-      onValueChange={(id) => id && setSelectedProvider(id)}
-      disabled={groups.length === 0}
+      onValueChange={(id) => id && (model ? model.onChange(id) : setSelectedProvider(id))}
+      disabled={groups.length === 0 || !!model?.disabled}
       triggerTooltip={
         issue
           ? `${issueLabel(strings.providerIssue, issue)} \u2014 ${issueDetail(strings.providerIssue, issue)}`

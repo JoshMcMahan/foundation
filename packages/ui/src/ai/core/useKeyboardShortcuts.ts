@@ -71,14 +71,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     const handleKeyDown = (e: KeyboardEvent) => {
       const cmdKey = isMac() ? e.metaKey : e.ctrlKey
 
-      // Escape - Stop generation
-      if (e.key === 'Escape') {
-        if (!escapeClosesLayer(e.target)) {
-          handleStopGeneration()
-        }
-        return
-      }
-
       // Cmd/Ctrl + Shift + O - New conversation
       if (cmdKey && e.shiftKey && e.key === 'O') {
         e.preventDefault()
@@ -103,7 +95,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, handleNewConversation, handleCopyLastResponse, handleStopGeneration])
+  }, [enabled, handleNewConversation, handleCopyLastResponse])
 
   // Return helper functions for components that need them
   return {

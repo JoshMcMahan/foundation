@@ -441,3 +441,19 @@ describe('ChatInput height', () => {
     }
   })
 })
+
+describe('ChatInput tools', () => {
+  afterEach(() => {
+    chatState.tools = []
+  })
+
+  it("leaves the chat's tools out where they do not apply", () => {
+    chatState.adapter.attachments = undefined
+    chatState.tools = [{ id: 'list_clusters', label: 'Clusters' }]
+    const { rerender } = render(<ChatInput onSend={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument()
+
+    rerender(<ChatInput onSend={vi.fn()} tools={false} />)
+    expect(screen.queryByRole('button', { name: /tools/i })).not.toBeInTheDocument()
+  })
+})

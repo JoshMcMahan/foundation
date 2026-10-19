@@ -22,6 +22,8 @@ import AgentMessageParts from './agent/AgentMessageParts'
 import ChatMessage from './ChatMessage'
 import { Reasoning, ReasoningBody } from './Reasoning'
 
+export type QueueDelivery = 'afterReply' | 'nextStep'
+
 interface ChatMessageListProps {
   messages: Message[]
   allMessages: Message[]
@@ -35,8 +37,9 @@ interface ChatMessageListProps {
   canRemoveQueued?: (id: string) => boolean
   /** When a queued message reaches the model: once the running reply
    *  finishes (the chat provider's queue), or between the agent's steps for a
-   *  host that steers the turn in progress. */
-  queueDelivery?: 'afterReply' | 'nextStep'
+   *  host that steers the turn in progress. A host with both kinds says which
+   *  each message is. */
+  queueDelivery?: QueueDelivery | ((messageId: string) => QueueDelivery)
   editingMessageId?: string | null | undefined
   showAuthor?: boolean
   currentUsername?: string
@@ -410,7 +413,8 @@ export default function ChatMessageList({
           const removable = canRemoveQueued?.(msg.id) ?? true
           const status = !removable
             ? strings.queue.handedOver
-            : queueDelivery === 'nextStep'
+            : (typeof queueDelivery === 'function' ? queueDelivery(msg.id) : queueDelivery) ===
+                'nextStep'
               ? strings.queue.waitingNextStep
               : strings.queue.waiting
           return (

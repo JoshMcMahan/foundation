@@ -4,6 +4,7 @@ import { Select } from '../../components/Select'
 import { ChevronDownIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
+import type { BoundSetting } from '../types'
 import { chipClassName } from '../ui/chip'
 import { isOrgModel } from '../utils'
 
@@ -13,9 +14,21 @@ const money = (amount: number) => dollars.format(amount)
 
 /** Which allocation an organization model bills, with its spend so far. Shows
  *  only for an organization model, and picks the first allocation for it. */
-export default function AllocationSelector() {
-  const { adapter, selectedProvider, selectedAllocation, setSelectedAllocation } = useChat()
+export default function AllocationSelector({
+  model,
+  allocation,
+}: {
+  /** The model a session owns, which decides whether it bills an allocation. */
+  model?: string | null | undefined
+  /** The allocation a session owns, in place of the chat's own selection. */
+  allocation?: BoundSetting | undefined
+} = {}) {
+  const chat = useChat()
   const t = useChatConfig().strings.allocationPicker
+  const { adapter } = chat
+  const bound = allocation !== undefined
+  const selectedProvider = bound ? (model ?? null) : chat.selectedProvider
+  const selectedAllocation = bound ? (allocation.value ?? null) : chat.selectedAllocation
 
   const isOrgProvider = isOrgModel(selectedProvider)
   const allocationsAdapter = adapter.allocations
@@ -27,15 +40,19 @@ export default function AllocationSelector() {
   )
 
   const first = allocations?.[0]
+  // A session keeps the allocation it has; only the chat's own selection follows the model.
   useEffect(() => {
+    if (bound) {
+      return
+    }
     if (!isOrgProvider) {
       if (selectedAllocation) {
-        setSelectedAllocation(null)
+        chat.setSelectedAllocation(null)
       }
     } else if (first && !selectedAllocation) {
-      setSelectedAllocation(first.name)
+      chat.setSelectedAllocation(first.name)
     }
-  }, [isOrgProvider, first, selectedAllocation, setSelectedAllocation])
+  }, [bound, isOrgProvider, first, selectedAllocation, chat.setSelectedAllocation])
 
   if (!isOrgProvider || !allocations?.length) {
     return null
@@ -48,7 +65,10 @@ export default function AllocationSelector() {
         aria-label={t.choose}
         items={allocations.map((a) => ({ value: a.name, label: a.name }))}
         value={selectedAllocation}
-        onValueChange={setSelectedAllocation}
+        disabled={!!allocation?.disabled}
+        onValueChange={(name) =>
+          bound ? name && allocation.onChange(name) : chat.setSelectedAllocation(name)
+        }
         trigger={
           <button type="button" className={chipClassName}>
             <span className="truncate">{selected?.name ?? t.placeholder}</span>

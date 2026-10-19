@@ -858,6 +858,18 @@ The chat's links (each conversation, a new chat, attachments, and the
 these links, so `navigation` handles only the moves that aren't clicks, such as
 keyboard shortcuts.
 
+`ChatThread` is `SessionView` bound to the chat provider. A host with its own
+transcript, such as an agent session fed by an event stream, renders
+`SessionView` with its messages, streaming and queued messages, and callbacks:
+`onSend`, and `turn` (`running`, `onStop`) for a turn the provider doesn't run.
+What it leaves out it doesn't offer: `onEdit`, `onRegenerate`, `onRetry` and
+`onNavigateBranch` turn on editing, regenerating, retrying and branches.
+Escape stops the running turn either way. `queueDelivery` says when a queued
+message reaches the model, per message when it takes a function. `composer`
+passes `ChatInput`'s props; `ComposerControls` takes `model` and `allocation`
+as a `BoundSetting` for a session that owns its own, and `tools={false}` keeps
+the chat's tools out of a composer they don't apply to.
+
 `ChatLayout sidebarMode="auto"` shows the conversation list as a drawer over
 the thread when the chat is narrower than `drawerBelowPx` (`DRAWER_BELOW_PX`, 896, by default),
 measured on the chat's own box; `"drawer"` always does, and `"inline"` (the
