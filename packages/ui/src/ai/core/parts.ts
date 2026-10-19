@@ -50,6 +50,10 @@ export function applyPartDelta(parts: MessagePart[], delta: PartDelta): MessageP
             }
           : p,
       )
+    case 'tool_decision':
+      return parts.map((p) =>
+        p.kind === 'tool_call' && p.id === delta.id ? { ...p, decision: delta.decision } : p,
+      )
     case 'subagent_start': {
       const part: SubagentPart = {
         kind: 'subagent',

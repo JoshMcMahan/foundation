@@ -80,6 +80,19 @@ export interface ReasoningPart {
   durationMs?: number
 }
 
+export type ToolDecisionStatus = 'approved' | 'denied' | 'expired' | 'timed_out' | 'failed'
+
+/** How a call that needed an answer was settled. */
+export interface ToolDecision {
+  status: ToolDecisionStatus
+  by: 'user' | 'auto-reviewer'
+  /** The person who answered, when `by` is a user. */
+  name?: string
+  /** ISO time of the answer. */
+  at?: string
+  note?: string
+}
+
 export interface ToolCallPart {
   kind: 'tool_call'
   id: string
@@ -90,6 +103,7 @@ export interface ToolCallPart {
   result?: string
   // First line of an EditFile diff, when the producer resolved it.
   startLine?: number
+  decision?: ToolDecision
 }
 
 export type SubagentStatus = 'running' | 'done' | 'failed'

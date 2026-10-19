@@ -240,6 +240,16 @@ export interface ChatStrings {
     denyWithFeedback: string
     feedbackPlaceholder: string
     answered: string
+    /** Under a call someone answered: who allowed or denied it. */
+    allowedBy: (name: string) => string
+    deniedBy: (name: string) => string
+    allowed: string
+    denied: string
+    allowedByReviewer: string
+    deniedByReviewer: string
+    approvalExpired: string
+    approvalTimedOut: string
+    reviewFailed: string
     writeOwnAnswer: string
     subagent: string
     tasks: string
@@ -521,6 +531,15 @@ export const defaultChatStrings: ChatStrings = {
     denyWithFeedback: 'No, and provide feedback to the agent',
     feedbackPlaceholder: 'Tell the agent what to do instead…',
     answered: 'Answered',
+    allowedBy: (name) => `Allowed by ${name}`,
+    deniedBy: (name) => `Denied by ${name}`,
+    allowed: 'Allowed',
+    denied: 'Denied',
+    allowedByReviewer: 'Allowed by the auto-reviewer',
+    deniedByReviewer: 'Denied by the auto-reviewer',
+    approvalExpired: 'Expired without an answer',
+    approvalTimedOut: 'No answer in time',
+    reviewFailed: 'The auto-reviewer could not decide',
     writeOwnAnswer: 'Write my own answer…',
     subagent: 'Task',
     tasks: 'Tasks',

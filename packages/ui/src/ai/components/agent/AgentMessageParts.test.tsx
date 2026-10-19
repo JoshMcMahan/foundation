@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ChatConfigProvider, resolveChatConfig } from '../../core/config'
-import type { ChatMessage, MessagePart } from '../../types'
+import type { ChatMessage, MessagePart, ToolCallPart, ToolDecision } from '../../types'
 import AgentMessageParts, { buildRenderItems } from './AgentMessageParts'
 
 vi.mock('../../ui/Markdown', () => ({
@@ -250,6 +250,65 @@ function tc(id: string, name: string, status: 'ok' | 'running' | 'error' = 'ok')
     result: 'out',
   }
 }
+
+describe('tool decisions', () => {
+  const call = (decision: ToolDecision): ToolCallPart => ({
+    kind: 'tool_call',
+    id: 't1',
+    name: 'Bash',
+    args: '{"command":"sbatch run.sh"}',
+    status: 'ok',
+    result: 'Submitted batch job 42',
+    decision,
+  })
+
+  it.each<[ToolDecision, string]>([
+    [{ status: 'approved', by: 'user', name: 'ana' }, 'Allowed by ana'],
+    [{ status: 'denied', by: 'user', name: 'bob' }, 'Denied by bob'],
+    [{ status: 'approved', by: 'user' }, 'Allowed'],
+    [{ status: 'approved', by: 'auto-reviewer' }, 'Allowed by the auto-reviewer'],
+    [{ status: 'expired', by: 'user' }, 'Expired without an answer'],
+    [{ status: 'timed_out', by: 'user' }, 'No answer in time'],
+    [{ status: 'failed', by: 'auto-reviewer' }, 'The auto-reviewer could not decide'],
+  ])('says who settled the call: %o', (decision, label) => {
+    renderParts([call(decision)])
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent(label)
+  })
+
+  it('shows when and the note', () => {
+    renderParts([
+      call({
+        status: 'approved',
+        by: 'user',
+        name: 'ana',
+        at: new Date().toISOString(),
+        note: 'directory whitelisted for session',
+      }),
+    ])
+    const line = screen.getByTestId('tool-decision')
+    expect(line.querySelector('time')).toBeInTheDocument()
+    expect(line).toHaveTextContent('directory whitelisted for session')
+  })
+
+  it('keeps an answered call out of a folded run', () => {
+    const read = (id: string): ToolCallPart => ({
+      kind: 'tool_call',
+      id,
+      name: 'Read',
+      args: '{"file_path":"a.ts"}',
+      status: 'ok',
+      result: 'x',
+    })
+    const parts: MessagePart[] = [read('a'), read('b'), read('c')]
+    expect(buildRenderItems(parts).map((i) => i.kind)).toEqual(['rollup'])
+    const answered: MessagePart[] = [
+      read('a'),
+      { ...read('b'), decision: { status: 'approved', by: 'user', name: 'ana' } },
+      read('c'),
+    ]
+    expect(buildRenderItems(answered).map((i) => i.kind)).not.toContain('rollup')
+  })
+})
 
 describe('rollup folding', () => {
   it('folds a run of finished groupable calls into one sentence row', () => {

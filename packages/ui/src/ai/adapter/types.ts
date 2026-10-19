@@ -12,6 +12,7 @@ import type {
   SharePermissionLevel,
   TodoItem,
   ToolCall,
+  ToolDecision,
   UnreachableSession,
 } from '../types'
 import type { CompletionMessage } from './openai/wire'
@@ -76,6 +77,7 @@ export type PartDelta =
     }
   | { type: 'tool_update'; id: string; args: string }
   | { type: 'tool_end'; id: string; result: string; isError?: boolean }
+  | { type: 'tool_decision'; id: string; decision: ToolDecision }
   | {
       type: 'subagent_start'
       id: string

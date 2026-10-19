@@ -21,6 +21,21 @@ describe('applyPartDelta', () => {
     expect(parts).toEqual([runningTool()])
   })
 
+  it('records a decision on its tool call', () => {
+    const decision = {
+      status: 'approved',
+      by: 'user',
+      name: 'ana',
+      at: '2026-10-19T12:00:00Z',
+    } as const
+    const parts = applyPartDelta([runningTool('t1'), runningTool('t2')], {
+      type: 'tool_decision',
+      id: 't2',
+      decision,
+    })
+    expect(parts).toEqual([runningTool('t1'), { ...runningTool('t2'), decision }])
+  })
+
   it('does not mutate the input array', () => {
     const before: MessagePart[] = []
     applyPartDelta(before, {

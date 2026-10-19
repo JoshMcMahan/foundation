@@ -12,7 +12,7 @@ import {
   useStreamedText,
 } from '../../stories/harness'
 import { defaultChatStrings } from '../../strings'
-import type { ToolCallStatus } from '../../types'
+import type { ToolCallStatus, ToolDecision } from '../../types'
 import ActivityLine from './ActivityLine'
 import AgentMessageParts from './AgentMessageParts'
 
@@ -64,6 +64,54 @@ export const ToolCall: StoryObj<{
       })}
     />
   ),
+}
+
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
+
+export const Decisions: StoryObj = {
+  render: () => {
+    const decided: [string, ToolDecision][] = [
+      [
+        'sbatch --partition=compute run_benchmark.sh',
+        { status: 'approved', by: 'user', name: 'ana', at: minutesAgo(2) },
+      ],
+      [
+        'rm -rf /scratch/old-runs',
+        { status: 'denied', by: 'user', name: 'bob', at: minutesAgo(5) },
+      ],
+      [
+        'ls /scratch/runs',
+        {
+          status: 'approved',
+          by: 'auto-reviewer',
+          at: minutesAgo(9),
+          note: 'directory whitelisted for session',
+        },
+      ],
+      ['squeue -u ana', { status: 'expired', by: 'user', at: minutesAgo(70) }],
+    ]
+    return (
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: decided.map(([command, decision]) => ({
+            ...makeToolCallPart({
+              command,
+              resultLines: 2,
+              status: decision.status === 'approved' ? 'ok' : 'error',
+            }),
+            ...(decision.status === 'approved' ? {} : { result: 'The call did not run.' }),
+            decision,
+          })),
+        })}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Allowed by ana')).toBeVisible()
+    await expect(canvas.getByText('Denied by bob')).toBeVisible()
+  },
 }
 
 export const ToolCallRun: StoryObj<{ calls: number; failLast: boolean }> = {
