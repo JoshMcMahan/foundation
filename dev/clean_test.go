@@ -177,7 +177,7 @@ func TestTrimGoCacheEvictsTheLeastRecentlyUsed(t *testing.T) {
 	newer := entry("dd-newer", 2*time.Hour)
 
 	var out strings.Builder
-	if err := trimGoCache(dir, 250, false, &out); err != nil {
+	if err := trimGoCache(dir, 250, 0, false, &out); err != nil {
 		t.Fatal(err)
 	}
 	for p, stays := range map[string]bool{oldest: false, older: false, newer: true, recent: true, filepath.Join(dir, "README"): true} {
@@ -186,7 +186,7 @@ func TestTrimGoCacheEvictsTheLeastRecentlyUsed(t *testing.T) {
 		}
 	}
 	// Entries a build may be reading now stay, over the limit if need be.
-	if err := trimGoCache(dir, 0, false, &out); err != nil {
+	if err := trimGoCache(dir, 0, 0, false, &out); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(recent); err != nil {
@@ -241,7 +241,7 @@ func given(names ...string) func(string) bool {
 
 func TestCleanScheduleFiles(t *testing.T) {
 	home, ran := stubScheduler(t)
-	s := cleanSchedule{exe: "/bin/dev", repos: []string{"/src/a & b", `/src/"100%" $x`}, idle: 6 * time.Hour, stale: 0, goCache: "25GB", every: 3 * time.Hour}
+	s := cleanSchedule{exe: "/bin/dev", repos: []string{"/src/a & b", `/src/"100%" $x`}, idle: 6 * time.Hour, stale: 0, goCache: "25GB", minFree: "40GB", every: 3 * time.Hour}
 
 	if err := installClean(t.Context(), "darwin", s); err != nil {
 		t.Fatal(err)
@@ -268,7 +268,7 @@ func TestCleanScheduleFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(service), `ExecStart="/bin/dev" "clean" "--idle" "6h0m0s" "--stale" "0s" "--go-cache" "25GB" "/src/a & b"`) {
+	if !strings.Contains(string(service), `ExecStart="/bin/dev" "clean" "--idle" "6h0m0s" "--stale" "0s" "--go-cache" "25GB" "--min-free" "40GB" "/src/a & b"`) {
 		t.Errorf("service runs the wrong command:\n%s", service)
 	}
 	timer, err := os.ReadFile(filepath.Join(units, cleanUnit+".timer"))
@@ -287,7 +287,7 @@ func TestCleanScheduleFiles(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", goos, err)
 		}
-		if got == nil || got.exe != s.exe || !slices.Equal(got.repos, s.repos) || got.idle != s.idle || got.stale != s.stale || got.goCache != s.goCache || got.every != s.every {
+		if got == nil || got.exe != s.exe || !slices.Equal(got.repos, s.repos) || got.idle != s.idle || got.stale != s.stale || got.goCache != s.goCache || got.minFree != s.minFree || got.every != s.every {
 			t.Errorf("%s: read back %+v, want %+v", goos, got, s)
 		}
 	}
@@ -377,13 +377,13 @@ func TestCleanScheduleAppends(t *testing.T) {
 			if !slices.Equal(s.repos, []string{core, games}) {
 				t.Errorf("repositories = %v, want both kept once", s.repos)
 			}
-			if s.goCache != "25GB" || s.idle != 2*time.Hour || s.stale != 72*time.Hour || s.every != 3*time.Hour {
+			if s.goCache != "25GB" || s.idle != 2*time.Hour || s.stale != 72*time.Hour || s.minFree != "50GB" || s.every != 15*time.Minute {
 				t.Errorf("flags not merged: %+v", s)
 			}
 			for _, want := range []string{
-				"dev clean runs every 3h0m0s on:\n",
+				"dev clean runs every 15m0s on:\n",
 				"  " + core + "\n", "  " + games + "\n",
-				"--idle 2h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB)\n",
+				"--idle 2h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB), --min-free 50GB\n",
 			} {
 				if !strings.Contains(out, want) {
 					t.Errorf("summary lacks %q:\n%s", want, out)
@@ -417,7 +417,7 @@ func TestCleanScheduleAppends(t *testing.T) {
 			if err := scheduleStatus(goos, &status); err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(status.String(), "--go-cache 25GB\n") || strings.Contains(status.String(), "added") {
+			if !strings.Contains(status.String(), "--go-cache 25GB, --min-free 50GB\n") || strings.Contains(status.String(), "added") {
 				t.Errorf("status:\n%s", status.String())
 			}
 
@@ -429,10 +429,10 @@ func TestCleanScheduleAppends(t *testing.T) {
 			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", add: []string{lib}, flags: defaultSchedule(), given: given(), replace: true}, &replaced); err != nil {
 				t.Fatal(err)
 			}
-			if s := read(); !slices.Equal(s.repos, []string{lib}) || s.goCache != "60GB" || s.idle != 6*time.Hour || s.every != 3*time.Hour {
+			if s := read(); !slices.Equal(s.repos, []string{lib}) || s.goCache != "60GB" || s.idle != 6*time.Hour || s.every != 15*time.Minute {
 				t.Errorf("after --replace: %+v", s)
 			}
-			if !strings.Contains(replaced.String(), core+"  (removed)") || !strings.Contains(replaced.String(), "every 3h0m0s (was 1h0m0s)") {
+			if !strings.Contains(replaced.String(), core+"  (removed)") || !strings.Contains(replaced.String(), "every 15m0s (was 1h0m0s)") {
 				t.Errorf("summary of --replace:\n%s", replaced.String())
 			}
 		})
@@ -579,11 +579,174 @@ func TestCleanInstallCommand(t *testing.T) {
 	if !slices.Equal(s.repos, []string{core, games}) || s.idle != 4*time.Hour || s.goCache != "25GB" {
 		t.Errorf("after lowering the cache limit: %+v", s)
 	}
-	if out := run("--status"); !strings.Contains(out, "--idle 4h0m0s, --stale 72h0m0s, --go-cache 25GB\n") {
+	if out := run("--status"); !strings.Contains(out, "--idle 4h0m0s, --stale 72h0m0s, --go-cache 25GB, --min-free 50GB\n") {
 		t.Errorf("status:\n%s", out)
 	}
 	run("--uninstall", games)
 	if s, _ := readSchedule(runtime.GOOS); s == nil || !slices.Equal(s.repos, []string{core}) {
 		t.Errorf("after removing games: %+v", s)
+	}
+}
+
+func TestGoBuilding(t *testing.T) {
+	ps := func(args ...string) process { return process{pid: 10, ppid: 1, args: args} }
+	for _, tc := range []struct {
+		name  string
+		procs []process
+		want  bool
+	}{
+		{"go test", []process{ps("/usr/local/go/bin/go", "test", "-race", "./...")}, true},
+		{"go vet with flags first", []process{ps("go", "-C", "dev", "vet", "./...")}, true},
+		{"compile", []process{ps("/usr/local/go/pkg/tool/darwin_arm64/compile", "-o", "x.a")}, true},
+		{"golangci-lint", []process{ps("/home/me/go/bin/golangci-lint", "run")}, true},
+		{"go tool golangci-lint", []process{ps("go", "tool", "-modfile=tools/go.mod", "golangci-lint", "run")}, true},
+		{"go run while building", []process{ps("go", "run", "./cmd/server")}, true},
+		{"go run once its program runs", []process{
+			ps("go", "run", "./cmd/server"),
+			{pid: 11, ppid: 10, args: []string{"/tmp/go-build123/b001/exe/server"}},
+		}, false},
+		{"gopls", []process{ps("/home/me/go/bin/gopls", "serve")}, false},
+		{"go env", []process{ps("go", "env", "GOCACHE")}, false},
+		{"go tool pprof", []process{ps("go", "tool", "pprof", "cpu.out")}, false},
+		{"an editor", []process{ps("vim", "compile.go")}, false},
+	} {
+		if got := goBuilding(tc.procs) != ""; got != tc.want {
+			t.Errorf("%s: building = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// goCacheEntry writes a 100-byte cache entry last used ago in dir.
+func goCacheEntry(t *testing.T, dir, name string, ago time.Duration) string {
+	t.Helper()
+	p := filepath.Join(dir, name[:2], name)
+	write(t, p, strings.Repeat("x", 100))
+	then := time.Now().Add(-ago)
+	if err := os.Chtimes(p, then, then); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestCleanGoCacheWaitsForBuilds(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GOCACHE", dir)
+	old := goCacheEntry(t, dir, "aa-old", 48*time.Hour)
+	var procs []process
+	list := listProcesses
+	listProcesses = func(context.Context) ([]process, error) { return procs, nil }
+	t.Cleanup(func() { listProcesses = list })
+
+	procs = []process{{pid: 42, ppid: 1, args: []string{"go", "test", "./..."}}}
+	var out strings.Builder
+	if err := cleanGoCache(t.Context(), 10, 0, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(old); err != nil {
+		t.Errorf("trimmed the cache under a running build: %v", err)
+	}
+	if !strings.Contains(out.String(), "left untrimmed while a build uses it (42 go test ./...)") {
+		t.Errorf("no word of the skipped trim:\n%s", out.String())
+	}
+
+	procs = nil
+	if err := cleanGoCache(t.Context(), 10, 0, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(old); err == nil {
+		t.Error("left the cache over its limit with no build running")
+	}
+
+	listProcesses = func(context.Context) ([]process, error) { return nil, errors.New("no ps") }
+	goCacheEntry(t, dir, "bb-old", 48*time.Hour)
+	if err := cleanGoCache(t.Context(), 10, 0, false, io.Discard); err == nil {
+		t.Error("trimmed without knowing whether a build runs")
+	}
+}
+
+func TestTrimGoCacheKeepsAFloorOfFreeSpace(t *testing.T) {
+	dir := t.TempDir()
+	var free int64
+	disk := diskFree
+	diskFree = func(string) (int64, error) { return free, nil }
+	t.Cleanup(func() { diskFree = disk })
+	oldest := goCacheEntry(t, dir, "aa-oldest", 72*time.Hour)
+	older := goCacheEntry(t, dir, "bb-older", 48*time.Hour)
+	newer := goCacheEntry(t, dir, "cc-newer", 24*time.Hour)
+	recent := goCacheEntry(t, dir, "dd-recent", 10*time.Minute)
+	exists := func(p string) bool { _, err := os.Stat(p); return err == nil }
+
+	// Under its limit, with the disk above the floor, nothing goes.
+	free = 1000
+	var out strings.Builder
+	if err := trimGoCache(dir, 1000, 500, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !exists(oldest) || strings.Contains(out.String(), "min-free") {
+		t.Errorf("trimmed a cache under its limit on a healthy disk:\n%s", out.String())
+	}
+
+	// 150 bytes short of the floor: the two oldest go, though under the limit.
+	free = 350
+	out.Reset()
+	if err := trimGoCache(dir, 1000, 500, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	for p, stays := range map[string]bool{oldest: false, older: false, newer: true, recent: true} {
+		if exists(p) != stays {
+			t.Errorf("%s exists = %v, want %v", filepath.Base(p), !stays, stays)
+		}
+	}
+	if !strings.Contains(out.String(), "freed 200B") || !strings.Contains(out.String(), "under --min-free") {
+		t.Errorf("summary of a trim to the floor:\n%s", out.String())
+	}
+
+	// Far short, it empties the cache but for what a build may be reading.
+	free = 0
+	if err := trimGoCache(dir, 1000, 500, false, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if exists(newer) || !exists(recent) {
+		t.Errorf("newer exists = %v, recent exists = %v; want only recent", exists(newer), exists(recent))
+	}
+}
+
+func TestCleanScheduleFromBeforeMinFree(t *testing.T) {
+	for _, goos := range []string{"darwin", "linux"} {
+		t.Run(goos, func(t *testing.T) {
+			home, _ := stubScheduler(t)
+			repo := t.TempDir()
+			paths, err := schedulePaths(goos, home)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// A schedule installed before --min-free, at the old default interval.
+			argv := []string{"/bin/dev", "clean", "--idle", "6h0m0s", "--stale", "72h0m0s", "--go-cache", "30GB", repo}
+			if goos == "darwin" {
+				write(t, paths[0], launchdPlist(argv, "/usr/bin", cleanLog(home), 3*time.Hour))
+			} else {
+				service, timer := systemdUnitFiles(argv, "/usr/bin", 3*time.Hour)
+				write(t, paths[0], service)
+				write(t, paths[1], timer)
+			}
+			s, err := readSchedule(goos)
+			if err != nil || s == nil || s.minFree != "50GB" || s.goCache != "30GB" {
+				t.Fatalf("read back %+v, %v; want the default --min-free", s, err)
+			}
+
+			flags := defaultSchedule()
+			flags.minFree = "20GB"
+			var out strings.Builder
+			if err := scheduleInstall(t.Context(), goos, scheduleChange{exe: "/bin/dev", flags: flags, given: given("min-free")}, &out); err != nil {
+				t.Fatal(err)
+			}
+			s, err = readSchedule(goos)
+			if err != nil || s == nil || s.minFree != "20GB" || s.goCache != "30GB" || s.every != 3*time.Hour || !slices.Equal(s.repos, []string{repo}) {
+				t.Errorf("after setting --min-free: %+v, %v", s, err)
+			}
+			if !strings.Contains(out.String(), "--min-free 20GB (was 50GB)") {
+				t.Errorf("summary:\n%s", out.String())
+			}
+		})
 	}
 }

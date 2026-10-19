@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/unix"
 )
 
 // cleanOptions says what `dev clean` removes.
@@ -292,11 +293,12 @@ func writable(dir string) {
 const cacheGrace = time.Hour
 
 // trimGoCache removes the least recently used entries of Go's build cache in
-// dir until it holds at most limit bytes. Go trims only entries unused for
-// five days, which never bounds the cache of a machine building every day.
-// Entries are content-addressed and written by rename, so a removed one is
-// rebuilt, never corrupt.
-func trimGoCache(dir string, limit int64, dryRun bool, out io.Writer) error {
+// dir until it holds at most limit bytes, and further while the disk holding
+// it has less than minFree bytes free (0: no floor). Go trims only entries
+// unused for five days, which never bounds the cache of a machine building
+// every day. Entries are content-addressed and written by rename, so a
+// removed one is rebuilt, never corrupt.
+func trimGoCache(dir string, limit, minFree int64, dryRun bool, out io.Writer) error {
 	type entry struct {
 		path string
 		size int64
@@ -326,9 +328,20 @@ func trimGoCache(dir string, limit int64, dryRun bool, out io.Writer) error {
 		return err
 	}
 	before := total
+	target, floor := limit, ""
+	if minFree > 0 {
+		free, err := diskFree(dir)
+		if err != nil {
+			return err
+		}
+		if free < minFree {
+			target = max(0, min(limit, total-(minFree-free)))
+			floor = fmt.Sprintf("; %s free, under --min-free %s", formatSize(free), formatSize(minFree))
+		}
+	}
 	slices.SortFunc(entries, func(a, b entry) int { return a.used.Compare(b.used) })
 	for _, e := range entries {
-		if total <= limit || time.Since(e.used) < cacheGrace {
+		if total <= target || time.Since(e.used) < cacheGrace {
 			break
 		}
 		if !dryRun {
@@ -342,8 +355,126 @@ func trimGoCache(dir string, limit int64, dryRun bool, out io.Writer) error {
 	if dryRun {
 		verb = "would free"
 	}
-	fmt.Fprintf(out, "Go build cache: %s %s, %s left (limit %s)\n", verb, formatSize(before-total), formatSize(total), formatSize(limit))
+	fmt.Fprintf(out, "Go build cache: %s %s, %s left (limit %s%s)\n", verb, formatSize(before-total), formatSize(total), formatSize(limit), floor)
 	return nil
+}
+
+// diskFree is the space free to this user on the filesystem holding path; a
+// variable so that tests need no full disk.
+var diskFree = func(path string) (int64, error) {
+	var st unix.Statfs_t
+	if err := unix.Statfs(path, &st); err != nil {
+		return 0, fmt.Errorf("free space of %s: %w", path, err)
+	}
+	// Through float64, since Bsize's type differs between systems.
+	return int64(float64(st.Bavail) * float64(st.Bsize)), nil
+}
+
+// process is one running process, its command line split on spaces.
+type process struct {
+	pid, ppid int
+	args      []string
+}
+
+// listProcesses lists the running processes; a variable so that tests do
+// not depend on what the machine is running.
+var listProcesses = func(ctx context.Context) ([]process, error) {
+	b, err := exec.CommandContext(ctx, "ps", "-A", "-o", "pid=,ppid=,args=").Output()
+	if err != nil {
+		return nil, fmt.Errorf("ps: %w", err)
+	}
+	var procs []process
+	for line := range strings.SplitSeq(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 3 {
+			continue
+		}
+		pid, err1 := strconv.Atoi(f[0])
+		ppid, err2 := strconv.Atoi(f[1])
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		procs = append(procs, process{pid, ppid, f[2:]})
+	}
+	return procs, nil
+}
+
+// goCacheUsers are the go subcommands that read and write the build cache.
+var goCacheUsers = []string{"build", "test", "vet", "run", "install", "list", "generate"}
+
+// cacheTools read the cache's compiled packages as they run, from the go
+// command or on their own.
+var cacheTools = []string{"compile", "link", "vet", "asm", "cgo", "golangci-lint"}
+
+// goBuilding returns a running process that reads Go's build cache, "" when
+// none does. Removing an entry under it breaks it: the go command hands
+// compile and the linters paths into the cache it has just looked up.
+func goBuilding(procs []process) string {
+	parents := map[int][]process{}
+	for _, p := range procs {
+		parents[p.ppid] = append(parents[p.ppid], p)
+	}
+	for _, p := range procs {
+		name := filepath.Base(p.args[0])
+		if slices.Contains(cacheTools, name) {
+			return fmt.Sprintf("%d %s", p.pid, strings.Join(p.args, " "))
+		}
+		if name != "go" {
+			continue
+		}
+		sub := ""
+		rest := p.args[1:]
+		if len(rest) > 1 && rest[0] == "-C" {
+			rest = rest[2:]
+		}
+		for i, a := range rest {
+			if !strings.HasPrefix(a, "-") {
+				sub, rest = a, rest[i+1:]
+				break
+			}
+		}
+		if sub == "tool" {
+			for _, a := range rest {
+				if !strings.HasPrefix(a, "-") {
+					sub = a
+					break
+				}
+			}
+			if !slices.Contains(cacheTools, sub) {
+				continue
+			}
+		} else if !slices.Contains(goCacheUsers, sub) {
+			continue
+		}
+		// go run waits on the program it built, done with the cache.
+		if sub == "run" && slices.ContainsFunc(parents[p.pid], func(c process) bool {
+			return strings.Contains(c.args[0], string(filepath.Separator)+"go-build")
+		}) {
+			continue
+		}
+		return fmt.Sprintf("%d %s", p.pid, strings.Join(p.args, " "))
+	}
+	return ""
+}
+
+// cleanGoCache trims Go's build cache, unless a build is using it: the next
+// run trims it instead.
+func cleanGoCache(ctx context.Context, limit, minFree int64, dryRun bool, out io.Writer) error {
+	dir, err := goCacheDir(ctx)
+	if err != nil {
+		return err
+	}
+	if !dryRun {
+		procs, err := listProcesses(ctx)
+		if err != nil {
+			return fmt.Errorf("left Go's build cache untrimmed, as dev cannot tell whether a build is using it: %w", err)
+		}
+		if p := goBuilding(procs); p != "" {
+			fmt.Fprintf(out, "Go build cache: left untrimmed while a build uses it (%s); the next run trims it\n", p)
+			return nil
+		}
+	}
+	return trimGoCache(dir, limit, minFree, dryRun, out)
 }
 
 // goCacheDir is Go's build cache, as the go command finds it.
@@ -407,7 +538,10 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 			"A worktree stays while it has changes or untracked files, is locked, was touched within --idle, or runs a dev. " +
 			"Ignored files in a removed worktree, such as build output and .devstack, go with it.\n\n" +
 			"Then trim Go's build cache to --go-cache, least recently used first: Go itself only drops what has been " +
-			"unused for five days, which never bounds the cache of a machine that builds every day.\n\n" +
+			"unused for five days, which never bounds the cache of a machine that builds every day. " +
+			"While the disk holding the cache has less than --min-free free, trim further, until it has or the cache is empty. " +
+			"The trim waits for a later run while a go build, test, vet or similar, or golangci-lint, is running: " +
+			"removing entries under a build breaks it.\n\n" +
 			"--install runs it on a schedule, every --every. It adds the repositories to those already scheduled, " +
 			"and the flags given replace the schedule's, while those not given keep their scheduled values; " +
 			"--replace schedules only this call's repositories and flags instead. " +
@@ -415,7 +549,7 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 			"--status shows the schedule and changes nothing.",
 		Example: `  dev clean -n                           # what would go
   dev clean ~/src/app ~/src/lib
-  dev clean --install ~/src/app          # every 3h from now on, with any already scheduled
+  dev clean --install ~/src/app          # every 15m from now on, with any already scheduled
   dev clean --install --go-cache 25GB    # add the repository here, lowering one limit
   dev clean --status
   dev clean --uninstall ~/src/lib        # stop cleaning one repository
@@ -446,6 +580,10 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 				return scheduleUninstall(ctx, goos, repos, out)
 			}
 			limit, err := parseSize(sched.goCache)
+			if err != nil {
+				return err
+			}
+			minFree, err := parseSize(sched.minFree)
 			if err != nil {
 				return err
 			}
@@ -483,11 +621,7 @@ func newCleanCmd(verbose *bool) *cobra.Command {
 				errs = append(errs, cleanWorktrees(ctx, r, opts, roots, out))
 			}
 			if limit > 0 {
-				dir, err := goCacheDir(ctx)
-				if err == nil {
-					err = trimGoCache(dir, limit, opts.dryRun, out)
-				}
-				errs = append(errs, err)
+				errs = append(errs, cleanGoCache(ctx, limit, minFree, opts.dryRun, out))
 			}
 			return errors.Join(errs...)
 		},

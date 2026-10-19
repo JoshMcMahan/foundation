@@ -108,7 +108,7 @@ Describe the app in `dev.json` at the repository root:
 | `dev stack` | Run Postgres on `:5432` and S3 on `127.0.0.1:8333` until interrupted. User, password and database are `name` (required with Postgres); tests get `name_test` |
 | `dev wait [service...]` | Block until a stack started elsewhere accepts connections, or until the services named are up; fails as soon as one fails, exits or turns unhealthy |
 | `dev reset` | Delete the stack's data |
-| `dev clean [repository...]` | Remove finished and long-idle worktrees, and trim Go's build cache; `--install` runs it every few hours ([Cleaning up](#cleaning-up)) |
+| `dev clean [repository...]` | Remove finished and long-idle worktrees, and trim Go's build cache; `--install` runs it every 15 minutes ([Cleaning up](#cleaning-up)) |
 
 Data and each service's latest log live in `.devstack/` beside `dev.json`, or
 `--dir`. The command finds `dev.json` from the working directory up, which is
@@ -251,7 +251,7 @@ five days unused. `dev clean` removes what is finished, from anywhere:
 ```sh
 dev clean -n ~/src/app             # what would go
 dev clean ~/src/app ~/src/lib
-dev clean --install ~/src/app      # every 3h from now on (launchd or a systemd user timer)
+dev clean --install ~/src/app      # every 15m from now on (launchd or a systemd user timer)
 ```
 
 A worktree goes when its default branch has its work: merged, rebased,
@@ -266,12 +266,25 @@ worth keeping.
 
 Then Go's build cache is trimmed to `--go-cache` (default 60GB), least
 recently used first, keeping anything used in the last hour. Entries are
-content-addressed, so one removed is rebuilt when needed. `--go-cache 0`
-leaves the cache alone.
+content-addressed, so one removed is rebuilt when needed. While the disk
+holding the cache has less than `--min-free` free (default 50GB), the trim
+goes below `--go-cache`, oldest first, until the disk has that much free or
+the cache is empty, so a burst of builds between runs cannot fill the disk.
+`--min-free 0` sets no floor, and `--go-cache 0` leaves the cache alone.
+
+Removing entries under a running build breaks it ("could not import ...: no
+such file or directory"), so while any `go build`, `test`, `vet`, `run`,
+`install`, `list` or `generate`, a compiler or linker, or `golangci-lint` is
+running, the trim is skipped with a note naming the process, and a later run
+does it. A `go run` whose program has started counts as done building, and
+`gopls` does not count. Worktrees are cleaned either way.
 
 ### On a schedule
 
-`--install` runs `dev clean` every `--every` (default 3 hours), and once now.
+`--install` runs `dev clean` every `--every` (default 15 minutes), and once now.
+A run with the cache under its limit, the disk above `--min-free` and no
+finished worktree changes nothing, and one during a build leaves the cache
+for the next, so running often is cheap and keeps up with bursts of builds.
 Each install adds its repositories (default: the one here) to those already
 scheduled, and the flags it is given replace the schedule's, while the rest
 keep their scheduled values; `--replace` schedules only this call's
@@ -286,10 +299,10 @@ dev clean --uninstall                 # stop the schedule
 ```
 
 ```text
-dev clean runs every 3h0m0s on:
+dev clean runs every 15m0s on:
   /Users/me/src/app
   /Users/me/src/lib
-with --idle 6h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB)
+with --idle 6h0m0s, --stale 72h0m0s, --go-cache 25GB (was 60GB), --min-free 50GB
 logging to /Users/me/Library/Logs/foundation-dev-clean.log
 ```
 
@@ -297,7 +310,10 @@ The schedule is the launchd agent `~/Library/LaunchAgents/foundation.dev.clean.p
 on macOS, or the systemd user units `foundation-dev-clean.service` and `.timer`
 on Linux, logging to the journal. `dev clean` reads its repositories and flags
 back from there, so one edited by hand into something else, or removed with
-`launchctl` or `systemctl`, is simply replaced by the next `--install`.
+`launchctl` or `systemctl`, is simply replaced by the next `--install`. A schedule installed by an
+earlier dev keeps its interval, as any flag not given does, and runs with the
+default `--min-free`; `dev clean --install --every 15m` moves it to the new
+interval.
 
 ## Ports
 

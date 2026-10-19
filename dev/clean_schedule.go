@@ -60,12 +60,13 @@ type cleanSchedule struct {
 	idle    time.Duration
 	stale   time.Duration
 	goCache string
+	minFree string
 	every   time.Duration
 }
 
 // args are the schedule's arguments to `dev clean`.
 func (s cleanSchedule) args() []string {
-	return append([]string{"--idle", s.idle.String(), "--stale", s.stale.String(), "--go-cache", s.goCache}, s.repos...)
+	return append([]string{"--idle", s.idle.String(), "--stale", s.stale.String(), "--go-cache", s.goCache, "--min-free", s.minFree}, s.repos...)
 }
 
 // cleanFlags declares the flags a schedule keeps, so that `dev clean` and
@@ -74,7 +75,8 @@ func cleanFlags(f *pflag.FlagSet, s *cleanSchedule) {
 	f.DurationVar(&s.idle, "idle", 6*time.Hour, "keep worktrees touched more recently than this")
 	f.DurationVar(&s.stale, "stale", 72*time.Hour, "remove unmerged worktrees untouched this long, keeping their commits on a branch (0: never)")
 	f.StringVar(&s.goCache, "go-cache", "60GB", "trim Go's build cache to this size (0: leave it)")
-	f.DurationVar(&s.every, "every", 3*time.Hour, "how often the schedule runs")
+	f.StringVar(&s.minFree, "min-free", "50GB", "while the disk has less free than this, trim Go's build cache below --go-cache (0: no floor)")
+	f.DurationVar(&s.every, "every", 15*time.Minute, "how often the schedule runs")
 }
 
 // schedulePaths are the files a schedule lives in: the launchd agent, or the
@@ -379,6 +381,9 @@ func scheduleInstall(ctx context.Context, goos string, c scheduleChange, out io.
 		if !c.given("go-cache") {
 			next.goCache = old.goCache
 		}
+		if !c.given("min-free") {
+			next.minFree = old.minFree
+		}
 		next.repos = slices.Clone(old.repos)
 	}
 	for _, r := range c.add {
@@ -475,8 +480,8 @@ func describeSchedule(goos string, old, next *cleanSchedule, out io.Writer) erro
 			fmt.Fprintf(out, "  %s  (removed)\n", r)
 		}
 	}
-	fmt.Fprintf(out, "with --idle %s, --stale %s, --go-cache %s\n",
-		was(next.idle.String(), prev.idle.String()), was(next.stale.String(), prev.stale.String()), was(next.goCache, prev.goCache))
+	fmt.Fprintf(out, "with --idle %s, --stale %s, --go-cache %s, --min-free %s\n",
+		was(next.idle.String(), prev.idle.String()), was(next.stale.String(), prev.stale.String()), was(next.goCache, prev.goCache), was(next.minFree, prev.minFree))
 	if goos == "darwin" {
 		fmt.Fprintf(out, "logging to %s\n", cleanLog(home))
 	} else {
