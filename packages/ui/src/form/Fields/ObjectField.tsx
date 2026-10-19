@@ -25,6 +25,7 @@ export default function ObjectField({
   return (
     <Section
       title={field.label || label}
+      description={field.description}
       // A section has no control to read its help with, so its ? keeps its Tab stop.
       beside={help && <InfoTip text={help} />}
       collapsible={!field.noCollapse}

@@ -37,6 +37,7 @@ const FORM_JSONS = {
   settings: {
     type: 'group',
     label: 'Cluster settings',
+    description: 'Every node in the cluster starts with these.',
     items: {
       name: {
         type: 'string',
