@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.71.0](https://github.com/parallelworks/foundation/compare/ui-v0.70.0...ui-v0.71.0) (2026-10-19)
+
+
+### Features
+
+* **ui:** one row, menu and empty state for lists of conversations and sessions ([#386](https://github.com/parallelworks/foundation/issues/386)) ([5e35899](https://github.com/parallelworks/foundation/commit/5e358997bd8e623637f7dff8d328c53a173fccfb))
+
 ## [0.70.0](https://github.com/parallelworks/foundation/compare/ui-v0.69.0...ui-v0.70.0) (2026-10-19)
 
 
