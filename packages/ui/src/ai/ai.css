@@ -347,6 +347,22 @@
     0 10px 24px -10px rgb(0 0 0 / 0.18);
 }
 
+/* The thread scrolls under the dock and the jump pill, so they must hide it
+ * even when a theme makes the panel color translucent: a second layer of the
+ * same color leaves the thread at most a hundredth visible. */
+.chat-composer-dock,
+.chat-jump {
+  background:
+    linear-gradient(var(--theme-panel-bg, #fff), var(--theme-panel-bg, #fff)),
+    var(--theme-panel-bg, #fff);
+}
+
+.chat-jump:hover {
+  background:
+    linear-gradient(var(--theme-muted-panel-bg, #f3f4f6), var(--theme-muted-panel-bg, #f3f4f6)),
+    var(--theme-muted-panel-bg, #f3f4f6);
+}
+
 /* The thread runs under the docked composer and fades out above it, so the
  * last lines dissolve rather than cut off at the dock's edge. */
 .chat-composer-dock::before {

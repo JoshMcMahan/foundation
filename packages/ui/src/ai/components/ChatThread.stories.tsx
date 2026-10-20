@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import { createMockChatAdapter } from '../adapter/mock'
 import type { ToolRendererProps } from '../core/config'
 import {
@@ -32,6 +32,23 @@ export const Conversation: StoryObj = {
     <StoryChat>
       <StoryViewport>
         <ChatThread conversationId="conv-1" />
+      </StoryViewport>
+    </StoryChat>
+  ),
+}
+
+/** A theme whose panel color is translucent: the composer dock and the jump
+ *  pill still hide the thread scrolling under them. */
+export const TranslucentPanel: StoryObj = {
+  render: () => (
+    <StoryChat>
+      <StoryViewport>
+        <div
+          className="flex h-full min-h-0 flex-col"
+          style={{ '--theme-panel-bg': 'rgb(255 255 255 / 0.9)' } as CSSProperties}
+        >
+          <ChatThread conversationId="conv-1" />
+        </div>
       </StoryViewport>
     </StoryChat>
   ),

@@ -27,7 +27,7 @@ import { Reasoning, ReasoningBody } from './Reasoning'
 const READER_GROWTH_MS = 600
 
 const jumpClasses =
-  'chat-composer rounded-full bg-(--theme-panel-bg) px-3 py-1.5 text-xs font-medium theme-text transition-colors hover:bg-(--theme-muted-panel-bg)'
+  'chat-composer chat-jump rounded-full px-3 py-1.5 text-xs font-medium theme-text transition-colors'
 
 export type QueueDelivery = 'afterReply' | 'nextStep'
 

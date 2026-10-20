@@ -401,7 +401,7 @@ export default function ChatInput({
 
   return (
     <div
-      className="chat-composer-dock relative bg-(--theme-panel-bg) px-4 pt-2 pb-5"
+      className="chat-composer-dock relative px-4 pt-2 pb-5"
       {...(attachmentsAvailable ? dragHandlers : {})}
     >
       {isDragging && <DragOverlay className="rounded-2xl" />}

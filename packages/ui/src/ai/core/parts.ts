@@ -124,32 +124,54 @@ function isStreamedText(part: MessagePart | undefined): boolean {
 }
 
 /** The wire history for an assistant turn whose tool calls the gateway ran:
- *  the calls, each result, then the answer. A turn with no finished tool
- *  calls comes back as the answer alone. */
+ *  each round's calls, with the text that came before them, and each result,
+ *  then the answer. A turn with no finished tool calls comes back as the
+ *  answer alone. */
 export function toolTurnMessages(
   parts: MessagePart[] | null | undefined,
   answer: CompletionMessage,
 ): CompletionMessage[] {
-  const calls = (parts ?? []).filter(
-    (p): p is ToolCallPart & { result: string } =>
-      p.kind === 'tool_call' && p.status !== 'running' && p.result !== undefined,
-  )
-  if (calls.length === 0) {
+  const rounds: { text: string; calls: (ToolCallPart & { result: string })[] }[] = []
+  let text = ''
+  let calls: (ToolCallPart & { result: string })[] = []
+  let hasText = false
+  for (const p of parts ?? []) {
+    if (p.kind === 'text') {
+      hasText = true
+      if (calls.length > 0) {
+        rounds.push({ text, calls })
+        text = ''
+        calls = []
+      }
+      text += p.text
+    } else if (p.kind === 'tool_call' && p.status !== 'running' && p.result !== undefined) {
+      calls.push(p as ToolCallPart & { result: string })
+    }
+  }
+  if (calls.length > 0) {
+    rounds.push({ text, calls })
+    text = ''
+  }
+  if (rounds.length === 0) {
     // A reply that paused on a call waiting for approval may hold nothing yet.
     return answer.content || answer.tool_calls?.length ? [answer] : []
   }
+  // Stored text parts already hold the answer; its content joins every round.
+  const final = hasText ? { ...answer, content: text || null } : answer
   return [
-    {
-      role: 'assistant',
-      content: null,
-      tool_calls: calls.map((c) => ({
-        id: c.id,
-        type: 'function',
-        function: { name: c.name, arguments: c.args },
-      })),
-    },
-    ...calls.map((c) => ({ role: 'tool', tool_call_id: c.id, content: c.result })),
-    ...(answer.content ? [answer] : []),
+    ...rounds.flatMap((round) => [
+      {
+        role: 'assistant',
+        content: round.text || null,
+        tool_calls: round.calls.map((c) => ({
+          id: c.id,
+          type: 'function',
+          function: { name: c.name, arguments: c.args },
+        })),
+      },
+      ...round.calls.map((c) => ({ role: 'tool', tool_call_id: c.id, content: c.result })),
+    ]),
+    ...(final.content ? [final] : []),
   ]
 }
 

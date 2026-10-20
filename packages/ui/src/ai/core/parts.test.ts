@@ -275,6 +275,40 @@ describe('toolTurnMessages', () => {
     expect(toolTurnMessages(undefined, answer)).toEqual([answer])
   })
 
+  it('replays the text between calls with the round it led into', () => {
+    const parts: MessagePart[] = [
+      { kind: 'text', text: 'Checking costs.' },
+      { ...runningTool('t1'), status: 'error', result: 'StartDate is required' },
+      { kind: 'text', text: 'Retrying with a start date.' },
+      { ...runningTool('t2'), status: 'ok', result: '[]' },
+      { kind: 'text', text: 'Nothing is billing.' },
+    ]
+    const stored = {
+      role: 'assistant',
+      content: 'Checking costs.\n\nRetrying with a start date.\n\nNothing is billing.',
+    }
+    const call = (id: string) => ({
+      id,
+      type: 'function',
+      function: { name: 'get_workflow', arguments: '{"name":"helloworld"}' },
+    })
+    expect(toolTurnMessages(parts, stored)).toEqual([
+      { role: 'assistant', content: 'Checking costs.', tool_calls: [call('t1')] },
+      { role: 'tool', tool_call_id: 't1', content: 'StartDate is required' },
+      { role: 'assistant', content: 'Retrying with a start date.', tool_calls: [call('t2')] },
+      { role: 'tool', tool_call_id: 't2', content: '[]' },
+      { role: 'assistant', content: 'Nothing is billing.' },
+    ])
+  })
+
+  it('leaves out the answer when the turn ends on tool results', () => {
+    const parts: MessagePart[] = [
+      { kind: 'text', text: 'Stopping it.' },
+      { ...runningTool('t1'), status: 'ok', result: 'stopped' },
+    ]
+    expect(toolTurnMessages(parts, { role: 'assistant', content: 'Stopping it.' })).toHaveLength(2)
+  })
+
   it('leaves out an empty answer after the tool results', () => {
     const parts: MessagePart[] = [{ ...runningTool(), status: 'ok', result: 'done' }]
     expect(toolTurnMessages(parts, { role: 'assistant', content: null })).toHaveLength(2)
