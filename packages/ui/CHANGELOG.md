@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.83.2](https://github.com/parallelworks/foundation/compare/ui-v0.83.1...ui-v0.83.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ui:** chat answers that call one tool many times bury the answer, show failures only by color, and strike out text between tildes ([#452](https://github.com/parallelworks/foundation/issues/452)) ([52a7d07](https://github.com/parallelworks/foundation/commit/52a7d07de8b1e83fa6a169d939bb39570a5e8efc))
+
 ## [0.83.1](https://github.com/parallelworks/foundation/compare/ui-v0.83.0...ui-v0.83.1) (2026-10-20)
 
 
