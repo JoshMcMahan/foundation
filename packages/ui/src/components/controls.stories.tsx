@@ -3,9 +3,11 @@ import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon, TrashIcon, UploadIcon } from '../icons'
+import { Avatar } from './Avatar'
 import { Button, MethodButton } from './Button'
 import type { ButtonSize, ButtonVariant } from './buttonClasses'
 import { Card, CardHeader, type CardPadding } from './Card'
+import { Checkbox } from './Checkbox'
 import { FileButton } from './FileButton'
 import { IconButton } from './IconButton'
 import { Input, Textarea } from './Input'
@@ -14,6 +16,7 @@ import { Pagination } from './Pagination'
 import { RadioGroup } from './Radio'
 import { SearchInput } from './SearchInput'
 import { SegmentedControl } from './SegmentedControl'
+import { Select } from './Select'
 import { SettingModeOption } from './SettingModeOption'
 import { SettingRow, SettingsCard, SettingsHeading } from './SettingsCard'
 import { Switch } from './Switch'
@@ -787,6 +790,159 @@ export const SettingRowError: StoryObj = {
     for (const button of canvas.getAllByRole('button', { name: 'Save' })) {
       button.blur()
     }
+  },
+}
+
+// A host's own markup, as a workspace's General settings write it: a form around the name and
+// its Save, an icon tile beside its button, and on/off settings.
+function HostSettingsDemo({ errors }: { errors: boolean }) {
+  const [name, setName] = useState('Research computing')
+  return (
+    <div className="max-w-3xl">
+      <SettingsCard title="General">
+        <SettingRow
+          label="Workspace icon"
+          helpText="Shown in the sidebar and in invitations"
+          error={errors ? "Couldn't upload the icon. Try again." : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <Avatar name={name} shape="square" size="lg" />
+            <Button size="sm">Change icon</Button>
+          </div>
+        </SettingRow>
+        <SettingRow
+          label="Workspace name"
+          htmlFor="host-workspace-name"
+          error={errors ? "Couldn't save the workspace name. Try again." : undefined}
+        >
+          <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+            <Input
+              id="host-workspace-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-56"
+            />
+            <Button type="submit" variant="primary">
+              Save
+            </Button>
+          </form>
+        </SettingRow>
+        <SettingRow
+          label="Allow guests"
+          helpText="Guests see only what is shared with them"
+          error={errors ? "Couldn't change guest access. Try again." : undefined}
+        >
+          <Switch aria-label="Allow guests" defaultChecked />
+        </SettingRow>
+        <SettingRow label="Weekly summary" helpText="Email a digest every Monday">
+          <Checkbox aria-label="Weekly summary" defaultChecked />
+        </SettingRow>
+      </SettingsCard>
+    </div>
+  )
+}
+
+/** Rows as a host writes them. On a phone the switch and checkbox stay on their name's line at
+ *  the row's end; the icon tile and the name's form move to a line of their own from the row's
+ *  start, where the form stretches and its field grows beside Save. */
+export const SettingRowsInAHost: StoryObj = {
+  render: () => <HostSettingsDemo errors={false} />,
+}
+
+/** The same rows, each with an error: under the control on a wide screen, across the row from
+ *  its start on a phone. */
+export const SettingRowsInAHostWithErrors: StoryObj = {
+  render: () => <HostSettingsDemo errors />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('alert')).toHaveLength(3)
+    await expect(
+      canvas.getByRole('textbox', { name: 'Workspace name' }),
+    ).toHaveAccessibleDescription("Couldn't save the workspace name. Try again.")
+  },
+}
+
+// A team's planning settings and a notification channel's events, as a host writes them:
+// short selects in a fixed width, and switches, one with a long error.
+function PlanningSettingsDemo() {
+  const days = [0, 30, 60, 90, 180, 365].map((n) => ({
+    value: String(n),
+    label: n === 0 ? 'Never' : `After ${n} days`,
+  }))
+  return (
+    <div className="max-w-3xl">
+      <SettingsCard title="Planning">
+        <SettingRow label="Auto-close" helpText="Close issues nobody has touched in this long">
+          <div className="w-40">
+            <Select aria-label="Auto-close" items={days} defaultValue="90" />
+          </div>
+        </SettingRow>
+        <SettingRow
+          label="Cycles"
+          helpText="Plan work in fixed stretches of time"
+          error="Something went wrong on our side, so cycles stay off for now. Try again in a few minutes."
+        >
+          <Switch aria-label="Cycles" />
+        </SettingRow>
+        <SettingRow label="Triage" helpText="New issues wait in triage before they reach the team">
+          <Switch aria-label="Triage" defaultChecked />
+        </SettingRow>
+      </SettingsCard>
+    </div>
+  )
+}
+
+/** Short selects and switches, as on a team's planning settings. A switch's error is longer than
+ *  the switch is wide, so it takes the whole row under the setting, from the name's start, and
+ *  never squeezes into the switch's column. */
+export const SettingRowsWithSwitchesAndSelects: StoryObj = {
+  render: () => <PlanningSettingsDemo />,
+}
+
+function SettingsCardErrorDemo() {
+  const [error, setError] = useState<string>()
+  return (
+    <div className="max-w-3xl">
+      <SettingsCard
+        title="Single sign-on"
+        description="Members sign in with your identity provider"
+        action={
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() =>
+              setError(
+                "Couldn't save single sign-on. The identity provider didn't answer. Try again.",
+              )
+            }
+          >
+            Save
+          </Button>
+        }
+        actionAlign="end"
+        error={error}
+      >
+        <SettingRow label="Issuer URL" htmlFor="sso-issuer" fill>
+          <Input id="sso-issuer" defaultValue="https://login.example.edu" />
+        </SettingRow>
+        <SettingRow label="Require single sign-on" helpText="Turn off password sign-in for members">
+          <Switch aria-label="Require single sign-on" defaultChecked />
+        </SettingRow>
+      </SettingsCard>
+    </div>
+  )
+}
+
+/** A card's own `error`, such as its header's Save failing: inside the card, above its rows,
+ *  with the rows' padding and no rule above it, and announced. */
+export const SettingsCardError: StoryObj = {
+  render: () => <SettingsCardErrorDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const save = canvas.getByRole('button', { name: 'Save' })
+    await userEvent.click(save)
+    await expect(canvas.getByRole('alert')).toHaveTextContent("Couldn't save single sign-on")
+    save.blur()
   },
 }
 

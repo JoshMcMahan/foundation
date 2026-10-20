@@ -227,9 +227,27 @@ export const InlineValue: StoryObj = {
 export const InlineValueAtPhoneWidth: StoryObj = {
   render: () => (
     <div style={{ maxWidth: 390 }} className="box-border p-4">
-      <Callout tone="success" title="Token created">
+      <Callout tone="success" title="Token created" onDismiss={() => {}}>
         <p className="mb-2">Copy it now. You won't be able to see it again.</p>
         <CopyCodeBlock inline text="tdm_pat_9c4e1b7a2f6d8e0b3a5c7f9e1d2b4a6c" label="token" />
+      </Callout>
+    </div>
+  ),
+}
+
+/** In a callout that can be dismissed, the value reaches the callout's far edge under the
+ *  dismiss button, so a token that nearly fits isn't cut short. */
+export const InlineValueInADismissibleCallout: StoryObj = {
+  render: () => (
+    <div style={{ maxWidth: 560 }} className="box-border p-4">
+      <Callout tone="success" live title="Token created" onDismiss={() => {}}>
+        <p>Copy it now. You won't be able to see it again.</p>
+        <CopyCodeBlock
+          inline
+          text="tdm_pat_9c4e1b7a2f6d8e0b3a5c7f9e1d2b4a6c8e0f"
+          label="token"
+          className="mt-2"
+        />
       </Callout>
     </div>
   ),

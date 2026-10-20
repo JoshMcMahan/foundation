@@ -63,3 +63,42 @@ describe('a setting row error', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })
+
+describe('a settings card error', () => {
+  it('shows inside the card above its rows, announced, and nothing without one', () => {
+    const { rerender } = render(
+      <SettingsCard title="Single sign-on" error="Couldn't save single sign-on.">
+        <SettingRow label="Issuer URL">x</SettingRow>
+      </SettingsCard>,
+    )
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't save single sign-on.")
+    const panel = alert.parentElement as HTMLElement
+    // Above the rows and outside their rules.
+    expect(panel.firstElementChild).toBe(alert)
+    expect(alert).not.toHaveClass('border-t')
+    expect(screen.getByText('Issuer URL').closest('.divide-y')).not.toContainElement(alert)
+    rerender(
+      <SettingsCard title="Single sign-on">
+        <SettingRow label="Issuer URL">x</SettingRow>
+      </SettingsCard>,
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it("puts a compact row's error under the whole row, and a full-width row's under its control", () => {
+    render(
+      <SettingsCard>
+        <SettingRow label="Cycles" error="Something went wrong on our side.">
+          <span>switch</span>
+        </SettingRow>
+        <SettingRow label="Issuer" fill error="Not a URL.">
+          <span>field</span>
+        </SettingRow>
+      </SettingsCard>,
+    )
+    const [compact, full] = screen.getAllByRole('alert')
+    expect(compact).toHaveClass('basis-full', 'md:col-span-2')
+    expect(full).toHaveClass('basis-full', 'md:col-start-2', 'md:min-w-full')
+  })
+})

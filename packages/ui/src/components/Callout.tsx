@@ -72,6 +72,26 @@ export function Callout({
   const { common } = useStrings()
   const small = size === 'sm'
   const Icon = toneIcons[tone]
+  const controls = (
+    <>
+      {action !== undefined && (
+        // One line tall like the icon, so a button taller than the text centers on
+        // the first line and spills into the padding instead of sitting below it.
+        <div className={cx('flex shrink-0 items-center gap-2', small ? 'h-4' : 'h-5')}>
+          {action}
+        </div>
+      )}
+      {onDismiss && (
+        <IconButton
+          size="xs"
+          icon={<CloseIcon />}
+          label={common.dismiss}
+          onClick={onDismiss}
+          className={cx('shrink-0', small ? '-my-1 -me-1' : '-my-0.5 -me-1')}
+        />
+      )}
+    </>
+  )
   return (
     <div
       data-testid={testId}
@@ -98,27 +118,21 @@ export function Callout({
           {icon ?? <Icon />}
         </span>
       )}
-      <div className="min-w-0 flex-1">
-        {title !== undefined && <p className="m-0 font-medium">{title}</p>}
-        {children !== undefined && (
-          <div className={cx(title !== undefined && 'mt-0.5')}>{children}</div>
-        )}
-      </div>
-      {action !== undefined && (
-        // One line tall like the icon, so a button taller than the text centers on
-        // the first line and spills into the padding instead of sitting below it.
-        <div className={cx('flex shrink-0 items-center gap-2', small ? 'h-4' : 'h-5')}>
-          {action}
+      {title !== undefined ? (
+        // With a title, the action and the dismiss button sit on its line, and the body below
+        // reaches the callout's far edge under them, such as a value to copy.
+        <div className="min-w-0 flex-1">
+          <div className={cx('flex items-start', small ? 'gap-2' : 'gap-3')}>
+            <p className="m-0 min-w-0 flex-1 font-medium">{title}</p>
+            {controls}
+          </div>
+          {children !== undefined && <div className="mt-0.5">{children}</div>}
         </div>
-      )}
-      {onDismiss && (
-        <IconButton
-          size="xs"
-          icon={<CloseIcon />}
-          label={common.dismiss}
-          onClick={onDismiss}
-          className={small ? '-my-1 -me-1' : '-my-0.5 -me-1'}
-        />
+      ) : (
+        <>
+          <div className="min-w-0 flex-1">{children}</div>
+          {controls}
+        </>
       )}
     </div>
   )
