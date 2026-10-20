@@ -1,6 +1,6 @@
 import { Meter as BaseMeter } from '@base-ui/react/meter'
 import { Progress } from '@base-ui/react/progress'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { cx } from '../cx'
 import { Tooltip } from './Tooltip'
 import { toneFill } from './tone'
@@ -65,6 +65,27 @@ function trackClasses(size: BarSize, end: boolean, own: string | undefined) {
   )
 }
 
+// Whether a bar that grows in has drawn empty for a frame yet, so its fill's width transitions from
+// nothing; at once for one that doesn't.
+function useGrown(grow: boolean) {
+  const [grown, setGrown] = useState(!grow)
+  useEffect(() => {
+    if (grown) {
+      return
+    }
+    // Two frames: the first lays out the empty fill, the second starts it growing from there.
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setGrown(true))
+    })
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+    }
+  }, [grown])
+  return grown
+}
+
 /** The tone for `value` against a warning and an error level, for a measure
  *  that's worse the higher it reads; `okTone` below the warning. */
 export function levelTone(
@@ -92,6 +113,7 @@ export function Meter({
   valueText,
   getAriaValueText,
   minFill = 0,
+  animate = false,
   locale,
   label,
   'aria-label': ariaLabel,
@@ -121,7 +143,12 @@ export function Meter({
   /** The narrowest the fill draws for a value above `min`, as a percent of the
    *  track, so a small reading still shows. */
   minFill?: number | undefined
+  /** Grows the fill in from empty when the bar first shows, and eases it to each new value, for a
+   *  reading that arrives with the page, such as a dashboard's. Still for anyone who asks for
+   *  less motion. */
+  animate?: boolean | undefined
 }) {
+  const grown = useGrown(animate)
   const clamped = Math.min(Math.max(value, min), max)
   const fill = fillClassName[tone ?? levelTone(clamped, warnAt, errorAt, okTone)]
   const end = showValue === 'end'
@@ -135,11 +162,21 @@ export function Meter({
   const track = (
     <BaseMeter.Track className={trackClasses(size, end, trackClassName)}>
       <BaseMeter.Indicator
+        data-growing={grown ? undefined : ''}
         className={cx(
-          'h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none',
+          'h-full rounded-full motion-reduce:transition-none',
+          animate
+            ? 'transition-[width,min-width] delay-150 duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]'
+            : 'transition-[width] duration-300',
           fill,
         )}
-        style={minFill > 0 && clamped > min ? { minWidth: `${minFill}%` } : undefined}
+        style={
+          !grown
+            ? { width: 0 }
+            : minFill > 0 && clamped > min
+              ? { minWidth: `${minFill}%` }
+              : undefined
+        }
       />
     </BaseMeter.Track>
   )

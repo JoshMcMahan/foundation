@@ -3,10 +3,12 @@ import {
   enclosing,
   FIT_MAX_SCALE,
   fitView,
+  intoReach,
   intoView,
   MAX_SCALE,
   MIN_SCALE,
   type Rect,
+  reachKept,
   viewShowing,
   wheelFactor,
   zoomAround,
@@ -202,5 +204,30 @@ describe('viewShowing', () => {
         { left: 0, top: 50, width: 5, height: 30 },
       ]),
     ).toEqual({ left: 0, top: 40, width: 30, height: 40 })
+  })
+})
+
+describe('intoReach', () => {
+  const panel = { left: 0, top: 0, width: 390, height: 600 }
+  const graph = (left: number, top: number) => ({ left, top, width: 300, height: 2000 })
+
+  it('leaves a graph alone while enough of it shows', () => {
+    expect(intoReach(graph(-100, -1500), panel, 130)).toEqual({ dx: 0, dy: 0 })
+  })
+
+  it('brings back a graph flung off any side, to show as much as it keeps', () => {
+    // Off the left and the top: its right and bottom edges come back 130 in.
+    expect(intoReach(graph(-1000, -5000), panel, 130)).toEqual({ dx: 830, dy: 3130 })
+    // Off the right and the bottom: its left and top edges come back 130 from the far sides.
+    expect(intoReach(graph(900, 700), panel, 130)).toEqual({ dx: -640, dy: -230 })
+  })
+
+  it('keeps all of a graph smaller than it would keep', () => {
+    const small = { left: 500, top: 0, width: 40, height: 40 }
+    expect(intoReach(small, panel, 130)).toEqual({ dx: -150, dy: 0 })
+  })
+
+  it('keeps half the panel’s shorter side', () => {
+    expect(reachKept(panel)).toBe(195)
   })
 })

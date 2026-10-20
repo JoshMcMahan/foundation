@@ -109,6 +109,31 @@ export function intoView(start: number, end: number, low: number, high: number) 
   return end > high ? high - end : 0
 }
 
+/** How much of a graph a pan or pinch leaves in its panel, at the least: half the panel's shorter
+ *  side, or all of a graph smaller than that. */
+export function reachKept(panel: { width: number; height: number }): number {
+  return Math.min(panel.width, panel.height) / 2
+}
+
+/** The least shift that brings at least `keep` of `graph` back inside `panel` on each axis, so a
+ *  pan or a fling never leaves the graph out of reach; none while that much already shows. */
+export function intoReach(graph: Rect, panel: Rect, keep: number): { dx: number; dy: number } {
+  const axis = (start: number, size: number, low: number, span: number) => {
+    if (size <= 0) {
+      return 0
+    }
+    const least = Math.min(keep, size, span)
+    if (start + size < low + least) {
+      return low + least - (start + size)
+    }
+    return start > low + span - least ? low + span - least - start : 0
+  }
+  return {
+    dx: axis(graph.left, graph.width, panel.left, panel.width),
+    dy: axis(graph.top, graph.height, panel.top, panel.height),
+  }
+}
+
 /** A box on screen, as `getBoundingClientRect` gives it. */
 export interface Rect {
   left: number

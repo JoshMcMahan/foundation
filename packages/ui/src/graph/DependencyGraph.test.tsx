@@ -28,6 +28,7 @@ vi.mock('../components/Provider', async (importOriginal) =>
 // The view bar zooms through the library's handle and learns the scale from its onTransform.
 const panZoom = vi.hoisted(() => ({
   onTransform: undefined as ((ref: unknown, state: { scale: number }) => void) | undefined,
+  props: {} as { velocityAnimation?: unknown; onPanningStop?: unknown; onPinchStop?: unknown },
   setTransform: vi.fn(),
   state: { positionX: 0, positionY: 0, scale: 0.6 },
 }))
@@ -38,6 +39,7 @@ vi.mock('react-zoom-pan-pinch', async () => {
       {
         children,
         onTransform,
+        ...props
       }: {
         children: ReactNode | (() => ReactNode)
         onTransform?: (ref: unknown, state: { scale: number }) => void
@@ -45,6 +47,7 @@ vi.mock('react-zoom-pan-pinch', async () => {
       ref: Ref<unknown>,
     ) {
       panZoom.onTransform = onTransform
+      panZoom.props = props
       const wrapper = useRef<HTMLDivElement>(null)
       useImperativeHandle(ref, () => ({
         instance: {
@@ -1544,5 +1547,14 @@ describe('DependencyGraph on a phone', () => {
     render(<DependencyGraph run={run} />)
     expect(ranksOf()).not.toHaveClass('flex-col')
     expect(document.getElementById('node_build')).toHaveClass('m-24')
+  })
+})
+
+describe('DependencyGraph pan', () => {
+  it('flings no further than a touch moves it, and checks the graph is in reach after a pan or pinch', () => {
+    render(<DependencyGraph run={run} />)
+    expect(panZoom.props.velocityAnimation).toEqual({ sensitivityTouch: 0 })
+    expect(panZoom.props.onPanningStop).toBeTypeOf('function')
+    expect(panZoom.props.onPinchStop).toBe(panZoom.props.onPanningStop)
   })
 })

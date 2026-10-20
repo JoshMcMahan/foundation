@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { hoverTooltip } from '../test/tooltip'
 import { levelTone, Meter, ProgressBar } from './Meter'
 import { TooltipProvider } from './Tooltip'
@@ -107,6 +107,28 @@ describe('levelTone', () => {
     expect(levelTone(10, 80, 90, 'accent')).toBe('accent')
     expect(levelTone(80, 80, 90)).toBe('warning')
     expect(levelTone(90, 80, 90)).toBe('error')
+  })
+})
+
+describe('Meter animate', () => {
+  it('grows its fill in from empty, then eases to each new value', async () => {
+    const { rerender } = render(<Meter value={45} aria-label="Storage" animate />)
+    const indicator = screen.getByRole('meter').querySelector('[data-growing]') as HTMLElement
+    expect(indicator.style.width).toBe('0px')
+    expect(indicator).toHaveClass('duration-500', 'motion-reduce:transition-none')
+    await waitFor(() => expect(indicator.style.width).toBe('45%'))
+    expect(indicator).not.toHaveAttribute('data-growing')
+    rerender(<Meter value={70} aria-label="Storage" animate />)
+    expect(indicator.style.width).toBe('70%')
+  })
+
+  it('keeps its least fill once grown, and draws at once without animate', async () => {
+    render(<Meter value={1} aria-label="Quota" animate minFill={4} />)
+    const indicator = screen.getByRole('meter').querySelector('[data-growing]') as HTMLElement
+    expect(indicator.style.minWidth).toBe('')
+    await waitFor(() => expect(indicator.style.minWidth).toBe('4%'))
+    render(<Meter value={30} aria-label="Cores" />)
+    expect(fill(screen.getByRole('meter', { name: 'Cores' })).style.width).toBe('30%')
   })
 })
 

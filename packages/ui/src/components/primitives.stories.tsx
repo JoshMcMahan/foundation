@@ -2421,6 +2421,57 @@ const PROGRESS: { label: string; value: number | null; tone: BarTone; status?: s
   { label: 'Preparing', value: null, tone: 'accent' },
 ]
 
+const ADOPTION = [
+  { name: 'Workflow editor', users: 42, of: 120 },
+  { name: 'Session sharing', users: 87, of: 120 },
+  { name: 'Usage reports', users: 3, of: 120 },
+]
+
+/** With `animate`, a meter's fill grows in from empty when it first shows and eases to each new
+ *  value, after a short delay; it stays still for anyone who asks for less motion. A console's
+ *  adoption of preview features: "Show again" mounts the bars afresh, and "More users" eases each
+ *  to a new value. */
+export const MeterGrowIn: StoryObj = {
+  render: function MeterGrowIn() {
+    const [round, setRound] = useState(0)
+    const [extra, setExtra] = useState(0)
+    return (
+      <div className="flex w-80 flex-col gap-5 p-8">
+        <div key={round} className="flex flex-col gap-4">
+          {ADOPTION.map(({ name, users, of }) => (
+            <Meter
+              key={name}
+              animate
+              tone="accent"
+              minFill={2}
+              value={Math.min(users + extra, of)}
+              max={of}
+              label={name}
+              detail={`${Math.min(users + extra, of)} of ${of} users`}
+            />
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setRound((r) => r + 1)}>
+            Show again
+          </Button>
+          <Button variant="secondary" onClick={() => setExtra((n) => n + 18)}>
+            More users
+          </Button>
+        </div>
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const meter = canvas.getByRole('meter', { name: 'Workflow editor' })
+    const fill = () => meter.querySelector<HTMLElement>('[style*="width"]')
+    await waitFor(() => expect(fill()?.style.width).toBe('35%'))
+    await userEvent.click(canvas.getByRole('button', { name: 'More users' }))
+    await expect(fill()?.style.width).toBe('50%')
+  },
+}
+
 /** Tasks under way, settled ones with a status in place of the percentage. */
 export const ProgressBars: StoryObj<{ size: 'sm' | 'md' | 'lg' }> = {
   args: { size: 'md' },

@@ -100,10 +100,12 @@ import {
   FIT_MAX_SCALE,
   fitMargin,
   fitView,
+  intoReach,
   intoView,
   MAX_SCALE,
   MIN_SCALE,
   type Rect,
+  reachKept,
   type View,
   viewShowing,
   wheelFactor,
@@ -1851,6 +1853,31 @@ export default function DependencyGraph({
   const moved = useCallback(() => {
     viewed.current = true
   }, [])
+  // A pan or pinch that leaves too little of the graph in the panel eases it back into reach.
+  const keepInReach = useCallback(() => {
+    const container = containerRef.current
+    const content = graphContentRef.current
+    const transform = transformRef.current
+    const bounds = content ? graphBounds(content) : null
+    if (!container || !transform || !bounds) {
+      return
+    }
+    const { positionX, positionY, scale } = transform.instance.state
+    const panel = { left: 0, top: 0, width: container.clientWidth, height: container.clientHeight }
+    const { dx, dy } = intoReach(
+      {
+        left: positionX + bounds.minX * scale,
+        top: positionY + bounds.minY * scale,
+        width: (bounds.maxX - bounds.minX) * scale,
+        height: (bounds.maxY - bounds.minY) * scale,
+      },
+      panel,
+      reachKept(panel),
+    )
+    if (dx !== 0 || dy !== 0) {
+      transform.setTransform(positionX + dx, positionY + dy, scale, FIT_ANIMATION_MS, 'easeOut')
+    }
+  }, [])
   const zoomTo = useCallback((view: View, animationMs: number) => {
     viewed.current = true
     transformRef.current?.setTransform(view.x, view.y, view.scale, animationMs, 'easeOut')
@@ -2325,8 +2352,13 @@ export default function DependencyGraph({
               onInit={() => {
                 setTimeout(invalidateConnectors, 0)
               }}
+              // A swipe moves the graph as far as the finger does, with no fling after it to carry
+              // it off; a mouse's drag keeps its glide.
+              velocityAnimation={{ sensitivityTouch: 0 }}
               onPanning={moved}
+              onPanningStop={keepInReach}
               onPinch={moved}
+              onPinchStop={keepInReach}
               onTransform={onTransform}
             >
               {() => (
