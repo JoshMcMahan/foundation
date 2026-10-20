@@ -94,10 +94,13 @@ export function useRelativeTime(value: TimeValue, format: RelativeTimeFormat = '
     const unit = unitOf(age)
     const key = `${format}:${at}:${unit}:${Math.trunc(age / unit)}`
     if (last.current?.key !== key) {
+      // The shared clock ticks once a second, so a time just recorded can sit a moment ahead of it.
       const label =
         format === 'compact'
           ? compactLabel(age, t)
-          : (DateTime.fromMillis(at).toRelative({ base: DateTime.fromMillis(current) }) ?? '')
+          : Math.abs(age) < SECOND
+            ? t.now
+            : (DateTime.fromMillis(at).toRelative({ base: DateTime.fromMillis(current) }) ?? '')
       last.current = { key, label }
     }
     return last.current.label

@@ -47,6 +47,13 @@ describe('useRelativeTime', () => {
     expect(screen.getByText('5m')).toBeInTheDocument()
   })
 
+  it('reads a time just recorded, even a moment ahead of the clock, as now', () => {
+    render(<Label value={START.getTime() + 400} />)
+    expect(screen.getByText('now')).toBeInTheDocument()
+    advance(2000)
+    expect(screen.getByText('1 second ago')).toBeInTheDocument()
+  })
+
   it('takes an ISO string, a Date or a DateTime', () => {
     const at = ago(2 * 3600)
     render(
