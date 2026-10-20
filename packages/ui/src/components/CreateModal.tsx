@@ -1,6 +1,6 @@
 import { Toggle } from '@base-ui/react/toggle'
 import type { ReactNode } from 'react'
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { ChevronDownIcon, FavoriteIcon, FavoriteOutlineIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
@@ -153,13 +153,27 @@ export function CreateModal({
     !submitting &&
     (interacted || name !== (initialName ?? '') || description !== '' || favorite || dirty)
 
-  // Red-ring the required name once the user has moved past it: blurred it
-  // empty, entered other content, or tried to submit without it.
-  const nameMissing =
-    !hideName &&
-    !nameOptional &&
-    (!name.trim() || !!nameError) &&
-    (nameTouched || description !== '' || favorite || dirty)
+  // Red-ring the required name once the user has tried to submit without it, or has left the
+  // dialog with it empty. Moving to the dialog's own controls, such as its type menu or a
+  // field below, is still filling it in.
+  const nameMissing = !hideName && !nameOptional && (!name.trim() || !!nameError) && nameTouched
+
+  // Whether focus has landed back in the dialog since the name lost it. React carries focus
+  // events up through portals, so a menu the dialog opens counts as inside it.
+  const focusInside = useRef(false)
+  const leaveCheck = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(leaveCheck.current), [])
+  const checkLeft = () => {
+    focusInside.current = false
+    clearTimeout(leaveCheck.current)
+    // The next element's focus follows the blur in the same task.
+    leaveCheck.current = setTimeout(() => {
+      // Switching to another window isn't leaving the dialog.
+      if (!focusInside.current && document.hasFocus() && !nameRef.current?.value.trim()) {
+        setNameTouched(true)
+      }
+    })
+  }
 
   const flashName = () => {
     setNameTouched(true)
@@ -203,6 +217,9 @@ export function CreateModal({
       dismissible={!isDirty}
       // The name, ahead of the type chip; a form without one starts at its first control.
       initialFocus={() => nameRef.current ?? true}
+      onFocus={() => {
+        focusInside.current = true
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           handleSubmit(true)
@@ -333,7 +350,7 @@ export function CreateModal({
                 }}
                 onBlur={(e) => {
                   if (!e.target.value.trim()) {
-                    setNameTouched(true)
+                    checkLeft()
                   }
                 }}
                 onKeyDown={(e) => {

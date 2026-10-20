@@ -131,6 +131,18 @@ export const WithTitle: Story = {
   ),
 }
 
+/** A host's `title` reads as the header's title, in the ink color and medium weight; the
+ *  language alone, without one, stays a muted caption. */
+export const TitleOrLanguage: Story = {
+  args: { code: WORKFLOW.split('\n').slice(0, 8).join('\n'), language: 'yaml' },
+  render: (args) => (
+    <div className="flex max-w-2xl flex-col gap-4 p-6">
+      <CodeBlock {...args} title="Resolved Workflow YAML" />
+      <CodeBlock {...args} />
+    </div>
+  ),
+}
+
 /** With a `filename`, a download button saves the code under it. */
 export const WithDownload: Story = {
   args: {

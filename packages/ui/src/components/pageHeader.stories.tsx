@@ -582,6 +582,29 @@ export const Standalone: Story = {
   },
 }
 
+/** In place, the header has no fill of its own: on a panel it shows the panel, and on the
+ *  app's background it shows that, so it never reads as a strip of another color. */
+export const StandaloneOnSurfaces: Story = {
+  render: () => (
+    <div className="flex flex-col gap-4 bg-(--theme-app-bg) p-4">
+      <div className="overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-panel-bg)">
+        <PageHeader
+          breadcrumbs={BUCKET_TRAIL}
+          actions={<PageHeaderAddButton label="Add object" href="/upload" />}
+        />
+        <p className="m-0 p-4 text-sm text-(--theme-muted-text-color)">On a panel.</p>
+      </div>
+      <div className="rounded-md border border-(--theme-border)">
+        <PageHeader
+          breadcrumbs={BUCKET_TRAIL}
+          actions={<PageHeaderAddButton label="Add object" href="/upload" />}
+        />
+        <p className="m-0 p-4 text-sm text-(--theme-muted-text-color)">On the app's background.</p>
+      </div>
+    </div>
+  ),
+}
+
 interface ActionLinkArgs {
   href: string
   reloadDocument: boolean

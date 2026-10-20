@@ -5,6 +5,7 @@ import {
   type ReactElement,
   type ReactNode,
   use,
+  useEffect,
   useId,
   useState,
 } from 'react'
@@ -100,6 +101,39 @@ export interface TooltipProps
   describesAnchor?: boolean | undefined
 }
 
+/** True from when the anchor's own popup, such as its menu, closes until the pointer leaves the
+ *  anchor or focus does. Closing the popup hands focus back to the anchor, and a tip opening
+ *  then would take the next Escape, meant for the dialog around it, and repeat a label the
+ *  reader has just seen. */
+function useRestAfterPopup(anchor: HTMLElement | null) {
+  const [resting, setResting] = useState(false)
+  useEffect(() => {
+    if (!anchor || typeof MutationObserver === 'undefined') {
+      return
+    }
+    let expanded = anchor.getAttribute('aria-expanded') === 'true'
+    const observer = new MutationObserver(() => {
+      const now = anchor.getAttribute('aria-expanded') === 'true'
+      if (expanded && !now) {
+        setResting(true)
+      } else if (now) {
+        setResting(false)
+      }
+      expanded = now
+    })
+    observer.observe(anchor, { attributes: true, attributeFilter: ['aria-expanded'] })
+    const wake = () => setResting(false)
+    anchor.addEventListener('blur', wake)
+    anchor.addEventListener('pointerleave', wake)
+    return () => {
+      observer.disconnect()
+      anchor.removeEventListener('blur', wake)
+      anchor.removeEventListener('pointerleave', wake)
+    }
+  }, [anchor])
+  return resting
+}
+
 /** A visual hint for sighted pointer and keyboard users. The anchor still needs
  *  its own accessible name; `describesAnchor` also gives assistive technology the
  *  hint. Use InfoTip for content everyone must reach, such as on a touch screen. */
@@ -115,6 +149,8 @@ export function Tooltip({
 }: TooltipProps) {
   const handle = use(TooltipHandleContext)
   const descriptionId = useId()
+  const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null)
+  const resting = useRestAfterPopup(anchorElement)
   const payload = { content, shortcut, side }
   const described = describesAnchor && !disabled && !!content
   const anchor = children as ReactElement<{ 'aria-describedby'?: string | undefined }>
@@ -129,7 +165,8 @@ export function Tooltip({
       {...(!handle && anchorProps.delay === undefined && { delay: OPEN_DELAY })}
       handle={handle ?? undefined}
       payload={payload}
-      disabled={disabled || !content}
+      ref={setAnchorElement}
+      disabled={disabled || !content || resting}
       data-overflow-only={overflowOnly || undefined}
       // The anchor's own props win over the trigger's, so its description joins there.
       render={described ? cloneElement(anchor, { 'aria-describedby': describedBy }) : children}

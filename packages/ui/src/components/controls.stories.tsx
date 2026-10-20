@@ -708,6 +708,88 @@ export const PaginationLinks: StoryObj = {
   },
 }
 
+function SettingErrorDemo() {
+  const [name, setName] = useState('Research computing')
+  const [domain, setDomain] = useState('research.example.edu')
+  const [nameError, setNameError] = useState<string>()
+  const [domainError, setDomainError] = useState<string>()
+  return (
+    <div className="max-w-3xl">
+      <SettingsCard title="Workspace">
+        <SettingRow
+          label="Name"
+          htmlFor="setting-name"
+          helpText="Shown to members and in invitations"
+          error={nameError}
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              id="setting-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-56"
+            />
+            <Button
+              size="sm"
+              onClick={() =>
+                setNameError("Couldn't save the name. Check your connection and try again.")
+              }
+            >
+              Save
+            </Button>
+          </div>
+        </SettingRow>
+        <SettingRow
+          label="Sign-in domain"
+          htmlFor="setting-domain"
+          helpText="People with this email domain can join"
+          fill
+          error={domainError}
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              id="setting-domain"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              className="min-w-0 flex-1"
+            />
+            <Button
+              size="sm"
+              onClick={() => setDomainError('Another workspace already uses this domain.')}
+            >
+              Save
+            </Button>
+          </div>
+        </SettingRow>
+        <SettingRow label="Allow guests" helpText="Guests see only what is shared with them">
+          <Switch aria-label="Allow guests" defaultChecked />
+        </SettingRow>
+      </SettingsCard>
+    </div>
+  )
+}
+
+/** A row's `error`, such as a failed Save: under the control and from its start on a wide
+ *  screen, across the row on a phone, with the row's own spacing and no rule above it. It
+ *  describes the control and is announced. */
+export const SettingRowError: StoryObj = {
+  render: () => <SettingErrorDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    for (const button of canvas.getAllByRole('button', { name: 'Save' })) {
+      await userEvent.click(button)
+    }
+    await expect(canvas.getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription(
+      /Couldn't save the name/,
+    )
+    await expect(canvas.getAllByRole('alert')).toHaveLength(2)
+    // At rest, as a reader sees it once they look away from the button.
+    for (const button of canvas.getAllByRole('button', { name: 'Save' })) {
+      button.blur()
+    }
+  },
+}
+
 function SettingsDemo({ headingLevel = 2 }: { headingLevel?: 2 | 3 }) {
   const [enabled, setEnabled] = useState(true)
   const [mode, setMode] = useState('auto')

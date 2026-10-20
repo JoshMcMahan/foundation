@@ -204,7 +204,15 @@ export function CodeBlock({
       )}
     >
       <div className="flex h-9 shrink-0 items-center gap-2 pr-1.5 pl-4">
-        <div className="min-w-0 flex-1 truncate text-xs text-(--theme-muted-text-color)">
+        <div
+          className={cx(
+            'min-w-0 flex-1 truncate',
+            // A host's title names the block, as a header does; the language alone is a caption.
+            title === undefined
+              ? 'text-xs text-(--theme-muted-text-color)'
+              : 'text-[13px] font-medium text-(--theme-app)',
+          )}
+        >
           {heading}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">

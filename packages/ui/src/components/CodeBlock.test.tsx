@@ -39,6 +39,19 @@ describe('CodeBlock', () => {
     expect(screen.queryByText('yaml')).toBeNull()
   })
 
+  it('sets a title as the header title, and the language alone as a muted caption', () => {
+    const { rerender } = render(<CodeBlock code={YAML} language="yaml" title="Resolved YAML" />)
+    expect(screen.getByText('Resolved YAML')).toHaveClass(
+      'text-[13px]',
+      'font-medium',
+      'text-(--theme-app)',
+    )
+    rerender(<CodeBlock code={YAML} language="yaml" />)
+    const caption = screen.getByText('yaml')
+    expect(caption).toHaveClass('text-xs', 'text-(--theme-muted-text-color)')
+    expect(caption).not.toHaveClass('font-medium')
+  })
+
   it('highlights in the theme code colors once the highlighter loads', async () => {
     const { container } = render(<CodeBlock code={YAML} language="yaml" />)
     await waitFor(() =>

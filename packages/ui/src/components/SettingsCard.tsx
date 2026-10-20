@@ -1,5 +1,6 @@
-import { createContext, type ReactNode, useContext } from 'react'
+import { createContext, type ReactNode, useContext, useId, useLayoutEffect } from 'react'
 import { cx } from '../cx'
+import { ErrorText } from './Field'
 
 const HeadingLevel = createContext<3 | 4>(3)
 
@@ -22,7 +23,9 @@ export interface SettingsCardProps {
 }
 
 /** A page's settings, grouped: a titled panel of SettingRows, each ruled off from
- *  the next. Cards stack with room between them. */
+ *  the next. Cards stack with room between them. An error about one setting, such as its
+ *  Save failing, is its row's `error`; one about the whole card goes outside it, such as
+ *  an ErrorText under the card, since every child of the card is ruled off as a row. */
 export function SettingsCard({
   title,
   description,
@@ -88,6 +91,7 @@ export function SettingRow({
   helpText,
   fill = false,
   onClick,
+  error,
   children,
 }: {
   label: string
@@ -99,8 +103,53 @@ export function SettingRow({
   /** Makes the whole row press its control, such as a switch. The control still
    *  handles its own press; stop it propagating there so it doesn't toggle twice. */
   onClick?: (() => void) | undefined
+  /** An error about this setting, such as its Save failing: under the control, at its start,
+   *  announced, and describing the control that `htmlFor` names. */
+  error?: ReactNode
   children: ReactNode
 }) {
+  const errorId = useId()
+  const hasError = error !== undefined && error !== null && error !== false && error !== ''
+  // The control is the host's, so the row names its error on it by id.
+  useLayoutEffect(() => {
+    const control = hasError && htmlFor ? document.getElementById(htmlFor) : null
+    if (!control) {
+      return
+    }
+    const ids = (control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
+    if (!ids.includes(errorId)) {
+      control.setAttribute('aria-describedby', [...ids, errorId].join(' '))
+    }
+    return () => {
+      const rest = (control.getAttribute('aria-describedby') ?? '')
+        .split(/\s+/)
+        .filter((id) => id && id !== errorId)
+      if (rest.length > 0) {
+        control.setAttribute('aria-describedby', rest.join(' '))
+      } else {
+        control.removeAttribute('aria-describedby')
+      }
+    }
+  }, [hasError, htmlFor, errorId])
+  const control = (
+    <div
+      className={cx(
+        'min-w-0',
+        !fill && [
+          'flex items-center justify-end',
+          // Stacked on a phone, a compact row that holds a text field fills the row from its
+          // start, as a full-width row does: the field grows and a button beside it keeps its
+          // size. A small control, such as a switch, stays at the end.
+          'max-md:has-[input:not([type=checkbox],[type=radio],[type=hidden],[type=range]),textarea,[role=combobox]]:justify-start',
+          'max-md:has-[input:not([type=checkbox],[type=radio],[type=hidden],[type=range]),textarea,[role=combobox]]:*:grow',
+          'max-md:[&_:is(input:not([type=checkbox],[type=radio],[type=hidden],[type=range]),textarea,[role=combobox])]:min-w-0',
+          'max-md:[&_:is(input:not([type=checkbox],[type=radio],[type=hidden],[type=range]),textarea,[role=combobox])]:flex-1',
+        ],
+      )}
+    >
+      {children}
+    </div>
+  )
   return (
     <div
       role="none"
@@ -117,7 +166,23 @@ export function SettingRow({
         </label>
         {helpText && <div className="text-xs leading-snug theme-muted-text">{helpText}</div>}
       </div>
-      <div className={cx('min-w-0', !fill && 'flex items-center justify-end')}>{children}</div>
+      {hasError ? (
+        // The error shares the control's cell, so it sits right under the control however
+        // tall the name beside it runs.
+        <div className="flex min-w-0 flex-col gap-y-2">
+          {control}
+          <ErrorText
+            id={errorId}
+            size="md"
+            // From the control's start, as wide as it without widening the column.
+            className="md:w-0 md:min-w-full"
+          >
+            {error}
+          </ErrorText>
+        </div>
+      ) : (
+        control
+      )}
     </div>
   )
 }

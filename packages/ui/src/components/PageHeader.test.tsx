@@ -326,6 +326,21 @@ describe('PageHeader without a provider', () => {
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
+
+  it('shows the surface it sits on, where the shell bar paints its own', () => {
+    const outer = (el: HTMLElement) => el.closest('.\\@container') as HTMLElement
+    const { unmount } = render(<PageHeader breadcrumbs={trail} />)
+    const inPlace = outer(screen.getByRole('navigation', { name: 'Breadcrumb' }))
+    expect(inPlace.className).not.toMatch(/\bbg-/)
+    unmount()
+    render(
+      <Shell>
+        <PageHeader breadcrumbs={trail} />
+      </Shell>,
+    )
+    const shellBar = outer(bar().getByRole('navigation', { name: 'Breadcrumb' }))
+    expect(shellBar).toHaveClass('bg-(--theme-app-bg)')
+  })
 })
 
 describe('PageHeaderStore', () => {

@@ -75,7 +75,9 @@ function createRegionNodes(): RegionNodes | null {
  * toolbar. Under a `PageHeaderProvider` it renders nothing in place: the
  * shell's `PageHeaderBar` shows it, while the actions stay in the page's React
  * tree, with its context and state. Without a provider it renders the bar
- * itself, for a page with no shell.
+ * itself, for a page with no shell, with no fill of its own, so it shows the
+ * surface it sits on. A host that pins it gives its pinned wrapper the page's
+ * surface, so content scrolling under it is covered.
  *
  * Any component may render one, such as a form adding its Save button: the bar
  * shows the actions of all of them, outermost first, and the trail of the last
@@ -86,6 +88,7 @@ export function PageHeader(props: PageHeaderProps) {
   if (!store) {
     return props.hidden ? null : (
       <HeaderLayout
+        inPlace
         breadcrumbs={props.breadcrumbs ?? []}
         heading={props.heading ?? true}
         titleActions={props.titleActions}
@@ -234,6 +237,7 @@ function HeaderLayout({
   toolbar,
   fit: sharedFit,
   compact = false,
+  inPlace = false,
   className,
 }: {
   breadcrumbs: readonly Breadcrumb[]
@@ -244,6 +248,9 @@ function HeaderLayout({
   /** The store's, when the actions are declared elsewhere; without one the bar keeps its own. */
   fit?: HeaderActionsFit | undefined
   compact?: boolean
+  /** Rendered in the page rather than the shell's chrome: it shows the surface it sits on, a
+   *  panel or the app's background alike, rather than painting the app's over a panel. */
+  inPlace?: boolean
   className?: string | undefined
 }) {
   const { breadcrumbPin, navToggle } = useSlots()
@@ -258,7 +265,14 @@ function HeaderLayout({
   const moved = fit.menu()
   const hasTrail = breadcrumbs.length > 0
   return (
-    <div className={cx('@container w-full shrink-0 bg-(--theme-app-bg)', className)}>
+    <div
+      className={cx(
+        '@container w-full shrink-0',
+        // The shell's bar is chrome, on the app's background; content scrolls under it.
+        !inPlace && 'bg-(--theme-app-bg)',
+        className,
+      )}
+    >
       <div
         ref={setRow}
         className={cx(

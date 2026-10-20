@@ -195,3 +195,34 @@ describe('formatInfoTipContent', () => {
     expect(container.querySelector('img')).toBeNull()
   })
 })
+
+describe('a tooltip on a popup trigger', () => {
+  // A trigger whose popup the test opens and closes, as a menu's does.
+  function Trigger({ expanded }: { expanded: boolean }) {
+    return (
+      <Tooltip content="Team">
+        <button type="button" aria-haspopup="menu" aria-expanded={expanded}>
+          Web
+        </button>
+      </Tooltip>
+    )
+  }
+
+  it('stays shut when its popup closes and hands focus back, until focus or the pointer leaves', async () => {
+    const { rerender } = withProvider(<Trigger expanded />)
+    const button = screen.getByRole('button', { name: 'Web' })
+    rerender(
+      <TooltipProvider>
+        <Trigger expanded={false} />
+      </TooltipProvider>,
+    )
+    // The observer reports the change a microtask on.
+    await act(async () => {})
+    focus(button)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(openTooltip()).toBeNull()
+    act(() => button.blur())
+    focus(button)
+    await waitFor(() => expect(openTooltip()).toHaveTextContent('Team'))
+  })
+})
