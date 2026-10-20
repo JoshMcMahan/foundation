@@ -555,6 +555,86 @@ describe('streamed parts', () => {
     ])
   })
 
+  it('resumes a reply paused on an approval: the result lands on the paused call, the answer follows it', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'stop_cluster', args: '{}' })
+        handlers.onPart?.({ type: 'tool_wait', id: 't1' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      handlers.onPart?.({ type: 'tool_end', id: 't1', result: 'stopping' })
+      return { ...emptyStreamResult(), messageId: 'resumed', content: 'It is stopping.' }
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: true })
+    })
+
+    const resumed = streamCompletion.mock.calls[1]![0]
+    expect(resumed.resume).toEqual({ messageId: 'paused', toolCallId: 't1', allowed: true })
+    expect(resumed.parentMessageId).toBe('paused')
+    expect(resumed.messages).toEqual([{ role: 'user', content: 'stop gpu-a' }])
+
+    const messages = chat.currentConversation?.messages ?? []
+    const paused = messages.find((m) => m.id === 'paused')
+    expect(paused?.parts).toEqual([
+      {
+        kind: 'tool_call',
+        id: 't1',
+        name: 'stop_cluster',
+        args: '{}',
+        status: 'ok',
+        result: 'stopping',
+        decision: { status: 'approved', by: 'user', name: 'Tester', at: expect.any(String) },
+      },
+      {
+        kind: 'approval',
+        id: 't1',
+        approvalKind: 'confirm',
+        subject: 'call',
+        resolved: true,
+        answer: 'Allowed',
+      },
+    ])
+    const answer = messages.find((m) => m.id === 'resumed')
+    expect(answer).toMatchObject({ parentId: 'paused', content: 'It is stopping.' })
+    expect(answer?.parts).toBeUndefined()
+  })
+
+  it('sends why the reader declined a held call', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: false, denyMessage: 'Wait' })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: false,
+      feedback: 'Wait',
+    })
+  })
+
   it('closes out a tool call the stream never resolved', async () => {
     const adapter = makeAdapter({
       streamCompletion: vi.fn(async (_req, handlers) => {

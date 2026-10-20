@@ -239,6 +239,45 @@ describe('approval parts', () => {
     expect(screen.getByText('Answered: Allowed')).toBeInTheDocument()
     expect(screen.queryByText('Yes, allow this command')).not.toBeInTheDocument()
   })
+  it('leaves an answered call to its decision line', () => {
+    renderParts([
+      {
+        kind: 'tool_call',
+        id: 'c1',
+        name: 'stop_cluster',
+        args: '{}',
+        status: 'ok',
+        decision: { status: 'approved', by: 'user', name: 'Bob' },
+      },
+      { kind: 'approval', id: 'c1', approvalKind: 'confirm', resolved: true, answer: 'Allowed' },
+    ])
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Allowed by Bob')
+    expect(screen.queryByText('Answered: Allowed')).not.toBeInTheDocument()
+  })
+
+  it('offers no answers once a confirm has expired', () => {
+    renderParts(
+      [
+        {
+          kind: 'approval',
+          id: 'a5',
+          approvalKind: 'confirm',
+          subject: 'call',
+          expiresAt: '2020-01-01T00:00:00Z',
+        },
+      ],
+      { onApprovalAnswer: vi.fn() },
+    )
+    expect(screen.getByText('This request expired. Ask again to run it.')).toBeInTheDocument()
+    expect(screen.queryByText('Yes, allow this call')).not.toBeInTheDocument()
+  })
+
+  it('names who has to answer a confirm the reader cannot', () => {
+    renderParts([
+      { kind: 'approval', id: 'a6', approvalKind: 'confirm', subject: 'call', waitingOn: 'Bob' },
+    ])
+    expect(screen.getByText('Waiting for Bob to answer')).toBeInTheDocument()
+  })
 })
 function tc(id: string, name: string, status: 'ok' | 'running' | 'error' = 'ok'): MessagePart {
   return {

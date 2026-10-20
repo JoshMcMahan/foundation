@@ -13,8 +13,9 @@ import {
 import { usePersistedState } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import type { CompletionMessage } from '../adapter/openai/wire'
-import type { ChatAdapter, ChatToolOption, PartDelta } from '../adapter/types'
+import type { ChatAdapter, ChatToolOption, PartDelta, StreamRequest } from '../adapter/types'
 import type {
+  ApprovalAnswerValue,
   AttachmentMeta,
   AttachmentRef,
   ChatModel,
@@ -115,6 +116,40 @@ function heldSendArgs(held: Array<QueuedSend & { id: string }>): Parameters<Send
   ]
 }
 
+type StreamOutcome = 'sent' | 'aborted' | 'failed'
+
+/** The wire history for the messages shown, oldest first. */
+function historyMessages(
+  messages: Message[],
+  selectedProvider: string | null,
+): CompletionMessage[] {
+  return messages
+    .filter((m) => m.content || m.toolCalls?.length || m.parts?.length)
+    .flatMap((m) => {
+      const msg: CompletionMessage = {
+        role: m.role,
+        content: m.content || null,
+      }
+      if (m.role === 'assistant' && m.reasoning) {
+        msg.reasoning_content = m.reasoning
+      }
+      if (m.role === 'assistant' && m.toolCalls?.length) {
+        msg.tool_calls = m.toolCalls
+      }
+      if (m.role === 'assistant' && m.responsesOutput?.length && m.model === selectedProvider) {
+        msg.responses_output = m.responsesOutput
+      }
+      if (m.role === 'tool' && m.toolCallId) {
+        msg.tool_call_id = m.toolCallId
+      }
+      // NOTE: Do NOT include attachment_ids for existing messages in history.
+      // The AI already processed those attachments when they were first sent.
+      // Re-sending them would cause duplicate content and potential API errors
+      // for non-vision models.
+      return m.role === 'assistant' ? toolTurnMessages(m.parts, msg) : [msg]
+    })
+}
+
 interface ChatContextValue {
   adapter: ChatAdapter
   currentUser: ChatUser
@@ -159,6 +194,8 @@ interface ChatContextValue {
     attachmentMeta?: AttachmentMeta,
   ) => Promise<boolean>
   retryMessage: (messageId: string) => Promise<boolean>
+  /** Answers a tool call waiting for approval, resuming the reply it paused. */
+  answerToolApproval: (approvalId: string, answer: ApprovalAnswerValue) => Promise<void>
   setSelectedProvider: (providerId: string | null) => void
   setSelectedAllocation: (allocation: string | null) => void
   setToolEnabled: (id: string, enabled: boolean) => void
@@ -534,6 +571,187 @@ export function ChatProvider({
     [adapter, state.currentConversation, navigation],
   )
 
+  // Streams one assistant reply under parentId and adds it to the
+  // conversation. routePart takes a part delta meant for another message,
+  // such as the result of a call an earlier reply paused on.
+  const streamReply = useCallback(
+    async (
+      targetConversationId: string,
+      request: StreamRequest,
+      parentId: string,
+      onFailure: (message: string) => void,
+      routePart?: (delta: PartDelta) => boolean,
+    ): Promise<StreamOutcome> => {
+      backgroundStreamsRef.current.set(targetConversationId, {
+        content: '',
+        reasoning: '',
+        parts: [],
+        messageId: null,
+        isActive: true,
+      })
+      dispatch({
+        type: 'SET_STREAMING',
+        isStreaming: true,
+        conversationId: targetConversationId,
+      })
+      dispatch({
+        type: 'CLEAR_STREAMING_CONTENT',
+        conversationId: targetConversationId,
+      })
+
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
+      try {
+        // Timed from the first streamed event, not the request, so the
+        // duration excludes request setup — the response only became readable
+        // at the first chunk before the transport moved behind the adapter.
+        let thinkingStart: number | null = null
+        // The last reasoning chunk, so "Thought for" stops where the thinking
+        // did rather than running on through the answer.
+        let thinkingEnd: number | null = null
+        const markStreamStart = () => {
+          if (thinkingStart === null) {
+            thinkingStart = Date.now()
+          }
+        }
+
+        // Parts timeline accumulated from onPart deltas (tool calls etc.).
+        // Kept locally as well as in the background stream so the final
+        // message can attach it after the stream's map entry is deleted.
+        let liveParts: MessagePart[] = []
+
+        const {
+          content: assistantContent,
+          messageId: assistantMessageId,
+          toolCalls,
+          model: resolvedModel,
+          reasoning: assistantReasoning,
+          responsesOutput,
+        } = await adapter.streamCompletion(
+          request,
+          {
+            onContent: (chunk: string) => {
+              markStreamStart()
+              onStreamingChunk(chunk)
+            },
+            onReasoning: (reasoning: string) => {
+              markStreamStart()
+              thinkingEnd = Date.now()
+              dispatch({
+                type: 'APPEND_STREAMING_REASONING',
+                reasoning,
+                conversationId: targetConversationId,
+              })
+              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
+              if (bgStream) {
+                bgStream.reasoning += reasoning
+              }
+            },
+            onMessageId: (messageId: string) => {
+              markStreamStart()
+              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
+              if (bgStream) {
+                bgStream.messageId = messageId
+              }
+            },
+            onPart: (delta: PartDelta) => {
+              markStreamStart()
+              if (routePart?.(delta)) {
+                return
+              }
+              liveParts = applyPartDelta(liveParts, delta)
+              dispatch({
+                type: 'APPLY_STREAMING_PART',
+                delta,
+                conversationId: targetConversationId,
+              })
+              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
+              if (bgStream) {
+                bgStream.parts = liveParts
+              }
+            },
+          },
+          controller.signal,
+        )
+
+        const thinkingDuration =
+          assistantReasoning && thinkingStart !== null
+            ? (thinkingEnd ?? Date.now()) - thinkingStart
+            : null
+
+        const assistantMessage: Message = {
+          id: assistantMessageId || crypto.randomUUID(),
+          parentId,
+          role: 'assistant',
+          content: assistantContent || (toolCalls.length > 0 ? null : ''),
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          // The Responses proxy forwards the upstream SSE, whose model is the
+          // bare upstream name; keep the composite id so the history echo's
+          // model-match gate works within the live session.
+          model: request.useResponses ? request.model : resolvedModel || request.model,
+          providerId: state.selectedProvider,
+          timestamp: new Date().toISOString(),
+          reasoning: assistantReasoning || undefined,
+          reasoningDuration: thinkingDuration ?? undefined,
+          responsesOutput: responsesOutput.length ? responsesOutput : undefined,
+          ...(liveParts.length ? { parts: finalizeParts(liveParts) } : {}),
+        }
+        dispatch({
+          type: 'ADD_MESSAGE',
+          message: assistantMessage,
+          conversationId: targetConversationId,
+        })
+        return 'sent'
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return 'aborted'
+        }
+        console.error('Failed to send message:', error)
+        onFailure(errorText(error))
+        return 'failed'
+      } finally {
+        abortControllerRef.current = null
+
+        const { unrevealed } = stopAnimationLoop()
+        if (unrevealed) {
+          dispatch({
+            type: 'APPEND_STREAMING_CONTENT',
+            content: unrevealed,
+            conversationId: targetConversationId,
+          })
+        }
+
+        streamingConversationIdRef.current = null
+
+        backgroundStreamsRef.current.delete(targetConversationId)
+
+        // Delay clear so any in-flight navigation can read the ref before it resets
+        setTimeout(() => {
+          streamingToConversationRef.current = null
+        }, 500)
+        dispatch({
+          type: 'SET_STREAMING',
+          isStreaming: false,
+          conversationId: targetConversationId,
+        })
+        dispatch({
+          type: 'CLEAR_STREAMING_CONTENT',
+          conversationId: targetConversationId,
+        })
+      }
+    },
+    [
+      adapter,
+      state.selectedProvider,
+      onStreamingChunk,
+      stopAnimationLoop,
+      streamingConversationIdRef,
+      backgroundStreamsRef,
+      abortControllerRef,
+    ],
+  )
+
   const sendMessage = useCallback<SendMessage>(
     async (content, attachmentIds, parentId, attachmentMeta, precedingMessages) => {
       if (isSendingRef.current) {
@@ -687,14 +905,6 @@ export function ChatProvider({
         conversationId: targetConversationId,
       })
 
-      backgroundStreamsRef.current.set(targetConversationId, {
-        content: '',
-        reasoning: '',
-        parts: [],
-        messageId: null,
-        isActive: true,
-      })
-
       const setMessageError = (errorMsg: string) => {
         dispatch({
           type: 'UPDATE_MESSAGE',
@@ -706,35 +916,7 @@ export function ChatProvider({
 
       const existingMessages = isNewConversation ? [] : state.currentConversation?.messages || []
       const apiMessages: CompletionMessage[] = [
-        ...existingMessages
-          .filter((m) => m.content || m.toolCalls?.length || m.parts?.length)
-          .flatMap((m) => {
-            const msg: CompletionMessage = {
-              role: m.role,
-              content: m.content || null,
-            }
-            if (m.role === 'assistant' && m.reasoning) {
-              msg.reasoning_content = m.reasoning
-            }
-            if (m.role === 'assistant' && m.toolCalls?.length) {
-              msg.tool_calls = m.toolCalls
-            }
-            if (
-              m.role === 'assistant' &&
-              m.responsesOutput?.length &&
-              m.model === state.selectedProvider
-            ) {
-              msg.responses_output = m.responsesOutput
-            }
-            if (m.role === 'tool' && m.toolCallId) {
-              msg.tool_call_id = m.toolCallId
-            }
-            // NOTE: Do NOT include attachment_ids for existing messages in history.
-            // The AI already processed those attachments when they were first sent.
-            // Re-sending them would cause duplicate content and potential API errors
-            // for non-vision models.
-            return m.role === 'assistant' ? toolTurnMessages(m.parts, msg) : [msg]
-          }),
+        ...historyMessages(existingMessages, state.selectedProvider),
         ...precedingApiMessages,
         {
           role: 'user' as const,
@@ -743,53 +925,15 @@ export function ChatProvider({
         },
       ]
 
-      dispatch({
-        type: 'SET_STREAMING',
-        isStreaming: true,
-        conversationId: targetConversationId,
-      })
-      dispatch({
-        type: 'CLEAR_STREAMING_CONTENT',
-        conversationId: targetConversationId,
-      })
+      // Responses-capable models use the native OpenAI Responses API; the
+      // gateway advertises capability per model in the models list.
+      const useResponses =
+        state.models.find((m) => m.id === modelString)?.supports_responses === true
 
-      const controller = new AbortController()
-      abortControllerRef.current = controller
-
-      let sendSucceeded = false
-      let wasAborted = false
+      let outcome: StreamOutcome = 'failed'
       try {
-        // Responses-capable models use the native OpenAI Responses API; the
-        // gateway advertises capability per model in the models list.
-        const useResponses =
-          state.models.find((m) => m.id === modelString)?.supports_responses === true
-
-        // Timed from the first streamed event, not the request, so the
-        // duration excludes request setup — the response only became readable
-        // at the first chunk before the transport moved behind the adapter.
-        let thinkingStart: number | null = null
-        // The last reasoning chunk, so "Thought for" stops where the thinking
-        // did rather than running on through the answer.
-        let thinkingEnd: number | null = null
-        const markStreamStart = () => {
-          if (thinkingStart === null) {
-            thinkingStart = Date.now()
-          }
-        }
-
-        // Parts timeline accumulated from onPart deltas (tool calls etc.).
-        // Kept locally as well as in the background stream so the final
-        // message can attach it after the stream's map entry is deleted.
-        let liveParts: MessagePart[] = []
-
-        const {
-          content: assistantContent,
-          messageId: assistantMessageId,
-          toolCalls,
-          model: resolvedModel,
-          reasoning: assistantReasoning,
-          responsesOutput,
-        } = await adapter.streamCompletion(
+        outcome = await streamReply(
+          targetConversationId,
           {
             model: modelString,
             messages: apiMessages,
@@ -800,126 +944,18 @@ export function ChatProvider({
             useResponses,
             ...(tools ? { tools: enabledToolIds } : {}),
           },
-          {
-            onContent: (chunk: string) => {
-              markStreamStart()
-              onStreamingChunk(chunk)
-            },
-            onReasoning: (reasoning: string) => {
-              markStreamStart()
-              thinkingEnd = Date.now()
-              dispatch({
-                type: 'APPEND_STREAMING_REASONING',
-                reasoning,
-                conversationId: targetConversationId,
-              })
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.reasoning += reasoning
-              }
-            },
-            onMessageId: (messageId: string) => {
-              markStreamStart()
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.messageId = messageId
-              }
-            },
-            onPart: (delta: PartDelta) => {
-              markStreamStart()
-              liveParts = applyPartDelta(liveParts, delta)
-              dispatch({
-                type: 'APPLY_STREAMING_PART',
-                delta,
-                conversationId: targetConversationId,
-              })
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.parts = liveParts
-              }
-            },
-          },
-          controller.signal,
+          userMessageId,
+          setMessageError,
         )
-
-        const thinkingDuration =
-          assistantReasoning && thinkingStart !== null
-            ? (thinkingEnd ?? Date.now()) - thinkingStart
-            : null
-
-        const assistantMessage: Message = {
-          id: assistantMessageId || crypto.randomUUID(),
-          parentId: userMessageId,
-          role: 'assistant',
-          content: assistantContent || (toolCalls.length > 0 ? null : ''),
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-          // The Responses proxy forwards the upstream SSE, whose model is the
-          // bare upstream name; keep the composite id so the history echo's
-          // model-match gate works within the live session.
-          model: useResponses ? modelString : resolvedModel || modelString,
-          providerId: state.selectedProvider,
-          timestamp: new Date().toISOString(),
-          reasoning: assistantReasoning || undefined,
-          reasoningDuration: thinkingDuration ?? undefined,
-          responsesOutput: responsesOutput.length ? responsesOutput : undefined,
-          ...(liveParts.length ? { parts: finalizeParts(liveParts) } : {}),
-        }
-        dispatch({
-          type: 'ADD_MESSAGE',
-          message: assistantMessage,
-          conversationId: targetConversationId,
-        })
-
-        if (isNewConversation) {
+        if (outcome === 'sent' && isNewConversation) {
           loadConversations()
         }
-
-        sendSucceeded = true
-        return true
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          wasAborted = true
-          return false
-        }
-        console.error('Failed to send message:', error)
-        setMessageError(errorText(error))
-        return false
+        return outcome === 'sent'
       } finally {
-        abortControllerRef.current = null
-
-        const { unrevealed } = stopAnimationLoop()
-        if (unrevealed) {
-          dispatch({
-            type: 'APPEND_STREAMING_CONTENT',
-            content: unrevealed,
-            conversationId: targetConversationId,
-          })
-        }
-
-        streamingConversationIdRef.current = null
-
-        backgroundStreamsRef.current.delete(targetConversationId)
-
-        // Delay clear so any in-flight navigation can read the ref before it resets
-        setTimeout(() => {
-          streamingToConversationRef.current = null
-        }, 500)
-        dispatch({
-          type: 'SET_STREAMING',
-          isStreaming: false,
-          conversationId: targetConversationId,
-        })
-        dispatch({
-          type: 'CLEAR_STREAMING_CONTENT',
-          conversationId: targetConversationId,
-        })
-
         // Success drains the queue into the next turn. Cancel and error both
         // keep it — the user stopped the stream to intervene, so the queue
         // waits and rides along with their next explicit send.
-        if (wasAborted) {
-          isSendingRef.current = false
-        } else if (sendSucceeded) {
+        if (outcome === 'sent') {
           const next = heldSendArgs(pendingQueueRef.current)
           pendingQueueRef.current = []
           dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
@@ -952,18 +988,111 @@ export function ChatProvider({
       createConversation,
       loadConversations,
       navigation,
-      onStreamingChunk,
       startStreaming,
-      stopAnimationLoop,
-      streamingConversationIdRef,
-      backgroundStreamsRef,
-      abortControllerRef,
+      streamReply,
     ],
   )
 
   useEffect(() => {
     sendMessageRef.current = sendMessage
   }, [sendMessage])
+
+  const answerToolApproval = useCallback(
+    async (approvalId: string, answer: ApprovalAnswerValue) => {
+      const conversation = state.currentConversation
+      const modelString = state.selectedProvider
+      if (answer.kind !== 'confirm' || !conversation || !modelString || isSendingRef.current) {
+        return
+      }
+      const pausedAt = conversation.messages.findIndex(
+        (m) =>
+          m.role === 'assistant' &&
+          m.parts?.some((p) => p.kind === 'approval' && p.id === approvalId && !p.resolved),
+      )
+      const paused = conversation.messages[pausedAt]
+      if (!paused) {
+        return
+      }
+      isSendingRef.current = true
+      const targetConversationId = conversation.id
+      const t = resolvedConfig.strings.agentTranscript
+      let pausedParts = paused.parts ?? []
+      const updatePaused = (updates: Partial<Message>) =>
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          messageId: paused.id,
+          updates,
+          conversationId: targetConversationId,
+        })
+      const applyToPaused = (delta: PartDelta) => {
+        pausedParts = applyPartDelta(pausedParts, delta)
+        updatePaused({ parts: pausedParts })
+      }
+      applyToPaused({
+        type: 'approval_resolved',
+        id: approvalId,
+        answer: answer.allowed ? t.approvalAllowed : t.approvalDenied,
+      })
+      applyToPaused({
+        type: 'tool_decision',
+        id: approvalId,
+        decision: {
+          status: answer.allowed ? 'approved' : 'denied',
+          by: 'user',
+          name: currentUser.name || currentUser.username,
+          at: DateTime.now().toUTC().toISO(),
+        },
+      })
+
+      streamingToConversationRef.current = targetConversationId
+      startStreaming(targetConversationId)
+      try {
+        await streamReply(
+          targetConversationId,
+          {
+            model: modelString,
+            messages: historyMessages(
+              conversation.messages.slice(0, pausedAt + 1),
+              state.selectedProvider,
+            ),
+            conversationId: targetConversationId,
+            parentMessageId: paused.id,
+            userMessageId: crypto.randomUUID(),
+            allocation: state.selectedAllocation,
+            ...(tools ? { tools: enabledToolIds } : {}),
+            resume: {
+              messageId: paused.id,
+              toolCallId: approvalId,
+              allowed: answer.allowed,
+              ...(answer.denyMessage ? { feedback: answer.denyMessage } : {}),
+            },
+          },
+          paused.id,
+          (message) => updatePaused({ error: message }),
+          (delta) => {
+            if (delta.type !== 'tool_end' || delta.id !== approvalId) {
+              return false
+            }
+            applyToPaused(delta)
+            return true
+          },
+        )
+      } finally {
+        isSendingRef.current = false
+      }
+    },
+    [
+      resolvedConfig,
+      state.currentConversation,
+      state.selectedProvider,
+      state.selectedAllocation,
+      tools,
+      enabledToolIds,
+      startStreaming,
+      streamReply,
+      currentUser,
+    ],
+  )
 
   const updateConversationTitle = useCallback(
     async (id: string, title: string): Promise<boolean> => {
@@ -1245,6 +1374,7 @@ export function ChatProvider({
       deleteConversation,
       sendMessage,
       retryMessage,
+      answerToolApproval,
       setSelectedProvider,
       setSelectedAllocation,
       setToolEnabled,
@@ -1293,6 +1423,7 @@ export function ChatProvider({
       deleteConversation,
       sendMessage,
       retryMessage,
+      answerToolApproval,
       setSelectedProvider,
       setSelectedAllocation,
       setToolEnabled,

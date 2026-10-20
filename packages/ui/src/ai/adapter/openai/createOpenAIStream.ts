@@ -52,6 +52,9 @@ export function createOpenAICompatibleStream(config: OpenAIStreamConfig): Stream
     const body: Record<string, unknown> = useResponses
       ? buildResponsesRequestBody(req.model, req.messages)
       : { model: req.model, messages: req.messages, stream: true }
+    if (req.resume && !useResponses) {
+      body['resume'] = req.resume
+    }
 
     const doFetch = config.fetch ?? globalThis.fetch.bind(globalThis)
     const res = await doFetch(url, {

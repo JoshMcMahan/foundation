@@ -47,8 +47,17 @@ export interface CompletionChunk {
   messageId?: string
   // Gateway extension: the result of a tool call the gateway ran itself.
   toolResult?: ToolResultChunk
+  // Gateway extension: a tool call the gateway runs only once the user
+  // approves it. The turn ends here; the answer resumes it.
+  toolApproval?: ToolApprovalChunk
   choices?: CompletionChunkChoice[] | null
   usage?: TokenUsage
+}
+
+export interface ToolApprovalChunk {
+  toolCallId: string
+  // ISO time after which the gateway refuses the approval.
+  expiresAt?: string
 }
 
 export interface ToolResultChunk {

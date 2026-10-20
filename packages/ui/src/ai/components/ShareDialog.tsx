@@ -320,8 +320,9 @@ export function ShareButton({
   disabled?: boolean
 }) {
   const { strings } = useChatConfig()
-  const { adapter } = useChat()
+  const { adapter, tools } = useChat()
   const [isOpen, setIsOpen] = useState(false)
+  const shared = useShared(conversationId, tools.length > 0 && !isOpen)
 
   if (!adapter.sharing) {
     return null
@@ -339,6 +340,7 @@ export function ShareButton({
         <ShareIcon className="h-3 w-3" />
         {strings.shareConversation.shareButton}
       </button>
+      {shared && <ToolResultsSharedNote />}
       <ShareDialog
         conversationId={conversationId}
         isOpen={isOpen}
@@ -346,4 +348,41 @@ export function ShareButton({
       />
     </>
   )
+}
+
+/** Says that tool results in a shared conversation are visible to the
+ *  people it is shared with. */
+export function ToolResultsSharedNote() {
+  const { strings } = useChatConfig()
+  return (
+    <span className="text-[11px] theme-muted-text">
+      {strings.shareConversation.toolResultsShared}
+    </span>
+  )
+}
+
+/** Whether anyone else can read the conversation, checked while `check` is
+ *  true: tool results in it are visible to them. */
+function useShared(conversationId: string, check: boolean): boolean {
+  const { adapter } = useChat()
+  const sharing = adapter.sharing
+  const [shared, setShared] = useState(false)
+  useEffect(() => {
+    if (!check || !sharing) {
+      return
+    }
+    let current = true
+    sharing.listPermissions(conversationId).then(
+      (permissions) => {
+        if (current) {
+          setShared(permissions.length > 0)
+        }
+      },
+      () => {},
+    )
+    return () => {
+      current = false
+    }
+  }, [conversationId, check, sharing])
+  return shared
 }

@@ -982,3 +982,72 @@ export function makeManyTools(): ChatToolOption[] {
     { id: 'read_logs', label: 'Read run logs', description: 'The output of a workflow run' },
   ]
 }
+
+/** A teammate in a shared conversation. */
+export const storyTeammate: ChatUser = { id: 'u-2', username: 'bob', name: 'Bob Rivera' }
+
+/** A question and the reply that paused on a call waiting for approval. */
+export function makeHeldCallTurn(options?: {
+  conversationId?: string
+  asker?: ChatUser
+}): ChatMessage[] {
+  const conversationId = options?.conversationId ?? 'conv-held'
+  return [
+    makeMessage({
+      id: 'u-stop',
+      role: 'user',
+      content: "gputraining has been idle all weekend, stop it so it isn't billing",
+      author: options?.asker ?? storyUser,
+      conversationId,
+    }),
+    makeMessage({
+      id: 'a-held',
+      parentId: 'u-stop',
+      role: 'assistant',
+      content: '',
+      conversationId,
+      parts: [
+        {
+          kind: 'tool_call',
+          id: 'call-stop',
+          name: 'stop_cluster',
+          args: '{"clusterName":"gputraining"}',
+          status: 'waiting',
+        },
+        {
+          kind: 'approval',
+          id: 'call-stop',
+          approvalKind: 'confirm',
+          subject: 'call',
+          canAllowDirectory: false,
+          expiresAt: '2099-01-01T00:00:00Z',
+        },
+      ],
+    }),
+  ]
+}
+
+/** Answers a held call the way a gateway does: the call's result, then the
+ *  reply going on from it. */
+export const resumeHeldCall: ChatAdapter['streamCompletion'] = async (req, handlers) => {
+  const allowed = req.resume?.allowed !== false
+  handlers.onPart?.({
+    type: 'tool_end',
+    id: req.resume?.toolCallId ?? '',
+    result: allowed ? '{"status":"stopping"}' : 'The user declined this call.',
+    ...(allowed ? {} : { isError: true }),
+  })
+  const content = allowed
+    ? 'gputraining is stopping. Its disks and settings stay, so you can start it again whenever you need it.'
+    : 'Okay, I left gputraining running.'
+  handlers.onContent(content)
+  return {
+    content,
+    messageId: nextId('msg'),
+    toolCalls: [],
+    finishReason: 'stop',
+    model: req.model,
+    reasoning: '',
+    responsesOutput: [],
+  }
+}

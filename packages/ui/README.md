@@ -924,6 +924,19 @@ OpenAI-compatible transport sends them as the `X-Platform-Tools` header
 (`TOOLS_HEADER`), comma-separated and empty when every tool is off. A request
 without a tool choice sends no header.
 
+A tool that changes something sets `asksFirst`, which the menu shows, and its
+calls wait for the reader. The gateway streams the call, then a `toolApproval`
+chunk (`toolCallId`, optional `expiresAt`) in place of a result, and ends the
+reply there. Chat shows a confirm under the call with Allow, Deny and Deny
+with feedback, which expires at `expiresAt`. The answer goes back through
+`useChat().answerToolApproval` as a request with no new user turn:
+`StreamRequest.resume` (`messageId`, `toolCallId`, `allowed`, optional
+`feedback`), sent as `resume` in the body. The gateway's `toolResult` for the
+call lands on the reply that paused, and the model's answer streams as a new
+reply under it. In a shared conversation only the person whose message
+started the turn may answer; others see whom it waits on, and a turn someone
+else started says whose access its tools ran with.
+
 Tailwind v4 consumers add the chat rules (markdown rendering, streaming
 animations) and streamdown's classes next to the theme contract:
 

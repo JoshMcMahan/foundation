@@ -62,6 +62,22 @@ describe('applyPartDelta', () => {
     expect((parts[0] as ToolCallPart).args).toBe('{"name":1}')
   })
 
+  it('marks the matching call waiting on tool_wait', () => {
+    const parts = applyPartDelta([runningTool('t1'), runningTool('t2')], {
+      type: 'tool_wait',
+      id: 't1',
+    })
+    expect(parts.map((p) => (p as ToolCallPart).status)).toEqual(['waiting', 'running'])
+  })
+
+  it('keeps a waiting call out of the history and out of the interrupted sweep', () => {
+    const waiting: ToolCallPart = { ...runningTool(), status: 'waiting' }
+    expect(finalizeParts([waiting])).toEqual([waiting])
+    expect(toolTurnMessages([waiting], { role: 'assistant', content: 'Stopping it.' })).toEqual([
+      { role: 'assistant', content: 'Stopping it.' },
+    ])
+  })
+
   it('resolves the matching call on tool_end and leaves others running', () => {
     let parts: MessagePart[] = [runningTool('t1'), runningTool('t2')]
     parts = applyPartDelta(parts, {

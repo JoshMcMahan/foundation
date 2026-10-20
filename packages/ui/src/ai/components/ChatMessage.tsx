@@ -12,7 +12,7 @@ import { formatDuration } from '../../format'
 import { EditIcon, RetryIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import { replyText } from '../core/useKeyboardShortcuts'
-import type { ApprovalAnswerValue, AttachmentRef, ChatMessage as Message } from '../types'
+import type { ApprovalAnswerValue, AttachmentRef, ChatUser, ChatMessage as Message } from '../types'
 import Markdown from '../ui/Markdown'
 import { chatProseClasses } from '../ui/prose'
 import AgentMessageParts from './agent/AgentMessageParts'
@@ -93,6 +93,14 @@ function ChatMessage({
       ? message.author
       : undefined
   const isOtherUser = !!otherAuthor
+  // A reply in a turn someone else started: its tools ran with their access,
+  // and only they may answer a call waiting for approval.
+  const asker =
+    !isUser && showAuthor && currentUsername ? turnAuthor(message, allMessages) : undefined
+  const otherAsker = asker && asker.username !== currentUsername ? asker : undefined
+  const askerName = otherAsker ? otherAsker.name || otherAsker.username : undefined
+  const partsMessage = askerName ? waitingOn(message, askerName) : message
+  const approvalAnswer = askerName ? undefined : onApprovalAnswer
   // Right-align only for the current user's messages
   const isRightAligned = isUser && !isOtherUser
   const hasError = !!message.error
@@ -213,9 +221,9 @@ function ChatMessage({
     return (
       <div className={cx('group py-3 w-full', !flush && 'px-4')}>
         <AgentMessageParts
-          message={message}
+          message={partsMessage}
           isStreaming={isStreaming}
-          onApprovalAnswer={onApprovalAnswer}
+          onApprovalAnswer={approvalAnswer}
         />
         {!isUser && !isStreaming && (said || onRegenerate || meta) && (
           <div className="chat-actions -ml-1.5 mt-2 flex items-center gap-0.5">
@@ -338,7 +346,9 @@ function ChatMessage({
                   <span>
                     {message.reasoningDuration
                       ? tThinking.thoughtFor(formatDuration(message.reasoningDuration))
-                      : tThinking.ranToolCalls(toolCallCount)}
+                      : askerName
+                        ? tThinking.ranToolCallsAs(toolCallCount, askerName)
+                        : tThinking.ranToolCalls(toolCallCount)}
                   </span>
                 </div>
               </div>
@@ -348,9 +358,9 @@ function ChatMessage({
             {!isUser && hasParts && (
               <div className="mb-1">
                 <AgentMessageParts
-                  message={message}
+                  message={partsMessage}
                   isStreaming={isStreaming}
-                  onApprovalAnswer={onApprovalAnswer}
+                  onApprovalAnswer={approvalAnswer}
                 />
               </div>
             )}
@@ -509,3 +519,28 @@ function ChatMessage({
 }
 
 export default memo(ChatMessage)
+
+/** The author of the user message that started the turn a reply belongs to.
+ *  A reply that resumes after an approval hangs under the reply it resumes. */
+function turnAuthor(message: Message, allMessages: Message[]): ChatUser | undefined {
+  let parentId = message.parentId
+  // Bounded, so a malformed chain that loops cannot hang the render.
+  for (let hops = 0; parentId && hops < allMessages.length; hops++) {
+    const parent = allMessages.find((m) => m.id === parentId)
+    if (parent?.role !== 'assistant') {
+      return parent?.role === 'user' ? parent.author : undefined
+    }
+    parentId = parent.parentId
+  }
+  return undefined
+}
+
+function waitingOn(message: Message, name: string): Message {
+  if (!message.parts?.some((p) => p.kind === 'approval')) {
+    return message
+  }
+  return {
+    ...message,
+    parts: message.parts.map((p) => (p.kind === 'approval' ? { ...p, waitingOn: name } : p)),
+  }
+}

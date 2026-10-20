@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon'
 import { memo, type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import { Disclosure } from '../../../components/Disclosure'
 import { fieldBox } from '../../../components/fieldBox'
@@ -272,6 +273,13 @@ function ToolStatusDot({ part }: { part: ToolCallPart }) {
       </StatusMark>
     )
   }
+  if (part.status === 'waiting') {
+    return (
+      <StatusMark status={t.approvalLabel}>
+        <span className="leading-none text-(--theme-accent)">●</span>
+      </StatusMark>
+    )
+  }
   if (part.status === 'error') {
     return (
       <StatusMark status={t.failed}>
@@ -333,7 +341,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
         )}
         <ResultBody part={part} />
       </Disclosure>
-      {!isDiff && !expanded && (
+      {!isDiff && !expanded && part.status !== 'waiting' && (
         <div
           className={cx(
             'ml-5 mt-0.5 truncate text-[13px]',
@@ -484,6 +492,31 @@ function SubagentCard({ part }: { part: SubagentPart }) {
   )
 }
 
+/** Whether the ISO time has passed, turning true when it does. */
+function useExpired(expiresAt: string | undefined): boolean {
+  const [expired, setExpired] = useState(
+    () => !!expiresAt && DateTime.fromISO(expiresAt) <= DateTime.now(),
+  )
+  useEffect(() => {
+    if (!expiresAt || expired) {
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const arm = () => {
+      const left = DateTime.fromISO(expiresAt).diffNow().toMillis()
+      if (left <= 0) {
+        setExpired(true)
+        return
+      }
+      // A timer past about 24 days fires at once, so check back daily.
+      timer = setTimeout(arm, Math.min(left, 86_400_000))
+    }
+    arm()
+    return () => clearTimeout(timer)
+  }, [expiresAt, expired])
+  return expired
+}
+
 function ConfirmApproval({
   part,
   onAnswer,
@@ -495,6 +528,7 @@ function ConfirmApproval({
   const { common } = useStrings()
   const t = strings.agentTranscript
   const [feedback, setFeedback] = useState<string | null>(null)
+  const expired = useExpired(part.expiresAt)
   const answer = (a: Parameters<NonNullable<typeof onAnswer>>[1]) => onAnswer?.(part.id, a)
   const [allowLabel, denyLabel] = {
     command: [t.allowOnce, t.deny],
@@ -510,8 +544,12 @@ function ConfirmApproval({
         </pre>
       )}
       {part.reason && <div className="text-xs theme-muted-text">{part.reason}</div>}
-      {!onAnswer ? (
-        <div className="text-xs theme-muted-text">{t.approvalPending}</div>
+      {expired ? (
+        <div className="text-xs theme-muted-text">{t.approvalRequestExpired}</div>
+      ) : !onAnswer ? (
+        <div className="text-xs theme-muted-text">
+          {part.waitingOn ? t.approvalWaitingOn(part.waitingOn) : t.approvalPending}
+        </div>
       ) : feedback === null ? (
         <div className="flex flex-wrap gap-2">
           <button
@@ -980,7 +1018,14 @@ export function buildRenderItems(parts: MessagePart[]): RenderItem[] {
     emitThoughts(run.slice(end))
     run = []
   }
+  const decided = new Set(
+    parts.flatMap((p) => (p.kind === 'tool_call' && p.decision ? [p.id] : [])),
+  )
   parts.forEach((part, index) => {
+    // An answered approval for a call that records its decision says nothing the call's own line doesn't.
+    if (part.kind === 'approval' && part.resolved && decided.has(part.id)) {
+      return
+    }
     if (
       part.kind === 'reasoning' ||
       (part.kind === 'tool_call' &&

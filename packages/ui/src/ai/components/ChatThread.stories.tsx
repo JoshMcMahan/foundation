@@ -4,12 +4,15 @@ import { createMockChatAdapter } from '../adapter/mock'
 import {
   makeAgentTurn,
   makeConversation,
+  makeHeldCallTurn,
   makeHybridTurn,
   makeLongConversation,
   makeStaticAdapter,
+  resumeHeldCall,
   StoryChat,
   StoryViewport,
   sendFromComposer,
+  storyTeammate,
 } from '../stories/harness'
 import ChatEmptyState from './ChatEmptyState'
 import ChatLayout from './ChatLayout'
@@ -206,6 +209,70 @@ export const ToolCallConversation: StoryObj = {
     >
       <StoryViewport>
         <ChatThread conversationId="conv-tools" />
+      </StoryViewport>
+    </StoryChat>
+  ),
+}
+
+// A call that changes something waits for the reader: Allow resumes the
+// reply with the call's result, Deny tells the model why.
+export const HeldToolCall: StoryObj = {
+  render: () => (
+    <StoryChat
+      adapter={{
+        ...makeStaticAdapter({
+          conversations: [
+            makeConversation({
+              id: 'conv-held',
+              title: 'Stop gputraining',
+              messages: makeHeldCallTurn(),
+            }),
+          ],
+          tools: [
+            {
+              id: 'stop_cluster',
+              label: 'Stop a cluster',
+              description: 'Stops a cluster, keeping its disks',
+              asksFirst: true,
+            },
+          ],
+        }),
+        streamCompletion: resumeHeldCall,
+      }}
+      conversationId="conv-held"
+    >
+      <StoryViewport>
+        <ChatThread conversationId="conv-held" />
+      </StoryViewport>
+    </StoryChat>
+  ),
+}
+
+// The same call in a shared conversation Bob started: it runs with Bob's
+// access, so only Bob may answer it, and the share note says the results
+// are visible to the people it is shared with.
+export const HeldToolCallSomeoneElseAsked: StoryObj = {
+  render: () => (
+    <StoryChat
+      adapter={makeStaticAdapter({
+        conversations: [
+          {
+            ...makeConversation({
+              id: 'conv-held',
+              title: 'Stop gputraining',
+              messages: makeHeldCallTurn({ asker: storyTeammate }),
+            }),
+            isOwner: false,
+            canCollaborate: true,
+          },
+        ],
+        sharing: true,
+        tools: [{ id: 'stop_cluster', label: 'Stop a cluster', asksFirst: true }],
+      })}
+      conversationId="conv-held"
+    >
+      <StoryViewport>
+        <ChatThread conversationId="conv-held" />
       </StoryViewport>
     </StoryChat>
   ),

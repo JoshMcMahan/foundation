@@ -50,6 +50,18 @@ export interface StreamRequest {
   // The ids of the host's tools the reader left on, possibly none. Absent
   // when the adapter lists no tools, or before the list has loaded.
   tools?: string[]
+  // Answers a tool call that waits for approval, in place of a new user
+  // turn: the gateway runs or declines it and the reply goes on from there.
+  resume?: ToolApprovalAnswer
+}
+
+export interface ToolApprovalAnswer {
+  // The assistant message holding the call.
+  messageId: string
+  toolCallId: string
+  allowed: boolean
+  // Why the user declined, for the model.
+  feedback?: string
 }
 
 export interface StreamHandlers {
@@ -76,6 +88,8 @@ export type PartDelta =
       startLine?: number
     }
   | { type: 'tool_update'; id: string; args: string }
+  // The call waits for the user's approval before it runs.
+  | { type: 'tool_wait'; id: string }
   | { type: 'tool_end'; id: string; result: string; isError?: boolean }
   | { type: 'tool_decision'; id: string; decision: ToolDecision }
   | {
@@ -173,6 +187,8 @@ export interface ChatToolOption {
   id: string
   label: string
   description?: string
+  // The tool changes something, so each call waits for the user's approval.
+  asksFirst?: boolean
 }
 
 export interface ChatToolsAdapter {

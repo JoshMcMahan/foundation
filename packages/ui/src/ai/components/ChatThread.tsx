@@ -6,7 +6,7 @@ import BlockedGroupBanner from './BlockedGroupBanner'
 import { ComposerControls, ComposerUsage, ConnectToolsLink } from './ComposerChrome'
 import ProviderIssueBanner from './ProviderIssueBanner'
 import SessionView from './SessionView'
-import { ShareButton } from './ShareDialog'
+import { ShareButton, ToolResultsSharedNote } from './ShareDialog'
 
 export default function ChatThread({ conversationId }: { conversationId: string }) {
   const {
@@ -17,6 +17,8 @@ export default function ChatThread({ conversationId }: { conversationId: string 
     loadProviders,
     sendMessage,
     retryMessage,
+    answerToolApproval,
+    tools,
     isLoadingConversation,
     navigateToBranch,
     queuedMessages,
@@ -89,6 +91,7 @@ export default function ChatThread({ conversationId }: { conversationId: string 
         ? { onEdit, onRegenerate, onRetry: (id: string) => void retryMessage(id) }
         : {})}
       onNavigateBranch={navigateToBranch}
+      {...(canWrite ? { onApprovalAnswer: answerToolApproval } : {})}
       showAuthor={showAuthor}
       currentUsername={currentUser.username}
       loading={isLoadingConversation && !currentConversation}
@@ -104,8 +107,10 @@ export default function ChatThread({ conversationId }: { conversationId: string 
         ...(canWrite ? {} : { placeholder: strings.thread.viewOnly }),
         settingsLeft: (
           <>
-            {currentConversation && currentConversation.isOwner !== false && (
+            {currentConversation && currentConversation.isOwner !== false ? (
               <ShareButton conversationId={conversationId} />
+            ) : (
+              tools.length > 0 && <ToolResultsSharedNote />
             )}
             <ConnectToolsLink />
           </>

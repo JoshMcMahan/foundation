@@ -40,6 +40,10 @@ export function applyPartDelta(parts: MessagePart[], delta: PartDelta): MessageP
       return parts.map((p) =>
         p.kind === 'tool_call' && p.id === delta.id ? { ...p, args: p.args + delta.args } : p,
       )
+    case 'tool_wait':
+      return parts.map((p) =>
+        p.kind === 'tool_call' && p.id === delta.id ? { ...p, status: 'waiting' as const } : p,
+      )
     case 'tool_end':
       return parts.map((p) =>
         p.kind === 'tool_call' && p.id === delta.id
@@ -131,7 +135,8 @@ export function toolTurnMessages(
       p.kind === 'tool_call' && p.status !== 'running' && p.result !== undefined,
   )
   if (calls.length === 0) {
-    return [answer]
+    // A reply that paused on a call waiting for approval may hold nothing yet.
+    return answer.content || answer.tool_calls?.length ? [answer] : []
   }
   return [
     {

@@ -9,7 +9,13 @@ import ChatMessage from './ChatMessage'
 // by its own suite.
 vi.mock('./agent/AgentMessageParts', () => ({
   __esModule: true,
-  default: () => <div data-testid="agent-parts-mock" />,
+  default: ({ message, onApprovalAnswer }: { message: Message; onApprovalAnswer?: unknown }) => (
+    <div
+      data-testid="agent-parts-mock"
+      data-answerable={String(!!onApprovalAnswer)}
+      data-waiting-on={message.parts?.find((p) => p.kind === 'approval')?.waitingOn ?? ''}
+    />
+  ),
 }))
 
 // Mock the Markdown component
@@ -646,6 +652,56 @@ describe('turn duration row', () => {
     expect(screen.getByText('because of reasons')).toBeInTheDocument()
     fireEvent.click(button)
     expect(screen.queryByText('because of reasons')).not.toBeInTheDocument()
+  })
+})
+
+describe('a turn someone else started', () => {
+  const bob = { id: 'u-bob', username: 'bob', name: 'Bob' }
+  const ask = createMockMessage({ id: 'ask', role: 'user', content: 'stop gpu-a', author: bob })
+  const paused = createMockMessage({
+    id: 'paused',
+    role: 'assistant',
+    parentId: 'ask',
+    content: '',
+    parts: [
+      { kind: 'tool_call', id: 'c1', name: 'stop_cluster', args: '{}', status: 'waiting' },
+      { kind: 'approval', id: 'c1', approvalKind: 'confirm', subject: 'call' },
+    ],
+  })
+  const answer = createMockMessage({
+    id: 'answer',
+    role: 'assistant',
+    parentId: 'paused',
+    content: 'It is stopping.',
+    parts: [{ kind: 'tool_call', id: 'c2', name: 'list_clusters', args: '{}', status: 'ok' }],
+  })
+  const props = {
+    ...defaultProps,
+    allMessages: [ask, paused, answer],
+    showAuthor: true,
+    onApprovalAnswer: vi.fn(),
+  }
+
+  it('says whose access its tools ran with, through a resumed reply', () => {
+    render(<ChatMessage {...props} message={answer} currentUsername="ada" />)
+
+    expect(screen.getByText('Ran 1 tool call as Bob')).toBeInTheDocument()
+  })
+
+  it('leaves a held call to the person who asked for it', () => {
+    render(<ChatMessage {...props} message={paused} currentUsername="ada" />)
+
+    const parts = screen.getByTestId('agent-parts-mock')
+    expect(parts).toHaveAttribute('data-answerable', 'false')
+    expect(parts).toHaveAttribute('data-waiting-on', 'Bob')
+  })
+
+  it('lets the person who asked answer it', () => {
+    render(<ChatMessage {...props} message={paused} currentUsername="bob" />)
+
+    const parts = screen.getByTestId('agent-parts-mock')
+    expect(parts).toHaveAttribute('data-answerable', 'true')
+    expect(parts).toHaveAttribute('data-waiting-on', '')
   })
 })
 

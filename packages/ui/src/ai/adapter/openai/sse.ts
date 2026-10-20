@@ -1,6 +1,6 @@
 import type { ToolCall, ToolCallDelta } from '../../types'
 import type { PartDelta } from '../types'
-import type { CompletionChunk, ToolResultChunk } from './wire'
+import type { CompletionChunk, ToolApprovalChunk, ToolResultChunk } from './wire'
 
 export type ParsedSSELine = {
   id?: string | undefined
@@ -9,6 +9,7 @@ export type ParsedSSELine = {
   reasoningContent?: string | undefined
   toolCalls?: ToolCallDelta[] | undefined
   toolResult?: ToolResultChunk | undefined
+  toolApproval?: ToolApprovalChunk | undefined
   finishReason?: string | null | undefined
   model?: string | undefined
   error?: string | undefined
@@ -39,6 +40,7 @@ export function parseSSELine(line: string): ParsedSSELine {
       reasoningContent: choice?.delta?.reasoning_content,
       toolCalls: choice?.delta?.tool_calls ?? undefined,
       toolResult: chunk.toolResult,
+      toolApproval: chunk.toolApproval,
       finishReason: choice?.finish_reason,
       model: chunk.model,
     }
@@ -166,6 +168,22 @@ export async function processSSEStream(
             id: parsed.toolResult.toolCallId,
             result: parsed.toolResult.content,
             ...(parsed.toolResult.isError ? { isError: true } : {}),
+          })
+        }
+        if (parsed.toolApproval) {
+          const { toolCallId, expiresAt } = parsed.toolApproval
+          answeredToolCalls.add(toolCallId)
+          onPart?.({ type: 'tool_wait', id: toolCallId })
+          onPart?.({
+            type: 'approval_request',
+            approval: {
+              kind: 'approval',
+              id: toolCallId,
+              approvalKind: 'confirm',
+              subject: 'call',
+              canAllowDirectory: false,
+              ...(expiresAt ? { expiresAt } : {}),
+            },
           })
         }
       }

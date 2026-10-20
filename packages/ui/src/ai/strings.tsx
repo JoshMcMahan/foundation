@@ -19,6 +19,8 @@ export interface ChatStrings {
     addGroups: string
     info: ReactNode
     shareButton: string
+    /** Beside the share button in a shared conversation that can use tools. */
+    toolResultsShared: string
   }
   blockedGroup: {
     title: (group: string) => string
@@ -71,6 +73,8 @@ export interface ChatStrings {
     turnAllOff: string
     /** Closes the tools modal; each switch takes effect as it is flipped. */
     done: string
+    /** Marks a tool whose calls wait for the reader's approval. */
+    asksFirst: string
   }
   allocationPicker: {
     choose: string
@@ -126,6 +130,9 @@ export interface ChatStrings {
     activity: string
     /** A finished turn's label when it ran tools without reasoning. */
     ranToolCalls: (count: number) => string
+    /** The same, in a shared conversation, for a turn someone else started:
+     *  its tools ran with that person's access. */
+    ranToolCallsAs: (count: number, name: string) => string
   }
   thread: {
     viewOnly: string
@@ -259,6 +266,13 @@ export interface ChatStrings {
     approvalOptions: string
     /** Names a question the agent waits on that has no heading of its own. */
     approvalLabel: string
+    /** A call the reader approved or declined. */
+    approvalAllowed: string
+    approvalDenied: string
+    /** A call nobody answered in time. */
+    approvalRequestExpired: string
+    /** A call only the person who asked for it may answer. */
+    approvalWaitingOn: (name: string) => string
     /** Names the field for the reason a request is denied. */
     feedbackLabel: string
     /** Names the field for an answer of the reader's own. */
@@ -336,6 +350,7 @@ export const defaultChatStrings: ChatStrings = {
       </>
     ),
     shareButton: 'Share conversation',
+    toolResultsShared: "Tool results here are visible to the people it's shared with",
   },
   blockedGroup: {
     title: (group) => `Billing group \u201c${group}\u201d is over its allocation`,
@@ -377,12 +392,13 @@ export const defaultChatStrings: ChatStrings = {
     tools: 'Tools',
     someToolsOff: 'Some tools are off',
     toolsOn: (enabled, total) => `${enabled.toLocaleString()}/${total.toLocaleString()}`,
-    toolsDescription: 'What the assistant may look up for you.',
+    toolsDescription: 'What the assistant may look up or do for you.',
     searchTools: 'Search tools',
     noToolsMatch: 'No tools match',
     turnAllOn: 'Turn all on',
     turnAllOff: 'Turn all off',
     done: 'Done',
+    asksFirst: 'Asks first',
   },
   allocationPicker: {
     choose: 'Allocation',
@@ -426,6 +442,7 @@ export const defaultChatStrings: ChatStrings = {
     thoughtProcess: 'Thought process',
     activity: 'Activity',
     ranToolCalls: (count) => `Ran ${countOf(count, 'tool call', 'tool calls')}`,
+    ranToolCallsAs: (count, name) => `Ran ${countOf(count, 'tool call', 'tool calls')} as ${name}`,
   },
   thread: {
     viewOnly: 'You have view only access',
@@ -549,6 +566,10 @@ export const defaultChatStrings: ChatStrings = {
     approvalPending: 'Waiting for an answer in the terminal',
     approvalOptions: 'Offered choices',
     approvalLabel: 'Waiting for your answer',
+    approvalAllowed: 'Allowed',
+    approvalDenied: 'Declined',
+    approvalRequestExpired: 'This request expired. Ask again to run it.',
+    approvalWaitingOn: (name) => `Waiting for ${name} to answer`,
     feedbackLabel: 'Feedback for the agent',
     ownAnswerLabel: 'Your answer',
     todoPending: 'To do',

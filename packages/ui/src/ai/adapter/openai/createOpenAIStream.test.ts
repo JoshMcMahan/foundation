@@ -89,6 +89,58 @@ describe('createOpenAICompatibleStream', () => {
     expect(result.content).toBe('You have gpu-a.')
   })
 
+  it('streams a call the gateway holds for approval as a waiting call with a confirm', async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
+      sseResponse([
+        'data: {"id":"c","model":"m","messageId":"srv-1","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","type":"function","function":{"name":"stop_cluster","arguments":"{}"}}]}}]}',
+        'data: {"id":"c","model":"m","toolApproval":{"toolCallId":"call-1","expiresAt":"2026-10-18T12:00:00Z"}}',
+        'data: {"id":"c","model":"m","choices":[{"delta":{},"finish_reason":"stop"}]}',
+        'data: [DONE]',
+      ]),
+    )
+    const stream = createOpenAICompatibleStream({
+      completionsUrl: '/v1/chat/completions',
+      fetch: fetchMock,
+    })
+
+    const parts: PartDelta[] = []
+    const result = await stream(baseRequest(), {
+      onContent: () => {},
+      onPart: (delta) => parts.push(delta),
+    })
+
+    expect(parts).toEqual([
+      { type: 'tool_start', id: 'call-1', name: 'stop_cluster', args: '{}' },
+      { type: 'tool_wait', id: 'call-1' },
+      {
+        type: 'approval_request',
+        approval: {
+          kind: 'approval',
+          id: 'call-1',
+          approvalKind: 'confirm',
+          subject: 'call',
+          canAllowDirectory: false,
+          expiresAt: '2026-10-18T12:00:00Z',
+        },
+      },
+    ])
+    expect(result.toolCalls).toEqual([])
+  })
+
+  it('sends the answer to a held call in the body', async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () => sseResponse(['data: [DONE]']))
+    const stream = createOpenAICompatibleStream({
+      completionsUrl: '/v1/chat/completions',
+      fetch: fetchMock,
+    })
+    const resume = { messageId: 'srv-1', toolCallId: 'call-1', allowed: false, feedback: 'Not now' }
+
+    await stream(baseRequest({ resume }), { onContent: () => {} })
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))
+    expect(body.resume).toEqual(resume)
+  })
+
   it('returns tool calls the gateway left for the caller to run', async () => {
     const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
       sseResponse([

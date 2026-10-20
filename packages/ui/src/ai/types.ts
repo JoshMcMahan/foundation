@@ -67,7 +67,8 @@ export interface TokenUsage {
 // `parts` render through the legacy flat-content path unchanged; adapters that
 // speak an agent protocol populate parts.
 
-export type ToolCallStatus = 'running' | 'ok' | 'error'
+// 'waiting' is a call the user has to approve before it runs.
+export type ToolCallStatus = 'running' | 'waiting' | 'ok' | 'error'
 
 export interface TextPart {
   kind: 'text'
@@ -161,6 +162,10 @@ export interface ApprovalPart {
   plan?: string
   // Set false by producers whose backend refuses standing directory grants.
   canAllowDirectory?: boolean
+  // When an unanswered confirm stops being answerable, as an ISO time.
+  expiresAt?: string
+  // Who has to answer, when it is someone other than the reader.
+  waitingOn?: string
   resolved?: boolean
   // Display form of the chosen answer, once resolved.
   answer?: string
