@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.83.1](https://github.com/parallelworks/foundation/compare/ui-v0.83.0...ui-v0.83.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ui:** a popover whose trigger has a tooltip opens beside it again, rather than invisible in the corner of the page ([#450](https://github.com/parallelworks/foundation/issues/450)) ([22b228d](https://github.com/parallelworks/foundation/commit/22b228dbd4389eb12fb43c434364b25c19cb1581))
+
 ## [0.83.0](https://github.com/parallelworks/foundation/compare/ui-v0.82.2...ui-v0.83.0) (2026-10-20)
 
 
