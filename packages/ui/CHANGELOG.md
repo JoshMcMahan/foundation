@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.80.0](https://github.com/parallelworks/foundation/compare/ui-v0.79.0...ui-v0.80.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** disclosure summaries hold controls, hosts close the shared menu, and pickers create after their matches and name their value ([#431](https://github.com/parallelworks/foundation/issues/431)) ([168bce4](https://github.com/parallelworks/foundation/commit/168bce43e739215076e3b906117f2288cd73d771))
+
 ## [0.79.0](https://github.com/parallelworks/foundation/compare/ui-v0.78.0...ui-v0.79.0) (2026-10-20)
 
 
