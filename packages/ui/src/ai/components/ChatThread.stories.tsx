@@ -327,6 +327,109 @@ export const HostDrawnToolCall: StoryObj = {
   ),
 }
 
+function CostRows({ part }: ToolRendererProps) {
+  if (part.status !== 'ok' || !part.result) {
+    return null
+  }
+  const rows = JSON.parse(part.result) as [string, string][]
+  if (rows.length === 0) {
+    return null
+  }
+  return (
+    <table className="w-full max-w-md text-xs">
+      <tbody>
+        {rows.map(([name, cost]) => (
+          <tr key={name} className="border-b theme-border">
+            <td className="py-1">{name}</td>
+            <td className="py-1 text-right tabular-nums">{cost}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+const costCall = (allocation: string, status: 'ok' | 'error', result: string) => ({
+  kind: 'tool_call' as const,
+  id: `cost-${allocation}-${status}`,
+  name: 'cost_summary',
+  args: JSON.stringify({ allocation, groupBy: ['resource'] }),
+  status,
+  result,
+})
+
+// One tool called again and again folds into a single row that counts the
+// calls and failures; what the host drew for each call stays in view, and a
+// call that drew nothing shows nothing until the row opens.
+export const RepeatedToolCalls: StoryObj = {
+  render: () => {
+    const adapter = makeStaticAdapter({
+      conversations: [
+        makeConversation({
+          id: 'conv-costs',
+          title: 'What is billing me',
+          messages: [
+            {
+              id: 'u-costs',
+              role: 'user',
+              content: 'whats billing me?',
+              conversationId: 'conv-costs',
+            },
+            {
+              id: 'a-costs',
+              role: 'assistant',
+              conversationId: 'conv-costs',
+              model: 'mock:story/streaming',
+              timestamp: '2026-08-16T11:00:00Z',
+              tokensUsed: { prompt_tokens: 61000, completion_tokens: 1200, total_tokens: 62200 },
+              content:
+                'Most of it is two test clusters (~$1.50/day each), plus snapshots (~$0.40/day) that have run for months.',
+              parts: [
+                costCall('research', 'error', 'StartDate is required'),
+                costCall('platform', 'error', 'StartDate is required'),
+                costCall('teaching', 'error', 'StartDate is required'),
+                costCall(
+                  'research',
+                  'ok',
+                  JSON.stringify([
+                    ['slurm-a', '$45.22'],
+                    ['snapshots', '$0.40'],
+                  ]),
+                ),
+                costCall('platform', 'ok', JSON.stringify([['gpu-train', '$12.07']])),
+                costCall('teaching', 'ok', '[]'),
+              ],
+            },
+          ],
+        }),
+      ],
+    })
+    return (
+      <StoryChat
+        adapter={{
+          ...adapter,
+          models: {
+            ...adapter.models,
+            async list() {
+              const listed = await adapter.models.list()
+              return {
+                ...listed,
+                models: listed.models.map((m) => ({ ...m, name: 'Story Large' })),
+              }
+            },
+          },
+        }}
+        config={{ slots: { toolRenderers: { cost_summary: CostRows } } }}
+        conversationId="conv-costs"
+      >
+        <StoryViewport>
+          <ChatThread conversationId="conv-costs" />
+        </StoryViewport>
+      </StoryChat>
+    )
+  },
+}
+
 function EditableStopCard({ part, approval, onApprovalAnswer }: ToolRendererProps) {
   const suggested = (JSON.parse(part.args || '{}') as { clusterName?: string }).clusterName ?? ''
   const [name, setName] = useState(suggested)

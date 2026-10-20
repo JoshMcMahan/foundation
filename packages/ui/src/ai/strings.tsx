@@ -232,6 +232,12 @@ export interface ChatStrings {
     running: string
     done: string
     failed: string
+    /** A failed call's row, with the first line of its error. */
+    failedWith: (reason: string) => string
+    /** Consecutive calls to one tool, folded into one row. */
+    callGroup: (tool: string, count: number) => string
+    /** Beside a folded row: how many of its calls failed. */
+    failedCount: (count: number) => string
     interrupted: string
     noOutput: string
     diffTruncated: string
@@ -539,6 +545,9 @@ export const defaultChatStrings: ChatStrings = {
     running: 'Running…',
     done: 'Done',
     failed: 'Failed',
+    failedWith: (reason) => `Failed: ${reason}`,
+    callGroup: (tool, count) => `Ran ${tool} ${countOf(count, 'time', 'times')}`,
+    failedCount: (count) => `${count} failed`,
     interrupted: 'Interrupted',
     noOutput: '(no output)',
     diffTruncated: 'Diff truncated',

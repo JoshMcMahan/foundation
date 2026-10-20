@@ -266,6 +266,18 @@ describe('ChatMessageList after a reply', () => {
     expect(container.scrollTop).toBe(1300)
   })
 
+  it('keeps a row the reader just opened under the pointer', () => {
+    const { container } = renderDone()
+    armAtBottom(container)
+    const before = container.scrollTop
+    fireEvent.click(container.querySelector('[data-testid]') ?? container.firstElementChild!)
+
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    resized?.()
+
+    expect(container.scrollTop).toBe(before)
+  })
+
   it('leaves the reader where they are once they scrolled up', () => {
     const { container } = renderDone()
     armAtBottom(container)

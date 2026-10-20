@@ -229,6 +229,16 @@ const NO_TOOLS: ChatToolOption[] = []
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
 const ChatStreamContext = createContext<ChatStream | undefined>(undefined)
+// Its own context so a message row that names its model re-renders only when
+// the models change, not on every update to the chat.
+const ChatModelsContext = createContext<ChatModel[]>([])
+
+/** A model's display name by its id, when the adapter listed one; undefined
+ *  outside a ChatProvider or for a model it doesn't list. */
+export function useChatModelName(id: string | null | undefined): string | undefined {
+  const models = useContext(ChatModelsContext)
+  return id ? models.find((m) => m.id === id)?.name || undefined : undefined
+}
 
 export function useChat() {
   const context = useContext(ChatContext)
@@ -1481,7 +1491,9 @@ export function ChatProvider({
     <ChatConfigProvider value={resolvedConfig}>
       <ReportSidebarPresentationContext.Provider value={reportSidebarPresentation}>
         <ChatContext.Provider value={value}>
-          <ChatStreamContext.Provider value={stream}>{children}</ChatStreamContext.Provider>
+          <ChatModelsContext.Provider value={state.models}>
+            <ChatStreamContext.Provider value={stream}>{children}</ChatStreamContext.Provider>
+          </ChatModelsContext.Provider>
         </ChatContext.Provider>
       </ReportSidebarPresentationContext.Provider>
     </ChatConfigProvider>

@@ -463,13 +463,14 @@ describe('rollup folding', () => {
     expect(screen.getAllByText('out').length).toBeGreaterThan(0)
   })
 
-  it('never folds failed or running members', () => {
+  it('never rolls up failed or running members', () => {
     const items = buildRenderItems([
       tc('t1', 'ReadFile'),
       tc('t2', 'ReadFile', 'error'),
       tc('t3', 'ReadFile'),
     ])
-    expect(items.map((i) => i.kind)).toEqual(['single', 'single', 'single'])
+    // Not a rollup: one tool's calls in a row, a failure among them, share a call group.
+    expect(items.map((i) => i.kind)).toEqual(['calls'])
     const running = buildRenderItems([tc('t1', 'ReadFile'), tc('t2', 'ReadFile', 'running')])
     expect(running.map((i) => i.kind)).toEqual(['single', 'single'])
   })
@@ -717,5 +718,79 @@ describe('status in words', () => {
     expect(hidden).toEqual(
       expect.arrayContaining(['Running…', 'Failed', 'Done', 'In progress', 'To do']),
     )
+  })
+})
+
+describe('call groups', () => {
+  const cost = (id: string, status: 'ok' | 'error', result: string): ToolCallPart => ({
+    kind: 'tool_call',
+    id,
+    name: 'cost_summary',
+    args: JSON.stringify({ allocation: id }),
+    status,
+    result,
+  })
+
+  it('folds one tool’s finished calls in a row, failures and host-drawn ones too', () => {
+    const items = buildRenderItems(
+      [cost('a', 'error', 'boom'), cost('b', 'ok', '{}'), tc('t1', 'Bash')],
+      (name) => name === 'cost_summary',
+    )
+    expect(items.map((i) => i.kind)).toEqual(['calls', 'single'])
+  })
+
+  it('never folds a running call, a waiting one, or one with a decision', () => {
+    const waiting: ToolCallPart = { ...cost('w', 'ok', ''), status: 'waiting' }
+    const decided: ToolCallPart = {
+      ...cost('d', 'ok', '{}'),
+      decision: { status: 'approved', by: 'user', name: 'Ada' },
+    }
+    const running: ToolCallPart = { ...cost('r', 'ok', ''), status: 'running' }
+    for (const other of [waiting, decided, running]) {
+      expect(buildRenderItems([cost('a', 'ok', '{}'), other]).map((i) => i.kind)).not.toContain(
+        'calls',
+      )
+    }
+  })
+
+  it('counts calls and failures, shows what the host drew, and opens to each call', () => {
+    renderParts(
+      [cost('a', 'error', 'StartDate is required'), cost('b', 'ok', 'drawn'), cost('c', 'ok', '')],
+      {},
+      {
+        slots: {
+          toolRenderers: {
+            cost_summary: ({ part }) =>
+              part.result ? <div data-testid="cost-table">{part.result}</div> : null,
+          },
+        },
+      },
+    )
+    expect(screen.getByText(/Ran cost_summary 3 times/)).toBeInTheDocument()
+    expect(screen.getByText(/1 failed/)).toBeInTheDocument()
+    expect(screen.getByTestId('tool-call-group')).toHaveTextContent('drawn')
+    fireEvent.click(screen.getByRole('button', { name: /Ran cost_summary 3 times/ }))
+    expect(screen.getAllByTestId('tool-call-part')).toHaveLength(3)
+    expect(screen.getByText('Failed: StartDate is required')).toBeVisible()
+  })
+})
+
+describe('failed calls', () => {
+  it('say so in words with the error, beside a host drawing too', () => {
+    renderParts(
+      [
+        {
+          kind: 'tool_call',
+          id: 'x',
+          name: 'cost_summary',
+          args: '{}',
+          status: 'error',
+          result: 'StartDate is required\nmore',
+        },
+      ],
+      {},
+      { slots: { toolRenderers: { cost_summary: () => null } } },
+    )
+    expect(screen.getByText(/^Failed: StartDate is required/)).toBeVisible()
   })
 })

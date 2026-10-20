@@ -10,6 +10,7 @@ import { RelativeTime } from '../../components/relativeTime'
 import { cx } from '../../cx'
 import { formatDuration } from '../../format'
 import { EditIcon, RetryIcon } from '../../icons'
+import { useChatModelName } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
 import { replyText } from '../core/useKeyboardShortcuts'
 import type { ApprovalAnswerValue, AttachmentRef, ChatUser, ChatMessage as Message } from '../types'
@@ -188,6 +189,7 @@ function ChatMessage({
   // through and renders the parts above its content with the usual chrome.
   const timestamp = parseTimestamp(message.timestamp)
   const totalTokens = message.tokensUsed?.total_tokens
+  const modelName = useChatModelName(isUser ? undefined : message.model)
   const meta = (timestamp || (!isUser && (message.model || totalTokens))) && (
     <span
       className={cx(
@@ -196,7 +198,9 @@ function ChatMessage({
       )}
     >
       <RelativeTime value={timestamp} />
-      {!isUser && message.model && <span>{message.model}</span>}
+      {!isUser && message.model && (
+        <span title={modelName ? message.model : undefined}>{modelName ?? message.model}</span>
+      )}
       {!isUser && totalTokens ? (
         <span
           title={
