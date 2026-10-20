@@ -135,7 +135,7 @@
     "@streamdown/code": "^2.0.0",
     "@streamdown/math": "^1.0.3",
     "@streamdown/mermaid": "^1.0.3",
-    "@tanstack/react-virtual": "^3.14.17",
+    "@tanstack/react-virtual": "^3.14.21",
     "@types/luxon": "^3.7.6",
     "anser": "^2.3.5",
     "clsx": "^2.1.1",

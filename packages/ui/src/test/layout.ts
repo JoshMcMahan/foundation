@@ -1,12 +1,16 @@
 import { vi } from 'vitest'
 
 /** Gives every element a size, since jsdom has no layout and the virtual list
- *  draws no rows in a scroller it measures as empty. Returns the restore. */
+ *  draws no rows in a scroller it measures as empty. The virtual list reads a
+ *  scroller's client size and an item's offset size, so both are faked.
+ *  Returns the restore. */
 export function mockListLayout(size = 240) {
-  const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(size)
-  const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(size)
+  const spies = (['offsetHeight', 'offsetWidth', 'clientHeight', 'clientWidth'] as const).map(
+    (key) => vi.spyOn(HTMLElement.prototype, key, 'get').mockReturnValue(size),
+  )
   return () => {
-    height.mockRestore()
-    width.mockRestore()
+    for (const spy of spies) {
+      spy.mockRestore()
+    }
   }
 }

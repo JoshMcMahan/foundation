@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { UIProvider } from '../components/Provider'
+import { mockListLayout } from '../test/layout'
 import { memoryStorage } from '../test/storage'
 import type { ActiveFilter } from './filterModel'
 import { ListFilterBar } from './ListFilterBar'
@@ -96,8 +97,7 @@ describe('the filter row', () => {
 
   it('searches a long list of people, Enter taking the first match, chosen ones kept listed', async () => {
     // jsdom has no layout, so the virtual list would measure its scroller as empty.
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(240)
-    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(240)
+    mockListLayout()
     render(<Harness searchable />)
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Owner' }))

@@ -14,6 +14,7 @@ import {
   RESOURCE,
   ROLES,
 } from '../test/access'
+import { mockListLayout } from '../test/layout'
 import { AccessDrawer, type AccessDrawerProps } from './AccessDrawer'
 import {
   alsoHas,
@@ -28,8 +29,7 @@ import type { AccessChange, AccessGrant } from './types'
 
 // jsdom has no layout, so the virtual list would measure its scroller as empty and draw no rows.
 beforeAll(() => {
-  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(400)
-  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400)
+  mockListLayout(400)
 })
 
 const role = (id: string) => {

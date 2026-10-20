@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { mockListLayout } from '../test/layout'
 import type { ComboboxItems } from './Combobox'
 import { CreateModalSelect } from './CreateModal'
 
 // jsdom has no layout, so the virtual list would measure its scroller as empty and draw no rows.
 beforeAll(() => {
-  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(240)
-  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(240)
+  mockListLayout()
 })
 
 const items: ComboboxItems<string> = [
