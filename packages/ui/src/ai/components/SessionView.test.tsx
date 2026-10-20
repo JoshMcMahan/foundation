@@ -28,13 +28,24 @@ vi.mock('./ChatMessageList', () => ({
 
 vi.mock('./ChatInput', () => ({
   __esModule: true,
-  default: (props: { disabled?: boolean; onEditLastMessage?: () => void }) => (
+  default: (props: {
+    disabled?: boolean
+    onEditLastMessage?: () => void
+    activity?: React.ReactNode
+  }) => (
     <div
       data-testid="composer"
       data-disabled={String(!!props.disabled)}
       data-edits-last={String(!!props.onEditLastMessage)}
-    />
+    >
+      {props.activity}
+    </div>
   ),
+}))
+
+vi.mock('./ChatActivity', () => ({
+  __esModule: true,
+  default: () => <span data-testid="chat-activity" />,
 }))
 
 const ask: Message = { id: 'u1', role: 'user', content: 'stop it', parentId: 'root' }
@@ -51,6 +62,29 @@ function pressEscape(target: Element | Window = window) {
 }
 
 describe('SessionView', () => {
+  it("shows the working line above the composer for the chat provider's reply, in place of the list's indicator", () => {
+    chat.isStreaming = true
+    render(<SessionView sessionKey="s1" messages={[ask]} onSend={vi.fn()} />)
+
+    expect(screen.getByTestId('composer')).toContainElement(screen.getByTestId('chat-activity'))
+    expect(listProps?.workingIndicator).toBe(false)
+  })
+
+  it('leaves the working line of a turn the host runs to the host', () => {
+    render(
+      <SessionView
+        sessionKey="s1"
+        messages={[ask]}
+        onSend={vi.fn()}
+        turn={{ running: true, onStop: vi.fn() }}
+        composer={{ activity: <span data-testid="host-activity" /> }}
+      />,
+    )
+
+    expect(screen.getByTestId('host-activity')).toBeInTheDocument()
+    expect(screen.queryByTestId('chat-activity')).not.toBeInTheDocument()
+  })
+
   it('stops a turn the host runs with Escape while it runs', () => {
     const onStop = vi.fn()
     const { rerender } = render(

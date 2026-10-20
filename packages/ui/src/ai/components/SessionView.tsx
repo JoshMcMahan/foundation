@@ -10,6 +10,7 @@ import { useChat } from '../core/ChatProvider'
 import useDragDrop from '../core/useDragDrop'
 import { escapeClosesLayer } from '../core/useKeyboardShortcuts'
 import type { ApprovalAnswerValue, AttachmentMeta, ChatMessage as Message } from '../types'
+import ChatActivity from './ChatActivity'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatMessageList from './ChatMessageList'
 import DragOverlay from './DragOverlay'
@@ -135,10 +136,14 @@ export default function SessionView({
   }, [])
   const { isDragging, dragHandlers } = useDragDrop({ onFilesDropped })
 
+  // A turn the provider runs gets the same working line an agent session's host passes in.
+  const activity = composer?.activity ?? (!turn && running ? <ChatActivity /> : undefined)
+
   const input = (
     <ChatInput
       ref={inputRef}
       {...composer}
+      activity={activity}
       onSend={onSend}
       conversationId={sessionKey}
       disabled={loading || !!composer?.disabled}
@@ -191,7 +196,7 @@ export default function SessionView({
             {...(footer ? { footer } : {})}
             {...(label ? { label } : {})}
             {...(flush ? { flush } : {})}
-            {...(workingIndicator !== undefined ? { workingIndicator } : {})}
+            workingIndicator={workingIndicator ?? !activity}
             inputElement={input}
           />
         )}

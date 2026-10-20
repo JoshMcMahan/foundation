@@ -95,6 +95,8 @@ export interface ChatStrings {
     stop: string
     /** The status words an agent's working line picks from, one per turn. */
     words: readonly string[]
+    /** The working line while a call waits for the reader to allow it. */
+    waitingForAnswer: string
   }
   emptyState: {
     // null renders the built-in time-of-day greeting.
@@ -409,6 +411,7 @@ export const defaultChatStrings: ChatStrings = {
     tokens: (input, output) => `↑${input} ↓${output} tokens`,
     stop: 'Stop',
     words: activityWords,
+    waitingForAnswer: 'Waiting for your answer',
   },
   emptyState: {
     greeting: null,
