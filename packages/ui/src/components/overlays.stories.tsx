@@ -5,6 +5,7 @@ import {
   DisplayIcon,
   FilterIcon,
   FolderIcon,
+  GridIcon,
   HomeIcon,
   KeyboardIcon,
   MoreIcon,
@@ -22,6 +23,7 @@ import { Popover, type PopoverProps, useClosePopover } from './Popover'
 import { Select } from './Select'
 import { Switch } from './Switch'
 import { toast } from './Toast'
+import { Tooltip } from './Tooltip'
 
 const meta: Meta = {
   title: 'UI/Overlays',
@@ -393,6 +395,77 @@ export const PopoverRailFlyout: StoryObj = {
     const flyout = await screen.findByRole('dialog', { name: 'Projects' })
     await waitFor(() => expect(flyout).toBeVisible())
     await expect(within(flyout).getByRole('link', { name: 'Archived' })).toBeVisible()
+  },
+}
+
+const launcherApps = [
+  { name: 'Projects', color: '#2563eb' },
+  { name: 'Notebooks', color: '#16a34a' },
+  { name: 'Reports', color: '#d97706' },
+]
+
+function AppLauncher() {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="start"
+      sheet={false}
+      aria-label="Apps"
+      className="grid w-64 gap-1 p-2"
+      // The library's stylesheet leaves out story-only utilities.
+      style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+      trigger={
+        // Its own name is the hint, so the tip stays shut while the grid is open.
+        <Tooltip content="Apps" side="right" disabled={open}>
+          <button
+            type="button"
+            aria-label="Apps"
+            className="flex size-7 items-center justify-center rounded-md theme-muted-text hover:bg-(--theme-hover) data-popup-open:bg-(--theme-hover) [&_svg]:size-4"
+          >
+            <GridIcon />
+          </button>
+        </Tooltip>
+      }
+    >
+      {launcherApps.map((app) => (
+        <a
+          key={app.name}
+          href={`#${app.name.toLowerCase()}`}
+          className="flex flex-col items-center gap-1.5 rounded-md p-2 text-center text-xs hover:bg-(--theme-hover)"
+        >
+          <span className="size-10 rounded-lg" style={{ background: app.color }} />
+          {app.name}
+        </a>
+      ))}
+    </Popover>
+  )
+}
+
+/** A trigger with a hint: a Tooltip wraps the button, and the panel still opens beside it. */
+export const PopoverTooltipTrigger: StoryObj = {
+  name: 'Popover, trigger with a tooltip',
+  render: () => (
+    <div className="p-8">
+      <div className="flex items-center justify-between" style={{ width: 240 }}>
+        <span className="text-sm font-semibold">Workspace</span>
+        <AppLauncher />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const trigger = within(canvasElement).getByRole('button', { name: 'Apps' })
+    await userEvent.click(trigger)
+    const panel = await screen.findByRole('dialog', { name: 'Apps' })
+    await waitFor(() => expect(panel).toBeVisible())
+    // Placed from the trigger: below it and starting at its edge, not at the page's corner.
+    const below = trigger.getBoundingClientRect()
+    await waitFor(() => {
+      const placed = panel.getBoundingClientRect()
+      expect(placed.top).toBeGreaterThan(below.bottom)
+      expect(Math.round(placed.left)).toBe(Math.round(below.left))
+    })
   },
 }
 

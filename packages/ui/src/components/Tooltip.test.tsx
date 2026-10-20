@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { ReactNode } from 'react'
+import { createRef, type ReactNode } from 'react'
 import { openTooltip } from '../test/tooltip'
 import { formatInfoTipContent, InfoTip } from './InfoTip'
 import { Tooltip, TooltipProvider } from './Tooltip'
@@ -35,6 +35,19 @@ describe('Tooltip', () => {
       'Owners only. New repositories start on this team',
     )
     other.remove()
+  })
+
+  it.each([
+    ['inside the provider', withProvider],
+    ['on its own', render],
+  ])('hands a ref it is given to its anchor, as a popup trigger gives one, %s', (_, mount) => {
+    const ref = createRef<HTMLButtonElement>()
+    mount(
+      <Tooltip content="Apps" ref={ref}>
+        <button type="button">Apps</button>
+      </Tooltip>,
+    )
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'Apps' }))
   })
 
   it('leaves the anchor undescribed by default', () => {

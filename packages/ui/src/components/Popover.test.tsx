@@ -51,6 +51,18 @@ describe('Popover', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'first problem' })).toHaveFocus())
   })
 
+  it('sits beside a trigger it opens through a tooltip', async () => {
+    render(<Toolbar side="bottom" align="start" sheet={false} />)
+    const button = screen.getByRole('button', { name: 'Problems' })
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 160, y: 10, width: 28, height: 28 }),
+    )
+    const { panel } = openPanel()
+    const positioner = panel.parentElement as HTMLElement
+    // Placed from the trigger, rather than left at the corner of the page with no anchor.
+    await waitFor(() => expect(positioner.style.transform).toMatch(/^translate\(15\dpx, /))
+  })
+
   it('can focus the panel rather than its first control', async () => {
     render(<Toolbar initialFocus="popup" />)
     const { panel } = openPanel()

@@ -4,7 +4,9 @@ import {
   createContext,
   type ReactElement,
   type ReactNode,
+  type Ref,
   use,
+  useCallback,
   useEffect,
   useId,
   useState,
@@ -134,6 +136,21 @@ function useRestAfterPopup(anchor: HTMLElement | null) {
   return resting
 }
 
+/** Sets a ref and returns how to unset it: a callback ref's own cleanup, or a call with null. */
+function assignRef<T>(ref: Ref<T> | undefined, node: T): () => void {
+  if (typeof ref === 'function') {
+    const cleanup = ref(node)
+    return typeof cleanup === 'function' ? cleanup : () => ref(null)
+  }
+  if (ref) {
+    ref.current = node
+    return () => {
+      ref.current = null
+    }
+  }
+  return () => {}
+}
+
 /** A visual hint for sighted pointer and keyboard users. The anchor still needs
  *  its own accessible name; `describesAnchor` also gives assistive technology the
  *  hint. Use InfoTip for content everyone must reach, such as on a touch screen. */
@@ -145,11 +162,28 @@ export function Tooltip({
   disabled = false,
   overflowOnly = false,
   describesAnchor = false,
+  ref,
   ...anchorProps
 }: TooltipProps) {
   const handle = use(TooltipHandleContext)
   const descriptionId = useId()
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null)
+  // A popup trigger rendering through this tooltip places its popup by this ref, so it must
+  // reach the anchor alongside the tooltip's own.
+  const anchorRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (!node) {
+        return
+      }
+      setAnchorElement(node)
+      const unset = assignRef(ref, node)
+      return () => {
+        setAnchorElement(null)
+        unset()
+      }
+    },
+    [ref],
+  )
   const resting = useRestAfterPopup(anchorElement)
   const payload = { content, shortcut, side }
   const described = describesAnchor && !disabled && !!content
@@ -165,7 +199,7 @@ export function Tooltip({
       {...(!handle && anchorProps.delay === undefined && { delay: OPEN_DELAY })}
       handle={handle ?? undefined}
       payload={payload}
-      ref={setAnchorElement}
+      ref={anchorRef}
       disabled={disabled || !content || resting}
       data-overflow-only={overflowOnly || undefined}
       // The anchor's own props win over the trigger's, so its description joins there.
