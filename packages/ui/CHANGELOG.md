@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.82.1](https://github.com/parallelworks/foundation/compare/ui-v0.82.0...ui-v0.82.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ui:** chat messages and tool cards lose width to doubled padding on phones ([#441](https://github.com/parallelworks/foundation/issues/441)) ([f8dacd5](https://github.com/parallelworks/foundation/commit/f8dacd52116833d753e8fad09c84cb9e578bd58c))
+
 ## [0.82.0](https://github.com/parallelworks/foundation/compare/ui-v0.81.0...ui-v0.82.0) (2026-10-20)
 
 
