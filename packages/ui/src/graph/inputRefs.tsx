@@ -153,6 +153,7 @@ export function InputRefSelect({
   return (
     <Select<string>
       aria-label={label}
+      width="fill"
       placeholder={matching.length > 0 ? t.chooseInput : t.noMatchingInputs}
       items={items}
       value={known || !current ? current || null : `?${current}`}

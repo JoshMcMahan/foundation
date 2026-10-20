@@ -518,3 +518,224 @@ describe('Combobox group headings', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Searching…')
   })
 })
+
+describe('Combobox as a picker', () => {
+  const teams = [
+    { label: 'Platform', value: 'plat', hint: 'PLT' },
+    { label: 'Design', value: 'des', hint: 'DES' },
+    { label: 'Docs', value: 'doc', hint: 'DOC' },
+  ]
+  function Picker({
+    initial = null,
+    onValueChange,
+    onCreate,
+    controlled = false,
+  }: {
+    initial?: string | null
+    onValueChange?: (value: string | null) => void
+    onCreate?: (text: string) => void
+    controlled?: boolean
+  }) {
+    const [value, setValue] = useState<string | null>(initial)
+    const [open, setOpen] = useState(false)
+    return (
+      <>
+        {controlled && (
+          <button type="button" onClick={() => setOpen(true)}>
+            Shortcut
+          </button>
+        )}
+        <Combobox
+          aria-label="Team"
+          placeholder="Search"
+          items={teams}
+          value={value}
+          onValueChange={(next) => {
+            setValue(next)
+            onValueChange?.(next)
+          }}
+          onCreate={onCreate}
+          {...(controlled && { open, onOpenChange: setOpen })}
+          trigger={<button type="button">{value ?? 'No team'}</button>}
+        />
+      </>
+    )
+  }
+  const typeIn = (value: string) => {
+    const input = screen.getByPlaceholderText('Search')
+    input.focus()
+    fireEvent.input(input, { target: { value }, inputType: 'insertText' })
+    return input
+  }
+
+  it('reads a row by its label and then its hint', async () => {
+    render(<Picker />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    expect(await screen.findByRole('option', { name: 'Design DES' })).toBeInTheDocument()
+  })
+
+  it('opens on a row, so Enter picks at once', async () => {
+    const onValueChange = vi.fn()
+    render(<Picker onValueChange={onValueChange} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Platform/ })).toHaveAttribute('data-highlighted'),
+    )
+    fireEvent.keyDown(screen.getByPlaceholderText('Search'), { key: 'Enter' })
+    await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith('plat'))
+  })
+
+  it('opens on the chosen row, with the whole list to search', async () => {
+    render(<Picker initial="des" />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    expect(screen.getByPlaceholderText('Search')).toHaveValue('')
+    expect(screen.getAllByRole('option')).toHaveLength(3)
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Design/ })).toHaveAttribute('data-highlighted'),
+    )
+  })
+
+  it('keeps the first match highlighted while typing', async () => {
+    const onValueChange = vi.fn()
+    render(<Picker onValueChange={onValueChange} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    const input = typeIn('do')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Docs/ })).toHaveAttribute('data-highlighted'),
+    )
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith('doc'))
+  })
+
+  it('opens on the chosen row when its host opens it', async () => {
+    render(<Picker controlled initial="doc" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Shortcut' }))
+    await screen.findByRole('listbox')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Docs/ })).toHaveAttribute('data-highlighted'),
+    )
+  })
+
+  it('opens and closes as its host says', async () => {
+    render(<Picker controlled />)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Shortcut' }))
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+  })
+
+  it('hands typed text no item has to onCreate, picking nothing itself', async () => {
+    const onCreate = vi.fn()
+    const onValueChange = vi.fn()
+    render(<Picker onCreate={onCreate} onValueChange={onValueChange} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    typeIn('Research')
+    fireEvent.click(await screen.findByRole('option', { name: 'Create “Research”' }))
+    expect(onCreate).toHaveBeenCalledWith('Research')
+    expect(onValueChange).not.toHaveBeenCalled()
+  })
+
+  it('offers no create row for text an item has', async () => {
+    render(<Picker onCreate={vi.fn()} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    typeIn('docs')
+    expect(await screen.findByRole('option', { name: /Docs/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /^Create/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Combobox tag entry', () => {
+  function TagField({
+    onValueChange,
+    items = [],
+    suggested,
+    addOnBlur = false,
+  }: {
+    onValueChange?: (value: string[]) => void
+    items?: string[]
+    suggested?: string[]
+    addOnBlur?: boolean
+  }) {
+    const [value, setValue] = useState<string[]>([])
+    return (
+      <Combobox
+        multiple
+        creatable
+        aria-label="Tags"
+        items={items}
+        value={value}
+        maxItems={3}
+        separators={[',']}
+        addOnBlur={addOnBlur}
+        suggested={suggested}
+        createValue={(typed) => typed.trim().toLowerCase().slice(0, 30) || undefined}
+        onValueChange={(next) => {
+          setValue(next)
+          onValueChange?.(next)
+        }}
+      />
+    )
+  }
+  const typeIn = (input: HTMLElement, value: string) => {
+    input.focus()
+    fireEvent.input(input, { target: { value }, inputType: 'insertText' })
+  }
+
+  it('shows no button and no empty list with nothing to pick from', () => {
+    render(<TagField />)
+    expect(screen.queryByTestId('combobox-button')).not.toBeInTheDocument()
+  })
+
+  it('adds what is typed on a separator, through createValue', async () => {
+    const onValueChange = vi.fn()
+    render(<TagField onValueChange={onValueChange} />)
+    const input = screen.getByRole('combobox', { name: 'Tags' })
+    typeIn(input, 'Climate ')
+    fireEvent.keyDown(input, { key: ',' })
+    expect(onValueChange).toHaveBeenLastCalledWith(['climate'])
+    expect(screen.getByRole('button', { name: 'Remove climate' })).toBeInTheDocument()
+    expect(input).toHaveValue('')
+  })
+
+  it('splits pasted text on the separators, up to maxItems and without repeats', () => {
+    const onValueChange = vi.fn()
+    render(<TagField onValueChange={onValueChange} />)
+    const input = screen.getByRole('combobox', { name: 'Tags' })
+    fireEvent.paste(input, { clipboardData: { getData: () => 'a, B,b, c, d' } })
+    expect(onValueChange).toHaveBeenLastCalledWith(['a', 'b', 'c'])
+  })
+
+  it('adds what is half typed on leaving the field, with addOnBlur', () => {
+    const onValueChange = vi.fn()
+    render(<TagField onValueChange={onValueChange} addOnBlur />)
+    const input = screen.getByRole('combobox', { name: 'Tags' })
+    typeIn(input, 'Ocean')
+    fireEvent.blur(input)
+    expect(onValueChange).toHaveBeenLastCalledWith(['ocean'])
+  })
+
+  it('offers suggested values as chips under the field, which leave once chosen', () => {
+    render(<TagField suggested={['wind', 'solar']} />)
+    const group = screen.getByRole('group', { name: 'Suggested' })
+    fireEvent.click(within(group).getByRole('button', { name: 'Add “wind”' }))
+    expect(screen.getByRole('button', { name: 'Remove wind' })).toBeInTheDocument()
+    expect(within(group).queryByRole('button', { name: 'Add “wind”' })).not.toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: 'Add “solar”' })).toBeInTheDocument()
+  })
+
+  it('removes the last value with Backspace in an empty field', async () => {
+    render(<TagField />)
+    const input = screen.getByRole('combobox', { name: 'Tags' })
+    typeIn(input, 'ocean')
+    fireEvent.keyDown(input, { key: ',' })
+    expect(screen.getByRole('button', { name: 'Remove ocean' })).toBeInTheDocument()
+    fireEvent.keyDown(input, { key: 'Backspace' })
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Remove ocean' })).not.toBeInTheDocument(),
+    )
+  })
+})

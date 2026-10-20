@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
-import { Input, Textarea } from './Input'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import { Input, Textarea, TitleInput } from './Input'
 
 describe('Input', () => {
   it('draws the small box at size sm, and lets a host class win over its own', () => {
@@ -109,5 +110,102 @@ describe('Textarea', () => {
 
     expect(screen.getByRole('textbox', { name: 'Notes' })).toBeRequired()
     expect(screen.getByText('*')).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+describe('Textarea options', () => {
+  it('grows with its text from rows up to maxRows with autosize', () => {
+    render(<Textarea aria-label="Comment" rows={1} autosize={{ maxRows: 6 }} />)
+    const box = screen.getByRole('textbox', { name: 'Comment' })
+    expect(box).toHaveClass('resize-none', '[field-sizing:content]')
+    expect(box.style.minHeight).toMatch(/^calc\(1lh \+ /)
+    expect(box.style.maxHeight).toMatch(/^calc\(6lh \+ /)
+  })
+
+  it('draws no box of its own when bare', () => {
+    render(<Textarea aria-label="Comment" bare />)
+    const box = screen.getByRole('textbox', { name: 'Comment' })
+    expect(box).toHaveClass('border-0', 'bg-transparent', 'p-0')
+    expect(box).not.toHaveClass('rounded-md')
+  })
+
+  it('hides a secret until shown, in monospace, unchecked and left alone by autofill', () => {
+    render(<Textarea aria-label="Private key" secret />)
+    const box = screen.getByRole('textbox', { name: 'Private key' })
+    expect(box).toHaveClass('font-mono', '[-webkit-text-security:disc]')
+    expect(box).toHaveAttribute('spellcheck', 'false')
+    expect(box).toHaveAttribute('autocomplete', 'off')
+    fireEvent.click(screen.getByRole('button', { name: 'Show value' }))
+    expect(box).not.toHaveClass('[-webkit-text-security:disc]')
+    expect(screen.getByRole('button', { name: 'Hide value' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+})
+
+describe('TitleInput', () => {
+  function Title({ onCommit = vi.fn() }: { onCommit?: (value: string) => void }) {
+    const [value, setValue] = useState('Fix login')
+    return (
+      <TitleInput
+        aria-label="Title"
+        value={value}
+        onCommit={(next) => {
+          setValue(next)
+          onCommit(next)
+        }}
+      />
+    )
+  }
+
+  it('saves the trimmed title on Enter, joining pasted lines', () => {
+    const onCommit = vi.fn()
+    render(<Title onCommit={onCommit} />)
+    const box = screen.getByRole('textbox', { name: 'Title' })
+    box.focus()
+    fireEvent.change(box, { target: { value: ' Fix\nlogin on Safari ' } })
+    expect(box).toHaveValue(' Fix login on Safari ')
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(onCommit).toHaveBeenCalledWith('Fix login on Safari')
+    expect(box).not.toHaveFocus()
+  })
+
+  it('puts the saved title back on Escape, saving nothing', () => {
+    const onCommit = vi.fn()
+    render(<Title onCommit={onCommit} />)
+    const box = screen.getByRole('textbox', { name: 'Title' })
+    box.focus()
+    fireEvent.change(box, { target: { value: 'Something else' } })
+    fireEvent.keyDown(box, { key: 'Escape' })
+    expect(box).toHaveValue('Fix login')
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('saves nothing for an empty title, and saves on leaving the field', () => {
+    const onCommit = vi.fn()
+    render(<Title onCommit={onCommit} />)
+    const box = screen.getByRole('textbox', { name: 'Title' })
+    box.focus()
+    fireEvent.change(box, { target: { value: '   ' } })
+    fireEvent.blur(box)
+    expect(box).toHaveValue('Fix login')
+    expect(onCommit).not.toHaveBeenCalled()
+    box.focus()
+    fireEvent.change(box, { target: { value: 'Renamed' } })
+    fireEvent.blur(box)
+    expect(onCommit).toHaveBeenCalledWith('Renamed')
+  })
+
+  it('takes a title changed elsewhere unless it is being edited', () => {
+    const { rerender } = render(<TitleInput aria-label="Title" value="One" onCommit={vi.fn()} />)
+    const box = screen.getByRole('textbox', { name: 'Title' })
+    rerender(<TitleInput aria-label="Title" value="Two" onCommit={vi.fn()} />)
+    expect(box).toHaveValue('Two')
+    box.focus()
+    fireEvent.focus(box)
+    fireEvent.change(box, { target: { value: 'Mine' } })
+    rerender(<TitleInput aria-label="Title" value="Three" onCommit={vi.fn()} />)
+    expect(box).toHaveValue('Mine')
   })
 })

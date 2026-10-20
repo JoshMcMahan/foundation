@@ -431,9 +431,7 @@ export default function ChatInput({
             {slash && slashMenu.open && (
               <SlashMenu
                 label={slash.label}
-                listId={slashMenu.listId}
-                matches={slashMenu.matches}
-                active={slashMenu.active}
+                menu={slashMenu}
                 onChoose={(name) => {
                   slashMenu.choose(name)
                   textareaRef.current?.focus()

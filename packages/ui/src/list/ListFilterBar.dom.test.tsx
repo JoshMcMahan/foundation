@@ -21,10 +21,12 @@ const ROWS: Row[] = [
 function Harness({
   defaultFilters,
   required = false,
+  searchable,
   storageKey = 'bar',
 }: {
   defaultFilters?: ActiveFilter[]
   required?: boolean
+  searchable?: boolean
   storageKey?: string
 }) {
   const view = useListView<Row>({
@@ -47,6 +49,7 @@ function Harness({
         label: 'Owner',
         kind: 'people',
         required,
+        searchable,
         options: ['alice', 'bob', 'carol'].map((o) => ({ value: o, label: o })),
         value: (row) => row.owner,
       },
@@ -89,6 +92,29 @@ describe('the filter row', () => {
     expect(rows()).toBe('bob')
     expect(screen.getByRole('group', { name: 'Owner is bob' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Filter, 1 on' })).toBeInTheDocument()
+  })
+
+  it('searches a long list of people, Enter taking the first match, chosen ones kept listed', async () => {
+    // jsdom has no layout, so the virtual list would measure its scroller as empty.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(240)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(240)
+    render(<Harness searchable />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Owner' }))
+    await nextFrame()
+    const search = await screen.findByPlaceholderText('Search options…')
+    search.focus()
+    fireEvent.input(search, { target: { value: 'car' }, inputType: 'insertText' })
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: 'carol' })).toHaveAttribute('data-highlighted'),
+    )
+    fireEvent.keyDown(search, { key: 'Enter' })
+    await waitFor(() => expect(rows()).toBe('carol'))
+    fireEvent.input(search, { target: { value: 'bo' }, inputType: 'insertText' })
+    expect(await screen.findByRole('option', { name: 'bob' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'carol' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('option', { name: 'alice' })).not.toBeInTheDocument()
+    vi.restoreAllMocks()
   })
 
   it('words the condition for how many values follow, and turns it to "is none of"', async () => {

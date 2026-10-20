@@ -463,6 +463,7 @@ function OutputsEditor({
               <div className="w-1/3">
                 <Select<string>
                   aria-label={t.outputStep}
+                  width="fill"
                   placeholder={t.outputStep}
                   items={stepIds.map((id) => ({ value: id, label: id }))}
                   value={row.step || null}

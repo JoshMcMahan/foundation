@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { openTooltip } from '../test/tooltip'
+import { Field } from './Field'
 import { Select, type SelectItem } from './Select'
 import { TooltipProvider } from './Tooltip'
 
@@ -104,5 +105,65 @@ describe('Select options', () => {
     const [text, indicator] = [...option.children]
     expect(text).toHaveTextContent('AskAsks before every change')
     expect(indicator?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+describe('Select sizing, reasons and keys', () => {
+  it('sizes to its longest label alone, and fills its row in a Field', () => {
+    const { unmount } = render(<Select aria-label="Mode" items={modes} defaultValue="ask" />)
+    const alone = screen.getByRole('combobox', { name: 'Mode' })
+    expect(alone).toHaveClass('w-fit')
+    // Every label sits unseen in the field, so its width holds as the choice changes.
+    expect(alone).toHaveTextContent('AskAskAutoLocked')
+    unmount()
+    render(
+      <Field label="Mode">
+        <Select items={modes} defaultValue="ask" />
+      </Field>,
+    )
+    expect(screen.getByRole('combobox', { name: 'Mode' })).not.toHaveClass('w-fit')
+  })
+
+  it('says why it is disabled, staying focusable and shut', async () => {
+    render(
+      <TooltipProvider>
+        <Select
+          aria-label="Key type"
+          items={modes}
+          defaultValue="ask"
+          disabled
+          disabledReason="Set by the platform"
+        />
+      </TooltipProvider>,
+    )
+    const trigger = screen.getByRole('combobox', { name: 'Key type' })
+    expect(trigger).toHaveAttribute('aria-disabled', 'true')
+    expect(trigger).toHaveAccessibleDescription('Set by the platform')
+    act(() => trigger.focus())
+    expect(trigger).toHaveFocus()
+    await waitFor(() => expect(openTooltip()).toHaveTextContent('Set by the platform'))
+    fireEvent.click(trigger)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('passes keys on its trigger to the host', () => {
+    const onKeyDown = vi.fn()
+    render(<Select aria-label="Mode" items={modes} onKeyDown={onKeyDown} />)
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Mode' }), { key: 'k' })
+    expect(onKeyDown).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads a row by its label and then its hint', async () => {
+    render(
+      <Select
+        aria-label="Team"
+        items={[
+          { value: 'plat', label: 'Platform', hint: 'PLT' },
+          { value: 'des', label: 'Design', hint: 'DES' },
+        ]}
+      />,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    expect(await screen.findByRole('option', { name: 'Design DES' })).toBeInTheDocument()
   })
 })

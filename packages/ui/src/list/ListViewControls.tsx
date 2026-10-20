@@ -176,11 +176,7 @@ function OptionSelect({
       aria-label={label}
       items={options}
       value={value}
-      onValueChange={(next) => {
-        if (next !== null) {
-          onSelect(next)
-        }
-      }}
+      onValueChange={onSelect}
       trigger={
         <button
           type="button"

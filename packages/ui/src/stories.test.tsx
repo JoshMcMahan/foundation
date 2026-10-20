@@ -23,6 +23,7 @@ import * as markdown from './components/Markdown.stories'
 import * as menus from './components/Menu.stories'
 import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
+import * as pickers from './components/pickers.stories'
 import * as primitives from './components/primitives.stories'
 import * as sections from './components/sections.stories'
 import * as tabs from './components/Tabs.stories'
@@ -82,6 +83,7 @@ const SUITES = {
   loading,
   markdown,
   combobox,
+  pickers,
   controls,
   copy,
   fields,

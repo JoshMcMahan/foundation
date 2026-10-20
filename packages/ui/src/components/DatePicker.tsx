@@ -1,6 +1,6 @@
 import { Popover } from '@base-ui/react/popover'
 import { type ClassNames, type DateRange, DayPicker, type Matcher } from '@daypicker/react'
-import { useState } from 'react'
+import { type ReactElement, type ReactNode, useId, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { buttonClasses } from './buttonClasses'
@@ -9,6 +9,8 @@ import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
 import { useLocale, useStrings } from './Provider'
 import { usePopupContainer } from './popupContainer'
+import { Tooltip } from './Tooltip'
+import { formatNumericDate, parseTypedDate } from './typedDate'
 
 export interface DatePickerProps {
   /** As a native date input holds it: `yyyy-MM-dd`, or with `withTime` the local
@@ -38,6 +40,13 @@ export interface DatePickerProps {
   size?: FieldBoxSize | undefined
   /** On the row that holds the date and the time: its width or margin. */
   className?: string | undefined
+  /** Renders the field as this button, such as a chip that says the date its own way. The
+   *  button shows the date itself; `placeholder` and `size` then go unused. */
+  trigger?: ReactElement | undefined
+  /** A hint on the trigger button. */
+  triggerTooltip?: ReactNode
+  /** The edge of the field the calendar lines up with. */
+  align?: 'start' | 'end' | undefined
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -77,6 +86,8 @@ function dateFormats(locale: string | undefined) {
     weekday: new Intl.DateTimeFormat(locale, { weekday: 'narrow' }),
     longDay: new Intl.DateTimeFormat(locale, { dateStyle: 'full' }),
     shownDay: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }),
+    // A day this year goes without its year, as dates read elsewhere in a page.
+    shownDayThisYear: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }),
     longWeekday: new Intl.DateTimeFormat(locale, { weekday: 'long' }),
     weekStartsOn: firstWeekday(locale),
   }
@@ -147,6 +158,9 @@ export function DatePicker({
   'aria-required': ariaRequired,
   size = 'md',
   className,
+  trigger,
+  triggerTooltip,
+  align = 'start',
 }: DatePickerProps) {
   const portal = usePopupContainer()
   const t = useStrings().datePicker
@@ -154,8 +168,15 @@ export function DatePicker({
   // The trigger is a button Base UI doesn't name from a Field's label, so it reads the Field.
   const field = useFieldLabelledControl()
   const [open, setOpen] = useState(false)
-  const { caption, weekday, longDay, shownDay, longWeekday, weekStartsOn } = formatsFor(useLocale())
+  const locale = useLocale()
+  const { caption, weekday, longDay, shownDay, shownDayThisYear, longWeekday, weekStartsOn } =
+    formatsFor(locale)
   const day = parseDay(value)
+  const uid = useId()
+  // The month on show, and what is typed in the box above it.
+  const [month, setMonth] = useState<Date | undefined>(undefined)
+  const [typed, setTyped] = useState('')
+  const typedBox = useRef<HTMLInputElement>(null)
   const time = timeOf(value) ?? timeOf(min) ?? '00:00'
   const earliest = parseDay(min)
   const latest = parseDay(max)
@@ -177,89 +198,163 @@ export function DatePicker({
     emit(next)
     setOpen(false)
   }
+  const onOpenChange = (next: boolean) => {
+    if (next) {
+      setMonth(opensOn ?? new Date())
+      setTyped(day ? formatNumericDate(day, locale) : '')
+    }
+    setOpen(next)
+  }
+  const inRange = (date: Date) => (!earliest || date >= earliest) && (!latest || date <= latest)
+  const typedDay = typed.trim() ? parseTypedDate(typed, locale) : undefined
+  const typedInvalid = typed.trim() !== '' && (!typedDay || !inRange(typedDay))
+  const shown = day
+    ? (day.getFullYear() === new Date().getFullYear() ? shownDayThisYear : shownDay).format(day)
+    : undefined
+  const triggerProps = {
+    id: id ?? field?.id,
+    disabled,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledBy ?? (ariaLabel ? undefined : field?.['aria-labelledby']),
+    'aria-describedby': ariaDescribedBy ?? field?.['aria-describedby'],
+    'aria-invalid': ariaInvalid || field?.['aria-invalid'],
+    'aria-required': ariaRequired || field?.['aria-required'],
+  }
 
   // A day at an end of the range bounds the time too, as datetime-local's min and max do.
   const sameDay = (bound: string | undefined) =>
     day !== undefined && parseDay(bound)?.getTime() === day.getTime()
 
-  return (
-    <div className={cx('flex w-full items-center', size === 'sm' ? 'gap-1.5' : 'gap-2', className)}>
-      <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger
-          id={id ?? field?.id}
-          disabled={disabled}
-          aria-label={ariaLabel}
-          aria-labelledby={ariaLabelledBy ?? (ariaLabel ? undefined : field?.['aria-labelledby'])}
-          aria-describedby={ariaDescribedBy ?? field?.['aria-describedby']}
-          aria-invalid={ariaInvalid || field?.['aria-invalid']}
-          aria-required={ariaRequired || field?.['aria-required']}
-          className={triggerClassName(size)}
-        >
-          <CalendarIcon
-            aria-hidden="true"
-            className={cx(
-              'shrink-0 text-(--theme-muted-text-color)',
-              size === 'sm' ? 'size-3' : 'size-3.5',
-            )}
-          />
-          <span className={cx('truncate', !day && 'text-(--theme-placeholder)')}>
-            {day ? shownDay.format(day) : (placeholder ?? t.pickDate)}
-          </span>
-        </Popover.Trigger>
-        <Popover.Portal {...portal}>
-          <Popover.Positioner align="start" sideOffset={4} className={positionerClassName}>
-            <Popover.Popup className={panelClassName}>
-              <DayPicker
-                {...(required
-                  ? { mode: 'single', required: true, selected: day, onSelect: pick }
-                  : { mode: 'single', selected: day, onSelect: pick })}
-                {...(opensOn && { defaultMonth: opensOn })}
-                {...(earliest && { startMonth: earliest })}
-                {...(latest && { endMonth: latest })}
-                disabled={outOfRange}
-                weekStartsOn={weekStartsOn}
-                autoFocus
-                showOutsideDays
-                fixedWeeks
-                classNames={calendarClassNames}
-                formatters={{
-                  formatCaption: (month) => caption.format(month),
-                  formatWeekdayName: (date) => weekday.format(date),
+  const picker = (
+    <Popover.Root open={open} onOpenChange={onOpenChange}>
+      <Tooltip content={triggerTooltip}>
+        {trigger ? (
+          <Popover.Trigger {...triggerProps} render={trigger} />
+        ) : (
+          <Popover.Trigger {...triggerProps} className={triggerClassName(size)}>
+            <CalendarIcon
+              aria-hidden="true"
+              className={cx(
+                'shrink-0 text-(--theme-muted-text-color)',
+                size === 'sm' ? 'size-3' : 'size-3.5',
+              )}
+            />
+            <span className={cx('truncate', !day && 'text-(--theme-placeholder)')}>
+              {shown ?? placeholder ?? t.pickDate}
+            </span>
+          </Popover.Trigger>
+        )}
+      </Tooltip>
+      <Popover.Portal {...portal}>
+        <Popover.Positioner align={align} sideOffset={4} className={positionerClassName}>
+          {/* Typing is the quickest way in; the calendar is a Tab away. */}
+          <Popover.Popup initialFocus={typedBox} className={panelClassName}>
+            <div className="border-b border-(--theme-border) p-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label={t.typeDate}
+                aria-invalid={typedInvalid || undefined}
+                aria-describedby={typedInvalid ? `${uid}invalid` : undefined}
+                placeholder={formatNumericDate(new Date(), locale)}
+                value={typed}
+                ref={typedBox}
+                onChange={(event) => {
+                  const next = event.target.value
+                  setTyped(next)
+                  const parsed = parseTypedDate(next, locale)
+                  if (parsed) {
+                    setMonth(parsed)
+                  }
                 }}
-                labels={{
-                  labelDayButton: (date) => longDay.format(date),
-                  labelPrevious: () => t.previousMonth,
-                  labelNext: () => t.nextMonth,
-                  labelGrid: (month) => caption.format(month),
-                  labelWeekday: (date) => longWeekday.format(date),
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    if (typedDay && inRange(typedDay)) {
+                      pick(typedDay)
+                    }
+                  }
                 }}
-                components={{
-                  Chevron: ({ orientation }) =>
-                    orientation === 'left' ? (
-                      <ChevronLeftIcon aria-hidden="true" />
-                    ) : (
-                      <ChevronRightIcon aria-hidden="true" />
-                    ),
-                }}
+                className={cx(fieldBox({ size: 'sm' }), 'tabular-nums')}
               />
-              {!required && day && (
-                <div className="flex justify-end border-t border-(--theme-border) px-3 py-2">
-                  <button
-                    type="button"
-                    className={buttonClasses({ variant: 'ghost', size: 'xs' })}
-                    onClick={() => {
-                      emit(undefined)
-                      setOpen(false)
-                    }}
-                  >
-                    {common.clear}
-                  </button>
+              {typedInvalid && (
+                <div
+                  id={`${uid}invalid`}
+                  className="mt-1 text-xs text-(--theme-error-text)"
+                  aria-live="polite"
+                >
+                  {t.invalidDate}
                 </div>
               )}
-            </Popover.Popup>
-          </Popover.Positioner>
-        </Popover.Portal>
-      </Popover.Root>
+            </div>
+            <DayPicker
+              {...(required
+                ? { mode: 'single', required: true, selected: day, onSelect: pick }
+                : { mode: 'single', selected: day, onSelect: pick })}
+              {...(month && { month })}
+              onMonthChange={setMonth}
+              {...(earliest && { startMonth: earliest })}
+              {...(latest && { endMonth: latest })}
+              disabled={outOfRange}
+              weekStartsOn={weekStartsOn}
+              showOutsideDays
+              fixedWeeks
+              classNames={calendarClassNames}
+              formatters={{
+                formatCaption: (month) => caption.format(month),
+                formatWeekdayName: (date) => weekday.format(date),
+              }}
+              labels={{
+                labelDayButton: (date) => longDay.format(date),
+                labelPrevious: () => t.previousMonth,
+                labelNext: () => t.nextMonth,
+                labelGrid: (month) => caption.format(month),
+                labelWeekday: (date) => longWeekday.format(date),
+              }}
+              components={{
+                Chevron: ({ orientation }) =>
+                  orientation === 'left' ? (
+                    <ChevronLeftIcon aria-hidden="true" />
+                  ) : (
+                    <ChevronRightIcon aria-hidden="true" />
+                  ),
+              }}
+            />
+            {!required && day && (
+              <div className="flex justify-end border-t border-(--theme-border) px-3 py-2">
+                <button
+                  type="button"
+                  className={buttonClasses({ variant: 'ghost', size: 'xs' })}
+                  onClick={() => {
+                    emit(undefined)
+                    setOpen(false)
+                  }}
+                >
+                  {common.clear}
+                </button>
+              </div>
+            )}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+  // A trigger of the host's own stands where the host puts it, as one button.
+  if (trigger && !withTime) {
+    return picker
+  }
+  return (
+    <div
+      className={cx(
+        trigger ? 'inline-flex' : 'flex w-full',
+        'items-center',
+        size === 'sm' ? 'gap-1.5' : 'gap-2',
+        className,
+      )}
+    >
+      {picker}
       {withTime && (
         <input
           type="time"

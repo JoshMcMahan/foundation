@@ -131,6 +131,10 @@ export interface UIStrings {
     showOptions: string
     /** The row that adds typed text as a new value. */
     add: (text: string) => string
+    /** The row that creates the thing typed text names, such as a new label. */
+    create: (text: string) => string
+    /** Heads the values offered under a tag field. */
+    suggested: string
     /** In place of the placeholder once a field holds as many values as it takes. */
     limitReached: (max: number) => string
     /** Names the button on a chosen value's chip that takes it out. */
@@ -143,6 +147,10 @@ export interface UIStrings {
     time: string
     previousMonth: string
     nextMonth: string
+    /** Names the box in the calendar's popup that takes a typed date. */
+    typeDate: string
+    /** Under the box while what is typed isn't a date that can be chosen. */
+    invalidDate: string
   }
   colorInput: {
     /** Names the picker beside the hex field: the field's name, or none when it has no plain one. */
@@ -990,6 +998,8 @@ const DEFAULTS: UIProviderValue = {
       searching: 'Searching…',
       showOptions: 'Show options',
       add: (text) => `Add “${text}”`,
+      create: (text) => `Create “${text}”`,
+      suggested: 'Suggested',
       limitReached: (max) => `Up to ${max}`,
       removeValue: (label) => `Remove ${label}`,
     },
@@ -998,6 +1008,8 @@ const DEFAULTS: UIProviderValue = {
       time: 'Time',
       previousMonth: 'Previous month',
       nextMonth: 'Next month',
+      typeDate: 'Type a date',
+      invalidDate: 'Not a date that can be chosen',
     },
     colorInput: {
       pick: (name) => (name ? `Pick ${name.toLowerCase()}` : 'Pick a color'),

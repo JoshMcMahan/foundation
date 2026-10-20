@@ -40,10 +40,65 @@ describe('DatePicker', () => {
     const { unmount } = render(<Controlled />)
     expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent('Pick a date')
     unmount()
-    render(<Controlled initial="2026-03-14" />)
+    render(<Controlled initial="2001-03-14" />)
     expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent(
-      new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(2026, 2, 14)),
+      new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(2001, 2, 14)),
     )
+  })
+
+  it('leaves out the year of a day this year', () => {
+    const year = new Date().getFullYear()
+    render(<Controlled initial={`${year}-03-14`} />)
+    expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent(
+      new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(
+        new Date(year, 2, 14),
+      ),
+    )
+    expect(screen.getByRole('button', { name: 'Starts' })).not.toHaveTextContent(String(year))
+  })
+
+  it('opens from a button of the host, which says the date its own way', async () => {
+    const onValueChange = vi.fn()
+    render(
+      <Controlled
+        initial="2026-03-14"
+        onValueChange={onValueChange}
+        trigger={<button type="button">Due soon</button>}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent('Due soon')
+    const grid = await openCalendar()
+    fireEvent.click(within(grid).getByRole('button', { name: longDay(new Date(2026, 2, 20)) }))
+    expect(onValueChange).toHaveBeenLastCalledWith('2026-03-20')
+  })
+
+  it('takes a typed date, moving the calendar to it, and Enter picks it', async () => {
+    const onValueChange = vi.fn()
+    render(<Controlled initial="2026-03-14" onValueChange={onValueChange} />)
+    await openCalendar()
+    const box = screen.getByRole('textbox', { name: 'Type a date' })
+    expect(box).toHaveFocus()
+    fireEvent.change(box, { target: { value: '2027-01-05' } })
+    expect(
+      await screen.findByRole('grid', {
+        name: new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(
+          new Date(2027, 0, 5),
+        ),
+      }),
+    ).toBeInTheDocument()
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(onValueChange).toHaveBeenLastCalledWith('2027-01-05')
+  })
+
+  it('says when the typed text is no day it can take', async () => {
+    const onValueChange = vi.fn()
+    render(<Controlled initial="2026-03-14" max="2026-12-31" onValueChange={onValueChange} />)
+    await openCalendar()
+    const box = screen.getByRole('textbox', { name: 'Type a date' })
+    fireEvent.change(box, { target: { value: '2027-01-05' } })
+    expect(box).toHaveAccessibleDescription('Not a date that can be chosen')
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(onValueChange).not.toHaveBeenCalled()
   })
 
   it('picks a day from the calendar as yyyy-MM-dd, and closes', async () => {
@@ -104,12 +159,14 @@ describe('DatePicker', () => {
   it("names days and months in the provider's locale", async () => {
     render(
       <UIProvider locale="de-DE">
-        <Controlled initial="2026-03-14" />
+        <Controlled initial="2025-03-14" />
       </UIProvider>,
     )
-    expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent('14.03.2026')
+    expect(screen.getByRole('button', { name: 'Starts' })).toHaveTextContent('14.03.2025')
     const grid = await openCalendar()
-    expect(grid).toHaveAccessibleName('März 2026')
+    expect(grid).toHaveAccessibleName('März 2025')
+    // The typed box reads the locale's own order.
+    expect(screen.getByRole('textbox', { name: 'Type a date' })).toHaveValue('14.03.2025')
     // Weeks start on Monday there, where the browser reports it.
     expect(grid.querySelector('thead th')).toHaveAttribute('aria-label', 'Montag')
   })

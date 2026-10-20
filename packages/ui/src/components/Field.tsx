@@ -586,10 +586,16 @@ export function RevealToggle({
   revealed,
   onRevealedChange,
   disabled,
+  align = 'center',
+  size = 'md',
 }: {
   revealed: boolean
   onRevealedChange: (revealed: boolean) => void
   disabled?: boolean | undefined
+  /** `top` keeps it on the first line of a tall box, such as a textarea's, of the box's
+   *  `size`. */
+  align?: 'center' | 'top' | undefined
+  size?: FieldBoxSize | undefined
 }) {
   const { common: t } = useStrings()
   const Icon = revealed ? EyeOffIcon : EyeIcon
@@ -600,7 +606,10 @@ export function RevealToggle({
       aria-pressed={revealed}
       disabled={disabled}
       onClick={() => onRevealedChange(!revealed)}
-      className="absolute inset-y-0 right-0 flex w-9 cursor-pointer items-center justify-center text-(--theme-muted-text-color) hover:text-(--theme-app) disabled:cursor-not-allowed disabled:opacity-50"
+      className={cx(
+        'absolute right-0 flex w-9 cursor-pointer items-center justify-center text-(--theme-muted-text-color) hover:text-(--theme-app) disabled:cursor-not-allowed disabled:opacity-50',
+        align === 'top' ? cx('top-0', { sm: 'h-7', md: 'h-8', lg: 'h-10' }[size]) : 'inset-y-0',
+      )}
     >
       <Icon aria-hidden="true" className="size-4" />
     </button>

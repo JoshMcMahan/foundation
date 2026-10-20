@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { buttonClasses } from '../components/buttonClasses'
+import { Combobox, type ComboboxGroup, type ComboboxItem } from '../components/Combobox'
 import { Calendar } from '../components/DatePicker'
 import { Drawer } from '../components/Drawer'
 import { Input } from '../components/Input'
@@ -579,37 +580,31 @@ function OptionValuePicker({
       {rows}
     </Menu.RadioGroup>
   )
-  const menu = (
-    <Menu.Root
-      open={open}
-      onOpenChange={(next) => {
-        onOpenChange(next)
-        if (!next) {
-          setQuery('')
-        }
-      }}
-    >
+  if (searchable) {
+    return (
+      <SearchablePicker
+        options={options}
+        selected={selected}
+        multiple={multiple}
+        loading={loaded.loading}
+        open={open}
+        onOpenChange={(next) => {
+          onOpenChange(next)
+          if (!next) {
+            setQuery('')
+          }
+        }}
+        onQueryChange={setQuery}
+        onValuesChange={set}
+        trigger={trigger}
+      />
+    )
+  }
+  return (
+    <Menu.Root open={open} onOpenChange={onOpenChange}>
       <Menu.Trigger render={trigger} />
       <MenuPopup className="w-max min-w-56 max-w-[min(28rem,var(--available-width))]">
-        {searchable ? (
-          <>
-            <div className="sticky top-0 z-[1] -mx-1 -mt-1 mb-1 border-b border-(--theme-border) bg-(--theme-app-bg) px-3 py-1.5">
-              <Menu.Input
-                placeholder={strings.list.searchOptions}
-                aria-label={strings.list.searchOptions}
-                className="w-full bg-transparent text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-placeholder)"
-              />
-            </div>
-            <Menu.List>{list}</Menu.List>
-          </>
-        ) : (
-          list
-        )}
-        {loaded.loading && options.length === 0 && (
-          <div className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
-            {strings.dropdown.searching}
-          </div>
-        )}
+        {list}
         {!loaded.loading && options.length === 0 && (
           <div className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
             {strings.dropdown.noOptionsFound}
@@ -618,12 +613,77 @@ function OptionValuePicker({
       </MenuPopup>
     </Menu.Root>
   )
-  return searchable ? (
-    <Menu.FilterProvider filter={null} value={query} onValueChange={setQuery}>
-      {menu}
-    </Menu.FilterProvider>
+}
+
+/** A long list's picker, such as of people: typing narrows it and Enter takes the first match,
+ *  and only the rows in view are drawn. */
+function SearchablePicker({
+  options,
+  selected,
+  multiple,
+  loading,
+  open,
+  onOpenChange,
+  onQueryChange,
+  onValuesChange,
+  trigger,
+}: {
+  options: readonly FilterOption[]
+  selected: readonly string[]
+  multiple: boolean
+  loading: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onQueryChange: (query: string) => void
+  onValuesChange: (values: string[]) => void
+  trigger: ReactElement
+}) {
+  const strings = useStrings()
+  // Options under their headings, in the order the headings first appear.
+  const items: (ComboboxItem | ComboboxGroup)[] = []
+  const groups = new Map<string, ComboboxItem[]>()
+  for (const option of options) {
+    const item: ComboboxItem = {
+      value: option.value,
+      label: option.label,
+      description: option.description,
+      icon: option.icon && <span className="flex [&_svg]:size-3.5">{option.icon}</span>,
+      hint: option.count === undefined ? undefined : COUNT.format(option.count),
+    }
+    if (!option.group) {
+      items.push(item)
+      continue
+    }
+    let group = groups.get(option.group)
+    if (!group) {
+      group = []
+      groups.set(option.group, group)
+      items.push({ label: option.group, items: group })
+    }
+    group.push(item)
+  }
+  const shared = {
+    items,
+    placeholder: strings.list.searchOptions,
+    open,
+    onOpenChange,
+    // The host narrows the list, so chosen values stay listed to be unticked.
+    onQueryChange,
+    loading: loading && options.length === 0,
+    trigger,
+  }
+  return multiple ? (
+    <Combobox<string> {...shared} multiple value={selected} onValueChange={onValuesChange} />
   ) : (
-    menu
+    <Combobox<string>
+      {...shared}
+      value={selected[0] ?? null}
+      onValueChange={(value) => {
+        if (value !== null) {
+          onValuesChange([value])
+        }
+      }}
+    />
   )
 }
 

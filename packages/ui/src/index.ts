@@ -113,8 +113,25 @@ export type { FloatingAnchor } from './components/floating'
 export { HoverCard, type HoverCardProps } from './components/HoverCard'
 export { IconButton, type IconButtonProps } from './components/IconButton'
 export { formatInfoTipContent, InfoTip } from './components/InfoTip'
-export { Input, type InputProps, Textarea, type TextareaProps } from './components/Input'
+export {
+  Input,
+  type InputProps,
+  Textarea,
+  type TextareaProps,
+  TitleInput,
+  type TitleInputProps,
+} from './components/Input'
 export { LetterBadge } from './components/LetterBadge'
+export {
+  ListboxGroup,
+  type ListboxNavigation,
+  type ListboxNavigationOptions,
+  ListboxOption,
+  type ListboxOptionProps,
+  ListboxPanel,
+  type ListboxPanelProps,
+  useListboxNavigation,
+} from './components/Listbox'
 export { Loader, type LoaderProps } from './components/Loader'
 export type { MarkdownProps } from './components/Markdown'
 export { default as Markdown } from './components/Markdown'

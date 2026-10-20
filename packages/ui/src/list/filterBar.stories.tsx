@@ -136,6 +136,8 @@ const ISSUE_FIELDS: FilterField<Issue>[] = [
     icon: <UserIcon />,
     kind: 'people',
     operators: ['is', 'isNot', 'isNotSet'],
+    // Searchable as a long list of people would be: typing narrows it, Enter takes the first.
+    searchable: true,
     options: PEOPLE.map((p) => person(p.value)),
     value: (i) => i.assignee,
   },

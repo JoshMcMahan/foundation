@@ -2,6 +2,11 @@ import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { panelItemClassName } from './floating'
 
+/** The end of an option's row: its hint, then the check while it is chosen, on the label's
+ *  line rather than the middle of a row with a description under it. */
+export const pickerEndClassName = 'ml-auto flex h-[1lh] shrink-0 items-center gap-2 self-start pl-2'
+export const pickerHintClassName = 'text-xs tabular-nums text-(--theme-muted-text-color)'
+
 /** An option's row in a Select's or a Combobox's list, so both lists look alike: the icon, the
  *  label over its description, and the check at the end. */
 export const pickerItemClassName = cx(panelItemClassName, 'data-selected:font-medium')
@@ -17,6 +22,8 @@ export interface ComboboxItem<Value = string> {
   icon?: ReactNode
   /** Beside the label, such as a tag that marks the option out. */
   badge?: ReactNode
+  /** Short muted text at the row's end, such as a key or a count; read after the label. */
+  hint?: string | undefined
   disabled?: boolean | undefined
 }
 
@@ -39,10 +46,10 @@ export type ComboboxItems<Value = string> = readonly (ComboboxLeaf<Value> | Comb
 /** How an option is named and described: by its label, with its description read after it. */
 export function optionNaming(
   id: string,
-  item: Pick<ComboboxItem<unknown>, 'description' | 'accessibleDescription'>,
+  item: Pick<ComboboxItem<unknown>, 'description' | 'accessibleDescription' | 'hint'>,
 ) {
   return {
-    'aria-labelledby': `${id}label`,
+    'aria-labelledby': item.hint ? `${id}label ${id}hint` : `${id}label`,
     'aria-describedby':
       item.accessibleDescription || item.description ? `${id}description` : undefined,
   }

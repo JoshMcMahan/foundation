@@ -11,7 +11,9 @@ export interface CheckboxProps extends Omit<BaseCheckbox.Root.Props, 'className'
 
 /** A box that ticks on and off, or shows a mixed state with `indeterminate`. Name it with an
  *  enclosing `<label>`, or `aria-label` when it stands alone, as in a table row. In a
- *  `CheckboxGroup`, `value` identifies it and the group holds which are ticked. */
+ *  `CheckboxGroup`, `value` identifies it and the group holds which are ticked. `readOnly`
+ *  shows a tick nobody here can change, such as a permission a role grants, filled grey; it
+ *  stays focusable, so a tooltip can say what grants it. */
 export function Checkbox({ className, ...props }: CheckboxProps) {
   return (
     <BaseCheckbox.Root
@@ -26,6 +28,12 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
         'data-indeterminate:border-(--theme-focus) data-indeterminate:bg-(--theme-accent)',
         'aria-invalid:border-(--theme-error)',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        // Read-only, it states a fact rather than offering a choice, such as a permission
+        // something else grants: grey rather than the accent, at full strength, so it reads
+        // apart from a disabled box.
+        'data-readonly:cursor-default data-readonly:text-(--theme-app-bg)',
+        'data-readonly:data-checked:border-(--theme-muted-text-color) data-readonly:data-checked:bg-(--theme-muted-text-color)',
+        'data-readonly:data-indeterminate:border-(--theme-muted-text-color) data-readonly:data-indeterminate:bg-(--theme-muted-text-color)',
         className,
       )}
     >
