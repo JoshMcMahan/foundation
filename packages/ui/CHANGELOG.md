@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.76.0](https://github.com/parallelworks/foundation/compare/ui-v0.75.1...ui-v0.76.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** chat holds a tool call that changes something until the reader allows it ([#378](https://github.com/parallelworks/foundation/issues/378)) ([e40f4c4](https://github.com/parallelworks/foundation/commit/e40f4c4e862797e65e4c880897638004201f7ca2))
+
 ## [0.75.1](https://github.com/parallelworks/foundation/compare/ui-v0.75.0...ui-v0.75.1) (2026-10-19)
 
 
