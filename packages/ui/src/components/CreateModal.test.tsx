@@ -180,6 +180,25 @@ describe('CreateModal panel mousedown', () => {
     expect(fireEvent.mouseDown(screen.getByTestId('redirect-uri'))).toBe(true)
   })
 
+  it('lets a press focus editable content, such as a rich text description', () => {
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        descriptionField={
+          <div contentEditable suppressContentEditableWarning data-testid="editor">
+            <p data-testid="paragraph">Steps</p>
+          </div>
+        }
+        onSubmit={vi.fn().mockResolvedValue(true)}
+      />,
+    )
+    expect(fireEvent.mouseDown(screen.getByTestId('editor'))).toBe(true)
+    expect(fireEvent.mouseDown(screen.getByTestId('paragraph'))).toBe(true)
+  })
+
   it('keeps the caret in the name field for non-interactive areas', () => {
     renderWithRedirectUri()
     expect(fireEvent.mouseDown(screen.getByTestId('hint'))).toBe(false)
@@ -194,6 +213,42 @@ describe('CreateModal fields with help', () => {
     render(<Control label="Account ID" hint={<InfoTip text="The twelve digit ID" />} />)
     expect(screen.getByRole('textbox', { name: 'Account ID' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'More information' })).toBeInTheDocument()
+  })
+})
+
+describe('CreateModal name', () => {
+  it('wraps a long name as one value: a pasted line break joins the lines, Enter submits', async () => {
+    const onSubmit = vi.fn(() => Promise.resolve(true))
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        onSubmit={onSubmit}
+      />,
+    )
+    const name = await screen.findByRole('textbox', { name: 'Issue title' })
+    // A textarea, so a long name wraps onto more lines instead of scrolling out of view.
+    expect(name.tagName).toBe('TEXTAREA')
+    expect(name).toHaveAttribute('rows', '1')
+    fireEvent.change(name, {
+      target: { value: 'Export fails\nfor invoices  \n over 10,000 lines' },
+    })
+    expect(name).toHaveValue('Export fails for invoices over 10,000 lines')
+    const enter = fireEvent.keyDown(name, { key: 'Enter', shiftKey: true })
+    // No line is added: Enter, with Shift too, submits.
+    expect(enter).toBe(false)
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        'Export fails for invoices over 10,000 lines',
+        '',
+        false,
+        {
+          modifier: false,
+        },
+      ),
+    )
   })
 })
 

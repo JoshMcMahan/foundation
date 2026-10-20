@@ -10,7 +10,12 @@ import { usePopupContainer } from './popupContainer'
 
 /** The panel a modal draws by default; pass `panel={false}` to paint your own. */
 export const modalPanelClassName =
-  'rounded-xl border border-(--theme-border) bg-(--theme-app-bg) text-(--theme-app) shadow-2xl'
+  'rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) text-(--theme-app) shadow-2xl'
+
+// At phone width the actions take the footer's width between them and a thumb's height, and
+// anything else in the footer, such as a hint, takes a line of its own above them.
+const phoneFooterClassName =
+  'max-sm:flex-wrap max-sm:[&>:is(button,a)]:h-10 max-sm:[&>:is(button,a)]:flex-1 max-sm:[&>:not(button,a)]:basis-full'
 
 /** Names the modal for assistive technology; renders an `<h2>`. */
 export const ModalTitle = Dialog.Title
@@ -95,7 +100,8 @@ export function Modal({
   dismissible = true,
   align = 'top',
   panel = true,
-  backdropClassName = 'bg-black/40',
+  // Darker in a dark scheme, where the same dimming barely shows against a dark page.
+  backdropClassName = 'bg-(--theme-backdrop)',
   closeButton = false,
   onSubmit,
   className,
@@ -150,7 +156,9 @@ export function Modal({
           {children}
         </div>
       )}
-      {footer !== undefined && <div className={dialogFooterClassName}>{footer}</div>}
+      {footer !== undefined && (
+        <div className={cx(dialogFooterClassName, phoneFooterClassName)}>{footer}</div>
+      )}
     </>
   )
   const content = (
@@ -161,8 +169,10 @@ export function Modal({
       <Dialog.Viewport
         className={cx(
           // pb keeps tall panels (max-h-full) off the window's bottom edge, and
-          // pt clears the toasts along the top so none covers the panel.
-          'fixed inset-0 z-(--layer-modal) flex justify-center px-4 pt-20 pb-8',
+          // pt clears the toasts along the top so none covers the panel. At phone width the
+          // panel takes the width less an 8px gutter, as a sheet does, so its fields keep room;
+          // it stays near the top, where an on-screen keyboard doesn't cover it.
+          'fixed inset-0 z-(--layer-modal) flex justify-center px-4 pt-20 pb-8 max-sm:px-2 max-sm:pb-[max(8px,env(safe-area-inset-bottom))]',
           align === 'center' ? 'items-center' : 'items-start sm:pt-[max(14vh,5rem)]',
         )}
       >
@@ -186,6 +196,7 @@ export function Modal({
           className={cx(
             panel && modalPanelClassName,
             size && [sizeClasses[size], 'max-w-full'],
+            panel && (size || laidOut) && 'max-sm:w-full',
             laidOut && 'flex max-h-full flex-col',
             'outline-none',
             popupMotion,

@@ -36,4 +36,32 @@ describe('Card', () => {
     expect(list).toHaveClass('divide-y')
     expect(list).not.toHaveClass('cursor-pointer')
   })
+
+  it('tints its border in a status’s tone, or a color the host picks', () => {
+    const { rerender } = render(
+      <Card size="fill" tone="warning">
+        tinted
+      </Card>,
+    )
+    const card = screen.getByText('tinted')
+    expect(card.style.getPropertyValue('--card-tone')).toBe('var(--theme-warning)')
+    expect(card).toHaveClass('border-(--card-tone)/45')
+    rerender(
+      <Card size="fill" tone="var(--agent-color)" tinted highlight href="#run">
+        tinted
+      </Card>,
+    )
+    const link = screen.getByRole('link', { name: 'tinted' })
+    expect(link.style.getPropertyValue('--card-tone')).toBe('var(--agent-color)')
+    expect(link).toHaveClass('border-(--card-tone)/80')
+    expect(link.className).toMatch(/var\(--card-tone\)_7%/)
+    expect(link.className).toMatch(/hover:bg-\[color-mix/)
+  })
+
+  it('keeps its own border without a tone', () => {
+    render(<Card size="fill">plain</Card>)
+    const card = screen.getByText('plain')
+    expect(card.style.getPropertyValue('--card-tone')).toBe('')
+    expect(card).toHaveClass('border-(--theme-border)')
+  })
 })

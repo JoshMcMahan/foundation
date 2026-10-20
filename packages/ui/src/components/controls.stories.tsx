@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon, TrashIcon, UploadIcon } from '../icons'
@@ -463,6 +464,54 @@ export const CardsInPage: StoryObj<{
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('list')).not.toHaveClass('cursor-pointer')
+  },
+}
+
+/** `tone` tints a card's border in a status's tone or any color the host picks, here an
+ *  agent's own color through a CSS variable, and `tinted` adds a faint fill of it. It works on
+ *  a pressable card, with `highlight` and with `focusWithin`. */
+export const CardsWithTone: StoryObj<{ tinted: boolean; highlight: boolean }> = {
+  args: { tinted: false, highlight: false },
+  argTypes: {
+    tinted: { description: 'A faint fill of the tone too.' },
+    highlight: { description: 'Deepens the tone’s border.' },
+  },
+  render: ({ tinted, highlight }) => (
+    // A host's own token, set wherever it likes, which the card takes as its tone.
+    <div
+      className="flex max-w-xl flex-col gap-4"
+      style={{ '--agent-color': 'light-dark(#7c3aed, #a78bfa)' } as CSSProperties}
+    >
+      <Card size="fill" tone="var(--agent-color)" tinted={tinted} highlight={highlight} href="#run">
+        <p className="m-0 text-sm font-medium">Agent run · Fix flaky upload test</p>
+        <p className="m-0 mt-1 text-sm theme-muted-text">Running for 4 minutes</p>
+      </Card>
+      <Card
+        size="fill"
+        padding="sm"
+        tone="var(--agent-color)"
+        tinted={tinted}
+        highlight={highlight}
+        focusWithin
+      >
+        <p className="m-0 text-sm font-medium">The agent asks: which region should it use?</p>
+        <textarea
+          aria-label="Answer"
+          placeholder="Answer the agent"
+          rows={2}
+          className="mt-2 w-full resize-none bg-transparent text-sm outline-none"
+        />
+      </Card>
+      {(['success', 'warning', 'error', 'info'] as const).map((tone) => (
+        <Card key={tone} size="fill" padding="sm" tone={tone} tinted={tinted} highlight={highlight}>
+          <p className="m-0 text-sm">A card in the {tone} tone.</p>
+        </Card>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const run = within(canvasElement).getByRole('link', { name: /Agent run/ })
+    await expect(run.style.getPropertyValue('--card-tone')).toBe('var(--agent-color)')
   },
 }
 

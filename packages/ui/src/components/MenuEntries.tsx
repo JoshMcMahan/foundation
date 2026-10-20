@@ -40,6 +40,9 @@ interface MenuActionBase {
   /** The key that does the same from the page, such as `S` or `⌘K`, in plain text at the
    *  row's end. The menu doesn't bind it; the host does. */
   shortcut?: string | undefined
+  /** Muted text at the row's end that tells rows apart, such as a team's key `CORE`. It is
+   *  read with the label, and a menu's search matches it. For a key to press, use `shortcut`. */
+  hint?: string | undefined
   /** A small mark at the row's end, such as a dot for something unseen. It is hidden from
    *  screen readers, so say what it means in `label`. */
   badge?: ReactNode
@@ -262,7 +265,7 @@ function SearchedEntries({
   const shown = needle
     ? searchMatches(
         entries,
-        (a) => matches(needle, a.label, a.description, a.keywords),
+        (a) => matches(needle, a.label, a.description, a.keywords, a.hint),
         (submenu) => matches(needle, submenu.label, submenu.keywords),
       )
     : entries
@@ -366,6 +369,8 @@ function RowEnd({ children, className }: { children: ReactNode; className?: stri
     </span>
   )
 }
+
+const hintClassName = 'ps-3 text-xs text-(--theme-muted-text-color) in-data-[size=sm]:text-[11px]'
 
 const shortcutClassName =
   'ps-3 text-xs text-(--theme-muted-text-color) tabular-nums in-data-[size=sm]:text-[11px]'
@@ -526,10 +531,16 @@ export function ActionRow({ action }: { action: MenuAction }) {
     action.current && 'font-medium',
   )
   const keyshortcuts = ariaKeyShortcut(action.shortcut)
+  // The hint shows at the row's end, out of the name's way, and is read after the label, as a reason is.
+  const heard = action.hint && <span className="sr-only">. {action.hint}</span>
   const end = (trailing?: ReactNode) => (
     <>
       {action.badge !== undefined && action.badge !== null && action.badge !== false && (
         <RowEnd className="ps-2">{action.badge}</RowEnd>
+      )}
+      {action.hint && (
+        // Read with the label instead, apart from it: "Core Platform. CORE".
+        <RowEnd className={hintClassName}>{action.hint}</RowEnd>
       )}
       {action.shortcut && <RowEnd className={shortcutClassName}>{action.shortcut}</RowEnd>}
       {trailing}
@@ -552,7 +563,12 @@ export function ActionRow({ action }: { action: MenuAction }) {
       >
         <RowContent
           icon={action.icon}
-          label={action.label}
+          label={
+            <>
+              {action.label}
+              {heard}
+            </>
+          }
           description={action.description}
           end={end(
             action.current ? (
@@ -578,6 +594,7 @@ export function ActionRow({ action }: { action: MenuAction }) {
       label={
         <>
           {action.label}
+          {heard}
           {reason && <span className="sr-only">. {reason}</span>}
         </>
       }

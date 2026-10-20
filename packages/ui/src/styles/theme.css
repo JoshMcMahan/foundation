@@ -61,6 +61,7 @@
   --theme-shadow-xl:
     0 25px 80px -20px light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6)),
     0 10px 30px -10px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --theme-backdrop: light-dark(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.65));
   --theme-code-bg: light-dark(#e7eaee, #1c242c);
   --theme-code-text: light-dark(#1c2330, #e1e9f2);
   --theme-code-comment: light-dark(#555d6c, #c0c8d1);

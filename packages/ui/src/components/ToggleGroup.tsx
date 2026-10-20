@@ -32,6 +32,8 @@ export interface ToggleGroupProps<T extends string> {
   /** Leads with an "All" option, pressed while nothing else is, that clears
    *  the others. `{ count }` shows the total beside it. */
   all?: boolean | { count?: number | undefined } | undefined
+  /** The All option's words, for one that names what it covers, such as "All types". */
+  allLabel?: ReactNode
   size?: 'sm' | 'md' | undefined
   disabled?: boolean | undefined
   /** Names an element that says more about the group, such as a live summary
@@ -61,6 +63,7 @@ export function ToggleGroup<T extends string>({
   onValueChange,
   multiple = true,
   all = false,
+  allLabel,
   size = 'sm',
   disabled = false,
   'aria-describedby': describedBy,
@@ -91,7 +94,9 @@ export function ToggleGroup<T extends string>({
         )
       }}
     >
-      {all && <Chip value={ALL} label={strings.common.all} count={allCount} size={size} />}
+      {all && (
+        <Chip value={ALL} label={allLabel ?? strings.common.all} count={allCount} size={size} />
+      )}
       {/* All clears the others rather than joining them, so a rule sets it apart. */}
       {all && options.length > 0 && (
         <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-(--theme-border)" />
@@ -111,7 +116,7 @@ function Chip({
   disabled,
   testId,
   size,
-}: ToggleGroupOption<string> & { size: 'sm' | 'md' }) {
+}: Omit<ToggleGroupOption<string>, 'label'> & { label: ReactNode; size: 'sm' | 'md' }) {
   const locale = useLocale()
   return (
     <Toggle

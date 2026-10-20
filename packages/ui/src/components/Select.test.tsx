@@ -124,6 +124,17 @@ describe('Select sizing, reasons and keys', () => {
     expect(screen.getByRole('combobox', { name: 'Mode' })).not.toHaveClass('w-fit')
   })
 
+  it('keeps its content width in a row, rather than shrinking and cutting off its choice', () => {
+    render(
+      <div className="flex">
+        <Select aria-label="Mode" items={modes} defaultValue="ask" width="content" />
+        <Select aria-label="Fill" items={modes} defaultValue="ask" width="fill" />
+      </div>,
+    )
+    expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveClass('shrink-0', 'max-w-full')
+    expect(screen.getByRole('combobox', { name: 'Fill' })).not.toHaveClass('shrink-0')
+  })
+
   it('says why it is disabled, staying focusable and shut', async () => {
     render(
       <TooltipProvider>

@@ -10,6 +10,7 @@ import { Combobox } from './Combobox'
 import { type ComboboxItems, comboboxLeaves } from './comboboxItems'
 import { Disclosure } from './Disclosure'
 import { ErrorText } from './Field'
+import { useAutosize } from './Input'
 import type { MenuEntry, MenuSearch } from './MenuEntries'
 import { Modal, type ModalSize } from './Modal'
 import { useStrings } from './Provider'
@@ -54,7 +55,9 @@ interface CreateModalProps {
   dirty?: boolean
   /** Show a favorite toggle in the footer. */
   showFavorite?: boolean
-  /** Muted text at the footer's start, such as which keys submit. `error` takes its place. */
+  /** Muted text at the footer's start, such as which keys submit, written with `Kbd` so each
+   *  reader sees their own keyboard's modifier. Hidden on a touch screen, where keys mean
+   *  nothing. `error` takes its place. */
   footerHint?: ReactNode
   /** Why the last submit failed, at the footer's start, read out as it appears. */
   error?: ReactNode
@@ -117,7 +120,9 @@ export function CreateModal({
   const [nameFlash, setNameFlash] = useState(false)
   const [nameTouched, setNameTouched] = useState(false)
   const [interacted, setInteracted] = useState(false)
-  const nameRef = useRef<HTMLInputElement>(null)
+  const nameRef = useRef<HTMLTextAreaElement | null>(null)
+  // The name wraps onto as many lines as it needs; where the browser can't size it, by hand.
+  const { element: nameSizer, resize: resizeName } = useAutosize(open && !hideName, name)
   const nameMessageId = useId()
 
   // Each opening starts a fresh form. Reset while rendering, not in an effect,
@@ -207,10 +212,13 @@ export function CreateModal({
         // Keep the caret in the focused field when clicking non-interactive
         // panel areas (the borderless name input has no other affordance).
         // Selectable text is exempt: preventDefault would stop a selection
-        // from ever starting there.
+        // from ever starting there. So is editable content, such as a rich
+        // text description, which a press must be able to focus.
         if (
           e.target instanceof Element &&
-          !e.target.closest('input, textarea, button, a, select, label, code, pre, .select-all')
+          !e.target.closest(
+            'input, textarea, button, a, select, label, code, pre, .select-all, [contenteditable]:not([contenteditable="false"])',
+          )
         ) {
           e.preventDefault()
         }
@@ -218,7 +226,14 @@ export function CreateModal({
       footer={
         <>
           {(showFavorite || footerHint || error) && (
-            <div className="me-auto flex min-w-0 items-center gap-3">
+            // Keys mean nothing on a touch screen: a hint alone leaves the footer to its
+            // buttons there.
+            <div
+              className={cx(
+                'me-auto flex min-w-0 items-center gap-3',
+                !showFavorite && !error && 'pointer-coarse:hidden',
+              )}
+            >
               {showFavorite && (
                 <Tooltip content={favorite ? t.favoriteHintOn : t.favoriteHintOff}>
                   <Toggle
@@ -240,7 +255,7 @@ export function CreateModal({
                 <ErrorText>{error}</ErrorText>
               ) : (
                 footerHint && (
-                  <p className="m-0 min-w-0 text-xs text-(--theme-muted-text-color)">
+                  <p className="m-0 min-w-0 text-xs text-(--theme-muted-text-color) pointer-coarse:hidden">
                     {footerHint}
                   </p>
                 )
@@ -297,16 +312,24 @@ export function CreateModal({
             <div className="mt-3" />
           ) : (
             <>
-              <input
-                ref={nameRef}
-                type="text"
+              {/* A textarea so a long name wraps and stays readable from its start, still one
+                  value: Enter submits rather than adding a line. */}
+              <textarea
+                ref={(element) => {
+                  nameRef.current = element
+                  nameSizer.current = element
+                }}
+                rows={1}
                 autoComplete="off"
                 data-1p-ignore
                 value={name}
                 onChange={(e) => {
-                  const next = sanitizeName ? sanitizeName(e.target.value) : e.target.value
+                  // One line: a pasted line break joins the lines.
+                  const joined = e.target.value.replace(/\s*\n+\s*/g, ' ')
+                  const next = sanitizeName ? sanitizeName(joined) : joined
                   setName(next)
                   onNameChange?.(next)
+                  resizeName?.()
                 }}
                 onBlur={(e) => {
                   if (!e.target.value.trim()) {
@@ -333,7 +356,7 @@ export function CreateModal({
                   // Padding gives the ring/flash box breathing room; the
                   // negative margins cancel it out so the text keeps the same
                   // position as the unpadded layout.
-                  'mt-2 -mb-1 -mx-1.5 w-[calc(100%+0.75rem)] rounded-md border-0 px-1.5 py-1 bg-transparent shadow-none text-lg font-medium text-(--theme-app) placeholder:text-(--theme-placeholder) focus:outline-none',
+                  'mt-2 -mb-1 -mx-1.5 block w-[calc(100%+0.75rem)] resize-none overflow-hidden rounded-md border-0 px-1.5 py-1 bg-transparent shadow-none text-lg leading-snug font-medium text-(--theme-app) [field-sizing:content] placeholder:text-(--theme-placeholder) focus:outline-none',
                   nameFlash && 'animate-field-flash',
                   nameMissing ? 'ring-1 ring-(--theme-error)' : 'focus:ring-0',
                 )}

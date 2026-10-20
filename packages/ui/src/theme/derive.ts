@@ -83,6 +83,8 @@ export const THEME_TOKENS = [
   '--theme-shadow',
   '--theme-shadow-lg',
   '--theme-shadow-xl',
+  // The dimming behind a modal or a drawer, deeper on a dark page, where a light one barely shows.
+  '--theme-backdrop',
   // Sidebar
   '--theme-sidebar-bg',
   '--theme-sidebar-text',
@@ -570,6 +572,7 @@ function build(
     '--theme-shadow': `0 4px 6px -1px rgba(0, 0, 0, ${a(shade)}), 0 2px 4px -2px rgba(0, 0, 0, ${a(shade)})`,
     '--theme-shadow-lg': `0 10px 15px -3px rgba(0, 0, 0, ${a(shade)}), 0 4px 6px -4px rgba(0, 0, 0, ${a(shade)})`,
     '--theme-shadow-xl': `0 25px 80px -20px rgba(0, 0, 0, ${a(dark ? 0.6 : 0.2)}), 0 10px 30px -10px rgba(0, 0, 0, ${a(dark ? 0.4 : 0.1)})`,
+    '--theme-backdrop': `rgba(0, 0, 0, ${dark ? 0.65 : 0.4})`,
   }
 
   const srgb = {} as ThemeVariables

@@ -12,17 +12,19 @@ interface Args {
   counts: boolean
   size: 'sm' | 'md'
   disabled: boolean
+  allLabel: string
 }
 
 const meta: Meta<Args> = {
   title: 'UI/ToggleGroup',
-  args: { multiple: true, all: false, counts: true, size: 'sm', disabled: false },
+  args: { multiple: true, all: false, counts: true, size: 'sm', disabled: false, allLabel: '' },
   argTypes: {
     multiple: { description: 'Several options may be pressed at once; off allows one or none.' },
     all: { description: 'Leads with an All option, pressed while nothing else is.' },
     counts: { description: 'Each option shows how many items it matches.' },
     size: { control: 'inline-radio', options: ['sm', 'md'] },
     disabled: { description: 'The whole group ignores presses.' },
+    allLabel: { control: 'text', description: 'The All option’s words, such as "All runs".' },
   },
 }
 export default meta
@@ -44,6 +46,7 @@ function StatusFilter({
   counts,
   size,
   disabled,
+  allLabel,
   initial = [],
 }: Args & { initial?: Status[] }) {
   const [value, setValue] = useState<Status[]>(initial)
@@ -57,6 +60,7 @@ function StatusFilter({
         onValueChange={setValue}
         multiple={multiple}
         all={all && (counts ? { count: TOTAL } : true)}
+        allLabel={allLabel || undefined}
         size={size}
         disabled={disabled}
       />
@@ -220,6 +224,18 @@ export const WithSummary: StoryObj<Args> = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('group', { name: 'Machine types' })).toHaveAccessibleDescription(
       '1 of 3 types allowed',
+    )
+  },
+}
+
+/** The All option named for what it covers. */
+export const AllLabel: StoryObj<Args> = {
+  args: { all: true, allLabel: 'All runs' },
+  render: (args) => <StatusFilter {...args} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('button', { name: /^All runs/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     )
   },
 }

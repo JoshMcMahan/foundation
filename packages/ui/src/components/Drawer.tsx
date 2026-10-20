@@ -121,7 +121,7 @@ export function Drawer({
           <BaseDrawer.Backdrop
             className={cx(
               area,
-              'z-(--layer-drawer) bg-black/40 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0 motion-reduce:transition-none',
+              'z-(--layer-drawer) bg-(--theme-backdrop) opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0 motion-reduce:transition-none',
             )}
           />
         )}

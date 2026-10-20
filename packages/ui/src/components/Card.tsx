@@ -1,5 +1,5 @@
 import { useRender } from '@base-ui/react/use-render'
-import type { ReactElement, ReactNode } from 'react'
+import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { cx } from '../cx'
 import { AppLink, type LinkTarget } from './AppLink'
 
@@ -26,6 +26,17 @@ const sizePadding: Record<CardSize, string> = {
   fill: paddingClasses.md,
 }
 
+const toneColors = {
+  accent: 'var(--theme-accent)',
+  success: 'var(--theme-success)',
+  warning: 'var(--theme-warning)',
+  error: 'var(--theme-error)',
+  info: 'var(--theme-info)',
+} as const
+
+/** A status's tone, or any CSS color a host picks, such as `var(--agent-color)`. */
+export type CardTone = keyof typeof toneColors | (string & {})
+
 export type CardSize = keyof typeof widthClasses
 export type CardPadding = keyof typeof paddingClasses
 
@@ -47,6 +58,12 @@ export interface CardProps extends LinkTarget {
   /** Tints the border while a field inside has focus, for a card that frames an
    *  input, such as a composer. */
   focusWithin?: boolean | undefined
+  /** Tints the border in a color, setting the card apart by what it is, such as the work of
+   *  one kind of author: a status's tone, or any CSS color, such as `var(--agent-color)`.
+   *  It is `--card-tone` inside the card, for its own content to use. `highlight` deepens it. */
+  tone?: CardTone | undefined
+  /** With `tone`, a faint fill of it too, for a card that should stand out at a glance. */
+  tinted?: boolean | undefined
   /** Renders the card as this element, such as a button, a list or a section. */
   render?: ReactElement | undefined
   /** The whole card presses: it lifts on hover and shows focus. On by default for
@@ -67,6 +84,8 @@ export function Card({
   elevated = false,
   highlight = false,
   focusWithin = false,
+  tone,
+  tinted = false,
   render: renderProp,
   interactive,
   href,
@@ -82,12 +101,25 @@ export function Card({
     )
   const fill = size === 'fill'
   const pressable = interactive ?? render !== undefined
+  const toned = tone !== undefined
+  const toneColor = toned ? (toneColors[tone as keyof typeof toneColors] ?? tone) : undefined
+  const fillTint = toned && tinted
   return useRender({
     render: render ?? <div />,
     props: {
+      style: toneColor ? ({ '--card-tone': toneColor } as CSSProperties) : undefined,
       className: cx(
-        'block w-full rounded-xl border bg-(--theme-panel-bg)',
-        highlight ? 'border-(--theme-accent)/30' : 'border-(--theme-border)',
+        'block w-full rounded-xl border',
+        fillTint
+          ? 'bg-[color-mix(in_oklab,var(--card-tone)_7%,var(--theme-panel-bg))]'
+          : 'bg-(--theme-panel-bg)',
+        toned
+          ? highlight
+            ? 'border-(--card-tone)/80'
+            : 'border-(--card-tone)/45'
+          : highlight
+            ? 'border-(--theme-accent)/30'
+            : 'border-(--theme-border)',
         focusWithin && 'focus-within:border-(--theme-focus)/60',
         // A raised card floats over the page; one in the page's flow sits flat in it.
         !fill && 'backdrop-blur-xl',
@@ -96,7 +128,12 @@ export function Card({
         padding === undefined ? sizePadding[size] : paddingClasses[padding],
         divided && 'divide-y divide-(--theme-border)',
         pressable &&
-          'cursor-pointer text-left text-inherit no-underline transition-[background-color,box-shadow,border-color] duration-150 hover:bg-(--theme-panel-hover) hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
+          'cursor-pointer text-left text-inherit no-underline transition-[background-color,box-shadow,border-color] duration-150 hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
+        pressable &&
+          (fillTint
+            ? 'hover:bg-[color-mix(in_oklab,var(--card-tone)_11%,var(--theme-panel-hover))]'
+            : 'hover:bg-(--theme-panel-hover)'),
+        pressable && toned && 'hover:border-(--card-tone)/70',
         !pressable &&
           focusWithin &&
           'transition-[border-color] duration-150 motion-reduce:transition-none',

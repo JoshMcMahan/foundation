@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { formatBytes } from '../format'
-import { ClusterIcon, MoreIcon, UploadIcon } from '../icons'
+import { CalendarIcon, ClusterIcon, MoreIcon, TagIcon, UploadIcon, UserIcon } from '../icons'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -18,13 +18,15 @@ import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
 import { Autocomplete, Combobox } from './Combobox'
 import { ConfirmModal, useConfirm } from './ConfirmModal'
-import { CreateModal, CreateModalSwitch } from './CreateModal'
+import { CreateModal, CreateModalSelect, CreateModalSwitch } from './CreateModal'
 import { DatePicker } from './DatePicker'
 import { EmptyState, type EmptyStateVariant } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
+import { Field } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
+import { Kbd } from './Kbd'
 import { positionKeys } from './keys'
 import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Meter'
 import { Modal, type ModalProps, type ModalSize } from './Modal'
@@ -1041,6 +1043,60 @@ export const ConfirmModalWithField: StoryObj = {
   },
 }
 
+function AddMountDemo() {
+  const [open, setOpen] = useState(false)
+  const [resource, setResource] = useState<string | null>(null)
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Open modal
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add mount"
+        description="A directory on a resource, mounted into your workspace."
+        confirmLabel="Add mount"
+        onConfirm={() => setOpen(false)}
+      >
+        {/* The body is padded already: its fields go straight in, at the title's edge. */}
+        <div className="flex flex-col gap-4">
+          <Field label="Resource" required>
+            <Select
+              items={[
+                { value: 'gpu', label: 'gpu-cluster-east' },
+                { value: 'cpu', label: 'cpu-batch-west' },
+              ]}
+              value={resource}
+              onValueChange={setResource}
+              placeholder="Pick a resource"
+            />
+          </Field>
+          <Input
+            label="Workspace path"
+            mono
+            defaultValue="/home/__USER__/pw/clusters/__CLUSTER__/"
+          />
+          <Input label="Resource path" mono placeholder="/shared/data" />
+        </div>
+      </ConfirmModal>
+    </>
+  )
+}
+
+/** A confirm that asks for several fields. At phone width the panel takes the screen's width
+ *  less a small gutter, its fields line up with the title, and its actions share the footer's
+ *  width at a thumb's height. */
+export const ConfirmModalWithForm: StoryObj = {
+  name: 'Confirm modal, with a form',
+  render: () => <AddMountDemo />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Add mount' })
+    await waitFor(() => expect(dialog).toBeVisible())
+  },
+}
+
 /** A failed confirm keeps the dialog open and says why, so the reader can try again. */
 export const ConfirmModalError: StoryObj = {
   name: 'Confirm modal, failed',
@@ -1185,7 +1241,12 @@ function NewIssueDemo({ failing, size }: { failing: boolean; size?: ModalSize | 
         }))}
         typeMenuSearch={{ placeholder: 'Search teams', empty: 'No team matches' }}
         namePlaceholder="Issue title"
-        footerHint="Enter creates · ⌘Enter creates and opens"
+        footerHint={
+          <>
+            <Kbd keys="Enter" size="xs" /> creates · <Kbd keys="Mod+Enter" size="xs" /> creates and
+            opens
+          </>
+        }
         error={error}
         size={size}
         onSubmit={async (name, _description, _favorite, { modifier }) => {
@@ -1213,7 +1274,7 @@ export const CreateModalHints: StoryObj<{ failing: boolean; size: ModalSize }> =
   render: ({ failing, size }) => <NewIssueDemo failing={failing} size={size} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
-    await expect(await screen.findByText('Enter creates · ⌘Enter creates and opens')).toBeVisible()
+    await expect(await screen.findByText(/creates and opens/)).toBeVisible()
   },
 }
 
@@ -1225,6 +1286,95 @@ export const CreateModalWide: StoryObj = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
     const dialog = await screen.findByRole('dialog')
     await waitFor(() => expect(dialog).toBeVisible())
+  },
+}
+
+function FullIssueDemo() {
+  const [open, setOpen] = useState(false)
+  const [status, setStatus] = useState<string | undefined>('todo')
+  const [priority, setPriority] = useState<string>()
+  const [assignee, setAssignee] = useState<string>()
+  const [labels, setLabels] = useState<string>()
+  const [due, setDue] = useState<string>()
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        New issue
+      </Button>
+      <CreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        typeLabel="Core Platform"
+        size="xl"
+        initialName="Export fails for invoices over 10,000 lines when the customer has a custom tax region"
+        namePlaceholder="Issue title"
+        descriptionPlaceholder="Add a description…"
+        footerHint={
+          <>
+            <Kbd keys="Enter" size="xs" /> creates · <Kbd keys="Mod+Enter" size="xs" /> creates and
+            opens
+          </>
+        }
+        submitLabel="Create issue"
+        properties={
+          <>
+            <CreateModalSelect
+              label="Status"
+              value={status}
+              onValueChange={setStatus}
+              items={[
+                { value: 'todo', label: 'Todo' },
+                { value: 'doing', label: 'In progress' },
+              ]}
+            />
+            <CreateModalSelect
+              label="Priority"
+              value={priority}
+              onValueChange={setPriority}
+              items={[
+                { value: 'high', label: 'High' },
+                { value: 'low', label: 'Low' },
+              ]}
+            />
+            <CreateModalSelect
+              label="Assignee"
+              icon={<UserIcon />}
+              value={assignee}
+              onValueChange={setAssignee}
+              items={['Ada Okafor', 'Lin Zhou']}
+            />
+            <CreateModalSelect
+              label="Labels"
+              icon={<TagIcon />}
+              value={labels}
+              onValueChange={setLabels}
+              items={['bug', 'performance']}
+            />
+            <CreateModalSelect
+              label="Due date"
+              icon={<CalendarIcon />}
+              value={due}
+              onValueChange={setDue}
+              items={['Today', 'Next week']}
+            />
+          </>
+        }
+        onSubmit={async () => true}
+      />
+    </>
+  )
+}
+
+/** A long title wraps rather than scrolling out of view, and the properties wrap under it. At
+ *  phone width the dialog sits near the top, clear of the on-screen keyboard, the actions take
+ *  the footer's width, and the key hint is left out on a touch screen. */
+export const CreateModalFull: StoryObj = {
+  name: 'Create modal, new issue',
+  render: () => <FullIssueDemo />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
+    const title = await screen.findByRole('textbox', { name: 'Issue title' })
+    await waitFor(() => expect(title).toBeVisible())
   },
 }
 
@@ -1705,6 +1855,43 @@ export const Selects: StoryObj<{ disabled: boolean; invalid: boolean; size: Fiel
     await userEvent.click(await screen.findByRole('option', { name: 'Medium' }))
     await expect(canvas.getByRole('combobox', { name: 'Instance size' })).toHaveTextContent(
       'Medium',
+    )
+  },
+}
+
+function SelectInRowDemo() {
+  const [group, setGroup] = useState<string | null>('allocation')
+  return (
+    // A narrow toolbar whose title takes what room is left: the select keeps its own width.
+    <div
+      className="flex items-center gap-2 rounded-md border theme-border p-2 text-sm"
+      style={{ width: 340 }}
+    >
+      <span className="min-w-0 flex-1 truncate font-medium">
+        Usage for the research allocation this month
+      </span>
+      <Select
+        aria-label="Group by"
+        width="content"
+        size="sm"
+        items={[
+          { value: 'allocation', label: 'By allocation' },
+          { value: 'user', label: 'By user' },
+        ]}
+        value={group}
+        onValueChange={setGroup}
+      />
+    </div>
+  )
+}
+
+/** In a row beside text that truncates, a `content` select keeps its width instead of cutting
+ *  off its own choice. */
+export const SelectInARow: StoryObj = {
+  render: () => <SelectInRowDemo />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('combobox', { name: /^Group by/ })).toHaveClass(
+      'shrink-0',
     )
   },
 }

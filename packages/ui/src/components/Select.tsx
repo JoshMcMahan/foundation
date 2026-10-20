@@ -143,7 +143,9 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
             className={cx(
               fieldBox({ size }),
               triggerClassName,
-              content && 'w-fit max-w-full',
+              // In a row of other things it keeps its width rather than cutting off its own
+              // choice; `max-w-full` still holds it to a narrower row.
+              content && 'w-fit max-w-full shrink-0',
               explained && explainedDisabledClassName,
               className,
             )}

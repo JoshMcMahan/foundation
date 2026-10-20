@@ -149,7 +149,7 @@ const sizesToContent = () =>
   typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content') === true
 
 /** Sets a textarea's height to its text's while the browser can't, from its value. */
-function useAutosize(enabled: boolean, value: unknown) {
+export function useAutosize(enabled: boolean, value: unknown) {
   const element = useRef<HTMLTextAreaElement | null>(null)
   const [native] = useState(sizesToContent)
   const resize = useCallback(() => {
@@ -309,7 +309,7 @@ export function TitleInput({
       setDraft(value)
     }
   }
-  const { resize } = useAutosize(true, draft)
+  const { element: sizer, resize } = useAutosize(true, draft)
   // biome-ignore lint/correctness/useExhaustiveDependencies: only as it appears
   useEffect(() => {
     if (autoSelect && element.current) {
@@ -320,13 +320,15 @@ export function TitleInput({
   const setRef = useCallback(
     (el: HTMLTextAreaElement | null) => {
       element.current = el
+      // The sizer too, or where the browser can't size it, it never grows.
+      sizer.current = el
       if (typeof ref === 'function') {
         ref(el)
       } else if (ref) {
         ref.current = el
       }
     },
-    [ref],
+    [ref, sizer],
   )
   return (
     <textarea

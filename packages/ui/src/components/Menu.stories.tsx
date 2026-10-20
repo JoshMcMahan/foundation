@@ -443,6 +443,30 @@ export const MixedIconSizes: StoryObj = {
   },
 }
 
+/** `hint` is muted text at a row's end that tells rows apart, such as a team's key. Unlike a
+ *  shortcut it is read with the label, and the menu's search finds it. */
+export const Hints: StoryObj = {
+  render: () => (
+    <ActionMenu
+      label="Move to team"
+      search={{ placeholder: 'Search teams', empty: 'No team matches' }}
+      items={[
+        { label: 'Core Platform', icon: <FolderIcon />, hint: 'CORE', onClick: () => {} },
+        { label: 'Web', icon: <FolderIcon className="size-3.5" />, hint: 'WEB', onClick: () => {} },
+        { label: 'Research', icon: <FolderIcon />, hint: 'RES', onClick: () => {} },
+      ]}
+    >
+      <MoreIcon />
+    </ActionMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Move to team' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: /^Core Platform\s*\.\s*CORE$/ }),
+    ).toBeInTheDocument()
+  },
+}
+
 /** The same rows at `size="sm"`, as a 12px toolbar's menus use. */
 export const Compact: StoryObj = {
   render: function Render() {

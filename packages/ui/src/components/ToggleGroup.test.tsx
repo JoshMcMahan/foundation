@@ -55,6 +55,11 @@ describe('ToggleGroup', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/^$/)
   })
 
+  it('names its All option as the host says, such as what it covers', () => {
+    render(<Filter all allLabel="All states" initial={[]} />)
+    expect(button(/^All states$/)).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('presses All while nothing else is, and clears the others when it is pressed', () => {
     render(<Filter all={{ count: 42 }} initial={['running', 'failed']} />)
     const all = button(/^All/)

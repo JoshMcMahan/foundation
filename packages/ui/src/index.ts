@@ -33,6 +33,7 @@ export {
   type CardPadding,
   type CardProps,
   type CardSize,
+  type CardTone,
 } from './components/Card'
 export { Checkbox, CheckboxGroup, type CheckboxProps } from './components/Checkbox'
 export { ColorInput, type ColorInputProps } from './components/ColorInput'

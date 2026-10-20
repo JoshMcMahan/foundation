@@ -195,6 +195,28 @@ describe('the context menu', () => {
     expect(screen.getByText('No type matches')).toBeInTheDocument()
   })
 
+  it('shows a row’s hint at its end, read with its label and found by its search', async () => {
+    render(
+      <Menu
+        items={[
+          action('Core Platform', { hint: 'CORE', shortcut: '1', icon: <svg /> }),
+          action('Web', { hint: 'WEB' }),
+        ]}
+        options={{ search: SEARCH }}
+      />,
+    )
+    open()
+    await screen.findAllByRole('menuitem')
+    const core = await screen.findByRole('menuitem', { name: 'Core Platform. CORE' })
+    // The hint sits before the shortcut, which isn't read as part of the name.
+    expect(core.textContent).toMatch(/CORE1$/)
+    const search = screen.getByRole('searchbox', { name: 'Search types' })
+    fireEvent.change(search, { target: { value: 'web' } })
+    expect(screen.getByRole('menuitem', { name: 'Web. WEB' })).toBeInTheDocument()
+    fireEvent.change(search, { target: { value: 'core' } })
+    expect(screen.queryByRole('menuitem', { name: /Web/ })).toBeNull()
+  })
+
   it('runs the first match when its search takes Enter', async () => {
     const onClick = vi.fn()
     render(
