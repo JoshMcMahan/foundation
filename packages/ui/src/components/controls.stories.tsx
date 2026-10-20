@@ -4,7 +4,7 @@ import { expect, userEvent, within } from 'storybook/test'
 import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon } from '../icons'
 import { Button, MethodButton } from './Button'
 import type { ButtonSize, ButtonVariant } from './buttonClasses'
-import { Card, CardHeader } from './Card'
+import { Card, CardHeader, type CardPadding } from './Card'
 import { IconButton } from './IconButton'
 import { Input, Textarea } from './Input'
 import { LetterBadge } from './LetterBadge'
@@ -295,6 +295,58 @@ export const CardsPressable: StoryObj = {
     await expect(canvas.getByRole('link', { name: /In the cloud/ })).toHaveFocus()
     await userEvent.tab()
     await expect(canvas.getByRole('button', { name: /On my own hardware/ })).toHaveFocus()
+  },
+}
+
+const MEMBERS = [
+  ['Ada Park', 'Admin'],
+  ['Lee Chen', 'Member'],
+  ['Sam Ortiz', 'Member'],
+]
+
+/** In-page cards: `size="fill"` is a flat panel as wide as its column. A list of rows is
+ *  divided with no padding; a highlighted card stands apart; a card around a field tints
+ *  its border while the field has focus. */
+export const CardsInPage: StoryObj<{
+  padding: CardPadding
+  highlight: boolean
+  focusWithin: boolean
+}> = {
+  args: { padding: 'md', highlight: false, focusWithin: false },
+  argTypes: {
+    padding: { control: 'inline-radio', options: ['none', 'sm', 'md', 'lg'] },
+    highlight: { description: 'An accent border, setting the card apart.' },
+    focusWithin: { description: 'Tints the border while a field inside has focus.' },
+  },
+  render: (args) => (
+    <div className="flex max-w-xl flex-col gap-4">
+      <Card size="fill" {...args}>
+        <p className="text-sm">Usage resets on the first of each month.</p>
+      </Card>
+      <Card size="fill" padding="none" divided interactive={false} render={<ul />}>
+        {MEMBERS.map(([name, role]) => (
+          <li key={name} className="flex items-center justify-between px-4 py-3 text-sm">
+            <span>{name}</span>
+            <span className="theme-muted-text">{role}</span>
+          </li>
+        ))}
+      </Card>
+      <Card size="fill" highlight render={<article />} interactive={false}>
+        <p className="text-sm">A thread shared with you stands apart from the others.</p>
+      </Card>
+      <Card size="fill" padding="sm" focusWithin>
+        <textarea
+          aria-label="Comment"
+          placeholder="Leave a comment"
+          rows={2}
+          className="w-full resize-none bg-transparent text-sm outline-none"
+        />
+      </Card>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('list')).not.toHaveClass('cursor-pointer')
   },
 }
 

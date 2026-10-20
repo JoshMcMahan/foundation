@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { Button } from './Button'
 import { Disclosure } from './Disclosure'
 import { InfoTip } from './InfoTip'
-import { Section, type SectionSpacing, type SectionVariant } from './Section'
+import { Section, type SectionSpacing, type SectionTone, type SectionVariant } from './Section'
+import { Select } from './Select'
 import { StatusDot } from './StatusBadge'
 import { StickyBar } from './StickyBar'
 import { Switch } from './Switch'
@@ -24,12 +26,27 @@ export const Sections: StoryObj<{
   variant: SectionVariant
   spacing: SectionSpacing
   collapsible: boolean
+  flush: boolean
+  tone: SectionTone
   description: string
 }> = {
-  args: { variant: 'plain', spacing: 'regular', collapsible: true, description: 'Name and owner.' },
+  args: {
+    variant: 'plain',
+    spacing: 'regular',
+    collapsible: true,
+    flush: false,
+    tone: 'default',
+    description: 'Name and owner.',
+  },
   argTypes: {
-    variant: { control: 'inline-radio', options: ['plain', 'card'] },
+    variant: { control: 'inline-radio', options: ['plain', 'bare', 'card'] },
     spacing: { control: 'inline-radio', options: ['regular', 'tight'] },
+    flush: { description: "A card's content reaches its edges." },
+    tone: {
+      control: 'inline-radio',
+      options: ['default', 'error'],
+      description: 'A card of irreversible actions.',
+    },
   },
   render: ({ description, ...args }) => (
     <div className="flex max-w-xl flex-col gap-6">
@@ -113,6 +130,99 @@ export const SettingsSections: StoryObj = {
     await expect(getComputedStyle(title).color).not.toBe(getComputedStyle(description).color)
     await expect(getComputedStyle(title).color).toBe(getComputedStyle(section as Element).color)
   },
+}
+
+/** No rule under the title: the title and what the section holds sit over its content. */
+export const BareSections: typeof Sections = {
+  ...Sections,
+  name: 'Bare sections',
+  args: { ...Sections.args, variant: 'bare', collapsible: false },
+}
+
+const NODES = [
+  ['gpu-01', 'Ready', '8 cores'],
+  ['gpu-02', 'Ready', '8 cores'],
+  ['cpu-01', 'Draining', '32 cores'],
+]
+
+/** A flush card: a table's rules reach the card's edges instead of sitting inset. */
+export const FlushCard: StoryObj = {
+  name: 'Flush card',
+  render: () => (
+    <div className="max-w-xl">
+      <Section
+        variant="card"
+        flush
+        title="Nodes"
+        beside={<span className="text-xs theme-muted-text">3</span>}
+      >
+        <table className="w-full border-t border-(--theme-border) text-left text-sm">
+          <thead className="theme-muted-panel text-xs">
+            <tr>
+              <th className="px-4 py-2 font-medium">Name</th>
+              <th className="px-4 py-2 font-medium">State</th>
+              <th className="px-4 py-2 font-medium">Size</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-(--theme-border)">
+            {NODES.map(([name, state, size]) => (
+              <tr key={name}>
+                <td className="px-4 py-2">{name}</td>
+                <td className="px-4 py-2">{state}</td>
+                <td className="px-4 py-2">{size}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Section>
+    </div>
+  ),
+}
+
+/** A danger zone: a card whose border and title take the error color over a clear body. */
+export const DangerZone: StoryObj = {
+  name: 'Danger zone',
+  render: () => (
+    <div className="max-w-xl">
+      <Section
+        variant="card"
+        tone="error"
+        collapsible={false}
+        title="Danger zone"
+        description="These can't be undone."
+      >
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span>Delete this cluster and everything on it.</span>
+          <Button variant="danger" size="sm">
+            Delete cluster
+          </Button>
+        </div>
+      </Section>
+    </div>
+  ),
+}
+
+const RANGES = [
+  { value: '1h', label: 'Last hour' },
+  { value: '24h', label: 'Last day' },
+]
+
+/** On a narrow screen the header wraps: actions drop under the title, still at the far end,
+ *  instead of squeezing it. */
+export const WrappingHeader: StoryObj = {
+  name: 'Wrapping header',
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  render: () => (
+    <div className="w-[320px] max-w-full">
+      <Section
+        variant="card"
+        title="Workload metrics for the training job"
+        actions={<Select aria-label="Range" items={RANGES} defaultValue="1h" />}
+      >
+        {body}
+      </Section>
+    </div>
+  ),
 }
 
 function RememberedSection() {

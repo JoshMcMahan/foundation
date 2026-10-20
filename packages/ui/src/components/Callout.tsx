@@ -1,12 +1,24 @@
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
-import { CloseIcon, ErrorIcon, type IconType, InfoIcon, SuccessIcon, WarningIcon } from '../icons'
+import {
+  CloseIcon,
+  ErrorIcon,
+  type IconType,
+  InfoIcon,
+  LockIcon,
+  SuccessIcon,
+  WarningIcon,
+} from '../icons'
 import { IconButton } from './IconButton'
 import { useStrings } from './Provider'
 import { type Tone, toneIcon, toneSurface } from './tone'
 
-/** A callout's tone: `default` for a plain note, or a status. */
-export type CalloutTone = Extract<Tone, 'default' | 'info' | 'success' | 'warning' | 'error'>
+/** A callout's tone: `default` for a plain note, a status, or `muted` for a quiet
+ *  note that something is read-only, such as a page only admins can change. */
+export type CalloutTone = Extract<
+  Tone,
+  'default' | 'info' | 'success' | 'warning' | 'error' | 'muted'
+>
 
 export interface CalloutProps {
   tone?: CalloutTone | undefined
@@ -38,6 +50,7 @@ const toneIcons: Record<CalloutTone, IconType> = {
   success: SuccessIcon,
   warning: WarningIcon,
   error: ErrorIcon,
+  muted: LockIcon,
 }
 
 /** A message set into the page in a status's tone: guidance, a warning, an error

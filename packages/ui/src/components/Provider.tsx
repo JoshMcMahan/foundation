@@ -68,6 +68,8 @@ export interface UIStrings {
     copyThing: (label: string) => string
     copiedThing: (label: string) => string
     copyThingFailed: (label: string) => string
+    /** A count past a badge's cap, `max` already formatted, such as "99+". */
+    countOverflow: (max: string) => string
     /** Read out where a value is missing, which shows as a dash. */
     noValue: string
     /** A name field's rule: the characters a key or identifier allows. */
@@ -881,6 +883,7 @@ const DEFAULTS: UIProviderValue = {
       copyThing: (label) => `Copy ${label}`,
       copiedThing: (label) => `Copied ${label}`,
       copyThingFailed: (label) => `Couldn't copy ${label}`,
+      countOverflow: (max) => `${max}+`,
       noValue: 'None',
       invalidName: 'Use letters, numbers, dashes, and underscores.',
       invalidNumber: 'Use a number.',

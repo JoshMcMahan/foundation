@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
+import { hoverTooltip } from '../test/tooltip'
 import { UIProvider } from './Provider'
 import { RunStatusIcon, runStatusTone } from './RunStatusIcon'
+import { TooltipProvider } from './Tooltip'
 
 describe('RunStatusIcon', () => {
   it('is named by the host’s status label', () => {
@@ -18,6 +20,31 @@ describe('RunStatusIcon', () => {
     const { container } = render(<RunStatusIcon status="" />)
     expect(screen.queryByRole('img')).toBeNull()
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('takes a label the host gives it over the status’s own', () => {
+    render(<RunStatusIcon status="running" label="Provisioning" />)
+    expect(screen.getByRole('img', { name: 'Provisioning' })).toHaveAttribute(
+      'data-status',
+      'running',
+    )
+  })
+
+  it('shows its name on hover when asked to', async () => {
+    render(
+      <TooltipProvider>
+        <RunStatusIcon status="pending" label="Queued" tooltip />
+      </TooltipProvider>,
+    )
+    expect(await hoverTooltip(screen.getByRole('img', { name: 'Queued' }))).toHaveTextContent(
+      'Queued',
+    )
+  })
+
+  it('shows a run under way in info blue, keeping amber for warnings', () => {
+    expect(runStatusTone('running')).toBe('info')
+    expect(runStatusTone('warning')).toBe('warning')
+    expect(runStatusTone('pending')).toBe('muted')
   })
 
   it('gives a badge the tone its icon shows', () => {

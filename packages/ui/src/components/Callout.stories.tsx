@@ -9,13 +9,14 @@ const meta: Meta = {
 }
 export default meta
 
-const TONES: CalloutTone[] = ['default', 'info', 'success', 'warning', 'error']
+const TONES: CalloutTone[] = ['default', 'info', 'success', 'warning', 'error', 'muted']
 const NAMES: Record<CalloutTone, string> = {
   default: 'A plain',
   info: 'An info',
   success: 'A success',
   warning: 'A warning',
   error: 'An error',
+  muted: 'A muted',
 }
 
 type CalloutArgs = Pick<CalloutProps, 'tone' | 'variant' | 'size' | 'live'> & {
@@ -89,6 +90,15 @@ export const Tones: StoryObj = {
     await expect(canvas.queryByRole('alert')).toBeNull()
     await expect(canvas.queryByRole('status')).toBeNull()
   },
+}
+
+/** A quiet note that the page is read-only for the reader, with a lock for its icon. */
+export const ReadOnlyNote: StoryObj = {
+  render: () => (
+    <div className="max-w-xl">
+      <Callout tone="muted">Only workspace admins can change these settings.</Callout>
+    </div>
+  ),
 }
 
 /** Full-width bars under a header, for a condition that holds across the surface. */

@@ -123,4 +123,36 @@ describe('Section', () => {
     )
     expect(screen.getByRole('heading', { name: 'Summary' }).className).not.toMatch(/muted/)
   })
+
+  it('lets a flush card’s content reach its edges', () => {
+    render(
+      <Section variant="card" title="Nodes" flush collapsible={false}>
+        <table data-testid="table" />
+      </Section>,
+    )
+    expect(screen.getByTestId('table').parentElement?.tagName).toBe('SECTION')
+  })
+
+  it('marks a danger zone in the error color', () => {
+    render(
+      <Section variant="card" tone="error" title="Danger zone" collapsible={false}>
+        content
+      </Section>,
+    )
+    const heading = screen.getByRole('heading', { name: 'Danger zone' })
+    expect(heading).toHaveClass('text-(--theme-error-text)')
+    expect(heading.closest('section')).toHaveClass('border-(--theme-error)/30')
+  })
+
+  it('sets a bare title over its content with no rule', () => {
+    render(
+      <Section variant="bare" title="Workflow" collapsible={false}>
+        content
+      </Section>,
+    )
+    const header = screen
+      .getByRole('heading', { name: 'Workflow' })
+      .closest('[data-section-header]')
+    expect(header?.className).not.toMatch(/border-b/)
+  })
 })

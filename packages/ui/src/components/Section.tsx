@@ -4,7 +4,8 @@ import { cx } from '../cx'
 import { ChevronRightIcon } from '../icons'
 import { collapsePanelClassName } from './Disclosure'
 
-export type SectionVariant = 'plain' | 'card'
+export type SectionVariant = 'plain' | 'bare' | 'card'
+export type SectionTone = 'default' | 'error'
 export type SectionSpacing = 'regular' | 'tight'
 
 export interface SectionProps {
@@ -16,9 +17,15 @@ export interface SectionProps {
   beside?: ReactNode
   /** At the header's far end, such as an add button or a range picker. */
   actions?: ReactNode
-  /** `plain` rules the title off from the content under it; `card` frames the
-   *  section as a panel. */
+  /** `plain` rules the title off from the content under it; `bare` sets the title
+   *  over the content with no rule; `card` frames the section as a panel. */
   variant?: SectionVariant | undefined
+  /** `error` marks a card of irreversible actions, such as deleting what the page
+   *  shows: its border and title turn the error color over a clear body. */
+  tone?: SectionTone | undefined
+  /** A card's content reaches its edges, such as a table or a list ruled to its
+   *  sides, instead of sitting inset under the header. */
+  flush?: boolean | undefined
   /** The room between a `plain` section's rule and its content. `tight` suits content that
    *  spaces itself tightly, such as a form with its labels over its fields, so the first row
    *  sits as far under the rule as the rows under it sit under one another. */
@@ -40,15 +47,24 @@ export interface SectionProps {
 
 const rootClasses: Record<SectionVariant, string> = {
   plain: 'flex w-full flex-col',
+  bare: 'flex w-full flex-col',
   card: 'panel mb-1 flex w-full flex-col',
 }
 
+// A danger zone keeps the card's frame but drops its fill, so its red edge reads
+// as the warning rather than a tinted block.
+const errorCardClassName = 'border-(--theme-error)/30 bg-transparent'
+
+// The row wraps, so on a narrow screen actions such as a range picker drop under
+// the title instead of squeezing it.
 const headerClasses: Record<SectionVariant, string> = {
-  plain: 'flex w-full items-center gap-2 border-b border-(--theme-border) pb-1',
-  card: 'flex w-full items-center gap-2 p-4',
+  plain: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1 border-b border-(--theme-border) pb-1',
+  bare: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1',
+  // 48px with a one-line title, so a page of folded cards stays short.
+  card: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3',
 }
 
-// Only under a rule: a card's header pads itself.
+// Between the title and the content; a card's header pads itself.
 const ruleGaps: Record<SectionSpacing, string> = { regular: 'mb-4', tight: 'mb-1.5' }
 
 // A card frames its content, so it pads it in line with the header. The padding sits
@@ -57,6 +73,7 @@ const cardBodyClassName = 'px-4 pb-4'
 
 const titleClasses: Record<SectionVariant, string> = {
   plain: 'text-base font-semibold',
+  bare: 'text-base font-semibold',
   card: 'text-base font-semibold',
 }
 
@@ -64,6 +81,7 @@ const titleClasses: Record<SectionVariant, string> = {
 // card that can't fold is always open, so its title never recedes.
 const foldedTitleClasses: Record<SectionVariant, string> = {
   plain: '',
+  bare: '',
   card: 'not-data-panel-open:text-(--theme-muted-text-color)',
 }
 
@@ -81,6 +99,8 @@ export function Section({
   beside,
   actions,
   variant = 'plain',
+  tone = 'default',
+  flush = false,
   spacing = 'regular',
   collapsible = true,
   open,
@@ -98,12 +118,15 @@ export function Section({
   const titleProps = { 'data-section-title': '' }
   // With nothing else in the header, the whole row folds the section.
   const fill = !beside && !actions
+  const card = variant === 'card'
+  const danger = card && tone === 'error'
+  const rootClassName = cx(rootClasses[variant], danger && errorCardClassName, className)
+  const titleTone = danger && 'text-(--theme-error-text)'
+  const body = card && !flush ? <div className={cardBodyClassName}>{children}</div> : children
   const header = (heading: ReactNode) => (
-    <div
-      className={cx(headerClasses[variant], variant === 'plain' && ruleGaps[spacing])}
-      data-section-header
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div className={cx(headerClasses[variant], !card && ruleGaps[spacing])} data-section-header>
+      {/* Its basis is what the title keeps before the actions wrap under it. */}
+      <div className="flex min-w-0 grow basis-48 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
           {heading}
           {beside}
@@ -117,23 +140,22 @@ export function Section({
           </p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="ms-auto flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
   )
 
   if (!collapsible) {
     return (
-      <section
-        id={id}
-        aria-describedby={describedBy}
-        className={cx(rootClasses[variant], className)}
-      >
+      <section id={id} aria-describedby={describedBy} className={rootClassName}>
         {header(
-          <Heading {...titleProps} className={cx('flex items-center', titleClasses[variant])}>
+          <Heading
+            {...titleProps}
+            className={cx('flex items-center', titleClasses[variant], titleTone)}
+          >
             {title}
           </Heading>,
         )}
-        {variant === 'card' ? <div className={cardBodyClassName}>{children}</div> : children}
+        {body}
       </section>
     )
   }
@@ -144,7 +166,7 @@ export function Section({
       open={open}
       onOpenChange={(next) => onOpenChange?.(next)}
       defaultOpen={defaultOpen}
-      className={cx(rootClasses[variant], className)}
+      className={rootClassName}
     >
       {header(
         <Heading className={cx('flex min-w-0', fill && 'flex-1')}>
@@ -152,10 +174,10 @@ export function Section({
             {...titleProps}
             aria-describedby={describedBy}
             className={cx(
-              'group flex min-w-0 cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
+              'group flex min-w-0 cursor-pointer items-center gap-1 rounded-sm text-left select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
               fill && 'w-full',
               titleClasses[variant],
-              foldedTitleClasses[variant],
+              titleTone || foldedTitleClasses[variant],
             )}
           >
             <ChevronRightIcon
@@ -170,7 +192,7 @@ export function Section({
         </Heading>,
       )}
       <Collapsible.Panel keepMounted className={collapsePanelClassName}>
-        {variant === 'card' ? <div className={cardBodyClassName}>{children}</div> : children}
+        {body}
       </Collapsible.Panel>
     </Collapsible.Root>
   )

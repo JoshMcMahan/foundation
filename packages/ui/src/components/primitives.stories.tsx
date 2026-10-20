@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
-import type { RunStatus } from '../engine'
 import { formatBytes } from '../format'
 import {
   applyTheme,
@@ -25,15 +24,23 @@ import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { InfoTip } from './InfoTip'
 import { Input } from './Input'
 import { positionKeys } from './keys'
-import { type BarTone, Meter, ProgressBar } from './Meter'
+import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Meter'
 import { Modal, type ModalProps } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
-import { RunStatusIcon, runStatusTone } from './RunStatusIcon'
+import { RunStatusIcon, type RunStatusIconStatus, runStatusTone } from './RunStatusIcon'
 import { Elapsed, RelativeTime } from './relativeTime'
 import { SegmentedControl } from './SegmentedControl'
 import { Select } from './Select'
-import { StatusBadge, StatusDot } from './StatusBadge'
+import {
+  type BadgeEmphasis,
+  type BadgeShape,
+  type BadgeSize,
+  type BadgeVariant,
+  CountBadge,
+  StatusBadge,
+  StatusDot,
+} from './StatusBadge'
 import { Switch } from './Switch'
 import { type SortDirection, Table, type TableDensity } from './Table'
 import { Tooltip } from './Tooltip'
@@ -43,7 +50,8 @@ const meta: Meta = {
 }
 export default meta
 
-const RUN_STATUSES: RunStatus[] = [
+const RUN_STATUSES: RunStatusIconStatus[] = [
+  'pending',
   'running',
   'completed',
   'error',
@@ -52,10 +60,12 @@ const RUN_STATUSES: RunStatus[] = [
   'skipped',
   'skipped-failed',
   'faulted',
+  'warning',
   '',
 ]
 
-/** A run status as an icon beside what ran, and in words as a badge in the same tone. */
+/** A run status as an icon beside what ran, and in words as a badge in the same tone. Under
+ *  way spins in info blue; `pending` and `warning` are looks a host maps its own statuses onto. */
 export const RunStatuses: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-2 text-sm">
@@ -77,21 +87,195 @@ export const RunStatuses: StoryObj = {
   },
 }
 
-export const Badges: StoryObj = {
-  render: () => (
-    <div className="flex items-center gap-3">
-      <StatusBadge variant="success">Running</StatusBadge>
-      <StatusBadge variant="warning" pulse>
+/** A host's own status in a run's look, with its own name, shown on hover with `tooltip`. */
+export const RunStatusLabels: StoryObj<{ tooltip: boolean }> = {
+  args: { tooltip: true },
+  argTypes: { tooltip: { description: 'Shows the name on hover too.' } },
+  render: ({ tooltip }) => (
+    <div className="flex items-center gap-4 p-8 text-sm">
+      <RunStatusIcon status="running" label="Provisioning" tooltip={tooltip} />
+      <RunStatusIcon status="running" label="Deleting" tooltip={tooltip} />
+      <RunStatusIcon status="pending" label="Queued" tooltip={tooltip} />
+      <RunStatusIcon status="warning" label="Degraded" tooltip={tooltip} />
+      <RunStatusIcon status="completed" label="Deployed" tooltip={tooltip} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: 'Provisioning' })).toHaveAttribute(
+      'data-status',
+      'running',
+    )
+  },
+}
+
+const BADGE_VARIANTS: BadgeVariant[] = [
+  'default',
+  'success',
+  'warning',
+  'error',
+  'info',
+  'muted',
+  'accent',
+]
+
+export const Badges: StoryObj<{
+  emphasis: BadgeEmphasis
+  shape: BadgeShape
+  caps: boolean
+  size: BadgeSize
+}> = {
+  args: { emphasis: 'soft', shape: 'pill', caps: false, size: 'sm' },
+  argTypes: {
+    emphasis: { control: 'inline-radio', options: ['soft', 'solid', 'outline'] },
+    shape: { control: 'inline-radio', options: ['pill', 'tag'] },
+    caps: { description: 'Uppercase, tracked letters.' },
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+  },
+  render: (args) => (
+    <div className="flex flex-wrap items-center gap-3">
+      <StatusBadge {...args} variant="success" dot>
+        Running
+      </StatusBadge>
+      <StatusBadge {...args} variant="warning" pulse>
         Degraded
       </StatusBadge>
-      <StatusBadge variant="error">Stopped</StatusBadge>
-      <StatusBadge variant="info" size="sm">
+      <StatusBadge {...args} variant="error">
+        Stopped
+      </StatusBadge>
+      <StatusBadge {...args} variant="info">
         Preview
       </StatusBadge>
-      <StatusBadge variant="muted">Archived</StatusBadge>
+      <StatusBadge {...args} variant="muted">
+        Archived
+      </StatusBadge>
+      <StatusBadge {...args} variant="accent">
+        New
+      </StatusBadge>
       <StatusDot variant="success" />
     </div>
   ),
+}
+
+/** Every tone at every emphasis, as pills and as tags. */
+export const BadgeEmphases: StoryObj = {
+  render: () => (
+    <div className="flex flex-col gap-3">
+      {(['pill', 'tag'] as const).map((shape) =>
+        (['soft', 'solid', 'outline'] as const).map((emphasis) => (
+          <div key={`${shape}-${emphasis}`} className="flex flex-wrap items-center gap-2">
+            <span className="w-24 text-xs theme-muted-text">
+              {shape} {emphasis}
+            </span>
+            {BADGE_VARIANTS.map((variant) => (
+              <StatusBadge
+                key={variant}
+                variant={variant}
+                emphasis={emphasis}
+                shape={shape}
+                size="md"
+              >
+                {variant}
+              </StatusBadge>
+            ))}
+          </div>
+        )),
+      )}
+    </div>
+  ),
+}
+
+/** A tag for a short label, in caps or sentence case; a link badge; a long state cut off
+ *  inside a narrow cell. */
+export const BadgeUses: StoryObj = {
+  render: () => (
+    <div className="flex flex-col gap-4 text-sm">
+      <div className="flex items-center gap-2">
+        <StatusBadge shape="tag" caps variant="accent" emphasis="solid">
+          All users
+        </StatusBadge>
+        <StatusBadge shape="tag" caps variant="info">
+          Preview
+        </StatusBadge>
+        <StatusBadge shape="tag" emphasis="outline" variant="accent" size="md">
+          Decided
+        </StatusBadge>
+        <StatusBadge
+          shape="tag"
+          emphasis="outline"
+          variant="muted"
+          size="md"
+          className="line-through"
+        >
+          Superseded
+        </StatusBadge>
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusBadge
+          variant="accent"
+          size="md"
+          render={<a href="#changelog" />}
+          className="font-mono"
+        >
+          v2.4.0
+        </StatusBadge>
+        <StatusBadge variant="accent" emphasis="solid">
+          New
+        </StatusBadge>
+        <StatusBadge emphasis="outline">Your version</StatusBadge>
+      </div>
+      <div className="w-28 rounded-md border border-(--theme-border) p-2">
+        <StatusBadge variant="warning" dot truncate>
+          Waiting for capacity
+        </StatusBadge>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('link', { name: 'v2.4.0' })).toBeVisible()
+  },
+}
+
+const HOST_COUNT_CSS =
+  '.story-host-count { background: light-dark(#b45309, #f59e0b); color: light-dark(#fff, #111) }'
+
+/** Counts beside a link or tab, capped at 99+; a host passes its own color in `className`. */
+export const CountBadges: StoryObj<{ count: number; max: number; size: BadgeSize }> = {
+  args: { count: 140, max: 99, size: 'md' },
+  argTypes: {
+    count: { control: { type: 'number', min: 0 } },
+    max: { control: { type: 'number', min: 1 } },
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+  },
+  render: ({ count, max, size }) => (
+    <div className="flex w-56 flex-col gap-1 text-sm">
+      {/* A host's own color, as a host's stylesheet would set it. */}
+      <style>{HOST_COUNT_CSS}</style>
+      <span className="flex items-center justify-between rounded-md px-2 py-1">
+        Inbox
+        <CountBadge count={count} max={max} size={size} label="unread" />
+      </span>
+      <span className="flex items-center justify-between rounded-md px-2 py-1">
+        Decisions
+        <CountBadge count={4} size={size} label="waiting" className="story-host-count" />
+      </span>
+      <span className="flex items-center justify-between rounded-md px-2 py-1">
+        Orphaned
+        <CountBadge count={7} size={size} emphasis="soft" variant="warning" />
+      </span>
+      <span className="flex items-center justify-between rounded-md px-2 py-1">
+        Archived
+        <CountBadge count={0} size={size} emphasis="soft" variant="muted" showZero />
+      </span>
+    </div>
+  ),
+  play: async ({ canvasElement, args }) => {
+    if (args.count <= args.max) {
+      return
+    }
+    await expect(within(canvasElement).getByText(`${args.max}+`)).toBeVisible()
+  },
 }
 
 /** A picture, or initials until it loads and when it fails; one image to assistive
@@ -1107,18 +1291,29 @@ export const DatePickers: StoryObj<{
 
 const GB = 1024 ** 3
 
-/** Readings against levels: amber past `warnAt`, red past `errorAt`. */
-export const Meters: StoryObj<{ value: number; showValue: 'beside' | 'tooltip' }> = {
-  args: { value: 62, showValue: 'beside' },
+/** Readings against levels: info blue below `warnAt` (or `okTone`), amber past it, red past
+ *  `errorAt`. */
+export const Meters: StoryObj<{
+  value: number
+  showValue: BarValuePlacement
+  okTone: BarTone
+}> = {
+  args: { value: 62, showValue: 'beside', okTone: 'info' },
   argTypes: {
     value: { control: { type: 'range', min: 0, max: 100 } },
-    showValue: { control: 'inline-radio', options: ['beside', 'tooltip'] },
+    showValue: { control: 'inline-radio', options: ['beside', 'tooltip', 'end', 'none'] },
+    okTone: {
+      control: 'inline-radio',
+      options: ['info', 'accent', 'success', 'muted'],
+      description: 'The tone below the warning level.',
+    },
   },
-  render: ({ value, showValue }) => (
+  render: ({ value, showValue, okTone }) => (
     <div className="flex w-72 flex-col gap-6 p-8">
       <Meter
         value={value}
         showValue={showValue}
+        okTone={okTone}
         label="Storage"
         detail={`${formatBytes((value / 100) * 50 * GB)} of ${formatBytes(50 * GB)}`}
       />
@@ -1132,6 +1327,56 @@ export const Meters: StoryObj<{ value: number; showValue: 'beside' | 'tooltip' }
     const canvas = within(canvasElement)
     await expect(canvas.getAllByRole('meter')).toHaveLength(5)
     await expect(canvas.getByRole('meter', { name: 'Memory' })).toHaveTextContent('85%')
+  },
+}
+
+const USAGE = [
+  ['scratch', 12.4],
+  ['home', 78.25],
+  ['projects', 91],
+  ['archive', 0.3],
+] as const
+
+/** A column of readings with the value after each bar: a fixed track lines the bars up,
+ *  the level is spoken with the value, and a small reading still shows a sliver. */
+export const MeterColumn: StoryObj = {
+  render: () => (
+    <div className="flex w-80 flex-col gap-2 p-8 text-sm">
+      {USAGE.map(([name, used]) => (
+        <div key={name} className="flex items-center justify-between gap-4">
+          <span>{name}</span>
+          <Meter
+            value={used}
+            warnAt={75}
+            aria-label={`${name} used`}
+            showValue="end"
+            trackClassName="w-24"
+            minFill={2}
+            format={{
+              style: 'unit',
+              unit: 'percent',
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            }}
+            getAriaValueText={(formatted, v) =>
+              v >= 90
+                ? `${formatted}, over limit`
+                : v >= 75
+                  ? `${formatted}, near limit`
+                  : formatted
+            }
+            className="w-40"
+          />
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('meter', { name: 'home used' })).toHaveAttribute(
+      'aria-valuetext',
+      '78.3%, near limit',
+    )
   },
 }
 
@@ -1167,6 +1412,49 @@ export const ProgressBars: StoryObj<{ size: 'sm' | 'md' | 'lg' }> = {
     await expect(canvas.getByRole('progressbar', { name: 'results.csv' })).toHaveTextContent('42%')
     await expect(canvas.getByRole('progressbar', { name: 'model.bin' })).toHaveTextContent(
       'Completed',
+    )
+  },
+}
+
+/** One bar in stretches, such as done work then started work, with the value after it in
+ *  the host's words; compact rows fix the track's width. */
+export const ProgressSegments: StoryObj<{ done: number; started: number; total: number }> = {
+  args: { done: 3, started: 2, total: 8 },
+  argTypes: {
+    done: { control: { type: 'number', min: 0 } },
+    started: { control: { type: 'number', min: 0 } },
+    total: { control: { type: 'number', min: 1 } },
+  },
+  render: ({ done, started, total }) => (
+    <div className="flex w-80 flex-col gap-6 p-8 text-sm">
+      <ProgressBar
+        value={done}
+        max={total}
+        tone="success"
+        segments={[{ value: started, tone: 'info', subtle: true }]}
+        showValue="end"
+        aria-label="Cycle progress"
+        valueText={(formatted) => `${done} of ${total} done, ${formatted}`}
+      />
+      <div className="flex items-center justify-between">
+        <span>Sprint 12</span>
+        <ProgressBar
+          value={done}
+          max={total}
+          tone="success"
+          segments={[{ value: started, tone: 'info', subtle: true }]}
+          showValue="end"
+          trackClassName="w-20"
+          aria-label="Sprint 12 progress"
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('progressbar', { name: 'Cycle progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '3',
     )
   },
 }
