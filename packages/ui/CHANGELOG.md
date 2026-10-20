@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.79.0](https://github.com/parallelworks/foundation/compare/ui-v0.78.0...ui-v0.79.0) (2026-10-20)
+
+
+### Features
+
+* run warnings and editor problems take a problem code, params and type ([#423](https://github.com/parallelworks/foundation/issues/423)) ([72cc81e](https://github.com/parallelworks/foundation/commit/72cc81ee87531d0bab37d24f522cb3a11c31ba10))
+* **ui:** a popover's list can reach its edges, for suggestion menus whose rows pad themselves ([#426](https://github.com/parallelworks/foundation/issues/426)) ([c5d50b9](https://github.com/parallelworks/foundation/commit/c5d50b9c60ad16f808dd446aae3e487204e952db))
+* **ui:** create modals take a size, confirms open on their first field, menu labels line up, and access gains a footer, a managed-elsewhere state and host-worded save errors ([#427](https://github.com/parallelworks/foundation/issues/427)) ([ddda095](https://github.com/parallelworks/foundation/commit/ddda09509fa82c94e9b9ab6a444690f95f412da5))
+
+
+### Bug Fixes
+
+* **ui:** a chat card that keeps growing after its reply stays in view, and a finished reply no longer scrolls the page around the chat ([#424](https://github.com/parallelworks/foundation/issues/424)) ([e5e30f9](https://github.com/parallelworks/foundation/commit/e5e30f99edb2c320fbba930f7cc025222103604f))
+* **ui:** virtual lists draw no rows in tests on the newer virtual list, which measures client size ([#425](https://github.com/parallelworks/foundation/issues/425)) ([f22bad8](https://github.com/parallelworks/foundation/commit/f22bad8c36e4079c6e42015346bff3d57ddf2991))
+
 ## [0.78.0](https://github.com/parallelworks/foundation/compare/ui-v0.77.0...ui-v0.78.0) (2026-10-20)
 
 
