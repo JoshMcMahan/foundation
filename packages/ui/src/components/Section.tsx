@@ -55,14 +55,20 @@ const rootClasses: Record<SectionVariant, string> = {
 // as the warning rather than a tinted block.
 const errorCardClassName = 'border-(--theme-error)/30 bg-transparent'
 
-// The row wraps, so on a narrow screen actions such as a range picker drop under
-// the title instead of squeezing it.
+// The header measures itself, so a narrow one (a phone, or a card in a tight
+// column) moves actions such as a range picker onto their own line under the title
+// instead of squeezing the title into a sliver beside them.
 const headerClasses: Record<SectionVariant, string> = {
-  plain: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1 border-b border-(--theme-border) pb-1',
-  bare: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1',
+  plain:
+    '@container/section-header flex w-full flex-wrap items-center gap-x-2 gap-y-2 border-b border-(--theme-border) pb-1',
+  bare: '@container/section-header flex w-full flex-wrap items-center gap-x-2 gap-y-2',
   // 48px with a one-line title, so a page of folded cards stays short.
-  card: 'flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3',
+  card: '@container/section-header flex w-full flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3',
 }
+
+// Below this width the actions take their own line; above it they sit at the far end.
+const actionsClassName =
+  'flex shrink-0 ms-auto @max-[24rem]/section-header:ms-0 @max-[24rem]/section-header:basis-full'
 
 // Between the title and the content; a card's header pads itself.
 const ruleGaps: Record<SectionSpacing, string> = { regular: 'mb-4', tight: 'mb-1.5' }
@@ -125,9 +131,8 @@ export function Section({
   const body = card && !flush ? <div className={cardBodyClassName}>{children}</div> : children
   const header = (heading: ReactNode) => (
     <div className={cx(headerClasses[variant], !card && ruleGaps[spacing])} data-section-header>
-      {/* Its basis is what the title keeps before the actions wrap under it. */}
-      <div className="flex min-w-0 grow basis-48 flex-col gap-0.5">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 grow basis-0 flex-col gap-0.5">
+        <div className="flex min-w-0 items-start gap-2">
           {heading}
           {beside}
         </div>
@@ -140,7 +145,13 @@ export function Section({
           </p>
         )}
       </div>
-      {actions && <div className="ms-auto flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && (
+        // On their own line they start under the title's text, past the chevron.
+        <div className={cx(actionsClassName, collapsible && '@max-[24rem]/section-header:ps-6')}>
+          {/* Content width, so a field such as a range picker doesn't stretch across its line. */}
+          <div className="flex w-fit items-center gap-2">{actions}</div>
+        </div>
+      )}
     </div>
   )
 
@@ -174,7 +185,7 @@ export function Section({
             {...titleProps}
             aria-describedby={describedBy}
             className={cx(
-              'group flex min-w-0 cursor-pointer items-center gap-1 rounded-sm text-left select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
+              'group flex min-w-0 cursor-pointer items-start gap-1 rounded-sm text-left select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
               fill && 'w-full',
               titleClasses[variant],
               titleTone || foldedTitleClasses[variant],
@@ -184,7 +195,9 @@ export function Section({
               aria-hidden="true"
               className={cx(
                 'shrink-0 transition-transform group-data-panel-open:rotate-90 motion-reduce:transition-none',
-                'px-1 text-[1.25rem]',
+                // A 1.25rem chevron centred on the title's first 1.5rem line, so a
+                // title that wraps keeps its chevron beside its start.
+                'mt-0.5 px-1 text-[1.25rem]',
               )}
             />
             {title}

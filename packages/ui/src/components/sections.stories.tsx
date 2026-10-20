@@ -207,8 +207,8 @@ const RANGES = [
   { value: '24h', label: 'Last day' },
 ]
 
-/** On a narrow screen the header wraps: actions drop under the title, still at the far end,
- *  instead of squeezing it. */
+/** In a narrow header the actions take their own line, starting under the title's text,
+ *  instead of squeezing it; a title that wraps keeps its chevron beside its first line. */
 export const WrappingHeader: StoryObj = {
   name: 'Wrapping header',
   globals: { viewport: { value: 'mobile1', isRotated: false } },
