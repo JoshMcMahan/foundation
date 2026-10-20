@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo, useState } from 'react'
 import { createMockChatAdapter } from '../adapter/mock'
+import type { ToolRendererProps } from '../core/config'
 import {
   makeAgentTurn,
   makeConversation,
@@ -238,6 +239,84 @@ export const HeldToolCall: StoryObj = {
           ],
         }),
         streamCompletion: resumeHeldCall,
+      }}
+      conversationId="conv-held"
+    >
+      <StoryViewport>
+        <ChatThread conversationId="conv-held" />
+      </StoryViewport>
+    </StoryChat>
+  ),
+}
+
+function StopOrDestroyCard({ part, approval, onApprovalAnswer }: ToolRendererProps) {
+  const [choice, setChoice] = useState<'stop_cluster' | 'destroy_cluster'>('stop_cluster')
+  const name = (JSON.parse(part.args || '{}') as { clusterName?: string }).clusterName
+  const pending = approval && !approval.resolved
+  return (
+    <div className="flex max-w-md flex-col gap-2 rounded-lg border theme-border p-3 text-sm">
+      <div className="font-medium">{name}</div>
+      {(['stop_cluster', 'destroy_cluster'] as const).map((tool) => (
+        <label key={tool} className="flex items-start gap-2">
+          <input
+            type="radio"
+            name={`choice-${part.id}`}
+            checked={choice === tool}
+            disabled={!pending}
+            onChange={() => setChoice(tool)}
+          />
+          {tool === 'stop_cluster'
+            ? 'Stop: keeps the disk, starts again in about 3 minutes'
+            : 'Destroy: deletes everything it provisioned, keeps the definition'}
+        </label>
+      ))}
+      {pending && onApprovalAnswer && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              onApprovalAnswer(approval.id, {
+                kind: 'confirm',
+                allowed: true,
+                ...(choice === part.name ? {} : { instead: choice }),
+              })
+            }
+          >
+            {choice === 'stop_cluster' ? 'Stop' : 'Destroy'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onApprovalAnswer(approval.id, { kind: 'confirm', allowed: false })}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// A host draws its own tool: the held stop offers destroy in its place, and
+// the answer resumes with the tool the reader chose.
+export const HostDrawnToolCall: StoryObj = {
+  render: () => (
+    <StoryChat
+      adapter={{
+        ...makeStaticAdapter({
+          conversations: [
+            makeConversation({
+              id: 'conv-held',
+              title: 'Stop gputraining',
+              messages: makeHeldCallTurn(),
+            }),
+          ],
+        }),
+        streamCompletion: resumeHeldCall,
+      }}
+      config={{
+        slots: {
+          toolRenderers: { stop_cluster: StopOrDestroyCard, destroy_cluster: StopOrDestroyCard },
+        },
       }}
       conversationId="conv-held"
     >

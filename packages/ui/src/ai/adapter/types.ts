@@ -62,6 +62,8 @@ export interface ToolApprovalAnswer {
   allowed: boolean
   // Why the user declined, for the model.
   feedback?: string
+  // A sibling tool the user chose to run in place of the one asked for.
+  tool?: string
 }
 
 export interface StreamHandlers {

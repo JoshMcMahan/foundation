@@ -140,6 +140,70 @@ describe('AgentMessageParts dispatch', () => {
   })
 })
 
+describe('host tool renderers', () => {
+  const held: MessagePart[] = [
+    {
+      kind: 'tool_call',
+      id: 'c1',
+      name: 'stop_cluster',
+      args: '{"name":"gpu-a"}',
+      status: 'waiting',
+    },
+    { kind: 'approval', id: 'c1', approvalKind: 'confirm', subject: 'call' },
+  ]
+
+  it('draws a named tool with its approval and answer handler, under the standard row', () => {
+    const onApprovalAnswer = vi.fn()
+    renderParts(
+      held,
+      { onApprovalAnswer },
+      {
+        slots: {
+          toolRenderers: {
+            stop_cluster: ({ part, approval, onApprovalAnswer: answer }) => (
+              <button
+                type="button"
+                data-testid="cluster-card"
+                onClick={() =>
+                  answer?.(approval!.id, {
+                    kind: 'confirm',
+                    allowed: true,
+                    instead: 'destroy_cluster',
+                  })
+                }
+              >
+                {part.args}
+              </button>
+            ),
+          },
+        },
+      },
+    )
+    expect(screen.getByText('stop_cluster')).toBeInTheDocument()
+    expect(screen.getByTestId('cluster-card')).toHaveTextContent('gpu-a')
+    expect(screen.queryByTestId('approval-part')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('cluster-card'))
+    expect(onApprovalAnswer).toHaveBeenCalledWith('c1', {
+      kind: 'confirm',
+      allowed: true,
+      instead: 'destroy_cluster',
+    })
+  })
+
+  it('never folds a host-drawn tool into a run', () => {
+    const parts = [tc('t1', 'ReadFile'), tc('t2', 'ReadFile')]
+    expect(buildRenderItems(parts).map((i) => i.kind)).toEqual(['rollup'])
+    expect(buildRenderItems(parts, (name) => name === 'ReadFile').map((i) => i.kind)).not.toContain(
+      'rollup',
+    )
+  })
+
+  it('leaves other tools to the built-in drawing', () => {
+    renderParts(held, {}, { slots: { toolRenderers: { list_clusters: () => <div /> } } })
+    expect(screen.getAllByTestId('approval-part').length).toBeGreaterThan(0)
+  })
+})
+
 describe('approval parts', () => {
   it('answers a confirm approval through the callback', () => {
     const onAnswer = vi.fn()

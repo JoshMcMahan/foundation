@@ -10,11 +10,13 @@ import { AppLink } from '../../components/AppLink'
 import { type ChatStrings, defaultChatStrings } from '../strings'
 import type {
   ApprovalAnswerValue,
+  ApprovalPart,
   ChatLinkTarget,
   ChatMessage,
   CspKind,
   MessagePart,
   MessagePartKind,
+  ToolCallPart,
 } from '../types'
 
 // What a part renderer receives; host overrides via slots.partRenderers get
@@ -23,6 +25,18 @@ export interface PartRendererProps {
   part: MessagePart
   message: ChatMessage
   isStreaming?: boolean
+  onApprovalAnswer?: (id: string, answer: ApprovalAnswerValue) => void
+}
+
+// What a host's renderer for one tool receives. It draws under the call's
+// standard row, in place of its summary, and owns the call's approval: the
+// approval part it would otherwise get is passed here instead.
+export interface ToolRendererProps {
+  part: ToolCallPart
+  approval?: ApprovalPart
+  message: ChatMessage
+  isStreaming?: boolean
+  /** Absent when the reader may not answer, such as a call someone else asked for. */
   onApprovalAnswer?: (id: string, answer: ApprovalAnswerValue) => void
 }
 
@@ -74,6 +88,9 @@ export interface ChatUIConfig {
     // Per-kind overrides for agent-transcript part rendering; unlisted kinds
     // use the built-in renderers.
     partRenderers?: Partial<Record<MessagePartKind, ComponentType<PartRendererProps>>>
+    // Per-tool drawings, by tool name, such as a live card for a host's own
+    // platform tools.
+    toolRenderers?: Record<string, ComponentType<ToolRendererProps>>
   }
   strings?: {
     [S in keyof ChatStrings]?: Partial<ChatStrings[S]>

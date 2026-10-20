@@ -608,6 +608,73 @@ describe('streamed parts', () => {
     expect(answer?.parts).toBeUndefined()
   })
 
+  it('runs the sibling tool the reader chose in place of the one asked for', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'stop_cluster', args: '{}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', {
+        kind: 'confirm',
+        allowed: true,
+        instead: 'destroy_cluster',
+      })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: true,
+      tool: 'destroy_cluster',
+    })
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).toMatchObject({ kind: 'tool_call', name: 'destroy_cluster' })
+  })
+
+  it('sends no sibling tool with a denial', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'stop_cluster', args: '{}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', {
+        kind: 'confirm',
+        allowed: false,
+        instead: 'destroy_cluster',
+      })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: false,
+    })
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).toMatchObject({ name: 'stop_cluster' })
+  })
+
   it('sends why the reader declined a held call', async () => {
     const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
       if (!req.resume) {

@@ -1043,6 +1043,13 @@ export function ChatProvider({
           at: DateTime.now().toUTC().toISO(),
         },
       })
+      const instead = answer.allowed ? answer.instead : undefined
+      if (instead) {
+        pausedParts = pausedParts.map((p) =>
+          p.kind === 'tool_call' && p.id === approvalId ? { ...p, name: instead } : p,
+        )
+        updatePaused({ parts: pausedParts })
+      }
 
       streamingToConversationRef.current = targetConversationId
       startStreaming(targetConversationId)
@@ -1065,6 +1072,7 @@ export function ChatProvider({
               toolCallId: approvalId,
               allowed: answer.allowed,
               ...(answer.denyMessage ? { feedback: answer.denyMessage } : {}),
+              ...(instead ? { tool: instead } : {}),
             },
           },
           paused.id,

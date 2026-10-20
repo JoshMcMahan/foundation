@@ -297,7 +297,10 @@ function ToolStatusDot({ part }: { part: ToolCallPart }) {
 /** A part's toggle row: its status mark and name, across the transcript's width. */
 const rowSummaryClasses = 'min-h-6 w-full'
 
-function ToolCallBlock({ part }: { part: ToolCallPart }) {
+/** A call's row: its status and signature, opening to its full arguments and
+ *  result. `children` is a host's drawing of the call, in place of the
+ *  one-line summary. */
+function ToolCallBlock({ part, children }: { part: ToolCallPart; children?: ReactNode }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   const [expanded, setExpanded] = useState(false)
@@ -341,7 +344,8 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
         )}
         <ResultBody part={part} />
       </Disclosure>
-      {!isDiff && !expanded && part.status !== 'waiting' && (
+      {children && <div className="ml-5 mt-1.5 min-w-0">{children}</div>}
+      {!children && !isDiff && !expanded && part.status !== 'waiting' && (
         <div
           className={cx(
             'ml-5 mt-0.5 truncate text-[13px]',
@@ -898,6 +902,24 @@ function TextBlock({ part, isStreaming }: { part: TextPart; isStreaming?: boolea
 
 function PartDispatch(props: PartRendererProps) {
   const { slots } = useChatConfig()
+  const part = props.part
+  const Tool = part.kind === 'tool_call' ? slots.toolRenderers?.[part.name] : undefined
+  if (Tool && part.kind === 'tool_call') {
+    const approval = props.message.parts?.find(
+      (p): p is ApprovalPart => p.kind === 'approval' && p.id === part.id,
+    )
+    return (
+      <ToolCallBlock part={part}>
+        <Tool
+          part={part}
+          message={props.message}
+          {...(approval ? { approval } : {})}
+          {...(props.isStreaming !== undefined ? { isStreaming: props.isStreaming } : {})}
+          {...(props.onApprovalAnswer ? { onApprovalAnswer: props.onApprovalAnswer } : {})}
+        />
+      </ToolCallBlock>
+    )
+  }
   const Override = slots.partRenderers?.[props.part.kind]
   if (Override) {
     return <Override {...props} />
@@ -977,7 +999,10 @@ function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
 // kinds (edits, todos, subagents) break the run. A thought between two calls
 // folds into the run with the work it preceded; the thoughts before and after
 // a run keep their own line — mirrors the TUI.
-export function buildRenderItems(parts: MessagePart[]): RenderItem[] {
+export function buildRenderItems(
+  parts: MessagePart[],
+  hostDrawn: (toolName: string) => boolean = () => false,
+): RenderItem[] {
   const items: RenderItem[] = []
   let run: RunMember[] = []
   const emitThoughts = (members: RunMember[]) => {
@@ -1021,9 +1046,15 @@ export function buildRenderItems(parts: MessagePart[]): RenderItem[] {
   const decided = new Set(
     parts.flatMap((p) => (p.kind === 'tool_call' && p.decision ? [p.id] : [])),
   )
+  const drawnByHost = new Set(
+    parts.flatMap((p) => (p.kind === 'tool_call' && hostDrawn(p.name) ? [p.id] : [])),
+  )
   parts.forEach((part, index) => {
     // An answered approval for a call that records its decision says nothing the call's own line doesn't.
     if (part.kind === 'approval' && part.resolved && decided.has(part.id)) {
+      return
+    }
+    if (part.kind === 'approval' && drawnByHost.has(part.id)) {
       return
     }
     if (
@@ -1031,6 +1062,7 @@ export function buildRenderItems(parts: MessagePart[]): RenderItem[] {
       (part.kind === 'tool_call' &&
         part.status === 'ok' &&
         !part.decision &&
+        !drawnByHost.has(part.id) &&
         isGroupableTool(part.name))
     ) {
       run.push({ part, index })
@@ -1091,7 +1123,12 @@ export default function AgentMessageParts({
   onApprovalAnswer?: PartRendererProps['onApprovalAnswer']
 }) {
   const parts = message.parts ?? []
-  const items = useMemo(() => buildRenderItems(parts), [parts])
+  const { slots } = useChatConfig()
+  const toolRenderers = slots.toolRenderers
+  const items = useMemo(
+    () => buildRenderItems(parts, (name) => !!toolRenderers?.[name]),
+    [parts, toolRenderers],
+  )
   const lastIndex = parts.length - 1
   return (
     <div className="w-full" data-testid="agent-parts">

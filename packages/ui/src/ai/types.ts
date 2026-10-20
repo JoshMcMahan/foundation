@@ -136,6 +136,9 @@ export type ApprovalAnswerValue =
       allowed: boolean
       allowDir?: boolean
       denyMessage?: string
+      /** A sibling tool to run in place of the one asked for, with the same
+       *  arguments, such as destroying a cluster the model asked to stop. */
+      instead?: string
     }
   | { kind: 'ask'; text: string; chat?: boolean }
 

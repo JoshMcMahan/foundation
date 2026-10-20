@@ -85,7 +85,7 @@ export {
   chatReducer,
   initialState,
 } from './core/chatReducer'
-export type { PartRendererProps } from './core/config'
+export type { PartRendererProps, ToolRendererProps } from './core/config'
 export {
   type ChatLinkProps,
   type ChatUIConfig,
