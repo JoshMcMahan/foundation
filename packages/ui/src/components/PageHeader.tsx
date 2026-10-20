@@ -35,6 +35,10 @@ export interface PageHeaderProps {
    *  `h1`. A crumb with an empty label, such as a name still loading, shows a
    *  placeholder. */
   breadcrumbs?: readonly Breadcrumb[] | undefined
+  /** False keeps the last crumb out of the page's outline, for a page whose `h1` is in its
+   *  body, such as a title field or a section's heading: the crumb still says it is the
+   *  current page, and the page has one `h1`. */
+  heading?: boolean | undefined
   /** Beside the title: actions on the page's subject, such as edit, rename or
    *  favorite, or its `PageHeaderMenu`. */
   titleActions?: ReactNode
@@ -83,6 +87,7 @@ export function PageHeader(props: PageHeaderProps) {
     return props.hidden ? null : (
       <HeaderLayout
         breadcrumbs={props.breadcrumbs ?? []}
+        heading={props.heading ?? true}
         titleActions={props.titleActions}
         actions={props.actions}
         toolbar={props.toolbar}
@@ -95,6 +100,7 @@ export function PageHeader(props: PageHeaderProps) {
 function DeclaredHeader({
   store,
   breadcrumbs,
+  heading = true,
   titleActions,
   actions,
   toolbar,
@@ -118,7 +124,7 @@ function DeclaredHeader({
   // page's trail or actions. The store ignores a declaration equal to the
   // last, so an inline trail array costs nothing.
   useLayoutEffect(() => {
-    store.set(order, { breadcrumbs, hidden, nodes, fills })
+    store.set(order, { breadcrumbs, heading, hidden, nodes, fills })
   })
   useLayoutEffect(() => () => store.delete(order), [store, order])
 
@@ -177,6 +183,7 @@ export function PageHeaderBar({
   return (
     <HeaderLayout
       breadcrumbs={header.breadcrumbs}
+      heading={header.heading}
       titleActions={header.titleActions.length > 0 && <Mounts nodes={header.titleActions} />}
       actions={header.actions.length > 0 && <Mounts nodes={header.actions} />}
       toolbar={header.toolbar.length > 0 && <Mounts nodes={header.toolbar} />}
@@ -221,6 +228,7 @@ function Mount({ node }: { node: HTMLElement }) {
 
 function HeaderLayout({
   breadcrumbs,
+  heading,
   titleActions,
   actions,
   toolbar,
@@ -229,6 +237,7 @@ function HeaderLayout({
   className,
 }: {
   breadcrumbs: readonly Breadcrumb[]
+  heading: boolean
   titleActions: ReactNode
   actions: ReactNode
   toolbar: ReactNode
@@ -260,7 +269,7 @@ function HeaderLayout({
         {/* Grows to the room the actions leave, so the trail can measure it. */}
         <div ref={setLead} className="flex min-w-0 flex-1 items-center gap-2">
           {navToggle?.()}
-          {hasTrail && <Breadcrumbs crumbs={breadcrumbs} heading />}
+          {hasTrail && <Breadcrumbs crumbs={breadcrumbs} heading={heading} />}
           {present(titleActions) && (
             <div className="flex shrink-0 items-center gap-0.5">{titleActions}</div>
           )}

@@ -49,6 +49,46 @@ describe('PageHeader in a shell', () => {
     expect(screen.getByTestId('page')).toBeEmptyDOMElement()
   })
 
+  it('leaves the heading to the page’s body when asked, keeping the crumb current', () => {
+    render(
+      <Shell>
+        <PageHeader
+          breadcrumbs={trail}
+          heading={false}
+          actions={<button type="button">Share</button>}
+        />
+        <h1>Quarterly report</h1>
+      </Shell>,
+    )
+    const nav = bar().getByRole('navigation', { name: 'Breadcrumb' })
+    const current = nav.querySelector('[aria-current="page"]')
+    expect(current).toHaveTextContent('training-data')
+    expect(current?.tagName).toBe('SPAN')
+    expect(bar().queryByRole('heading')).toBeNull()
+    expect(bar().getByRole('button', { name: 'Share' })).toBeInTheDocument()
+    // The page's own is its one h1.
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+
+  it('takes the heading choice from the page whose trail shows', () => {
+    render(
+      <Shell>
+        <PageHeader breadcrumbs={[{ label: 'Storage' }]} />
+        <PageHeader breadcrumbs={trail} heading={false} />
+      </Shell>,
+    )
+    expect(bar().queryByRole('heading')).toBeNull()
+    expect(screen.getByTestId('bar').querySelector('[aria-current="page"]')).toHaveTextContent(
+      'training-data',
+    )
+  })
+
+  it('leaves the heading out without a shell too', () => {
+    const { container } = render(<PageHeader breadcrumbs={trail} heading={false} />)
+    expect(screen.queryByRole('heading')).toBeNull()
+    expect(container.querySelector('[aria-current="page"]')).toHaveTextContent('training-data')
+  })
+
   it('shows the actions in the bar from the first render, with the page’s context', () => {
     const Scope = createContext('none')
     function Reader() {
@@ -295,13 +335,31 @@ describe('PageHeaderStore', () => {
     const store = new PageHeaderStore()
     const listener = vi.fn()
     store.subscribe(listener)
-    store.set(1, { breadcrumbs: [{ label: 'A' }], hidden: false, nodes: null, fills })
+    store.set(1, {
+      breadcrumbs: [{ label: 'A' }],
+      heading: true,
+      hidden: false,
+      nodes: null,
+      fills,
+    })
     const first = store.getSnapshot()
     // An equal trail in a new array, as an inline prop makes each render.
-    store.set(1, { breadcrumbs: [{ label: 'A' }], hidden: false, nodes: null, fills })
+    store.set(1, {
+      breadcrumbs: [{ label: 'A' }],
+      heading: true,
+      hidden: false,
+      nodes: null,
+      fills,
+    })
     expect(listener).toHaveBeenCalledTimes(1)
     expect(store.getSnapshot()).toBe(first)
-    store.set(1, { breadcrumbs: [{ label: 'B' }], hidden: false, nodes: null, fills })
+    store.set(1, {
+      breadcrumbs: [{ label: 'B' }],
+      heading: true,
+      hidden: false,
+      nodes: null,
+      fills,
+    })
     expect(listener).toHaveBeenCalledTimes(2)
   })
 })

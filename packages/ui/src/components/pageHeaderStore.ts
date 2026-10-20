@@ -10,6 +10,8 @@ export type RegionNodes = Readonly<Record<PageHeaderRegion, HTMLElement>>
 
 export interface Declaration {
   breadcrumbs: readonly Breadcrumb[] | undefined
+  /** Whether the trail's last crumb is the page's `h1`. */
+  heading: boolean
   hidden: boolean
   nodes: RegionNodes | null
   fills: Readonly<Record<PageHeaderRegion, boolean>>
@@ -17,6 +19,8 @@ export interface Declaration {
 
 export interface PageHeaderSnapshot {
   breadcrumbs: readonly Breadcrumb[]
+  /** Whether the trail's last crumb is the page's `h1`, as the page whose trail it is says. */
+  heading: boolean
   hidden: boolean
   titleActions: readonly HTMLElement[]
   actions: readonly HTMLElement[]
@@ -28,6 +32,7 @@ const NO_CRUMBS: readonly Breadcrumb[] = []
 
 const EMPTY: PageHeaderSnapshot = {
   breadcrumbs: NO_CRUMBS,
+  heading: true,
   hidden: false,
   titleActions: NO_NODES,
   actions: NO_NODES,
@@ -50,6 +55,7 @@ export function sameCrumbs(
 function sameDeclaration(a: Declaration, b: Declaration): boolean {
   return (
     sameCrumbs(a.breadcrumbs, b.breadcrumbs) &&
+    a.heading === b.heading &&
     a.hidden === b.hidden &&
     a.nodes === b.nodes &&
     a.fills.titleActions === b.fills.titleActions &&
@@ -111,10 +117,12 @@ export class PageHeaderStore {
       // Keeping the old array lets the bar's regions skip re-rendering.
       return sameNodes(next, prev) ? prev : next
     }
-    const trail = ordered.findLast((d) => d.breadcrumbs !== undefined)?.breadcrumbs ?? NO_CRUMBS
+    const owner = ordered.findLast((d) => d.breadcrumbs !== undefined)
+    const trail = owner?.breadcrumbs ?? NO_CRUMBS
     const prev = this.snapshot
     this.snapshot = {
       breadcrumbs: sameCrumbs(trail, prev.breadcrumbs) ? prev.breadcrumbs : trail,
+      heading: owner?.heading ?? true,
       hidden: ordered.some((d) => d.hidden),
       titleActions: regionNodes('titleActions', prev.titleActions),
       actions: regionNodes('actions', prev.actions),

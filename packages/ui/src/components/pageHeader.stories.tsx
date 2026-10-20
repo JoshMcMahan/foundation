@@ -167,6 +167,38 @@ export const InShell: Story = {
   },
 }
 
+/** `heading={false}` for a page whose `h1` is in its body, such as an issue's title: the bar
+ *  keeps its trail and actions, and its last crumb still says it is the current page, but
+ *  isn't a heading, so the page has one `h1`. */
+export const HeadingInBody: Story = {
+  render: ({ compact, persistent, narrow }) => (
+    <Shell compact={compact} persistent={persistent} narrow={narrow}>
+      <PageHeader
+        heading={false}
+        breadcrumbs={[
+          { label: 'Core Platform', href: '/teams/core' },
+          { label: 'Issues', href: '/teams/core/issues' },
+          { label: 'CORE-128' },
+        ]}
+        titleActions={<PageHeaderMenu items={BUCKET_MENU} />}
+        actions={<PageHeaderAction icon={ShareIcon} label="Share" onClick={() => {}} />}
+      />
+      <h1 className="m-0 text-xl font-semibold text-(--theme-app)">
+        Export fails for invoices over 10,000 lines
+      </h1>
+      <p className="m-0 mt-2">The issue's title is the page's heading, in its body.</p>
+    </Shell>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const headings = canvas.getAllByRole('heading', { level: 1 })
+    await expect(headings).toHaveLength(1)
+    await expect(headings[0]).toHaveTextContent('Export fails for invoices over 10,000 lines')
+    const trail = canvas.getByRole('navigation', { name: 'Breadcrumb' })
+    await expect(trail.querySelector('[aria-current="page"]')).toHaveTextContent('CORE-128')
+  },
+}
+
 /** Toggles beside the title keep the page's state: they render in the page's
  *  tree, though they show in the shell's bar. */
 export const TitleActions: Story = {
