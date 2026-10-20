@@ -2,7 +2,17 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { formatBytes } from '../format'
-import { CalendarIcon, ClusterIcon, MoreIcon, TagIcon, UploadIcon, UserIcon } from '../icons'
+import {
+  CalendarIcon,
+  CancelIcon,
+  ClusterIcon,
+  FilterIcon,
+  MoreIcon,
+  RetryIcon,
+  TagIcon,
+  UploadIcon,
+  UserIcon,
+} from '../icons'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -32,6 +42,7 @@ import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Mete
 import { Modal, type ModalProps, type ModalSize } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
+import { Pagination } from './Pagination'
 import { type AvatarColoring, UIProvider } from './Provider'
 import { RunStatusIcon, type RunStatusIconStatus, runStatusTone } from './RunStatusIcon'
 import { Elapsed, RelativeTime } from './relativeTime'
@@ -48,6 +59,7 @@ import {
 } from './StatusBadge'
 import { Switch } from './Switch'
 import { type SortDirection, Table, type TableDensity } from './Table'
+import { ToggleGroup } from './ToggleGroup'
 import { Tooltip } from './Tooltip'
 
 const meta: Meta = {
@@ -1571,6 +1583,173 @@ export const TableOptions: StoryObj<TableOptionsArgs> = {
   play: async ({ canvasElement, args }) => {
     const header = within(canvasElement).getByRole('columnheader', { name: 'Partition' })
     await expect(header.classList.contains('uppercase')).toBe(args.caps)
+  },
+}
+
+type DashboardStatus = 'running' | 'completed' | 'error' | 'canceling' | 'canceled'
+
+const DASHBOARD_STATUSES: DashboardStatus[] = [
+  'running',
+  'completed',
+  'error',
+  'canceling',
+  'canceled',
+]
+
+const DASHBOARD_STATUS_LABELS: Record<DashboardStatus, string> = {
+  running: 'Running',
+  completed: 'Completed',
+  error: 'Error',
+  canceling: 'Canceling',
+  canceled: 'Canceled',
+}
+
+// Solid fills a status cell takes, as a dashboard's run table paints them.
+const DASHBOARD_STATUS_FILL: Record<DashboardStatus, string> = {
+  running: 'var(--theme-info-solid)',
+  completed: 'var(--theme-success-solid)',
+  error: 'var(--theme-error-solid)',
+  canceling: 'var(--theme-info-solid)',
+  canceled: 'var(--theme-info-solid)',
+}
+
+const DASHBOARD_WORKFLOWS = [
+  'Hello world',
+  'Train a model on the cluster',
+  'Nightly genome alignment',
+  'Render frames',
+  'Weather ensemble',
+]
+
+const DASHBOARD_RUNS = Array.from({ length: 40 }, (_, i) => ({
+  id: `run-${i}`,
+  workflow: DASHBOARD_WORKFLOWS[i % DASHBOARD_WORKFLOWS.length] ?? 'Hello world',
+  number: String(4120 - i),
+  status: DASHBOARD_STATUSES[[0, 1, 1, 2, 1, 4, 1, 3][i % 8] ?? 1] ?? 'completed',
+  submitted: `${i * 7 + 2} minutes ago`,
+  runtime: `${(i % 6) + 1}m ${(i * 13) % 60}s`,
+}))
+
+/** A run table on a dashboard, as a home page card lays one out: status
+ *  toggles over a `compact` table whose rows hold a workflow's logo, and a
+ *  pager under it. The card fits as many rows as its height allows, so how
+ *  tall a row, the header, the toggles and the pager are is how many runs a
+ *  reader sees at once. */
+export const TableInDashboardCard: StoryObj<{ height: number }> = {
+  args: { height: 340 },
+  argTypes: { height: { control: { type: 'range', min: 240, max: 640, step: 20 } } },
+  render: function Render({ height }) {
+    const [statuses, setStatuses] = useState<DashboardStatus[]>(['completed', 'error'])
+    const [page, setPage] = useState(0)
+    const [rows, setRows] = useState<number>()
+    const box = useRef<HTMLDivElement>(null)
+    const pageSize = rows ?? 10
+    const shown = DASHBOARD_RUNS.filter(
+      (run) => statuses.length === 0 || statuses.includes(run.status),
+    )
+    const runs = shown.slice(page * pageSize, (page + 1) * pageSize)
+    // Fits as many rows as the box holds below the header row.
+    useLayoutEffect(() => {
+      const rowsInBox = box.current?.querySelectorAll('tr')
+      const header = rowsInBox?.[0]?.offsetHeight
+      const row = rowsInBox?.[1]?.offsetHeight
+      if (!box.current || !header || !row) {
+        return
+      }
+      const fit = Math.floor((box.current.offsetHeight - header) / row)
+      if (fit > 0 && fit !== rows) {
+        setRows(fit)
+      }
+    })
+    return (
+      // Sizes are inline: the package's stylesheet doesn't scan stories.
+      <div className="panel flex flex-col overflow-hidden" style={{ height, maxWidth: 760 }}>
+        <div className="flex shrink-0 items-center gap-2 px-3 py-2 text-sm font-semibold">
+          <ClusterIcon aria-hidden="true" />
+          Workflow runs
+        </div>
+        {/* The body clips, as a dashboard card's does: the toggles sit at its top
+            edge, so a hover or focus that spilled out of them would be cut. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* The funnel keeps to the toggles' first line when they wrap. */}
+          <div className="flex shrink-0 items-start gap-1.5 px-3 pb-1">
+            <span className="flex h-7 shrink-0 items-center">
+              <FilterIcon aria-hidden="true" />
+            </span>
+            <ToggleGroup
+              label="Status"
+              options={DASHBOARD_STATUSES.map((value) => ({
+                value,
+                label: DASHBOARD_STATUS_LABELS[value],
+              }))}
+              value={statuses}
+              onValueChange={(next) => {
+                setStatuses(next)
+                setPage(0)
+              }}
+            />
+          </div>
+          <div ref={box} className="min-h-0 flex-1 overflow-hidden" data-testid="dashboard-rows">
+            <Table density="compact">
+              <Table.Header>Workflow</Table.Header>
+              <Table.Header>Run</Table.Header>
+              <Table.Header>Status</Table.Header>
+              <Table.Header>Submitted</Table.Header>
+              <Table.Header>Runtime</Table.Header>
+              <Table.Header colSpan={2}>
+                <span className="sr-only">Actions</span>
+              </Table.Header>
+              {runs.map((run) => (
+                <tr key={run.id} className="hover:theme-hover">
+                  <Table.Item>
+                    <span className="flex items-center gap-2">
+                      {/* A workflow's 23px logo with 4px above and below it. */}
+                      <span style={{ padding: '4px 0', display: 'flex' }}>
+                        <span
+                          aria-hidden="true"
+                          className="rounded-md"
+                          style={{
+                            width: 23,
+                            height: 23,
+                            background: 'var(--theme-link)',
+                            opacity: 0.35,
+                          }}
+                        />
+                      </span>
+                      <span className="link truncate">{run.workflow}</span>
+                    </span>
+                  </Table.Item>
+                  <Table.Item>
+                    <span className="link">{run.number}</span>
+                  </Table.Item>
+                  <Table.Item
+                    className="text-center text-xs font-semibold text-white"
+                    style={{ background: DASHBOARD_STATUS_FILL[run.status] }}
+                  >
+                    {DASHBOARD_STATUS_LABELS[run.status]}
+                  </Table.Item>
+                  <Table.Item>{run.submitted}</Table.Item>
+                  <Table.Item>{run.runtime}</Table.Item>
+                  <Table.Item>
+                    <CancelIcon aria-label="Cancel run" />
+                  </Table.Item>
+                  <Table.Item>
+                    <RetryIcon aria-label="Run again" />
+                  </Table.Item>
+                </tr>
+              ))}
+            </Table>
+          </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={shown.length}
+            onPageChange={setPage}
+            pageNumbers
+          />
+        </div>
+      </div>
+    )
   },
 }
 

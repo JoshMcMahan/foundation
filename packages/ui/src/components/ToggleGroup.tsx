@@ -125,10 +125,13 @@ function Chip({
       data-testid={testId}
       // The outline button's pressed border alone reads faintly across a row of
       // chips; the selection tint says which are on at a glance, and the check
-      // says it without color.
+      // says it without color. A toggle doesn't rise on hover as a button does
+      // (see buttonClasses). Its focus ring draws inside it, so a row of
+      // options at a card's clipped top edge or on a wrapped line never has it
+      // cut off or laid over a neighbor.
       className={cx(
-        'group aria-pressed:bg-(--theme-accent-subtle)',
         buttonClasses({ variant: 'outline', size }),
+        'group focus-visible:-outline-offset-2 aria-pressed:bg-(--theme-accent-subtle)',
       )}
     >
       {/* An option that's off dims its icon, such as a logo or a status dot, so

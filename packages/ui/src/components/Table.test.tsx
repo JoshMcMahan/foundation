@@ -108,6 +108,25 @@ describe('Table layout', () => {
     expect(padding(screen.getByRole('columnheader'))).toEqual(padding(screen.getByRole('cell')))
   })
 
+  it('holds a compact row to 32px, padding only a cell that wraps', () => {
+    render(
+      <Table density="compact">
+        <Table.Header>Name</Table.Header>
+        <tr>
+          <Table.Item>ada</Table.Item>
+          <Table.Item wrap>a note that wraps</Table.Item>
+        </tr>
+      </Table>,
+    )
+    expect(screen.getByRole('cell', { name: 'ada' })).toHaveClass(
+      'h-8',
+      'py-0',
+      'whitespace-nowrap',
+    )
+    expect(screen.getByRole('cell', { name: 'a note that wraps' })).toHaveClass('h-8', 'py-1')
+    expect(screen.getByRole('columnheader')).toHaveClass('py-1.5')
+  })
+
   it('lets a caller pad a cell its own way, and spans columns', () => {
     render(
       <Table density="compact">

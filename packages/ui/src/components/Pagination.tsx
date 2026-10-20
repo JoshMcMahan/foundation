@@ -96,7 +96,8 @@ export function Pagination({
   return (
     <nav
       aria-label={t.pagination}
-      className={cx('flex h-10 shrink-0 items-center justify-between gap-3 px-2.5', className)}
+      // A slim line under a list, so a list in a card spends its height on rows.
+      className={cx('flex h-8 shrink-0 items-center justify-between gap-3 px-2.5', className)}
     >
       {/* Takes the bar's free space, so the position truncates only when the bar runs out. */}
       <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-(--theme-muted-text-color)">
@@ -176,11 +177,22 @@ function PageStep({
   pageHref: ((page: number) => string) | undefined
 }) {
   if (pageHref && enabled) {
-    return <IconButton variant="outline" icon={icon} label={label} href={pageHref(to)} />
+    return (
+      <IconButton
+        variant="outline"
+        size="xs"
+        className={STEP_TOUCH}
+        icon={icon}
+        label={label}
+        href={pageHref(to)}
+      />
+    )
   }
   return (
     <IconButton
       variant="outline"
+      size="xs"
+      className={STEP_TOUCH}
       icon={icon}
       label={label}
       disabled={!enabled}
@@ -189,11 +201,15 @@ function PageStep({
   )
 }
 
+// Steps are 24px, small enough to keep the bar slim; on a touch screen they
+// grow to 32px, which the bar still holds, so a finger finds them.
+const STEP_TOUCH = 'pointer-coarse:size-8'
+
 // The current page reads as a pressed toggle does, so it is told apart without
 // the fill a primary action has.
 const numberClassName = cx(
-  buttonClasses({ variant: 'outline', size: 'sm' }),
-  'min-w-7 px-1.5 tabular-nums aria-[current=page]:border-(--theme-link) aria-[current=page]:bg-(--theme-accent-subtle) aria-[current=page]:text-(--theme-app)',
+  buttonClasses({ variant: 'outline', size: 'xs' }),
+  'min-w-6 px-1 tabular-nums pointer-coarse:h-8 pointer-coarse:min-w-8 aria-[current=page]:border-(--theme-link) aria-[current=page]:bg-(--theme-accent-subtle) aria-[current=page]:text-(--theme-app)',
 )
 
 function PageNumber({

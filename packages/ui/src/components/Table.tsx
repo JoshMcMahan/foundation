@@ -7,25 +7,36 @@ import { useStickyTop } from './stickyTop'
 /** Which way a column sorts, as `aria-sort` names it. */
 export type SortDirection = 'ascending' | 'descending' | 'none'
 
-/** `comfortable` gives each row room; `compact` fits a short key and value
- *  list; `dense` sets small type in tight rows, for a table inside a card or
- *  a panel of figures. */
+/** `comfortable` gives each row room; `compact` fits many rows in little
+ *  height, such as a key and value list or a dashboard card's runs; `dense`
+ *  sets small type in tight rows, for a panel of figures. */
 export type TableDensity = 'comfortable' | 'compact' | 'dense'
 
 const DensityContext = createContext<TableDensity>('comfortable')
 // Whether a header sets its title in small capitals unless it says otherwise.
 const CapsContext = createContext(true)
 
+// A compact row is 32px tall whatever it holds up to that: a line of text,
+// a 24px logo or a button. The height is a floor, as a cell's height is, and
+// with no padding of its own taller content sets the row's height, so a row
+// with a 32px logo stays 32px instead of growing by the padding. A cell that
+// wraps keeps a little padding, so its lines stay off the rules.
 const cellY: Record<TableDensity, string> = {
   comfortable: 'py-4',
-  compact: 'py-1.5 text-sm',
+  compact: 'h-8 py-0 text-sm',
   dense: 'py-1 text-xs',
+}
+
+const wrapY: Record<TableDensity, string | false> = {
+  comfortable: false,
+  compact: 'py-1',
+  dense: false,
 }
 
 const headerY: Record<TableDensity, string> = {
   comfortable: 'py-3',
-  compact: 'py-2',
-  dense: 'py-1.5',
+  compact: 'py-1.5',
+  dense: 'py-1',
 }
 
 // A header and the cells under it share their side padding, so a column's
@@ -40,7 +51,10 @@ interface ItemProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
   const density = useContext(DensityContext)
   return (
-    <td {...tdProps} className={cx(cellX, cellY[density], !wrap && 'whitespace-nowrap', className)}>
+    <td
+      {...tdProps}
+      className={cx(cellX, cellY[density], wrap ? wrapY[density] : 'whitespace-nowrap', className)}
+    >
       {children}
     </td>
   )

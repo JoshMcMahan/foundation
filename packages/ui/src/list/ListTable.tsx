@@ -69,7 +69,10 @@ export function NameCell({
 }: {
   icon: ReactNode
   /** Sets the icon in a small bordered tile, so rows whose icons differ in
-   *  weight, such as kinds of token or runner, still line up. */
+   *  weight, such as kinds of token or runner, still line up. The 28px tile
+   *  sits beside a name and its subtitle; a row with no subtitle keeps its
+   *  icon bare, centered where the tile would be, so a one-line row stays
+   *  as short as its text and its name still lines up with tiled rows. */
   iconTile?: boolean | undefined
   name: string
   subtitle?: string | undefined
@@ -90,8 +93,12 @@ export function NameCell({
   const inner = (
     <>
       {hasIcon &&
-        (iconTile ? (
+        (iconTile && subtitle ? (
           <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-(--theme-border) text-(--theme-muted-text-color) [&>svg]:size-3.5">
+            {icon}
+          </span>
+        ) : iconTile ? (
+          <span className="flex w-7 shrink-0 items-center justify-center text-(--theme-muted-text-color) [&>svg]:size-3.5">
             {icon}
           </span>
         ) : (

@@ -175,7 +175,13 @@ describe('list columns and cells', () => {
       <table>
         <tbody>
           <tr>
-            <NameCell icon={<svg data-testid="icon" />} iconTile name="logs" href={null}>
+            <NameCell
+              icon={<svg data-testid="icon" />}
+              iconTile
+              name="logs"
+              subtitle="12 GB"
+              href={null}
+            >
               <span>stacked</span>
             </NameCell>
           </tr>
@@ -184,6 +190,21 @@ describe('list columns and cells', () => {
     )
     expect(screen.getByTestId('icon').parentElement).toHaveClass('size-7', 'border')
     expect(screen.getByText('stacked').parentElement).toHaveClass('col-start-2')
+  })
+
+  it('keeps a one-line row’s icon bare, in the tile’s width', () => {
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <NameCell icon={<svg data-testid="icon" />} iconTile name="logs" href={null} />
+          </tr>
+        </tbody>
+      </table>,
+    )
+    const slot = screen.getByTestId('icon').parentElement
+    expect(slot).toHaveClass('w-7')
+    expect(slot).not.toHaveClass('size-7', 'border')
   })
 })
 

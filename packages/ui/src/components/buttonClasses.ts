@@ -27,9 +27,12 @@ export interface ButtonStyle {
 // Hover classes carry not-disabled and not-aria-disabled so a button that
 // can't be pressed doesn't react. Hovered, a button rises a pixel on a soft
 // shadow and settles back while pressed; with reduced motion it keeps the
-// shadow and doesn't move. Written out in full for Tailwind's scanner.
+// shadow and doesn't move. A toggle (`aria-pressed`) stays put: it says it is
+// on by its fill, and a filter row of them that rose would read as a row of
+// actions and lift its top edge out of a box that clips. Written out in full
+// for Tailwind's scanner.
 const base =
-  'relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:-translate-y-px hover:not-disabled:not-aria-disabled:shadow-(--theme-shadow-sm) active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
+  'relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-(--theme-shadow-sm) active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 const variants: Record<ButtonVariant, string> = {
   primary:

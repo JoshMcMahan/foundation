@@ -18,19 +18,24 @@ type State = 'rows' | 'loading' | 'error' | 'empty' | 'noMatches'
 interface Args {
   state: State
   iconTile: boolean
+  subtitles: boolean
   toolbarWhenEmpty: boolean
 }
 
 const meta: Meta<Args> = {
   title: 'UI/List/Page',
-  args: { state: 'rows', iconTile: true, toolbarWhenEmpty: false },
+  args: { state: 'rows', iconTile: true, subtitles: true, toolbarWhenEmpty: false },
   argTypes: {
     state: {
       control: 'inline-radio',
       options: ['rows', 'loading', 'error', 'empty', 'noMatches'],
       description: 'Which state the list is in: ListPage picks the body from it.',
     },
-    iconTile: { description: 'NameCell: the icon in a bordered tile.' },
+    iconTile: {
+      description:
+        'NameCell: the icon in a bordered tile beside a subtitle; a one-line row keeps it bare in the same width.',
+    },
+    subtitles: { description: 'NameCell: a second line under each name.' },
     toolbarWhenEmpty: { description: 'ListPage: keep the toolbar while the list is empty.' },
   },
 }
@@ -49,7 +54,7 @@ const TOKENS: Token[] = [
   { name: 'laptop', scope: 'Full access', prefix: 'tk_e6f0aa', uses: 3 },
 ]
 
-function TokensPage({ state, iconTile, toolbarWhenEmpty }: Args) {
+function TokensPage({ state, iconTile, subtitles, toolbarWhenEmpty }: Args) {
   const search = useListSearch(true)
   const view = useListView<Token>({
     storageKey: 'story-tokens',
@@ -127,7 +132,7 @@ function TokensPage({ state, iconTile, toolbarWhenEmpty }: Args) {
                     icon={<KeyIcon />}
                     iconTile={iconTile}
                     name={token.name}
-                    subtitle={token.scope}
+                    subtitle={subtitles ? token.scope : undefined}
                     href={null}
                   />
                   <Table.Item>
@@ -164,6 +169,14 @@ export const States: StoryObj<Args> = {
       await expect(canvas.queryByRole('button', { name: 'Display options' })).toBeNull()
     }
   },
+}
+
+/** Rows with one line each, such as teams or labels: the icon stays bare in
+ *  the tile's width, so a row is as short as its name and the names line up
+ *  as they would beside tiles. */
+export const OneLineRows: StoryObj<Args> = {
+  args: { subtitles: false },
+  render: (args) => <TokensPage {...args} />,
 }
 
 /** The empty list: the empty state in the body and no toolbar, with "+ Add" in

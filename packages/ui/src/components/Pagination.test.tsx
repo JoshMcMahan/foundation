@@ -116,3 +116,12 @@ it("numbers pages in the host's locale, in full", () => {
   )
   expect(screen.getByRole('button', { name: 'Page 1204' })).toHaveTextContent('1.204')
 })
+
+it('is a slim 32px line with 24px steps that grow under a finger', () => {
+  render(<Pagination page={0} pageSize={10} total={30} onPageChange={() => {}} />)
+  expect(screen.getByRole('navigation')).toHaveClass('h-8')
+  expect(screen.getByRole('button', { name: 'Next' })).toHaveClass(
+    'size-6',
+    'pointer-coarse:size-8',
+  )
+})
