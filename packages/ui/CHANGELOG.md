@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.77.0](https://github.com/parallelworks/foundation/compare/ui-v0.76.0...ui-v0.77.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** a host can draw its own tools in chat and let the reader run a sibling tool in place of a held one ([#406](https://github.com/parallelworks/foundation/issues/406)) ([68e33c8](https://github.com/parallelworks/foundation/commit/68e33c8218656156bdfd6d4e41afc82c947e6fa9))
+* **ui:** chat shows the same working line as agent sessions, naming the step it is on ([#405](https://github.com/parallelworks/foundation/issues/405)) ([e66ccf6](https://github.com/parallelworks/foundation/commit/e66ccf66c099c841b9bbf79ec4f52980a39ee4d5))
+
 ## [0.76.0](https://github.com/parallelworks/foundation/compare/ui-v0.75.1...ui-v0.76.0) (2026-10-20)
 
 
