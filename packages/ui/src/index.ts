@@ -7,7 +7,12 @@ export {
 } from './components/AppLink'
 export {
   Avatar,
+  AvatarGroup,
+  type AvatarGroupProps,
+  type AvatarInitialsOptions,
+  type AvatarKind,
   type AvatarProps,
+  type AvatarShape,
   type AvatarSize,
   type AvatarStatus,
   avatarInitials,
@@ -167,6 +172,7 @@ export {
   useClosePopover,
 } from './components/Popover'
 export {
+  type AvatarColoring,
   type PersistedStateHook,
   type RunFileResult,
   type UIData,
@@ -177,6 +183,7 @@ export {
   type UISlots,
   type UIStringOverrides,
   type UIStrings,
+  useAvatarColoring,
   useLocale,
   useNavigation,
   useOptionalWorkflowEngine,
@@ -205,6 +212,7 @@ export {
   Elapsed,
   RelativeTime,
   type RelativeTimeFormat,
+  type RelativeTimeProps,
   useClock,
   useElapsed,
   useRelativeTime,
@@ -303,6 +311,7 @@ export type {
   WorkflowVariables,
 } from './engine'
 export {
+  type DateTimeStyle,
   formatBytes,
   formatCount,
   formatDateTime,

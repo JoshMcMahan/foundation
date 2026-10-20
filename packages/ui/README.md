@@ -52,6 +52,13 @@ times, exact times, durations and the date picker read as the app's own text
 does. Without it they follow the date library's default locale, or the browser's.
 `useLocale()` reads it, for a host formatting with `formatDateTime`.
 
+Pass `avatarColoring="kind"` for avatars that tell people from agents at a
+glance: every person shares one tint and every agent another, with two initials
+even for a one-word name. The host sets the tints with `--avatar-person`,
+`--avatar-person-text`, `--avatar-agent`, `--avatar-agent-text` and the agent's
+edge `--avatar-agent-ring`. An agent's avatar (`kind="agent"`) is a rounded
+square under either coloring, so its shape and not only its color sets it apart.
+
 Menus, selects, pickers, popovers, tooltips and hover cards open over the page,
 or over the fullscreen element while there is one. Opened inside a `<dialog>`
 shown with `showModal()`, they open inside that dialog instead: the browser
@@ -103,11 +110,11 @@ Each need has one component. Reach for it before styling markup by hand.
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
 | Pages of a long list | `Pagination` |
 | A grouped page of settings | `SettingsCard` with `SettingRow`s |
-| A person | `Avatar`, colored by name without a picture |
+| A person or an agent | `Avatar`, colored by name without a picture, or by kind; `AvatarGroup` for an overlapping stack with a "+N" chip |
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
 | A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
 | A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet; `useCopy` for a menu row or a control of your own |
-| A live relative time or duration | `RelativeTime`, `Elapsed` |
+| A live relative time or duration | `RelativeTime` (with a `fallback`, an `exact` style for its tooltip, or `show="absolute"`), `Elapsed` |
 | Rendered Markdown | `Markdown` |
 | Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
 | A run's jobs, steps, logs, annotations and warnings | `DependencyGraph` from `./graph`, as a graph or a list |
@@ -342,7 +349,8 @@ all at one lightness and chroma so none reads louder, and each
 `--theme-category-N-text` is solved to secondary text's targets on its fill. An
 `Avatar` without a picture takes one, picked by an FNV-1a hash of its name (or
 its `colorKey`), so the same name has the same color on every page; a nameless
-one keeps the accent. `categoryOf(key)` gives the same pick, 1–8, and
+one keeps the accent. Under `avatarColoring="kind"` it takes its kind's tint
+instead. `categoryOf(key)` gives the same pick, 1–8, and
 `categoryClasses(key)` its fill and text classes, for anything else drawn
 beside a name, such as a group's icon.
 

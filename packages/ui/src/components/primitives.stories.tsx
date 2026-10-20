@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { formatBytes } from '../format'
 import {
@@ -10,7 +10,7 @@ import {
   schemeFor,
   THEME_PRESETS,
 } from '../theme/index'
-import { Avatar, type AvatarSize } from './Avatar'
+import { Avatar, AvatarGroup, type AvatarSize } from './Avatar'
 import { Button } from './Button'
 import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
@@ -28,7 +28,7 @@ import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Mete
 import { Modal, type ModalProps } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
-import { UIProvider } from './Provider'
+import { type AvatarColoring, UIProvider } from './Provider'
 import { RunStatusIcon, type RunStatusIconStatus, runStatusTone } from './RunStatusIcon'
 import { Elapsed, RelativeTime } from './relativeTime'
 import { SegmentedControl } from './SegmentedControl'
@@ -305,9 +305,9 @@ export const Avatars: StoryObj = {
   },
 }
 
-/** A ring passed in `className` traces the circle, so overlapping avatars read as
- *  separate faces. Beside a printed name the avatar is `decorative`, so a screen
- *  reader says the name once. */
+/** A ring passed in `className` traces the shape, circle or square, so overlapping avatars read
+ *  as separate faces. Beside a printed name the avatar is `decorative`, so a screen reader says
+ *  the name once. */
 export const AvatarRings: StoryObj<{ decorative: boolean }> = {
   args: { decorative: true },
   render: ({ decorative }) => (
@@ -319,6 +319,14 @@ export const AvatarRings: StoryObj<{ decorative: boolean }> = {
             <Avatar name={name} size="md" className="ring-2 ring-(--theme-app-bg)" />
           </span>
         ))}
+        <span style={{ marginLeft: -8 }} className="flex">
+          <Avatar
+            name="Triage bot"
+            kind="agent"
+            size="md"
+            className="ring-2 ring-(--theme-app-bg)"
+          />
+        </span>
       </div>
       <div className="flex items-center gap-2 text-sm">
         <Avatar
@@ -459,6 +467,173 @@ export const AvatarColors: StoryObj<AvatarColorArgs> = {
     const fill = (name: string) => within(light as HTMLElement).getByRole('img', { name }).innerHTML
     await expect(fill('Ada Lovelace')).toMatch(/theme-category-\d/)
     await expect(fill('User avatar')).not.toMatch(/theme-category/)
+  },
+}
+
+interface AvatarKindArgs {
+  avatarColoring: AvatarColoring
+  size: AvatarSize
+  tooltip: boolean
+}
+
+const KIND_ROWS = [
+  { name: 'maya', kind: 'person' },
+  { name: 'Grace Hopper', kind: 'person' },
+  { name: 'alan.turing@example.com', kind: 'person' },
+  { name: 'Triage', kind: 'agent' },
+  { name: 'Release notes writer', kind: 'agent' },
+] as const
+
+/** Who is a person and who is an agent. An agent is always a rounded square, so its shape and not
+ *  only its color tells it apart. Under UIProvider's `avatarColoring="kind"` every person shares
+ *  one tint and every agent another, with two initials even for a one-word name; a host sets
+ *  `--avatar-person`, `--avatar-agent` and their `-text` colors to its own. `colorClassName`
+ *  fills one that is neither, such as a connector, and `tooltip` names it on hover. */
+export const AvatarKinds: StoryObj<AvatarKindArgs> = {
+  args: { avatarColoring: 'kind', size: 'md', tooltip: true },
+  argTypes: {
+    avatarColoring: { control: 'inline-radio', options: ['name', 'kind'] },
+    size: { control: 'select', options: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] },
+    tooltip: { control: 'boolean' },
+  },
+  render: ({ avatarColoring, size, tooltip }) => (
+    <UIProvider avatarColoring={avatarColoring}>
+      <ul className="m-0 flex list-none flex-col gap-3 p-8">
+        {KIND_ROWS.map(({ name, kind }) => (
+          <li key={name} className="flex items-center gap-2 text-sm">
+            <Avatar name={name} kind={kind} size={size} tooltip={tooltip} />
+            <span>{name}</span>
+          </li>
+        ))}
+        <li className="flex items-center gap-2 text-sm">
+          <Avatar
+            name="Webhook"
+            size={size}
+            tooltip={tooltip}
+            colorClassName="bg-(--theme-muted-panel-bg) text-(--theme-muted-text-color)"
+          />
+          <span>Webhook</span>
+        </li>
+        <li className="flex items-center gap-2 text-sm">
+          <Avatar name="Release notes writer" kind="agent" src="/missing-avatar.png" size={size} />
+          <span>An agent whose picture failed</span>
+        </li>
+      </ul>
+    </UIProvider>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: 'Triage' })).toHaveAttribute(
+      'data-shape',
+      'square',
+    )
+    await expect(canvas.getByRole('img', { name: 'maya' })).toHaveTextContent(
+      args.avatarColoring === 'kind' ? 'MA' : 'M',
+    )
+  },
+}
+
+interface AvatarGroupArgs {
+  count: number
+  max: number
+  total: number
+  showOverflow: boolean
+  size: AvatarSize
+  ring: boolean
+  ringColor: string
+}
+
+const GROUP_PEOPLE = [
+  'Ada Lovelace',
+  'Grace Hopper',
+  'Alan Turing',
+  'Radia Perlman',
+  'Ken Thompson',
+  'Barbara Liskov',
+  'Donald Knuth',
+  'Frances Allen',
+]
+
+/** Overlapping faces with a "+N" chip for the rest. `max` caps how many show; `total` counts
+ *  the rest when the children are already a slice. Each avatar takes a ring in the color behind
+ *  the stack, `ringColor`, which follows its shape, and one can set its own as a highlight. */
+export const AvatarGroups: StoryObj<AvatarGroupArgs> = {
+  args: {
+    count: 6,
+    max: 4,
+    total: 0,
+    showOverflow: true,
+    size: 'sm',
+    ring: true,
+    ringColor: '',
+  },
+  argTypes: {
+    count: { control: { type: 'range', min: 0, max: 8 }, description: 'Story only' },
+    max: { control: { type: 'number', min: 0 } },
+    total: { control: { type: 'number', min: 0 }, description: '0 leaves it unset' },
+    showOverflow: { control: 'boolean' },
+    size: { control: 'select', options: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] },
+    ring: { control: 'boolean' },
+    ringColor: { control: 'color', description: 'Empty is the panel color' },
+  },
+  render: ({ count, max, total, showOverflow, size, ring, ringColor }) => (
+    <div className="flex flex-col gap-6 p-8 text-sm">
+      <div className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) p-4">
+        <AvatarGroup
+          max={max}
+          total={total || undefined}
+          showOverflow={showOverflow}
+          size={size}
+          ring={ring}
+          ringColor={ringColor || undefined}
+          label={`${total || count} people`}
+        >
+          {GROUP_PEOPLE.slice(0, count).map((name) => (
+            <Avatar key={name} name={name} tooltip />
+          ))}
+        </AvatarGroup>
+      </div>
+      <UIProvider avatarColoring="kind">
+        <div className="flex items-center gap-3 rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) p-4">
+          <AvatarGroup size={size} label="Assigned to Ada Lovelace, Triage and Grace Hopper">
+            <Avatar name="Ada Lovelace" tooltip />
+            <Avatar name="Triage" kind="agent" tooltip />
+            {/* A host would pass className="[--avatar-ring:…]"; stories build no styles. */}
+            <span
+              className="flex"
+              style={{ '--avatar-ring': 'var(--theme-info)' } as CSSProperties}
+            >
+              <Avatar name="Grace Hopper" tooltip="Grace is editing the title" />
+            </span>
+          </AvatarGroup>
+          <span className="text-(--theme-muted-text-color)">By kind, one highlighted</span>
+        </div>
+      </UIProvider>
+      <div className="flex items-center gap-3 p-4">
+        <AvatarGroup
+          size={size}
+          max={3}
+          total={9}
+          ringColor="var(--theme-app-bg)"
+          showOverflow={false}
+        >
+          {GROUP_PEOPLE.slice(0, 3).map((name) => (
+            <Avatar key={name} name={name} />
+          ))}
+        </AvatarGroup>
+        <span className="text-(--theme-muted-text-color)">9 online, on the page background</span>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const group = canvas.getByRole('group', { name: `${args.total || args.count} people` })
+    const shown = Math.min(args.count, args.max)
+    await expect(within(group).queryAllByRole('img')).toHaveLength(shown)
+    const rest = (args.total || args.count) - shown
+    if (args.showOverflow && rest > 0) {
+      await expect(within(group).getByText(`${rest} more`)).toBeInTheDocument()
+    }
   },
 }
 
@@ -1497,30 +1672,79 @@ export const ProgressSegments: StoryObj<{ done: number; started: number; total: 
 
 const MINUTE = 60_000
 
+interface RelativeTimeArgs {
+  format: 'long' | 'compact'
+  locale: string
+  show: 'relative' | 'absolute'
+  exact: 'date' | 'short' | 'medium' | 'seconds' | 'full' | 'none'
+  fallback: string
+}
+
+const DAY_MINUTES = 60 * 24
+
 /** Times that keep counting while on screen, long or compact, with the exact
- *  time on hover, in UIProvider's `locale` when the host gives one. */
-export const RelativeTimes: StoryObj<{ format: 'long' | 'compact'; locale: string }> = {
-  args: { format: 'long', locale: '' },
+ *  time on hover, in UIProvider's `locale` when the host gives one. Compact reads
+ *  a date once a week away, with the year only when it isn't this one; `show="absolute"`
+ *  turns it round, and a missing time shows the `fallback`. */
+export const RelativeTimes: StoryObj<RelativeTimeArgs> = {
+  args: { format: 'long', locale: '', show: 'relative', exact: 'seconds', fallback: 'Never' },
   argTypes: {
     format: { control: 'inline-radio', options: ['long', 'compact'] },
     locale: { control: 'select', options: ['', 'de-DE', 'fr-FR', 'ja-JP'] },
+    show: { control: 'inline-radio', options: ['relative', 'absolute'] },
+    exact: {
+      control: 'select',
+      options: ['date', 'short', 'medium', 'seconds', 'full', 'none'],
+      description: '"none" passes false: no tooltip',
+    },
+    fallback: { control: 'text' },
   },
-  render: ({ format, locale }) => {
+  render: ({ format, locale, show, exact, fallback }) => {
     const now = Date.now()
+    const rows: [string, number | null][] = [
+      ['Seconds', 0.2],
+      ['Minutes', 5],
+      ['Hours', 90],
+      ['Yesterday', 30 * 60],
+      ['Days', 3 * DAY_MINUTES],
+      ['Over a week', 12 * DAY_MINUTES],
+      ['Last year', 400 * DAY_MINUTES],
+      ['In the future', -45.5],
+      ['Missing', null],
+    ]
     const times = (
-      <div className="flex flex-col gap-2 p-8 text-sm">
-        {[0.2, 5, 90, 60 * 30, 60 * 24 * 400].map((minutes) => (
-          <RelativeTime key={minutes} value={now - minutes * MINUTE} format={format} />
+      <dl
+        className="m-0 grid gap-x-6 gap-y-2 p-8 text-sm"
+        style={{ gridTemplateColumns: 'max-content 1fr' }}
+      >
+        {rows.map(([label, minutes]) => (
+          <div key={label} className="contents">
+            <dt className="text-(--theme-muted-text-color)">{label}</dt>
+            <dd className="m-0">
+              <RelativeTime
+                value={minutes === null ? null : now - minutes * MINUTE}
+                format={format}
+                show={show}
+                exact={exact === 'none' ? false : exact}
+                fallback={fallback}
+              />
+            </dd>
+          </div>
         ))}
-      </div>
+      </dl>
     )
     return locale ? <UIProvider locale={locale}>{times}</UIProvider> : times
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByText(args.format === 'compact' ? '5m' : '5 minutes ago'),
-    ).toBeInTheDocument()
+    if (args.show === 'relative' && !args.locale) {
+      await expect(
+        canvas.getByText(args.format === 'compact' ? '5m' : '5 minutes ago'),
+      ).toBeInTheDocument()
+    }
+    if (args.fallback) {
+      await expect(canvas.getByText(args.fallback)).toBeInTheDocument()
+    }
   },
 }
 

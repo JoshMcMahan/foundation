@@ -77,15 +77,20 @@ const DATE_TIME_STYLES = {
   short: DateTime.DATETIME_SHORT,
   medium: DateTime.DATETIME_MED,
   seconds: DateTime.DATETIME_MED_WITH_SECONDS,
+  full: DateTime.DATETIME_FULL,
 } as const
 
+/** How `formatDateTime` writes a moment. */
+export type DateTimeStyle = keyof typeof DATE_TIME_STYLES
+
 /** A moment in the reader's locale: `date` reads "Mar 14, 2026", `short`
- *  "3/14/2026, 9:30 AM", `medium` "Mar 14, 2026, 9:30 AM", and `seconds` adds
- *  the seconds. `locale`, such as `useLocale()` gives, wins over the time's own
+ *  "3/14/2026, 9:30 AM", `medium` "Mar 14, 2026, 9:30 AM", `seconds` adds
+ *  the seconds, and `full` reads "March 14, 2026 at 9:30 AM EDT", with the
+ *  time zone. `locale`, such as `useLocale()` gives, wins over the time's own
  *  and luxon's default. Empty for a missing or invalid time. */
 export function formatDateTime(
   value: TimeValue,
-  style: keyof typeof DATE_TIME_STYLES = 'medium',
+  style: DateTimeStyle = 'medium',
   locale?: string | undefined,
 ): string {
   const time = toDateTime(value)

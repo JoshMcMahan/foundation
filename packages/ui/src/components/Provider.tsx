@@ -120,6 +120,8 @@ export interface UIStrings {
     refreshing: string
     /** A refresh button's label once it knows when the data was fetched. */
     updated: (ago: string) => string
+    /** Read with a "+3" chip that stands for the items a list leaves out. */
+    moreCount: (count: number) => string
   }
   dropdown: {
     select: (type: string) => string
@@ -538,12 +540,19 @@ export interface UIStrings {
     /** A step's name in the list of steps, numbered from 1. */
     stepLabel: (number: number, title: string) => string
   }
+  /** A compact relative time ("5m", "3h"), which reads as a date after a week. */
   time: {
     now: string
     minutes: (n: number) => string
     hours: (n: number) => string
     days: (n: number) => string
+    /** @deprecated A compact time reads as a date once it is a week away, so no longer counts in years. */
     years: (n: number) => string
+    /** A compact time still to come, such as "in 5m"; `label` is one of the counts above. */
+    inFuture: (label: string) => string
+    /** A compact time a week or more away, such as "Sep 4"; by default with the year only while
+     *  it isn't this year. `locale` is UIProvider's, when the host gives one. */
+    date: (date: Date, locale?: string) => string
   }
   list: {
     moreActions: string
@@ -939,6 +948,7 @@ const DEFAULTS: UIProviderValue = {
       refresh: 'Refresh',
       refreshing: 'Refreshing',
       updated: (ago) => `Updated ${ago}`,
+      moreCount: (count) => `${count} more`,
     },
     dropdown: {
       select: (type) => `Select ${type}`,
@@ -1354,6 +1364,11 @@ const DEFAULTS: UIProviderValue = {
       hours: (n) => `${n}h`,
       days: (n) => `${n}d`,
       years: (n) => `${n}y`,
+      inFuture: (label) => `in ${label}`,
+      date: (date, locale) =>
+        dayFormat(locale)[
+          date.getFullYear() === new Date().getFullYear() ? 'short' : 'medium'
+        ].format(date),
     },
     list: {
       moreActions: 'More actions',
@@ -1469,6 +1484,14 @@ const SlotsContext = createContext<UISlots>(DEFAULTS.slots)
 const EngineContext = createContext<WorkflowEngineSource | undefined>(undefined)
 const LocaleContext = createContext<string | undefined>(undefined)
 
+/** How avatars without a picture are colored. `name` gives each person a color from the theme's
+ *  categorical palette, picked by name, and one initial for a one-word name. `kind` gives every
+ *  person one tint and every agent another (and a square), with two initials for a one-word name,
+ *  for an app that tells people and agents apart at a glance. */
+export type AvatarColoring = 'name' | 'kind'
+
+const AvatarColoringContext = createContext<AvatarColoring>('name')
+
 export function useStrings(): UIStrings {
   return useContext(StringsContext)
 }
@@ -1477,6 +1500,11 @@ export function useStrings(): UIStrings {
  *  each format's own default: the date library's for its times, the browser's for the rest. */
 export function useLocale(): string | undefined {
   return useContext(LocaleContext)
+}
+
+/** How the host colors avatars, UIProvider's `avatarColoring`. */
+export function useAvatarColoring(): AvatarColoring {
+  return useContext(AvatarColoringContext)
 }
 
 export function useNavigation(): UINavigation {
@@ -1638,6 +1666,10 @@ export interface UIProviderProps {
    *  exact times and the date picker. Pass the app's language, so they read as its own text
    *  does. Without one they follow the date library's default locale, or the browser's. */
   locale?: string | undefined
+  /** How avatars without a picture are colored: by name (the default), or by kind, where people
+   *  share one tint and agents another, set by `--avatar-person` and `--avatar-agent` (see
+   *  `Avatar`). */
+  avatarColoring?: AvatarColoring | undefined
   children: React.ReactNode
 }
 
@@ -1668,6 +1700,7 @@ export function UIProvider({
   engine: engineProp,
   nonce,
   locale,
+  avatarColoring = 'name',
   children,
 }: UIProviderProps) {
   // A loader is the first one passed: an inline arrow is a new function each render, and each
@@ -1704,13 +1737,15 @@ export function UIProvider({
           <SlotsContext value={stableSlots}>
             <EngineContext value={engine}>
               <LocaleContext value={locale}>
-                {/* Base UI hides a select's or scroll area's own scrollbar with an
-                  inline <style>, which a same-origin style policy blocks and
-                  reports. theme.css ships that rule instead. */}
-                <CSPProvider nonce={nonce} disableStyleElements>
-                  <TooltipProvider>{children}</TooltipProvider>
-                  <Toaster />
-                </CSPProvider>
+                <AvatarColoringContext value={avatarColoring}>
+                  {/* Base UI hides a select's or scroll area's own scrollbar with an
+                    inline <style>, which a same-origin style policy blocks and
+                    reports. theme.css ships that rule instead. */}
+                  <CSPProvider nonce={nonce} disableStyleElements>
+                    <TooltipProvider>{children}</TooltipProvider>
+                    <Toaster />
+                  </CSPProvider>
+                </AvatarColoringContext>
               </LocaleContext>
             </EngineContext>
           </SlotsContext>
