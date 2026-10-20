@@ -1,4 +1,5 @@
-import { type FocusEvent, memo, type ReactNode } from 'react'
+import { createContext, type FocusEvent, memo, type ReactNode, useContext } from 'react'
+import type { GraphDirection } from './connectorGeometry'
 import { BoxGrip } from './editorRows'
 import { emptyRowsStyle } from './gridSpacing'
 import { type JobHandlers, Joblist } from './JobSummary'
@@ -26,6 +27,9 @@ export function DimRules({ depth }: { depth: number }) {
   )
 }
 
+/** Which way the graph around a node runs; a run's graph on a phone runs down. */
+export const GraphDirectionContext = createContext<GraphDirection>('right')
+
 /** Dims what of a graph level isn't in the hovered job's lineage, while one is hovered. */
 export function setDimmed(wrapper: HTMLElement, depth: number, hovering: boolean) {
   wrapper.classList.toggle(dimClasses(depth).level, hovering)
@@ -51,6 +55,8 @@ export function GraphNode({
   children: ReactNode
 }) {
   const lineage = useLineageStore()
+  // Running down, ranks are rows, closer together, and slots a layout leaves empty close up.
+  const down = useContext(GraphDirectionContext) === 'down'
   // In the hovered lineage it doesn't dim; while the lineage shows, it's above the connectors.
   const highlight = useLineage((l) => l.node(job), 0)
   const enter = () => lineage?.hover(job)
@@ -65,8 +71,11 @@ export function GraphNode({
     <div
       id={id}
       role="none"
-      className="relative m-24"
-      style={{ zIndex: (highlight > 0 ? 25 : 1) + zBase, ...emptyRowsStyle(rowsAbove) }}
+      className={down ? 'relative mx-8 my-16' : 'relative m-24'}
+      style={{
+        zIndex: (highlight > 0 ? 25 : 1) + zBase,
+        ...(down ? {} : emptyRowsStyle(rowsAbove)),
+      }}
       onMouseEnter={enter}
       onMouseLeave={leave}
       onFocus={enter}

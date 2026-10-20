@@ -73,6 +73,38 @@ describe('fitView', () => {
     expect(fitView({ minX: 0, minY: 0, maxX: 1e7, maxY: 10 }, panel)?.scale).toBe(MIN_SCALE)
   })
 
+  it('stops at a least scale, showing a long graph from its start below what covers the top', () => {
+    const phone = { width: 390, height: 300 }
+    const chain = { minX: 0, minY: 0, maxX: 4000, maxY: 200 }
+    const view = fitView(chain, phone, { minScale: 0.5, top: 40 })
+    expect(view?.scale).toBe(0.5)
+    // A margin of 5% of the panel's height, 15, from the left and under the 40 kept clear.
+    expect(view?.x).toBe(15)
+    expect(view?.y).toBe(55)
+  })
+
+  it('fits a graph that reads at the least scale as before, minding nothing at the top', () => {
+    const small = { minX: 0, minY: 0, maxX: 300, maxY: 100 }
+    expect(fitView(small, panel, { minScale: 0.5, top: 40 })).toEqual(fitView(small, panel))
+  })
+
+  it('fits a graph running down by its width alone, centered, from below what covers the top', () => {
+    const phone = { width: 390, height: 600 }
+    const column = { minX: 0, minY: 0, maxX: 400, maxY: 5000 }
+    const view = fitView(column, phone, { minScale: 0.5, top: 40, width: true })
+    // 400 across fits at 0.5 less the margins (0.8775), past what a fit comes to, 0.6.
+    expect(view?.scale).toBe(0.6)
+    expect(view?.x).toBe((390 - 400 * 0.6) / 2)
+    expect(view?.y).toBe(40 + 19.5)
+    // Wider than reads, it stops at the least scale, cut off evenly at both sides.
+    const fan = fitView({ minX: 0, minY: 0, maxX: 1200, maxY: 2000 }, phone, {
+      minScale: 0.5,
+      width: true,
+    })
+    expect(fan?.scale).toBe(0.5)
+    expect(fan?.x).toBe((390 - 600) / 2)
+  })
+
   it('has nothing to fit without a graph', () => {
     expect(fitView({ minX: 0, minY: 0, maxX: 0, maxY: 0 }, panel)).toBeNull()
   })

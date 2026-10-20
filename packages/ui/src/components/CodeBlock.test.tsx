@@ -33,6 +33,14 @@ describe('CodeBlock', () => {
     expect(lines(container)[0]?.className).not.toContain('counter-increment')
   })
 
+  it('reaches past the page padding on a phone only with bleed', () => {
+    const { container, rerender } = render(<CodeBlock code={YAML} language="yaml" />)
+    const block = container.querySelector('[data-code-block]')
+    expect(block).not.toHaveClass('max-sm:-mx-4')
+    rerender(<CodeBlock code={YAML} language="yaml" bleed />)
+    expect(block).toHaveClass('max-sm:-mx-4', 'max-sm:rounded-none')
+  })
+
   it('takes a title of its own in place of the language', () => {
     render(<CodeBlock code={YAML} language="yaml" title="Resolved YAML" />)
     expect(screen.getByText('Resolved YAML')).toBeInTheDocument()

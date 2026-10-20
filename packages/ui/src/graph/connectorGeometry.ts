@@ -58,11 +58,57 @@ export function connectorPath(start: Point, end: Point, r: number, colGap: numbe
   }
 }
 
+/** Which way a graph runs: ranks as columns, left to right, or as rows, top to bottom. */
+export type GraphDirection = 'right' | 'down'
+
+/** A connector from a node's bottom to a later row's node's top: `connectorPath` turned a quarter,
+ *  with the bends in the gap above `end`'s row. */
+export function connectorPathDown(
+  start: Point,
+  end: Point,
+  r: number,
+  rowGap: number,
+): ConnectorPath {
+  const across = connectorPath({ x: start.y, y: start.x }, { x: end.y, y: end.x }, r, rowGap)
+  return { d: transposed(across.d), reversed: transposed(across.reversed) }
+}
+
+// A path mirrored across the diagonal: every point's x and y swapped, and each arc's sweep flipped,
+// since a mirror turns a clockwise bend counterclockwise.
+function transposed(d: string): string {
+  const parts = d.split(' ')
+  const out: string[] = []
+  for (let i = 0; i < parts.length; ) {
+    const op = parts[i++] ?? ''
+    if (op === 'A') {
+      const [rx, ry, rot, large, sweep, x, y] = parts.slice(i, i + 7)
+      out.push(
+        'A',
+        ry ?? '',
+        rx ?? '',
+        rot ?? '',
+        large ?? '',
+        sweep === '1' ? '0' : '1',
+        y ?? '',
+        x ?? '',
+      )
+      i += 7
+    } else {
+      const [x, y] = parts.slice(i, i + 2)
+      out.push(op, y ?? '', x ?? '')
+      i += 2
+    }
+  }
+  return out.join(' ')
+}
+
 /** A node's place in its graph level, as laid out. */
 export interface Box {
   x: number
   y: number
   width: number
+  /** Where a graph runs down, its height, which places the connectors leaving its bottom. */
+  height?: number | undefined
 }
 
 /** Whether two layouts put every node in the same place. */
@@ -72,7 +118,13 @@ export function sameBoxes(a: Map<string, Box>, b: Map<string, Box>): boolean {
   }
   for (const [job, box] of a) {
     const other = b.get(job)
-    if (!other || other.x !== box.x || other.y !== box.y || other.width !== box.width) {
+    if (
+      !other ||
+      other.x !== box.x ||
+      other.y !== box.y ||
+      other.width !== box.width ||
+      other.height !== box.height
+    ) {
       return false
     }
   }
@@ -100,7 +152,12 @@ export function routeConnectors(
   deps: Record<string, string[]>,
   boxes: Map<string, Box>,
   connectorY: number,
+  /** `down` joins a node's bottom to the top of one in a later row, at their middles. */
+  direction: GraphDirection = 'right',
 ): DrawnEdge[] {
+  if (direction === 'down') {
+    return routeDown(cols, deps, boxes)
+  }
   const heads = (c: number) => cols[c]?.[0]?.[0]
   const gapAfter = (c: number) => {
     const left = boxes.get(heads(c) ?? '')
@@ -140,4 +197,65 @@ export function routeConnectors(
   }
   const r = arcRadius(minRise, colGap)
   return ends.map((edge) => ({ ...edge, path: connectorPath(edge.start, edge.end, r, colGap) }))
+}
+
+// Connectors of a graph that runs down, its ranks as rows: from the middle of a need's bottom to the
+// middle of the top of the node needing it, the bends in the narrowest gap between rows.
+function routeDown(
+  rows: string[][][],
+  deps: Record<string, string[]>,
+  boxes: Map<string, Box>,
+): DrawnEdge[] {
+  const top = (row: string[][]) =>
+    Math.min(...row.map(([head]) => boxes.get(head ?? '')?.y ?? Number.POSITIVE_INFINITY))
+  const bottom = (row: string[][]) =>
+    Math.max(
+      ...row.map(([head]) => {
+        const box = boxes.get(head ?? '')
+        return box ? box.y + (box.height ?? 0) : Number.NEGATIVE_INFINITY
+      }),
+    )
+  let rowGap = Number.POSITIVE_INFINITY
+  for (let r = 0; r + 1 < rows.length; r++) {
+    const gap = top(rows[r + 1] ?? []) - bottom(rows[r] ?? [])
+    if (Number.isFinite(gap)) {
+      rowGap = Math.min(rowGap, gap)
+    }
+  }
+  if (!Number.isFinite(rowGap)) {
+    rowGap = 32
+  }
+  const ends: Omit<DrawnEdge, 'path'>[] = []
+  let minShift = Number.POSITIVE_INFINITY
+  for (const row of rows) {
+    for (const [to] of row) {
+      const target = to === undefined ? undefined : boxes.get(to)
+      if (to === undefined || !target) {
+        continue
+      }
+      for (const from of deps[to] ?? []) {
+        const source = boxes.get(from)
+        if (!source) {
+          continue
+        }
+        const start = {
+          x: Math.round(source.x + source.width / 2),
+          y: source.y + (source.height ?? 0) - 2,
+        }
+        // Middles a few pixels apart, as nodes of nearly one width have, run straight.
+        const middle = Math.round(target.x + target.width / 2)
+        const end = { x: Math.abs(middle - start.x) <= 8 ? start.x : middle, y: target.y + 2 }
+        const shift = Math.abs(end.x - start.x)
+        if (shift > 0) {
+          minShift = Math.min(minShift, shift)
+        }
+        ends.push({ from, to, start, end })
+      }
+    }
+  }
+  const r = arcRadius(minShift, rowGap)
+  return ends.map((edge) => ({
+    ...edge,
+    path: connectorPathDown(edge.start, edge.end, r, rowGap),
+  }))
 }

@@ -1503,3 +1503,46 @@ describe('DependencyGraphPreview', () => {
     expect(nodeIds()).toEqual(['node_build', 'node_deploy'])
   })
 })
+
+describe('DependencyGraph bleed', () => {
+  it('takes the jobs’ panel, graph or list, past the page padding on a phone only when asked', () => {
+    const panelOf = (container: HTMLElement) =>
+      container.querySelector('.panel.overflow-hidden') ??
+      screen.getByRole('button', { name: 'Expand all' }).closest('.panel')
+    const { container, rerender } = render(<DependencyGraph run={run} />)
+    expect(panelOf(container)).not.toHaveClass('max-sm:-mx-4')
+    rerender(<DependencyGraph run={run} bleed />)
+    expect(panelOf(container)).toHaveClass('max-sm:-mx-4', 'max-sm:border-x-0')
+    rerender(<DependencyGraph run={run} bleed viewMode="tree" />)
+    expect(panelOf(container)).toHaveClass('max-sm:-mx-4', 'max-sm:rounded-none')
+  })
+})
+
+describe('DependencyGraph on a phone', () => {
+  const ranksOf = () => document.getElementById('node_build')?.parentElement?.parentElement
+  const at = (width: number) => {
+    const was = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+    onTestFinished(() => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: was })
+    })
+  }
+
+  it('runs a run’s graph down the screen, its ranks as rows', () => {
+    at(390)
+    render(<DependencyGraph run={run} />)
+    expect(ranksOf()).toHaveClass('flex-col')
+    expect(document.getElementById('node_build')).toHaveClass('my-16')
+  })
+
+  it('keeps a preview, and a wider screen, running across', () => {
+    at(390)
+    const { unmount } = render(<DependencyGraph run={run} preview />)
+    expect(ranksOf()).not.toHaveClass('flex-col')
+    unmount()
+    at(1280)
+    render(<DependencyGraph run={run} />)
+    expect(ranksOf()).not.toHaveClass('flex-col')
+    expect(document.getElementById('node_build')).toHaveClass('m-24')
+  })
+})

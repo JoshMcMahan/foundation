@@ -7,7 +7,9 @@ import DependencyGraph, { type ViewMode } from './DependencyGraph'
 import type { RunWarning } from './runWarnings'
 import {
   ALWAYS_WARNING,
+  FAN_JOBS,
   NOT_COMPLETED_WARNING,
+  PIPELINE_JOBS,
   RUNNING_WARNED_JOBS,
   WARNED_JOBS,
 } from './stories/runFixtures'
@@ -18,10 +20,21 @@ interface RunGraphArgs {
   status: 'completed' | 'running'
   warnings: RunWarning[]
   viewMode: ViewMode
+  bleed?: boolean
+  workflowName?: string
+  completedAt?: string
 }
 
 /** A run's page as a host draws it: the graph of its jobs, with the view toggle the host keeps. */
-function RunGraph({ jobs, status, warnings, viewMode }: RunGraphArgs) {
+function RunGraph({
+  jobs,
+  status,
+  warnings,
+  viewMode,
+  bleed,
+  workflowName = 'release',
+  completedAt = '2026-01-01T09:10:00.000Z',
+}: RunGraphArgs) {
   const [mode, setMode] = useState(viewMode)
   const [picked, setPicked] = useState(viewMode)
   if (picked !== viewMode) {
@@ -38,16 +51,17 @@ function RunGraph({ jobs, status, warnings, viewMode }: RunGraphArgs) {
       run={{
         id: 'run-12',
         number: 12,
-        slug: 'release-12',
-        workflowName: 'release',
+        slug: `${workflowName}-12`,
+        workflowName,
         status,
         createdAt,
-        ...(running ? {} : { completedAt: '2026-01-01T09:10:00.000Z' }),
+        ...(running ? {} : { completedAt }),
         executedJobs: jobs,
         warnings,
       }}
       viewMode={mode}
       setViewMode={setMode}
+      bleed={bleed}
     />
   )
 }
@@ -77,6 +91,11 @@ const meta: Meta<typeof RunGraph> = {
       description: 'The graph, or the list of jobs and steps.',
     },
     status: { control: 'inline-radio', options: ['completed', 'running'] },
+    bleed: {
+      control: 'boolean',
+      description:
+        'On a phone, the graph’s or list’s panel reaches past the page’s `p-4` to its edges.',
+    },
     jobs: { control: false, description: 'The run’s `executedJobs`.' },
   },
 }
@@ -195,3 +214,46 @@ export const TreeView: Story = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Expand all' }))
   },
 }
+
+const PIPELINE: Partial<RunGraphArgs> = {
+  jobs: PIPELINE_JOBS,
+  workflowName: 'variant-calling',
+  completedAt: '2026-01-01T09:35:25.000Z',
+}
+
+/** A sixteen-job pipeline: the whole graph fits a desktop panel. */
+export const APipeline: Story = { args: PIPELINE }
+
+/** The pipeline as a list: each name takes the room its time leaves, and the job that waits on four
+ *  lanes wraps its chips, each one whole. */
+export const APipelineAsAList: Story = { args: { ...PIPELINE, viewMode: 'tree' } }
+
+const phone = { viewport: { value: 'mobile1', isRotated: false } }
+
+/** On a phone the graph runs down the screen, its ranks as rows, fit to the width at a scale its
+ *  jobs read at, in a panel most of the screen tall to pan down through. Connectors leave each
+ *  node's bottom for the top of the next. With `bleed`, its panel reaches the screen's edges. */
+export const APipelineOnAPhone: Story = {
+  args: { ...PIPELINE, bleed: true },
+  globals: phone,
+}
+
+/** The list on a phone, edge to edge with `bleed`: names show whole where they fit, and a long list
+ *  of what a job depends on wraps. */
+export const APipelineAsAListOnAPhone: Story = {
+  args: { ...PIPELINE, viewMode: 'tree', bleed: true },
+  globals: phone,
+}
+
+const FAN: Partial<RunGraphArgs> = {
+  jobs: FAN_JOBS,
+  workflowName: 'variant-calling',
+  completedAt: '2026-01-01T09:16:06.000Z',
+}
+
+/** A run that fans out four lanes wide and back in, each lane its own jobs. */
+export const AWideFan: Story = { args: FAN }
+
+/** The fan on a phone, running down: four lanes are wider than the screen at a size they read at,
+ *  so the row pans sideways, from the middle. */
+export const AWideFanOnAPhone: Story = { args: { ...FAN, bleed: true }, globals: phone }

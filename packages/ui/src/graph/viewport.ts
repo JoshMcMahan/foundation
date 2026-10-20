@@ -58,23 +58,44 @@ export function fitMargin(panel: { width: number; height: number }): number {
   return Math.min(panel.width, panel.height) * 0.05
 }
 
+/** How a fit may differ from showing everything. */
+export interface FitOptions {
+  /** The farthest out it goes: a graph too big to read at this scale shows from its start,
+   *  its top left, for the rest to be panned to. */
+  minScale?: number | undefined
+  /** Room kept clear at the panel's top, such as under a bar over it, when the fit stops at
+   *  `minScale`. */
+  top?: number | undefined
+  /** Fits the graph's width alone, for one that runs down the panel to be panned along: centered
+   *  across the panel, from its top below `top`. */
+  width?: boolean | undefined
+}
+
 /** The view that shows all of `bounds` in a panel from its top left, no closer than a fit comes. */
-export function fitView(bounds: Bounds, panel: { width: number; height: number }): View | null {
+export function fitView(
+  bounds: Bounds,
+  panel: { width: number; height: number },
+  { minScale = MIN_SCALE, top = 0, width: byWidth = false }: FitOptions = {},
+): View | null {
   const width = bounds.maxX - bounds.minX
   const height = bounds.maxY - bounds.minY
   if (width <= 0 || height <= 0) {
     return null
   }
   const margin = fitMargin(panel)
-  const scale = Math.max(
-    MIN_SCALE,
-    Math.min(
-      (panel.width - margin * 2) / width,
-      (panel.height - margin * 2) / height,
-      FIT_MAX_SCALE,
-    ),
+  const fit = Math.min(
+    (panel.width - margin * 2) / width,
+    byWidth ? FIT_MAX_SCALE : (panel.height - margin * 2) / height,
+    FIT_MAX_SCALE,
   )
-  return { x: margin - bounds.minX * scale, y: margin - bounds.minY * scale, scale }
+  const floor = Math.min(Math.max(MIN_SCALE, minScale), FIT_MAX_SCALE)
+  const scale = Math.max(floor, fit)
+  // Cut off, the graph starts below what covers the panel's top, so its first jobs show whole.
+  const y = fit < floor || byWidth ? Math.max(margin, top + margin) : margin
+  // By width, centered: a graph running down centers its rows, so a wider one cut off at both sides
+  // still shows its chain of jobs down the middle.
+  const x = byWidth ? (panel.width - width * scale) / 2 : margin
+  return { x: x - bounds.minX * scale, y: y - bounds.minY * scale, scale }
 }
 
 /** The least shift that brings [start, end] inside [low, high]; none when it can't all fit, so the view stays. */

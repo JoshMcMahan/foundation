@@ -46,6 +46,9 @@ export interface CodeBlockProps {
   /** The code is still arriving: highlighting is not cached, and the block
    *  keeps its end in view while it is scrolled there. */
   streaming?: boolean | undefined
+  /** On a phone, reaches past the host's content padding (`p-4`) to the
+   *  container's edges, without corners, so long lines get the screen's width. */
+  bleed?: boolean | undefined
   className?: string | undefined
 }
 
@@ -138,6 +141,7 @@ export function CodeBlock({
   fill = false,
   maxHeight,
   streaming = false,
+  bleed = false,
   className,
 }: CodeBlockProps) {
   const { common: t } = useStrings()
@@ -200,6 +204,7 @@ export function CodeBlock({
         // not-prose: an answer's typography styles every pre it holds.
         'not-prose flex flex-col overflow-hidden rounded-xl bg-(--theme-code-bg) text-(--theme-code-text) shadow-[0_0_0_1px_color-mix(in_oklab,var(--theme-app)_8%,transparent)]',
         fill && 'h-full min-h-0',
+        bleed && 'max-sm:-mx-4 max-sm:rounded-none',
         className,
       )}
     >

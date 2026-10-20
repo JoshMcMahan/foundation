@@ -138,20 +138,25 @@ function JobRow({
         <RunStatusIcon status={job.status} />
         <div className="flex flex-col gap-1 min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="font-mono text-sm text-[var(--theme-app)] truncate">
+            <span
+              className="font-mono text-sm text-[var(--theme-app)] truncate"
+              title={jobLabel(jobName, job)}
+            >
               {jobLabel(jobName, job)}
             </span>
             <WarningMark warnings={marks.under(rowKey(prefix, jobName))} />
           </span>
           {dependencies.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-[var(--theme-muted-text-color)]">
+            // A job that waits on many wraps its chips onto more lines, each chip whole, rather than
+            // breaking a name across lines.
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span className="whitespace-nowrap text-xs text-[var(--theme-muted-text-color)]">
                 {t.dependsOn}
               </span>
               {dependencies.map((dep) => (
                 <span
                   key={dep}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--theme-muted-panel-bg)] text-[var(--theme-muted-text-color)]"
+                  className="whitespace-nowrap text-xs px-1.5 py-0.5 rounded bg-[var(--theme-muted-panel-bg)] text-[var(--theme-muted-text-color)]"
                 >
                   {jobLabel(dep)}
                 </span>
@@ -159,7 +164,7 @@ function JobRow({
             </div>
           )}
         </div>
-        <div className="flex-1" />
+        {/* The name takes all the room the time leaves, so it truncates only when it must. */}
         <Elapsed
           start={job.startedAt}
           end={job.completedAt}

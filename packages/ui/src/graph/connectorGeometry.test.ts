@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { arcRadius, type Box, connectorPath, routeConnectors, sameBoxes } from './connectorGeometry'
+import {
+  arcRadius,
+  type Box,
+  connectorPath,
+  connectorPathDown,
+  routeConnectors,
+  sameBoxes,
+} from './connectorGeometry'
 
 describe('connectorPath', () => {
   it('runs straight between level ends', () => {
@@ -21,6 +28,21 @@ describe('connectorPath', () => {
     const { reversed } = connectorPath({ x: 0, y: 0 }, { x: 200, y: 100 }, 8, 40)
     expect(reversed.startsWith('M 200 100')).toBe(true)
     expect(reversed.endsWith('L 0 0')).toBe(true)
+  })
+})
+
+describe('connectorPathDown', () => {
+  it('runs straight down between ends one above the other', () => {
+    expect(connectorPathDown({ x: 10, y: 0 }, { x: 10, y: 100 }, 8, 40).d).toBe('M 10 0 L 10 100')
+  })
+
+  it('bends in the gap above its target, right or left', () => {
+    const right = connectorPathDown({ x: 0, y: 0 }, { x: 100, y: 200 }, 8, 40)
+    // Down to the first bend, across, and down into the target half a gap later.
+    expect(right.d).toBe('M 0 0 L 0 172 A 8 8 0 0 0 8 180 L 92 180 A 8 8 0 0 1 100 188 L 100 200')
+    const left = connectorPathDown({ x: 100, y: 0 }, { x: 0, y: 200 }, 8, 40)
+    expect(left.d).toBe('M 100 0 L 100 172 A 8 8 0 0 1 92 180 L 8 180 A 8 8 0 0 0 0 188 L 0 200')
+    expect(right.reversed.startsWith('M 100 200')).toBe(true)
   })
 })
 
@@ -70,6 +92,31 @@ describe('routeConnectors', () => {
     // Gaps of 300, then 100; the bend ends half a gap less its radius short of the target.
     expect(route(false)).toContain('A 16 16 0 0 1 468 0')
     expect(route(true)).toContain('A 16 16 0 0 1 568 0')
+  })
+})
+
+describe('routeConnectors down', () => {
+  const boxes = new Map<string, Box>([
+    ['a', { x: 100, y: 0, width: 200, height: 80 }],
+    ['b', { x: 0, y: 200, width: 150, height: 80 }],
+    ['c', { x: 151, y: 200, width: 100, height: 80 }],
+  ])
+
+  it('joins the middle of a need’s bottom to the middle of the top of what needs it', () => {
+    const edges = routeConnectors(
+      [[['a']], [['b'], ['c']]],
+      false,
+      { b: ['a'], c: ['a'] },
+      boxes,
+      37,
+      'down',
+    )
+    expect(edges.map(({ start, end }) => ({ start, end }))).toEqual([
+      { start: { x: 200, y: 78 }, end: { x: 75, y: 202 } },
+      // A middle a few pixels off runs straight.
+      { start: { x: 200, y: 78 }, end: { x: 200, y: 202 } },
+    ])
+    expect(edges[1]?.path.d).toBe('M 200 78 L 200 202')
   })
 })
 

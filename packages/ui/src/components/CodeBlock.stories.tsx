@@ -18,6 +18,7 @@ const meta: Meta<typeof CodeBlock> = {
     wrap: { control: 'boolean' },
     fill: { control: 'boolean' },
     maxHeight: { control: 'text' },
+    bleed: { control: 'boolean' },
   },
 }
 export default meta
@@ -208,6 +209,21 @@ export const Phone: Story = {
   render: (args) => (
     <div className="flex flex-col p-4" style={{ height: 560 }}>
       <CodeBlock {...args} />
+    </div>
+  ),
+}
+
+/** With `bleed`, on a phone the block reaches past the page's `p-4` to the
+ *  screen's edges, without corners, so long lines get the whole width; wider,
+ *  it sits inside the padding as before. */
+export const BleedOnAPhone: Story = {
+  args: { code: LONG_LINES, language: 'bash', title: 'Submit', bleed: true },
+  parameters: { layout: 'fullscreen' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  render: (args) => (
+    <div className="flex flex-col gap-4 p-4">
+      <CodeBlock {...args} />
+      <CodeBlock {...args} title="Inside the padding" bleed={false} />
     </div>
   ),
 }

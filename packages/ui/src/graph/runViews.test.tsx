@@ -6,7 +6,7 @@ import { AnnotationBanner } from './AnnotationBanner'
 import { GraphNode } from './GraphNode'
 import { Lineage, LineageContext } from './lineage'
 import { Reveal } from './Reveal'
-import { RUN_JOBS } from './stories/runFixtures'
+import { PIPELINE_JOBS, RUN_JOBS } from './stories/runFixtures'
 import TreeView from './TreeView'
 
 const runFile = vi.hoisted(() => vi.fn(() => ({ data: 'log', isLoading: false, error: undefined })))
@@ -97,6 +97,28 @@ describe('TreeView', () => {
     )
     const [a, b] = screen.getAllByRole('button', { name: /Matrix: train/ })
     expect(a?.getAttribute('aria-controls')).not.toBe(b?.getAttribute('aria-controls'))
+  })
+
+  it('names a job in full where its name is cut short, and wraps what it depends on whole', () => {
+    function Pipeline() {
+      const [expanded, setExpanded] = useState<Set<string>>(new Set())
+      return (
+        <TreeView
+          jobs={PIPELINE_JOBS}
+          slug="run"
+          expandedJobs={expanded}
+          setExpandedJobs={setExpanded}
+        />
+      )
+    }
+    render(<Pipeline />)
+    const merge = row('merge-bams')
+    expect(within(merge).getByText('Merge-bams')).toHaveAttribute('title', 'Merge-bams')
+    const lane = within(merge).getByText('Align-lane-4')
+    expect(lane).toHaveClass('whitespace-nowrap')
+    expect(lane.parentElement).toHaveClass('flex-wrap')
+    // The name's column takes all the room the time leaves; no spacer splits it.
+    expect(merge.querySelector(':scope > .flex-1:empty')).toBeNull()
   })
 
   it('fetches a finished step’s log once instead of polling it', () => {
