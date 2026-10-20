@@ -327,6 +327,74 @@ export const HostDrawnToolCall: StoryObj = {
   ),
 }
 
+function EditableStopCard({ part, approval, onApprovalAnswer }: ToolRendererProps) {
+  const suggested = (JSON.parse(part.args || '{}') as { clusterName?: string }).clusterName ?? ''
+  const [name, setName] = useState(suggested)
+  const pending = approval && !approval.resolved
+  return (
+    <div className="flex max-w-md flex-col gap-2 rounded-lg border theme-border p-3 text-sm">
+      <label className="flex flex-col gap-1">
+        Cluster
+        <input
+          className="rounded border theme-border px-2 py-1"
+          value={name}
+          disabled={!pending}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+      {pending && onApprovalAnswer && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              onApprovalAnswer(approval.id, {
+                kind: 'confirm',
+                allowed: true,
+                args: JSON.stringify({ clusterName: name }),
+              })
+            }
+          >
+            Stop
+          </button>
+          <button
+            type="button"
+            onClick={() => onApprovalAnswer(approval.id, { kind: 'confirm', allowed: false })}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The model suggests the call's arguments and the reader can change them
+// before allowing it; the call runs with theirs, and its line says so.
+export const EditedToolCall: StoryObj = {
+  render: () => (
+    <StoryChat
+      adapter={{
+        ...makeStaticAdapter({
+          conversations: [
+            makeConversation({
+              id: 'conv-held',
+              title: 'Stop gputraining',
+              messages: makeHeldCallTurn(),
+            }),
+          ],
+        }),
+        streamCompletion: resumeHeldCall,
+      }}
+      config={{ slots: { toolRenderers: { stop_cluster: EditableStopCard } } }}
+      conversationId="conv-held"
+    >
+      <StoryViewport>
+        <ChatThread conversationId="conv-held" />
+      </StoryViewport>
+    </StoryChat>
+  ),
+}
+
 // The same call in a shared conversation Bob started: it runs with Bob's
 // access, so only Bob may answer it, and the share note says the results
 // are visible to the people it is shared with.

@@ -64,6 +64,8 @@ export interface ToolApprovalAnswer {
   feedback?: string
   // A sibling tool the user chose to run in place of the one asked for.
   tool?: string
+  // The call's arguments as the user changed them, as JSON text.
+  args?: string
 }
 
 export interface StreamHandlers {

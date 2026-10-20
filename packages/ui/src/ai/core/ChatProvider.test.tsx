@@ -642,6 +642,98 @@ describe('streamed parts', () => {
     expect(paused?.parts?.[0]).toMatchObject({ kind: 'tool_call', name: 'destroy_cluster' })
   })
 
+  it('runs the arguments the reader changed, and says they changed them', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'start_run', args: '{"cores":4}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('run it')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: true, args: '{"cores":8}' })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: true,
+      args: '{"cores":8}',
+    })
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).toMatchObject({
+      kind: 'tool_call',
+      args: '{"cores":8}',
+      decision: { status: 'approved', edited: true },
+    })
+  })
+
+  it('sends no arguments when the reader left the suggestion as it was', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'start_run', args: '{"cores":4}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('run it')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: true, args: '{"cores":4}' })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: true,
+    })
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).not.toHaveProperty('decision.edited')
+  })
+
+  it('sends no changed arguments with a denial', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'start_run', args: '{"cores":4}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('run it')
+    })
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: false, args: '{"cores":8}' })
+    })
+
+    expect(streamCompletion.mock.calls[1]![0].resume).toEqual({
+      messageId: 'paused',
+      toolCallId: 't1',
+      allowed: false,
+    })
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).toMatchObject({ args: '{"cores":4}' })
+  })
+
   it('sends no sibling tool with a denial', async () => {
     const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
       if (!req.resume) {

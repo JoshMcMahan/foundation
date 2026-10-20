@@ -27,6 +27,7 @@ import type {
   MessagePart,
   ProviderInfo,
   ProviderIssue,
+  ToolCallPart,
   UnreachableSession,
 } from '../types'
 import { chatReducer, initialState } from './chatReducer'
@@ -1033,6 +1034,11 @@ export function ChatProvider({
         id: approvalId,
         answer: answer.allowed ? t.approvalAllowed : t.approvalDenied,
       })
+      const instead = answer.allowed ? answer.instead : undefined
+      const asked = pausedParts.find(
+        (p): p is ToolCallPart => p.kind === 'tool_call' && p.id === approvalId,
+      )
+      const args = answer.allowed && answer.args !== asked?.args ? answer.args : undefined
       applyToPaused({
         type: 'tool_decision',
         id: approvalId,
@@ -1041,12 +1047,18 @@ export function ChatProvider({
           by: 'user',
           name: currentUser.name || currentUser.username,
           at: DateTime.now().toUTC().toISO(),
+          ...(args !== undefined ? { edited: true } : {}),
         },
       })
-      const instead = answer.allowed ? answer.instead : undefined
-      if (instead) {
+      if (instead || args !== undefined) {
         pausedParts = pausedParts.map((p) =>
-          p.kind === 'tool_call' && p.id === approvalId ? { ...p, name: instead } : p,
+          p.kind === 'tool_call' && p.id === approvalId
+            ? {
+                ...p,
+                ...(instead ? { name: instead } : {}),
+                ...(args !== undefined ? { args } : {}),
+              }
+            : p,
         )
         updatePaused({ parts: pausedParts })
       }
@@ -1073,6 +1085,7 @@ export function ChatProvider({
               allowed: answer.allowed,
               ...(answer.denyMessage ? { feedback: answer.denyMessage } : {}),
               ...(instead ? { tool: instead } : {}),
+              ...(args !== undefined ? { args } : {}),
             },
           },
           paused.id,

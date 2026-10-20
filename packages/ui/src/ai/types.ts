@@ -94,6 +94,8 @@ export interface ToolDecision {
   note?: string
   /** Why it was settled this way, such as the auto-reviewer's rationale. */
   reason?: string
+  /** The reader changed the call's arguments before allowing it. */
+  edited?: boolean
 }
 
 export interface ToolCallPart {
@@ -139,6 +141,9 @@ export type ApprovalAnswerValue =
       /** A sibling tool to run in place of the one asked for, with the same
        *  arguments, such as destroying a cluster the model asked to stop. */
       instead?: string
+      /** The call's arguments as the reader changed them, as JSON text, to
+       *  run in place of the model's suggestion. */
+      args?: string
     }
   | { kind: 'ask'; text: string; chat?: boolean }
 

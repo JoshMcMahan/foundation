@@ -379,6 +379,20 @@ describe('tool decisions', () => {
     expect(screen.getByTestId('tool-decision')).toHaveTextContent(label)
   })
 
+  it('says the reader changed the call before allowing it', () => {
+    renderParts([
+      {
+        kind: 'tool_call',
+        id: 'c1',
+        name: 'start_run',
+        args: '{}',
+        status: 'ok',
+        decision: { status: 'approved', by: 'user', name: 'Bob', edited: true },
+      },
+    ])
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Allowed with changes by Bob')
+  })
+
   it('shows when and the note', () => {
     renderParts([
       call({

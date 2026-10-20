@@ -251,8 +251,11 @@ export interface ChatStrings {
     answered: string
     /** Under a call someone answered: who allowed or denied it. */
     allowedBy: (name: string) => string
+    /** Allowed after the reader changed the call's arguments. */
+    allowedWithChangesBy: (name: string) => string
     deniedBy: (name: string) => string
     allowed: string
+    allowedWithChanges: string
     denied: string
     allowedByReviewer: string
     deniedByReviewer: string
@@ -553,8 +556,10 @@ export const defaultChatStrings: ChatStrings = {
     feedbackPlaceholder: 'Tell the agent what to do instead…',
     answered: 'Answered',
     allowedBy: (name) => `Allowed by ${name}`,
+    allowedWithChangesBy: (name) => `Allowed with changes by ${name}`,
     deniedBy: (name) => `Denied by ${name}`,
     allowed: 'Allowed',
+    allowedWithChanges: 'Allowed with changes',
     denied: 'Denied',
     allowedByReviewer: 'Allowed by the auto-reviewer',
     deniedByReviewer: 'Denied by the auto-reviewer',

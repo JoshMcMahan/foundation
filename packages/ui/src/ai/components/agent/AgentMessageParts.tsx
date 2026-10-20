@@ -371,6 +371,9 @@ function decisionLabel(d: ToolDecision, t: ChatStrings['agentTranscript']): stri
       if (d.by === 'auto-reviewer') {
         return t.allowedByReviewer
       }
+      if (d.edited) {
+        return d.name ? t.allowedWithChangesBy(d.name) : t.allowedWithChanges
+      }
       return d.name ? t.allowedBy(d.name) : t.allowed
     case 'denied':
       if (d.by === 'auto-reviewer') {
