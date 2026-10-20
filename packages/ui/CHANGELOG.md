@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.82.2](https://github.com/parallelworks/foundation/compare/ui-v0.82.1...ui-v0.82.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ui:** setting rows keep small controls on their line and give a stacked control the row, a card takes an error, and a callout's body reaches under its dismiss button ([#443](https://github.com/parallelworks/foundation/issues/443)) ([e2a1227](https://github.com/parallelworks/foundation/commit/e2a122742d556d38968fe42a4c0c2bd29f6afa59))
+
 ## [0.82.1](https://github.com/parallelworks/foundation/compare/ui-v0.82.0...ui-v0.82.1) (2026-10-20)
 
 
