@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.78.0](https://github.com/parallelworks/foundation/compare/ui-v0.77.0...ui-v0.78.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** an error page, page loaders, fuller empty and error states, busy and overflowing actions, and the list page kit ([#414](https://github.com/parallelworks/foundation/issues/414)) ([7f6d80b](https://github.com/parallelworks/foundation/commit/7f6d80b88da818a54fc6579f2004b162302468bf))
+* **ui:** avatars that tell agents from people, avatar stacks, and relative times with a fallback, an exact style and dates after a week ([#415](https://github.com/parallelworks/foundation/issues/415)) ([5a01baa](https://github.com/parallelworks/foundation/commit/5a01baaf01d692e39e8ac782674a61b13958aa9b))
+* **ui:** buttons lift on hover and gain a danger outline and a file picker; tooltips take the panel look; popovers open as a sheet on phones ([#416](https://github.com/parallelworks/foundation/issues/416)) ([049aae0](https://github.com/parallelworks/foundation/commit/049aae0e4c32ebd05227849a0350a281cfeab7e7))
+* **ui:** in-page cards, danger-zone sections, badge emphases, count badges and richer meters ([#409](https://github.com/parallelworks/foundation/issues/409)) ([dc25a97](https://github.com/parallelworks/foundation/commit/dc25a97ec2c7fcae5a85c91e51d0b824eab8182c))
+* **ui:** keycaps, tags, chart colors and parts, selection copy, and copy and refresh options ([#410](https://github.com/parallelworks/foundation/issues/410)) ([c1b5113](https://github.com/parallelworks/foundation/commit/c1b5113d384dd58709d5c7dc9ab5bebe78e2cb08))
+* **ui:** lists show their active filters as editable chips under the toolbar ([#411](https://github.com/parallelworks/foundation/issues/411)) ([d041111](https://github.com/parallelworks/foundation/commit/d041111ca469d75d01c637922b0f0cd5a22653ec))
+* **ui:** pickers size to their content, say why they're disabled, open from shortcuts, create, take typed dates and tags, and share a keyboard listbox ([#420](https://github.com/parallelworks/foundation/issues/420)) ([de00bf0](https://github.com/parallelworks/foundation/commit/de00bf0d365d31fc0c16ea46caebe250a7098fd1))
+* **ui:** richer menu rows, one shared context menu, animated modals with a close button, useConfirm, and an inline access panel ([#419](https://github.com/parallelworks/foundation/issues/419)) ([5c5d046](https://github.com/parallelworks/foundation/commit/5c5d046e8b47ff3084de7fbc0c4b3cf3f517cb9b))
+
+
+### Bug Fixes
+
+* **ui:** a picker that starts open lands on the chosen row, and a narrow filter chip keeps its remove button in reach ([#421](https://github.com/parallelworks/foundation/issues/421)) ([77f6f72](https://github.com/parallelworks/foundation/commit/77f6f72450211cc4e3aa671d4f1da1ae790f89e5))
+* **ui:** a section title that wraps leaves its chevron between lines and its actions stranded at the far end ([#413](https://github.com/parallelworks/foundation/issues/413)) ([a13364d](https://github.com/parallelworks/foundation/commit/a13364d3365038dd588e483e46a53bdbd5cacd3b))
+* **ui:** a submenu on a phone covered its parent menu, and read-only access rows didn't line up ([#422](https://github.com/parallelworks/foundation/issues/422)) ([301dae6](https://github.com/parallelworks/foundation/commit/301dae61c87067278a669f111a5f9539c192fbed))
+* **ui:** menus and pickers open behind native dialogs, and avatar rings come out square ([#408](https://github.com/parallelworks/foundation/issues/408)) ([cc7ca8f](https://github.com/parallelworks/foundation/commit/cc7ca8faded8fd13b66e8aad3295a372cd1a2d65))
+
 ## [0.77.0](https://github.com/parallelworks/foundation/compare/ui-v0.76.0...ui-v0.77.0) (2026-10-20)
 
 
