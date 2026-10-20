@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.81.0](https://github.com/parallelworks/foundation/compare/ui-v0.80.0...ui-v0.81.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** a code block for pages, which Markdown's fenced code renders through ([#435](https://github.com/parallelworks/foundation/issues/435)) ([b1744f2](https://github.com/parallelworks/foundation/commit/b1744f23c32e51fd41065b149286de2631fe067d))
+* **ui:** a page header can leave the page's heading to its body ([#436](https://github.com/parallelworks/foundation/issues/436)) ([f37bbae](https://github.com/parallelworks/foundation/commit/f37bbae945fcc456c317f3c5fcfc794e06f9e6ee))
+* **ui:** a reader can change a held call's arguments before allowing it ([#433](https://github.com/parallelworks/foundation/issues/433)) ([330d7e0](https://github.com/parallelworks/foundation/commit/330d7e08993c39527dff5b63044d85cf60676162))
+* **ui:** dialogs read well on a phone, a long create title wraps, menu rows take a hint, cards take a tone, and pickers keep their width and words ([#434](https://github.com/parallelworks/foundation/issues/434)) ([d24dbfa](https://github.com/parallelworks/foundation/commit/d24dbfac85358f4d51d1088cf84d7459ac71f02f))
+
 ## [0.80.0](https://github.com/parallelworks/foundation/compare/ui-v0.79.0...ui-v0.80.0) (2026-10-20)
 
 
