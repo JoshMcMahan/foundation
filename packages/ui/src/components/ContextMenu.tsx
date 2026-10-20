@@ -91,12 +91,17 @@ export function useContextMenu() {
       if (next) {
         return
       }
-      // A press on the button that opened it is outside the menu, but that button's click
-      // closes the menu; closing here as well would have the click open it again.
+      // A press on the button that opened it is outside the menu, and focus leaves for it,
+      // but that button's click closes the menu; closing here as well would have the click
+      // open it again.
       const element = current.current?.element
-      const target = details.event?.target
+      const event = details.event
+      const target =
+        details.reason === 'focus-out' && event instanceof FocusEvent
+          ? event.relatedTarget
+          : event?.target
       if (
-        details.reason === 'outside-press' &&
+        (details.reason === 'outside-press' || details.reason === 'focus-out') &&
         element &&
         target instanceof Node &&
         element.contains(target)

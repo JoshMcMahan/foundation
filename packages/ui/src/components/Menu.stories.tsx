@@ -6,6 +6,7 @@ import {
   ChevronDownIcon,
   CopyIcon,
   DownloadIcon,
+  FolderIcon,
   GridIcon,
   HelpIcon,
   MoreIcon,
@@ -547,6 +548,13 @@ function SharedRow({ name }: { name: string }) {
       icon: <CopyIcon />,
       copy: { text: `https://example.com/${name}`, label: 'link' },
     },
+    {
+      label: 'Move to',
+      icon: <FolderIcon />,
+      items: ['Core', 'Platform', 'Research']
+        .filter((team) => team !== name)
+        .map((team) => ({ label: team, onClick: () => {} })),
+    },
     menuDivider,
     { label: 'Delete', icon: <TrashIcon />, destructive: true, onClick: () => {} },
   ]
@@ -562,7 +570,8 @@ function SharedRow({ name }: { name: string }) {
 }
 
 /** The one menu `UIProvider` mounts, opened through `useOpenMenu` with nothing to render. A
- *  second press on the more button closes it, and Shift+right-click keeps the browser's menu. */
+ *  second press on the more button closes it, and Shift+right-click keeps the browser's menu.
+ *  At phone width, Move to opens in the menu's place, with a row back. */
 export const SharedMenu: StoryObj = {
   render: () => (
     <ul className="w-64 space-y-0.5">

@@ -292,3 +292,45 @@ describe('the shared menu', () => {
     expect(await screen.findByRole('menuitem', { name: 'Here' })).toBeInTheDocument()
   })
 })
+
+describe('submenus at phone width', () => {
+  const realMatchMedia = window.matchMedia
+  beforeEach(() => {
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('max-width'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia
+  })
+  afterEach(() => {
+    window.matchMedia = realMatchMedia
+  })
+
+  it('opens a submenu in its parent’s place, with a row back', async () => {
+    const onBug = vi.fn()
+    render(
+      <Menu
+        items={[
+          { label: 'Rename', onClick: run },
+          { label: 'Labels', items: [{ label: 'Bug', onClick: onBug }] },
+        ]}
+      />,
+    )
+    const menu = await openMenu()
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Labels' }))
+    const back = await within(menu).findByRole('menuitem', { name: /^Back:\s*Labels$/ })
+    await waitFor(() => expect(back).toHaveFocus())
+    expect(within(menu).queryByRole('menuitem', { name: 'Rename' })).toBeNull()
+    // One popup: the submenu doesn't open a second one over the first.
+    expect(screen.getAllByRole('menu')).toHaveLength(1)
+
+    fireEvent.keyDown(back, { key: 'ArrowLeft' })
+    const labels = await within(menu).findByRole('menuitem', { name: 'Labels' })
+    await waitFor(() => expect(labels).toHaveFocus())
+
+    fireEvent.keyDown(labels, { key: 'ArrowRight' })
+    fireEvent.click(await within(menu).findByRole('menuitem', { name: 'Bug' }))
+    expect(onBug).toHaveBeenCalled()
+  })
+})

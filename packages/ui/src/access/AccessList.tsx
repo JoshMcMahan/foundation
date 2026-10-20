@@ -75,6 +75,21 @@ const aboutOf = (principal: AccessPrincipal, t: AccessStrings) =>
 const sourceOf = (holding: Holding) => holding.through?.name ?? holding.from ?? ''
 
 /** Stands where a remove button would, on a row that can't be removed here. */
+/** A role named where a row's role select would sit, so read-only rows line up with
+ *  editable ones: the select's width, border and padding, without the box. */
+function RoleText({ children }: { children: ReactNode }) {
+  return (
+    <span className="w-36 shrink-0 wrap-anywhere border border-transparent px-2 text-xs text-(--theme-muted-text-color)">
+      {children}
+    </span>
+  )
+}
+
+/** Holds the remove button's place on a row that has none. */
+function NoAction() {
+  return <span aria-hidden="true" className="size-7 shrink-0" />
+}
+
 function Locked() {
   return (
     <span className="flex size-7 items-center justify-center text-(--theme-muted-text-color)">
@@ -891,9 +906,12 @@ export function RuleRow({
           </span>
         </>
       )}
-      {roleName && (
-        <span className="shrink-0 text-xs text-(--theme-muted-text-color)">{roleName}</span>
-      )}
+      {roleName &&
+        (lead === 'tile' ? (
+          <RoleText>{roleName}</RoleText>
+        ) : (
+          <span className="shrink-0 text-xs text-(--theme-muted-text-color)">{roleName}</span>
+        ))}
       <Locked />
     </div>
   )
@@ -942,11 +960,9 @@ export function ByPrincipalSingle({ model, order, actions, t, sectionId }: ViewP
         {t.owner}
       </StatusBadge>
     ) : !role ? (
-      <span className="shrink-0 text-sm text-(--theme-muted-text-color)">
-        {inheritedRoles.map((r) => r.name).join(', ')}
-      </span>
+      <RoleText>{inheritedRoles.map((r) => r.name).join(', ')}</RoleText>
     ) : actions.readOnly ? (
-      <span className="shrink-0 text-sm text-(--theme-muted-text-color)">{role.name}</span>
+      <RoleText>{role.name}</RoleText>
     ) : (
       <Select<string>
         size="sm"
@@ -988,15 +1004,15 @@ export function ByPrincipalSingle({ model, order, actions, t, sectionId }: ViewP
           {control}
           {owner || !role ? (
             <Locked />
+          ) : actions.readOnly ? (
+            <NoAction />
           ) : (
-            !actions.readOnly && (
-              <RemoveButton
-                label={t.removeRole(name, role.name)}
-                saving={saving}
-                removal={removal}
-                onAsk={actions.onAskRemove}
-              />
-            )
+            <RemoveButton
+              label={t.removeRole(name, role.name)}
+              saving={saving}
+              removal={removal}
+              onAsk={actions.onAskRemove}
+            />
           )}
         </div>
         {failure && <div className="px-4 pb-3">{failure}</div>}

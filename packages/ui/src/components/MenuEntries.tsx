@@ -1,8 +1,17 @@
 import { Menu } from '@base-ui/react/menu'
-import { type ReactNode, useCallback, useState } from 'react'
+import {
+  createContext,
+  type KeyboardEvent,
+  type ReactNode,
+  use,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { cx } from '../cx'
 import { isDev } from '../dev'
-import { CheckIcon, ExternalLinkIcon } from '../icons'
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon } from '../icons'
 import { AppLink } from './AppLink'
 import { EmptyState } from './EmptyState'
 import { keyedByContent } from './keys'
@@ -15,9 +24,11 @@ import {
   MenuSeparator,
   MenuSubmenuTrigger,
 } from './Menu'
+import { useStrings } from './Provider'
 import { useQueryMatch } from './search'
 import { Tooltip } from './Tooltip'
 import { useCopy } from './useCopy'
+import { useNarrow } from './useNarrow'
 
 interface MenuActionBase {
   label: string
@@ -146,6 +157,9 @@ export function MenuFilter({
   )
 }
 
+// At phone width a submenu opens in its parent's place, since there's no room beside it.
+const DrillContext = createContext<((submenu: MenuSubmenu, row: HTMLElement) => void) | null>(null)
+
 /** A menu's rows, with its search field when it has one. */
 export function MenuEntries({
   entries,
@@ -156,6 +170,88 @@ export function MenuEntries({
   search?: MenuSearch | undefined
   /** The search's text, from the MenuFilter around the menu's root. */
   query?: string
+}) {
+  const narrow = useNarrow()
+  const [drilled, setDrilled] = useState<{ submenu: MenuSubmenu; popup: HTMLElement | null }>()
+  const [returnTo, setReturnTo] = useState<{ label: string; popup: HTMLElement | null }>()
+  // Back on the row the submenu opened from, once it's rendered again.
+  useLayoutEffect(() => {
+    if (!returnTo) {
+      return
+    }
+    const { label, popup } = returnTo
+    const frame = requestAnimationFrame(() => {
+      for (const row of popup?.querySelectorAll<HTMLElement>('[data-drill]') ?? []) {
+        if (row.getAttribute('data-drill') === label) {
+          row.focus()
+        }
+      }
+      setReturnTo(undefined)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [returnTo])
+  if (narrow && drilled) {
+    const back = () => {
+      setReturnTo({ label: drilled.submenu.label, popup: drilled.popup })
+      setDrilled(undefined)
+    }
+    return <DrilledSubmenu submenu={drilled.submenu} onBack={back} />
+  }
+  const drill = narrow
+    ? (submenu: MenuSubmenu, row: HTMLElement) =>
+        setDrilled({ submenu, popup: row.closest<HTMLElement>('[role="menu"]') })
+    : null
+  return (
+    <DrillContext value={drill}>
+      <SearchedEntries entries={entries} search={search} query={query} />
+    </DrillContext>
+  )
+}
+
+/** A submenu opened in its parent's place: a row back to the parent, then its rows. */
+function DrilledSubmenu({ submenu, onBack }: { submenu: MenuSubmenu; onBack: () => void }) {
+  const t = useStrings().common
+  const backRef = useRef<HTMLDivElement>(null)
+  // A frame on, once the menu has counted the new rows, so the arrow keys move on from it.
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => backRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft' && !(e.target instanceof HTMLInputElement)) {
+      e.preventDefault()
+      onBack()
+    }
+  }
+  return (
+    <div role="none" className="contents" onKeyDown={onKeyDown}>
+      <MenuItem ref={backRef} closeOnClick={false} onClick={onBack} className="font-medium">
+        <RowContent
+          icon={<ChevronLeftIcon aria-hidden="true" className="size-3 opacity-60" />}
+          label={
+            <>
+              <span className="sr-only">{t.back}: </span>
+              {submenu.label}
+            </>
+          }
+        />
+      </MenuItem>
+      <MenuSeparator />
+      <MenuFilter search={submenu.search}>
+        {(query) => <MenuEntries entries={submenu.items} search={submenu.search} query={query} />}
+      </MenuFilter>
+    </div>
+  )
+}
+
+function SearchedEntries({
+  entries,
+  search,
+  query,
+}: {
+  entries: MenuEntry[]
+  search: MenuSearch | undefined
+  query: string
 }) {
   const matches = useQueryMatch()
   if (!search) {
@@ -306,6 +402,45 @@ function RowContent({
 
 function SubmenuRow({ submenu }: { submenu: MenuSubmenu }) {
   const reason = submenu.disabled ? submenu.disabledReason : undefined
+  const drill = use(DrillContext)
+  if (drill) {
+    return (
+      <MenuItem
+        closeOnClick={false}
+        disabled={submenu.disabled}
+        data-drill={submenu.label}
+        aria-haspopup="menu"
+        aria-keyshortcuts={ariaKeyShortcut(submenu.shortcut)}
+        onClick={(e) => drill(submenu, e.currentTarget)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            drill(submenu, e.currentTarget)
+          }
+        }}
+      >
+        <RowContent
+          icon={submenu.icon}
+          label={
+            <>
+              {submenu.label}
+              {reason && <span className="sr-only">. {reason}</span>}
+            </>
+          }
+          end={
+            <>
+              {submenu.shortcut && (
+                <RowEnd className={shortcutClassName}>{submenu.shortcut}</RowEnd>
+              )}
+              <RowEnd>
+                <ChevronRightIcon className="size-3 opacity-60" />
+              </RowEnd>
+            </>
+          }
+        />
+      </MenuItem>
+    )
+  }
   return (
     <MenuFilter search={submenu.search}>
       {(query) => (

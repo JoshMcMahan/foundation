@@ -1,11 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import {
-  type ComponentPropsWithRef,
-  type ReactNode,
-  useId,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import { type ComponentPropsWithRef, type ReactNode, useId, useState } from 'react'
 import { Button } from '../../components/Button'
 import { panelItemClassName } from '../../components/floating'
 import {
@@ -19,6 +13,7 @@ import { Modal } from '../../components/Modal'
 import { SearchInput } from '../../components/SearchInput'
 import { Switch } from '../../components/Switch'
 import { useQueryMatch } from '../../components/search'
+import { useNarrow } from '../../components/useNarrow'
 import { cx } from '../../cx'
 import { AddIcon, AttachmentIcon, ConnectIcon, ToolsIcon } from '../../icons'
 import type { ChatToolOption } from '../adapter/types'
@@ -27,27 +22,6 @@ import { useChatConfig } from '../core/config'
 
 /** More tools than this leave the menu for a modal, where they can be searched. */
 export const TOOLS_IN_MENU = 6
-
-const NARROW = '(max-width: 639px)'
-
-function subscribeNarrow(onChange: () => void): () => void {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return () => {}
-  }
-  const media = window.matchMedia(NARROW)
-  media.addEventListener('change', onChange)
-  return () => media.removeEventListener('change', onChange)
-}
-
-const isNarrow = () =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia(NARROW).matches
-
-/** A phone has no room beside the menu for a submenu, and no hover to open one. */
-function useNarrow(): boolean {
-  return useSyncExternalStore(subscribeNarrow, isNarrow, () => false)
-}
 
 function PlusButton({
   open,

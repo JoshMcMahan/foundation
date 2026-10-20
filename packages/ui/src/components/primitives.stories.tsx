@@ -1019,7 +1019,8 @@ export const ConfirmModalError: StoryObj = {
 function UseConfirmDemo() {
   const { confirm, dialog } = useConfirm()
   const [members, setMembers] = useState(['Ada Okafor', 'Lin Zhou'])
-  const [tries, setTries] = useState(0)
+  // Counted outside render, so a retry from the same dialog sees the first try.
+  const tries = useRef(0)
   return (
     <>
       <ul className="w-72 space-y-1 text-sm">
@@ -1041,8 +1042,8 @@ function UseConfirmDemo() {
                       // The first try fails, to show the error in place.
                       onConfirm: async () => {
                         await new Promise((resolve) => setTimeout(resolve, 400))
-                        setTries((n) => n + 1)
-                        if (tries === 0) {
+                        tries.current += 1
+                        if (tries.current === 1) {
                           throw new Error(`${name} owns a team. Hand it over first.`)
                         }
                         setMembers((all) => all.filter((m) => m !== name))
