@@ -5,6 +5,31 @@ export {
   type ToolbarItem,
 } from './ActionToolbar'
 export {
+  type ActiveFilter,
+  applyFilterList,
+  DATE_PRESETS,
+  type DatePreset,
+  dateFilterRange,
+  decodeFilters,
+  encodeFilters,
+  type FilterField,
+  type FilterKind,
+  type FilterOperator,
+  type FilterOption,
+  type FilterRowValue,
+  filterParamKeys,
+  matchFilter,
+  sameFilters,
+  withFilterParams,
+} from './filterModel'
+export {
+  AddFilterMenu,
+  type AddFilterMenuProps,
+  FilterChip,
+  ListFilterBar,
+  type ListFilterBarProps,
+} from './ListFilterBar'
+export {
   ListColumns,
   ListPage,
   type ListPageProps,
@@ -59,3 +84,9 @@ export {
   UserHoverCard,
   type UserHoverCardProps,
 } from './UserHoverCard'
+export {
+  type FilterStore,
+  type ListFilters,
+  type ListFiltersConfig,
+  useListFilters,
+} from './useListFilters'

@@ -51,7 +51,12 @@ export {
   CreateModalSwitch,
 } from './components/CreateModal'
 export { categoryClasses, categoryOf } from './components/category'
-export { DatePicker, type DatePickerProps } from './components/DatePicker'
+export {
+  Calendar,
+  type CalendarProps,
+  DatePicker,
+  type DatePickerProps,
+} from './components/DatePicker'
 export {
   DescriptionListGroup,
   DescriptionListItem,

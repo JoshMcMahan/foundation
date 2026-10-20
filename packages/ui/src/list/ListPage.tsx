@@ -13,6 +13,7 @@ import { useNavigation } from '../components/Provider'
 import { type SortDirection, Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
+import { ListFilterBar } from './ListFilterBar'
 import {
   HEADERS_OFF,
   ListActionsHeader,
@@ -62,16 +63,29 @@ export interface ListPageProps {
   /** The list's search, filters and view controls, above the rows. The page's
    *  trail and actions go in its `PageHeader`. */
   toolbar?: ReactNode
+  /** Under the toolbar: the chips of the list's active filters. By default the view's own
+   *  `ListFilterBar`, shown while a filter is on; pass one to add a trailing slot, such as Save
+   *  view, or `null` to leave it out. */
+  filterBar?: ReactNode
   /** Omit on pages without a list view — rows show all actions by default. */
   view?: ListViewChrome | undefined
   children: ReactNode
 }
 
 /** A list filling the page: its toolbar stays put while only the rows scroll. */
-export function ListPage({ bleed = false, toolbar, view, children }: ListPageProps) {
+export function ListPage({ bleed = false, toolbar, filterBar, view, children }: ListPageProps) {
+  const bar =
+    filterBar === undefined ? (
+      view?.filterState && view.filterState.fields.length > 0 ? (
+        <ListFilterBar filters={view.filterState} />
+      ) : null
+    ) : (
+      filterBar
+    )
   return (
     <div className={cx('flex h-full min-h-0 flex-col', bleed && '-m-4')}>
       {toolbar && <div className="shrink-0 px-4">{toolbar}</div>}
+      {bar && <div className="shrink-0 px-4">{bar}</div>}
       {/* The list body is the @container priority columns measure to auto-hide. */}
       <div className="relative @container min-h-0 flex-1 overflow-auto">
         <ListRowActionsProvider view={view}>{children}</ListRowActionsProvider>

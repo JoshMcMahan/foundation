@@ -12,7 +12,9 @@ import { useQueryMatch } from '../components/search'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ChevronDownIcon, ChevronUpIcon, DisplayIcon, FilterIcon } from '../icons'
+import { AddFilterMenu } from './ListFilterBar'
 import type { FilterFacet, ListView } from './listView'
+import type { ListFilters } from './useListFilters'
 
 /** A toggle pill, for the Display panel's column and pinned-action pickers. */
 const pillClassName =
@@ -192,27 +194,43 @@ function OptionSelect({
   )
 }
 
-/** The Filter button's menu: a submenu for each facet, whose options toggle
- *  without closing it. F opens it. */
-export function ListFilterMenu<T>({ view, label }: { view: ListView<T>; label?: string }) {
-  const { common } = useStrings()
-  if (view.facets.length === 0) {
+/** The toolbar's Filter button, which F presses. Beside a chip row (`ListFilterBar`, which
+ *  `ListPage` shows), it opens the Add filter menu: picking a field adds its chip and opens its
+ *  value picker there. Without one, it keeps a submenu of values for each facet. */
+export function ListFilterMenu<T>({
+  view,
+  filters,
+  label,
+}: {
+  view?: ListView<T> | undefined
+  /** For a page whose filters come from `useListFilters` rather than a list view. */
+  filters?: ListFilters | undefined
+  label?: string
+}) {
+  const { common, filters: t } = useStrings()
+  const state = filters ?? view?.filterState
+  if (!state || state.fields.length === 0) {
     return null
   }
-  const active = view.activeFilterCount > 0
+  const active = state.count > 0
+  const button = (
+    <IconButton
+      variant="outline"
+      icon={<FilterIcon />}
+      label={label ?? t.filterButton(state.count)}
+      dot={active}
+      shortcut="f"
+    />
+  )
+  if (state.barMounted) {
+    return <AddFilterMenu filters={state} trigger={button} align="end" />
+  }
+  if (!view || view.facets.length === 0) {
+    return null
+  }
   return (
     <Menu.Root>
-      <Menu.Trigger
-        render={
-          <IconButton
-            variant="outline"
-            icon={<FilterIcon />}
-            label={label ?? common.filter}
-            dot={active}
-            shortcut="f"
-          />
-        }
-      />
+      <Menu.Trigger render={button} />
       <MenuPopup align="end" className="w-56">
         <div className="flex items-center justify-between px-3 py-1">
           <span className="text-[11px] font-medium uppercase tracking-wide text-(--theme-muted-text-color)">

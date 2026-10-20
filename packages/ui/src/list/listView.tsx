@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 import { usePersistedState, useStrings } from '../components/Provider'
+import type { ActiveFilter, FilterField } from './filterModel'
 import { actionsColumnWidth } from './ListTable'
+import { type FilterStore, type ListFilters, useListFilters } from './useListFilters'
 
 /** A toggleable column. Rendering stays in the page's row component, gated by
  * {@link ListView.isVisible}; this is just the header metadata + visibility. */
@@ -65,7 +67,9 @@ export interface OrderByOption<T> {
 
 type OrderDir = 'asc' | 'desc'
 
-/** matches decides whether a row passes given the user's selected values for this facet. */
+/** A multi-choice filter: shorthand for an `enum` {@link FilterField} offering "is" and "is not".
+ *  `matches` decides whether a row passes given the values chosen ("is not" passes the rows it
+ *  turns away). */
 export interface FilterFacet<T> {
   key: string
   label: string
@@ -92,6 +96,16 @@ export interface ListViewConfig<T> {
   orderBys?: OrderByOption<T>[]
   defaultOrderBy?: string
   facets?: FilterFacet<T>[]
+  /** Filters beyond facets: people, dates, text, yes-or-no, with conditions. They follow the
+   *  facets in the Filter menu. */
+  filterFields?: FilterField<T>[] | undefined
+  /** What the page shows before the reader changes anything; Reset returns to them. */
+  defaultFilters?: ActiveFilter[] | undefined
+  /** Filters held outside the list too, such as the URL: its filters win while it has any, and
+   *  changes go to both. See `decodeFilters` and `encodeFilters`. */
+  filterStore?: FilterStore | undefined
+  /** False leaves remembering the filters to `filterStore` alone. */
+  rememberFilters?: boolean | undefined
   actions?: ActionDef[]
   /** Explicit pinned-button count when not using actions+isPinned; sizes the actions column. */
   actionCount?: number
@@ -124,6 +138,8 @@ export interface ListViewChrome {
   /** Per visible column, whether it stacks under the first on a narrow
    * container ({@link ColumnDef.stack}); `ListRow` reads entry `i`. */
   columnStacks: boolean[]
+  /** The list's filters, which `ListPage` shows as a row of chips under its toolbar. */
+  filterState?: ListFilters | undefined
 }
 
 export interface ListView<T> extends ListViewChrome {
@@ -151,8 +167,11 @@ export interface ListView<T> extends ListViewChrome {
   sortBy: (value: string) => void
   applyOrder: (rows: T[]) => T[]
   facets: FilterFacet<T>[]
+  filterState: ListFilters
+  /** The values of each filter that reads "is"; `filterState.active` has every filter. */
   filters: Record<string, string[]>
   setFacetValues: (key: string, values: string[]) => void
+  /** Empties every filter but the required ones. */
   clearFilters: () => void
   activeFilterCount: number
   applyFilters: (rows: T[]) => T[]
@@ -184,6 +203,10 @@ export function useListView<T>({
   orderBys = [],
   defaultOrderBy,
   facets = [],
+  filterFields,
+  defaultFilters,
+  filterStore,
+  rememberFilters = true,
   actions = [],
   actionCount,
   defaultShowColumnHeaders = true,
@@ -266,38 +289,27 @@ export function useListView<T>({
     defaultOrderByValue,
   )
   const [orderDir, setOrderDir] = usePersistedState<OrderDir>(`${storageKey}:orderDir`, 'asc')
-  const [localFilters, setLocalFilters] = usePersistedState<Record<string, string[]>>(
-    `${storageKey}:filters`,
-    {},
+  const fields = useMemo<FilterField<T>[]>(
+    () => [...facets.map(facetField), ...(filterFields ?? [])],
+    [facets, filterFields],
   )
-  const [sharedFilters, setSharedFilters] = usePersistedState<Record<string, string[]>>(
-    `${sharedFiltersKey ?? storageKey}:sharedFilters`,
-    {},
-  )
-
-  const sharedKeys = useMemo(
-    () => new Set(facets.filter((f) => f.shared).map((f) => f.key)),
-    [facets],
-  )
-
+  const filterState = useListFilters<T>({
+    storageKey,
+    sharedFiltersKey,
+    fields,
+    defaultFilters,
+    store: filterStore,
+    remember: rememberFilters,
+  })
   const filters = useMemo(() => {
-    if (sharedKeys.size === 0) {
-      return localFilters
-    }
-    const merged: Record<string, string[]> = {}
-    for (const [key, values] of Object.entries(localFilters)) {
-      if (!sharedKeys.has(key)) {
-        merged[key] = values
+    const out: Record<string, string[]> = {}
+    for (const f of filterState.active) {
+      if (f.op === 'is') {
+        out[f.field] = [...f.values]
       }
     }
-    for (const key of sharedKeys) {
-      const values = sharedFilters[key]
-      if (values?.length) {
-        merged[key] = values
-      }
-    }
-    return merged
-  }, [localFilters, sharedFilters, sharedKeys])
+    return out
+  }, [filterState.active])
 
   const pinnedCount =
     actionCount ?? pinnedKeys.filter((key) => actions.some((action) => action.key === key)).length
@@ -330,38 +342,20 @@ export function useListView<T>({
     [setHiddenKeys],
   )
 
+  const { add, update, remove } = filterState
   const setFacetValues = useCallback(
     (key: string, values: string[]) => {
-      const update = (prev: Record<string, string[]>) => {
-        const next = { ...prev }
-        if (values.length) {
-          next[key] = values
-        } else {
-          delete next[key]
-        }
-        return next
-      }
-      if (sharedKeys.has(key)) {
-        setSharedFilters(update)
+      if (values.length === 0) {
+        remove(key)
+      } else if (filterState.active.some((f) => f.field === key)) {
+        update(key, { op: 'is', values })
       } else {
-        setLocalFilters(update)
+        add(key, 'is', values)
       }
     },
-    [setLocalFilters, setSharedFilters, sharedKeys],
+    [add, update, remove, filterState.active],
   )
-
-  const clearFilters = useCallback(() => {
-    setLocalFilters({})
-    if (sharedKeys.size > 0) {
-      setSharedFilters((prev) => {
-        const next = { ...prev }
-        for (const key of sharedKeys) {
-          delete next[key]
-        }
-        return next
-      })
-    }
-  }, [setLocalFilters, setSharedFilters, sharedKeys])
+  const clearFilters = filterState.clear
 
   const isPinned = useCallback((key: string) => pinnedKeys.includes(key), [pinnedKeys])
   const togglePinned = useCallback(
@@ -455,21 +449,8 @@ export function useListView<T>({
     defaultShowActions,
   ])
 
-  const activeFilterCount = useMemo(
-    () => Object.values(filters).filter((v) => v && v.length > 0).length,
-    [filters],
-  )
-
-  const applyFilters = useCallback(
-    (rows: T[]) =>
-      rows.filter((row) =>
-        facets.every((f) => {
-          const selected = filters[f.key]
-          return !selected || selected.length === 0 ? true : f.matches(row, selected)
-        }),
-      ),
-    [facets, filters],
-  )
+  const activeFilterCount = filterState.count
+  const applyFilters = useCallback((rows: T[]) => filterState.apply(rows), [filterState.apply])
 
   return {
     columns,
@@ -491,6 +472,7 @@ export function useListView<T>({
     sortBy,
     applyOrder,
     facets,
+    filterState,
     filters,
     setFacetValues,
     clearFilters,
@@ -507,5 +489,21 @@ export function useListView<T>({
     toggleAlwaysShowActions,
     isDisplayDefault,
     resetDisplay,
+  }
+}
+
+/** A facet as the field it is shorthand for. */
+function facetField<T>(facet: FilterFacet<T>): FilterField<T> {
+  return {
+    key: facet.key,
+    label: facet.label,
+    kind: 'enum',
+    options: facet.options,
+    searchable: facet.searchable,
+    shared: facet.shared,
+    matches: (row, filter) =>
+      filter.op === 'isNot'
+        ? !facet.matches(row, [...filter.values])
+        : facet.matches(row, [...filter.values]),
   }
 }

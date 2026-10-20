@@ -7,6 +7,7 @@ import type { WorkflowAction, WorkflowEditing } from '../editing'
 import type { WorkflowEngine } from '../engine'
 import type { GraphEditorText, InputsEditorText } from '../graph/editorStrings'
 import type { RunLink } from '../graph/types'
+import type { FilterOperator } from '../list/filterModel'
 import { safeUrl } from '../safeUrl'
 import { useLocalPersistedState } from './persistedState'
 import { Toaster } from './Toast'
@@ -586,10 +587,74 @@ export interface UIStrings {
     pagination: string
     removeSearchTerm: (term: string) => string
   }
+  /** The chip row of a list's active filters, its Filter menu and its pickers. Field and option
+   *  labels come from the host's fields, already translated. */
+  filters: {
+    /** The button at the end of the chip row that adds one, and the Filter menu's heading. */
+    addFilter: string
+    /** Names the Filter menu's search over the fields. */
+    searchFields: string
+    /** Names the chip row. */
+    activeFilters: string
+    /** The toolbar's Filter button, saying how many filters are on, since its dot is only seen. */
+    filterButton: (count: number) => string
+    /** A required or pinned filter's value while it has none. */
+    any: string
+    /** The value part of a chip just added, until a value is chosen. */
+    pending: string
+    /** A condition, worded for how many values follow it: "is" / "is any of". */
+    operator: (op: FilterOperator, count: number) => string
+    /** After the first values shown in a chip: "+3". */
+    more: (count: number) => string
+    /** At phone width, the chip that opens every filter in a sheet: "+3 filters". */
+    overflow: (count: number) => string
+    /** The sheet's title. */
+    sheetTitle: string
+    /** Names a chip's remove button. */
+    remove: (field: string) => string
+    /** Names a chip, read as a sentence. */
+    chip: (field: string, operator: string, values: string) => string
+    /** Names a chip's field part, which picks another field. */
+    changeField: (field: string) => string
+    /** Names a chip's condition part. */
+    changeOperator: (operator: string) => string
+    /** Names a chip's value part. */
+    changeValue: (values: string) => string
+    /** Joins the values a chip lists. */
+    list: (values: string[]) => string
+    /** A relative date preset: `today`, `-7d`, `-30d`, `-90d` or `month`; any `-Nd`. */
+    datePreset: (preset: string) => string
+    /** The date picker's entry that picks days on a calendar. */
+    customDate: string
+    /** Two days a filter spans. */
+    between: (from: string, to: string) => string
+    /** A day in a chip; by default without the year while it is this year. */
+    formatDate: (date: Date) => string
+    /** The text picker's hint. */
+    textPlaceholder: string
+    /** A yes-or-no filter's values. */
+    yes: string
+    no: string
+  }
 }
 
 /** What a host passes to translate the strings: any group, any string in it, at any depth.
  *  A string it leaves out stays in English. */
+const OPERATOR_WORDS: Record<FilterOperator, (count: number) => string> = {
+  is: (n) => (n > 1 ? 'is any of' : 'is'),
+  isNot: (n) => (n > 1 ? 'is none of' : 'is not'),
+  includesAll: (n) => (n > 1 ? 'includes all of' : 'includes'),
+  after: () => 'is after',
+  before: () => 'is before',
+  between: () => 'is between',
+  contains: () => 'contains',
+  notContains: () => 'does not contain',
+  isSet: () => 'is set',
+  isNotSet: () => 'is not set',
+}
+const SHORT_DAY = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+const MEDIUM_DAY = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+
 export type UIStringOverrides = Overrides<UIStrings>
 
 type Overrides<T> = {
@@ -1308,6 +1373,41 @@ const DEFAULTS: UIProviderValue = {
       paginationNext: 'Next',
       pagination: 'Pagination',
       removeSearchTerm: (term) => `Remove filter ${term}`,
+    },
+    filters: {
+      addFilter: 'Filter',
+      searchFields: 'Filter by…',
+      activeFilters: 'Active filters',
+      filterButton: (count) => (count > 0 ? `Filter, ${count} on` : 'Filter'),
+      any: 'Any',
+      pending: 'Choose…',
+      operator: (op, count) => OPERATOR_WORDS[op](count),
+      more: (count) => `+${count}`,
+      overflow: (count) => `+${count} ${count === 1 ? 'filter' : 'filters'}`,
+      sheetTitle: 'Filters',
+      remove: (field) => `Remove ${field} filter`,
+      chip: (field, operator, values) => [field, operator, values].filter(Boolean).join(' '),
+      changeField: (field) => `Field: ${field}`,
+      changeOperator: (operator) => `Condition: ${operator}`,
+      changeValue: (values) => `Value: ${values}`,
+      list: (values) => values.join(', '),
+      datePreset: (preset) => {
+        const days = preset.match(/^-(\d+)d$/)?.[1]
+        return preset === 'today'
+          ? 'Today'
+          : preset === 'month'
+            ? 'This month'
+            : days
+              ? `Last ${days} days`
+              : preset
+      },
+      customDate: 'Custom…',
+      between: (from, to) => `${from} – ${to}`,
+      formatDate: (date) =>
+        (date.getFullYear() === new Date().getFullYear() ? SHORT_DAY : MEDIUM_DAY).format(date),
+      textPlaceholder: 'Type, then press Enter',
+      yes: 'Yes',
+      no: 'No',
     },
   },
   navigation: {

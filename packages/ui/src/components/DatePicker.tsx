@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
-import { type ClassNames, DayPicker, type Matcher } from '@daypicker/react'
+import { type ClassNames, type DateRange, DayPicker, type Matcher } from '@daypicker/react'
 import { useState } from 'react'
 import { cx } from '../cx'
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons'
@@ -265,5 +265,81 @@ export function DatePicker({
         />
       )}
     </div>
+  )
+}
+
+export type CalendarProps = {
+  /** The earliest and latest days that can be chosen. */
+  min?: Date | undefined
+  max?: Date | undefined
+  /** The month it opens on, when it differs from the chosen day's. */
+  defaultMonth?: Date | undefined
+  /** Moves focus to the chosen day, or today, as it appears. */
+  autoFocus?: boolean | undefined
+} & (
+  | { mode: 'single'; selected: Date | undefined; onSelect: (day: Date | undefined) => void }
+  | {
+      /** Two days, both included; the second click ends the range. */
+      mode: 'range'
+      selected: DateRange | undefined
+      onSelect: (range: DateRange | undefined) => void
+    }
+)
+
+const rangeClassNames: Partial<ClassNames> = {
+  ...calendarClassNames,
+  selected: '',
+  range_start:
+    '[&>button]:bg-(--theme-accent) [&>button]:text-(--theme-accent-text) [&>button]:hover:bg-(--theme-accent)',
+  range_end:
+    '[&>button]:bg-(--theme-accent) [&>button]:text-(--theme-accent-text) [&>button]:hover:bg-(--theme-accent)',
+  range_middle: '[&>button]:bg-(--theme-accent-subtle) [&>button]:rounded-none',
+}
+
+/** The month grid DatePicker opens, for a panel that holds a calendar in place, such as a
+ *  date filter's picker. Months, weekdays and labels follow the reader's locale. */
+export function Calendar({ min, max, defaultMonth, autoFocus = false, ...props }: CalendarProps) {
+  const t = useStrings().datePicker
+  const [weekStartsOn] = useState(firstWeekday)
+  const outOfRange: Matcher[] = [
+    ...(min ? [{ before: min }] : []),
+    ...(max ? [{ after: max }] : []),
+  ]
+  const opensOn =
+    defaultMonth ?? (props.mode === 'single' ? props.selected : props.selected?.from) ?? min
+  return (
+    <DayPicker
+      {...(props.mode === 'single'
+        ? { mode: 'single', selected: props.selected, onSelect: props.onSelect }
+        : { mode: 'range', selected: props.selected, onSelect: props.onSelect })}
+      {...(opensOn && { defaultMonth: opensOn })}
+      {...(min && { startMonth: min })}
+      {...(max && { endMonth: max })}
+      disabled={outOfRange}
+      weekStartsOn={weekStartsOn}
+      autoFocus={autoFocus}
+      showOutsideDays
+      fixedWeeks
+      classNames={props.mode === 'range' ? rangeClassNames : calendarClassNames}
+      formatters={{
+        formatCaption: (month) => caption.format(month),
+        formatWeekdayName: (date) => weekday.format(date),
+      }}
+      labels={{
+        labelDayButton: (date) => longDay.format(date),
+        labelPrevious: () => t.previousMonth,
+        labelNext: () => t.nextMonth,
+        labelGrid: (month) => caption.format(month),
+        labelWeekday: (date) => longWeekday.format(date),
+      }}
+      components={{
+        Chevron: ({ orientation }) =>
+          orientation === 'left' ? (
+            <ChevronLeftIcon aria-hidden="true" />
+          ) : (
+            <ChevronRightIcon aria-hidden="true" />
+          ),
+      }}
+    />
   )
 }
