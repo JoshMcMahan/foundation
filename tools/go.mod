@@ -53,7 +53,7 @@ require (
 	github.com/charithe/durationcheck v0.0.11 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260811164956-006e29f97886 // indirect
-	github.com/charmbracelet/x/ansi v0.11.8 // indirect
+	github.com/charmbracelet/x/ansi v0.11.9 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/matoous/godox v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mgechev/revive v1.17.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -207,12 +207,12 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
-	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
