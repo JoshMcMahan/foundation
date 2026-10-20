@@ -2,7 +2,14 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRowMenuActive } from '../list/rowMenu'
-import { type OpenMenu, type OpenMenuOptions, useContextMenu } from './ContextMenu'
+import {
+  ContextMenuProvider,
+  type OpenMenu,
+  type OpenMenuOptions,
+  useCloseMenu,
+  useContextMenu,
+  useOpenMenu,
+} from './ContextMenu'
 import type { MenuAction, MenuEntry, MenuSearch } from './MenuEntries'
 import { toast } from './Toast'
 
@@ -249,5 +256,56 @@ describe('the context menu', () => {
     expect(opener).toHaveAttribute('data-active', 'true')
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' })
     await waitFor(() => expect(opener).toHaveAttribute('data-active', 'false'))
+  })
+
+  it.each([
+    ['wheel', () => fireEvent.wheel(document.body)],
+    ['blur', () => fireEvent.blur(window)],
+    ['resize', () => fireEvent(window, new Event('resize'))],
+  ] as const)('closes on %s when asked to, and tells its opener', async (trigger, happen) => {
+    const onClose = vi.fn()
+    render(<Menu items={[action('Copy')]} options={{ closeOn: [trigger], onClose }} />)
+    open()
+    await menu()
+    act(happen)
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+  })
+
+  it('stays open on a wheel over the menu itself, and on what it wasn’t asked to close on', async () => {
+    render(<Menu items={[action('Copy')]} options={{ closeOn: ['wheel'] }} />)
+    open()
+    const opened = await menu()
+    fireEvent.wheel(opened)
+    act(() => {
+      fireEvent(window, new Event('resize'))
+    })
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+  })
+
+  it('closes the shared menu when its host says', async () => {
+    function Host() {
+      const openMenu = useOpenMenu()
+      const closeMenu = useCloseMenu()
+      return (
+        <>
+          <button type="button" onClick={(e) => openMenu(e.currentTarget, [action('Copy')])}>
+            Open
+          </button>
+          <button type="button" onClick={closeMenu}>
+            Switch pane
+          </button>
+        </>
+      )
+    }
+    render(
+      <ContextMenuProvider>
+        <Host />
+      </ContextMenuProvider>,
+    )
+    open()
+    await menu()
+    act(() => screen.getByRole('button', { name: 'Switch pane', hidden: true }).click())
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 })

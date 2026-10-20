@@ -147,12 +147,15 @@ export const ButtonTrigger: StoryObj<FieldArgs> = {
   render: (args) => <ButtonTriggerDemo {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: 'Cluster' }))
+    // Named by its label and then what it holds.
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Cluster/ }))
     await userEvent.type(await screen.findByPlaceholderText('Pick one'), 'beta')
     await userEvent.click(await screen.findByRole('option', { name: /beta-environment.*-1/ }))
-    await expect(canvas.getByRole('combobox', { name: 'Cluster' })).toHaveTextContent(
-      'beta-environment-with-a-long-descriptive-name-1',
-    )
+    await expect(
+      canvas.getByRole('combobox', {
+        name: 'Cluster beta-environment-with-a-long-descriptive-name-1',
+      }),
+    ).toHaveTextContent('beta-environment-with-a-long-descriptive-name-1')
   },
 }
 

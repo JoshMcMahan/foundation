@@ -43,19 +43,23 @@ const setup = (props: Partial<Parameters<typeof CreateModalSelect>[0]> = {}) => 
 }
 
 const open = () => {
-  fireEvent.click(screen.getByRole('combobox', { name: 'Target' }))
+  fireEvent.click(screen.getByRole('combobox', { name: /^Target/ }))
   return screen.findByRole('listbox')
 }
 
 describe('CreateModalSelect', () => {
   it('shows the selection on the pill', () => {
     setup()
-    expect(screen.getByRole('combobox', { name: 'Target' })).toHaveTextContent('User Workspace')
+    expect(screen.getByRole('combobox', { name: 'Target User Workspace' })).toHaveTextContent(
+      'User Workspace',
+    )
   })
 
   it('keeps a value the list no longer offers on the pill', () => {
     setup({ value: 'stale-region' })
-    expect(screen.getByRole('combobox', { name: 'Target' })).toHaveTextContent('stale-region')
+    expect(screen.getByRole('combobox', { name: 'Target stale-region' })).toHaveTextContent(
+      'stale-region',
+    )
   })
 
   it('lists every group and picks the clicked item', async () => {

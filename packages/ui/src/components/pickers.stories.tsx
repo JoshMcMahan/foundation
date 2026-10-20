@@ -302,7 +302,7 @@ export const PickerChips: StoryObj<{ align: 'start' | 'end' }> = {
   render: (args) => <PickerChipsDemo {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: 'Status' }))
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Status/ }))
     await waitFor(() =>
       expect(screen.getByRole('option', { name: /In progress/ })).toHaveAttribute(
         'data-highlighted',
@@ -310,7 +310,10 @@ export const PickerChips: StoryObj<{ align: 'start' | 'end' }> = {
     )
     await waitFor(() => expect(screen.getByPlaceholderText('Change status…')).toHaveFocus())
     await userEvent.keyboard('rev{Enter}')
-    await expect(canvas.getByRole('combobox', { name: 'Status' })).toHaveTextContent('In review')
+    // Named by its label and then what it now holds.
+    await expect(canvas.getByRole('combobox', { name: 'Status In review' })).toHaveTextContent(
+      'In review',
+    )
   },
 }
 

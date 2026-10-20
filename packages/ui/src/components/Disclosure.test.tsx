@@ -83,4 +83,35 @@ describe('Disclosure rows', () => {
     fireEvent.contextMenu(container.firstElementChild as Element)
     expect(onContextMenu).toHaveBeenCalledOnce()
   })
+
+  it('holds controls on the summary’s line outside the toggle, the rest of the line toggling', async () => {
+    const onLogs = vi.fn()
+    const { container } = render(
+      <Disclosure
+        summary="gpu-east"
+        summaryControls={
+          <button type="button" onClick={onLogs}>
+            Couldn’t connect
+          </button>
+        }
+        actions={<button type="button">Stop</button>}
+      >
+        detail
+      </Disclosure>,
+    )
+    const toggle = screen.getByRole('button', { name: 'gpu-east' })
+    const control = screen.getByRole('button', { name: 'Couldn’t connect' })
+    expect(toggle).not.toContainElement(control)
+    expect(control.closest('button button')).toBeNull()
+    // Toggle, then the control, then the actions, in Tab order.
+    const buttons = screen.getAllByRole('button').map((b) => b.textContent)
+    expect(buttons).toEqual(['gpu-east', 'Couldn’t connect', 'Stop'])
+    fireEvent.click(control)
+    expect(onLogs).toHaveBeenCalledOnce()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    const rest = container.querySelector('[aria-hidden="true"].flex-1') as HTMLElement
+    fireEvent.click(rest)
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'true'))
+    expect(screen.getByText('detail')).toBeInTheDocument()
+  })
 })

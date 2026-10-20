@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
-import { MoreIcon, StopIcon } from '../icons'
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test'
+import { MoreIcon, StopIcon, WarningIcon } from '../icons'
 import { Button } from './Button'
 import { Disclosure } from './Disclosure'
 import { IconButton } from './IconButton'
@@ -526,6 +526,62 @@ export const DisclosureRow: StoryObj<{ chevron: boolean }> = {
       canvas.getByRole('button', { name: 'Stop gpu-cluster-east' }),
     )
     await userEvent.click(toggle)
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'true'))
+  },
+}
+
+/** Controls that read as part of the summary, on its line right after it, such as a button
+ *  that says why a row failed: outside the toggle, each its own stop for Tab, while a click on
+ *  the rest of the line still opens the row. */
+export const DisclosureRowWithControls: StoryObj = {
+  render: () => (
+    <div className="max-w-xl rounded-xl border theme-border text-sm">
+      {[
+        { name: 'gpu-cluster-east', failed: true },
+        { name: 'cpu-batch-west', failed: false },
+      ].map(({ name, failed }) => (
+        <Disclosure
+          key={name}
+          chevron={false}
+          className="border-b theme-border px-3 py-2 last:border-b-0"
+          summaryClassName="items-center"
+          summary={
+            <>
+              <StatusDot variant={failed ? 'error' : 'success'} />
+              <span className="min-w-0 truncate font-medium">{name}</span>
+            </>
+          }
+          summaryControls={
+            failed ? (
+              <IconButton
+                size="xs"
+                label={`Couldn’t connect to ${name}. View logs`}
+                icon={<WarningIcon className="text-(--theme-error)" />}
+              />
+            ) : undefined
+          }
+          actions={
+            <>
+              <span className="me-2 theme-muted-text">4 nodes</span>
+              <IconButton label={`More actions for ${name}`} icon={<MoreIcon />} />
+            </>
+          }
+          panelClassName="pt-2 ps-4"
+        >
+          <p className="m-0 theme-muted-text">Started 3 hours ago in us-east-1.</p>
+        </Disclosure>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const toggle = canvas.getByRole('button', { name: 'gpu-cluster-east' })
+    const warning = canvas.getByRole('button', { name: /Couldn’t connect to gpu-cluster-east/ })
+    await expect(toggle).not.toContainElement(warning)
+    // Clicks as a mouse makes them, without the focus ring a scripted click leaves.
+    fireEvent.click(warning)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
     await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'true'))
   },
 }

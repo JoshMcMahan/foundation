@@ -19,7 +19,7 @@ async function openPicker(adapter: ChatAdapter, targetSession?: string) {
       <ModelSelector targetSession={targetSession} />
     </StoryChat>,
   )
-  const trigger = await screen.findByRole('combobox', { name: 'Model' })
+  const trigger = await screen.findByRole('combobox', { name: /^Model/ })
   await vi.waitFor(() => expect(trigger).toBeEnabled())
   fireEvent.click(trigger)
   return screen.findByRole('listbox')
@@ -53,7 +53,7 @@ describe('ModelSelector', () => {
         <ModelSelector model={{ value: null, onChange }} />
       </StoryChat>,
     )
-    const trigger = await screen.findByRole('combobox', { name: 'Model' })
+    const trigger = await screen.findByRole('combobox', { name: /^Model/ })
     await vi.waitFor(() => expect(trigger).toBeEnabled())
     fireEvent.click(trigger)
     const option = (await within(await screen.findByRole('listbox')).findAllByRole('option'))[0]!

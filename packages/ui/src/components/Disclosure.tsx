@@ -1,5 +1,5 @@
 import { Collapsible } from '@base-ui/react/collapsible'
-import type { MouseEventHandler, ReactNode } from 'react'
+import { type MouseEventHandler, type ReactNode, useRef } from 'react'
 import { cx } from '../cx'
 import { ChevronRightIcon } from '../icons'
 
@@ -29,6 +29,10 @@ export interface DisclosureProps {
   /** Controls beside the summary, outside the toggle, so a row can hold buttons without
    *  nesting them in it. */
   actions?: ReactNode
+  /** Controls that read as part of the summary, right after it on its line, such as a button
+   *  that says why a row failed. They sit outside the toggle, so no button holds another and
+   *  each is its own stop for Tab; a click on the rest of the line still toggles. */
+  summaryControls?: ReactNode
   /** On the whole disclosure, summary and detail, such as a row's own menu. */
   onContextMenu?: MouseEventHandler<HTMLDivElement> | undefined
   children: ReactNode
@@ -49,11 +53,16 @@ export function Disclosure({
   panelClassName,
   chevron = true,
   actions,
+  summaryControls,
   onContextMenu,
   children,
 }: DisclosureProps) {
+  const trigger = useRef<HTMLButtonElement>(null)
+  const hasControls =
+    summaryControls !== undefined && summaryControls !== null && summaryControls !== false
   const toggle = (
     <Collapsible.Trigger
+      ref={trigger}
       className={cx(
         'group/disclosure flex min-w-0 items-start gap-2 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
         disabled ? 'cursor-default' : 'cursor-pointer',
@@ -78,7 +87,20 @@ export function Disclosure({
       className={className}
       onContextMenu={onContextMenu}
     >
-      {actions ? (
+      {hasControls ? (
+        <div className="flex min-w-0 items-center gap-2">
+          {toggle}
+          <div className="flex shrink-0 items-center gap-1">{summaryControls}</div>
+          {/* The rest of the line, a pointer's way to toggle as the line was before. The
+              toggle itself is the keyboard's and the screen reader's. */}
+          <div
+            aria-hidden="true"
+            className={cx('min-w-0 flex-1 self-stretch', !disabled && 'cursor-pointer')}
+            onClick={() => trigger.current?.click()}
+          />
+          {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+        </div>
+      ) : actions ? (
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex min-w-0 flex-1">{toggle}</div>
           <div className="flex shrink-0 items-center gap-1">{actions}</div>

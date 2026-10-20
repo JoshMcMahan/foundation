@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { createContext, type ReactNode, use, useCallback, useRef, useState } from 'react'
+import { createContext, type ReactNode, use, useCallback, useEffect, useRef, useState } from 'react'
 import { isDev } from '../dev'
 import { type FloatingAnchor, type PositionerAnchor, toPositionerAnchor } from './floating'
 import { MenuPopup, type MenuSize } from './Menu'
@@ -13,7 +13,12 @@ export interface OpenMenuOptions {
   size?: MenuSize | undefined
   /** As `MenuPopup`'s: classes on the menu and its submenus, such as a terminal's colors. */
   themeClassName?: string | undefined
+  /** What else closes it, for a menu over something that moves under it, such as a
+   *  terminal's: a wheel outside the menu, the window losing focus, or the window resizing. */
+  closeOn?: readonly MenuCloseTrigger[] | undefined
 }
+
+export type MenuCloseTrigger = 'wheel' | 'blur' | 'resize'
 
 /** Where a menu opens: an element, such as the button that opened it, or a pointer event,
  *  such as a right-click. An event with Shift held is left to the browser, whose own menu
@@ -86,6 +91,45 @@ export function useContextMenu() {
     [release],
   )
 
+  /** Closes the menu, if one is open, as Escape would. */
+  const closeMenu = useCallback(() => {
+    if (current.current) {
+      current.current = null
+      setOpen(false)
+    }
+  }, [])
+
+  const closeOn = open ? opened?.closeOn : undefined
+  useEffect(() => {
+    if (!closeOn?.length) {
+      return
+    }
+    const onWheel = (event: WheelEvent) => {
+      // Scrolling a long menu is using it.
+      if (!(event.target instanceof Element && event.target.closest('[role="menu"]'))) {
+        closeMenu()
+      }
+    }
+    const listeners: [keyof WindowEventMap, EventListener][] = []
+    if (closeOn.includes('wheel')) {
+      listeners.push(['wheel', onWheel as EventListener])
+    }
+    if (closeOn.includes('blur')) {
+      listeners.push(['blur', closeMenu])
+    }
+    if (closeOn.includes('resize')) {
+      listeners.push(['resize', closeMenu])
+    }
+    for (const [type, listener] of listeners) {
+      window.addEventListener(type, listener, { capture: true, passive: true })
+    }
+    return () => {
+      for (const [type, listener] of listeners) {
+        window.removeEventListener(type, listener, { capture: true })
+      }
+    }
+  }, [closeOn, closeMenu])
+
   const onOpenChange = useCallback(
     (next: boolean, details: { reason: string; event: Event; cancel: () => void }) => {
       if (next) {
@@ -150,23 +194,26 @@ export function useContextMenu() {
 
   const openedBy = open ? (opened?.element ?? null) : null
 
-  return { openMenu, contextMenu, openedBy }
+  return { openMenu, closeMenu, contextMenu, openedBy }
 }
 
 // Apart, so the many rows that only open the menu don't re-render each time it opens.
 const OpenMenuContext = createContext<OpenMenu | null>(null)
 const OpenedByContext = createContext<Element | null>(null)
+const CloseMenuContext = createContext<(() => void) | null>(null)
 
 /** The one menu every row, button and canvas below it opens through `useOpenMenu`, so none
  *  renders a menu of its own. `UIProvider` mounts it; nothing else needs to. */
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
-  const { openMenu, contextMenu, openedBy } = useContextMenu()
+  const { openMenu, closeMenu, contextMenu, openedBy } = useContextMenu()
   return (
     <OpenMenuContext value={openMenu}>
-      <OpenedByContext value={openedBy}>
-        {children}
-        {contextMenu}
-      </OpenedByContext>
+      <CloseMenuContext value={closeMenu}>
+        <OpenedByContext value={openedBy}>
+          {children}
+          {contextMenu}
+        </OpenedByContext>
+      </CloseMenuContext>
     </OpenMenuContext>
   )
 }
@@ -182,6 +229,14 @@ const warnNoProvider: OpenMenu = () => {
  *  `openMenu(button, items)` under a button, which a second press closes. */
 export function useOpenMenu(): OpenMenu {
   return use(OpenMenuContext) ?? warnNoProvider
+}
+
+const noMenu = () => {}
+
+/** Closes the app's shared menu, if it is open, for a host whose surface moves out from under
+ *  it in a way `closeOn` doesn't cover, such as a pane that switches. */
+export function useCloseMenu(): () => void {
+  return use(CloseMenuContext) ?? noMenu
 }
 
 /** The element the shared menu is open under, so its button can say it's expanded. */

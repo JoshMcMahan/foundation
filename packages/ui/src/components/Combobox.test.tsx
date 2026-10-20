@@ -398,7 +398,8 @@ describe('Combobox with a button trigger', () => {
     )
     expect(onValueChange).toHaveBeenLastCalledWith('small')
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-    expect(screen.getByRole('combobox', { name: 'Size' })).toHaveTextContent('small')
+    // Named by its label and then the value it now holds.
+    expect(screen.getByRole('combobox', { name: 'Size Small' })).toHaveTextContent('small')
   })
 })
 
@@ -568,6 +569,49 @@ describe('Combobox as a picker', () => {
     return input
   }
 
+  it('names its button by the label and then the value, which a label alone would hide', () => {
+    const { unmount } = render(<Picker initial="plat" />)
+    expect(screen.getByRole('combobox', { name: 'Team Platform' })).toBeInTheDocument()
+    unmount()
+    render(<Picker />)
+    expect(screen.getByRole('combobox', { name: 'Team' })).toBeInTheDocument()
+  })
+
+  it('names its button by a visible label too, then the value', () => {
+    render(
+      <>
+        <span id="team-label">Owning team</span>
+        <Combobox
+          aria-labelledby="team-label"
+          items={teams}
+          defaultValue="doc"
+          trigger={<button type="button">doc</button>}
+        />
+      </>,
+    )
+    expect(screen.getByRole('combobox', { name: 'Owning team Docs' })).toBeInTheDocument()
+  })
+
+  it('tells a host that mirrors the search when closing clears it', async () => {
+    const onQueryChange = vi.fn()
+    render(
+      <Combobox
+        aria-label="Team"
+        placeholder="Search"
+        items={teams}
+        onQueryChange={onQueryChange}
+        trigger={<button type="button">Team</button>}
+      />,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    const input = typeIn('pl')
+    expect(onQueryChange).toHaveBeenLastCalledWith('pl')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    expect(onQueryChange).toHaveBeenLastCalledWith('')
+  })
+
   it('reads a row by its label and then its hint', async () => {
     render(<Picker />)
     fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
@@ -588,7 +632,7 @@ describe('Combobox as a picker', () => {
 
   it('opens on the chosen row, with the whole list to search', async () => {
     render(<Picker initial="des" />)
-    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team Design' }))
     await screen.findByRole('listbox')
     expect(screen.getByPlaceholderText('Search')).toHaveValue('')
     expect(screen.getAllByRole('option')).toHaveLength(3)
@@ -652,6 +696,38 @@ describe('Combobox as a picker', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Create “Research”' }))
     expect(onCreate).toHaveBeenCalledWith('Research')
     expect(onValueChange).not.toHaveBeenCalled()
+  })
+
+  it('lists the create row after the matches, so Enter picks a match', async () => {
+    const onCreate = vi.fn()
+    const onValueChange = vi.fn()
+    render(<Picker onCreate={onCreate} onValueChange={onValueChange} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    const input = typeIn('Pla')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Platform/ })).toHaveAttribute('data-highlighted'),
+    )
+    const names = screen.getAllByRole('option').map((option) => option.textContent)
+    expect(names.at(-1)).toBe('Create “Pla”')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith('plat'))
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('creates on Enter when nothing else matches', async () => {
+    const onCreate = vi.fn()
+    render(<Picker onCreate={onCreate} />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Team' }))
+    await screen.findByRole('listbox')
+    const input = typeIn('Research')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: 'Create “Research”' })).toHaveAttribute(
+        'data-highlighted',
+      ),
+    )
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('Research'))
   })
 
   it('offers no create row for text an item has', async () => {

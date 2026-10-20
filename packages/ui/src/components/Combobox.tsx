@@ -285,6 +285,13 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   const list = useRef<VirtualListHandle>(null)
   const uid = useId()
   const [inputValue, setInputValue] = useState<string | null>(null)
+  /** Empties the search, and tells a host that mirrors it. */
+  const clearQuery = (to: '' | null = '') => {
+    if (inputValue) {
+      onQueryChange?.('')
+    }
+    setInputValue(to)
+  }
   const [highlighted, setHighlighted] = useState<Entry<Value> | undefined>(undefined)
   // Open from the start, the list opens a moment after its rows mount, as any other opening
   // does, so it lands on the chosen row; Base UI's own first-render open would land on the first.
@@ -385,7 +392,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       return false
     }
     setValues(next)
-    setInputValue('')
+    clearQuery()
     return true
   }
   const separators = props.multiple && props.creatable ? (props.separators ?? []) : []
@@ -411,11 +418,22 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   // Free entry with nothing to pick from: no button to open a list, and no empty one.
   const freeEntry = creatable && entries.flat.length === 0
   const [first] = entries.items
+  // A typed value to add leads, so Enter adds what was typed. A row that hands the text to
+  // `onCreate` follows the matches instead: Enter picks "performance" for "per", and creates
+  // only once nothing else is listed.
+  const createLast = created?.action === true
   const listItems = !created
     ? entries.items
     : first !== undefined && 'items' in first
-      ? [{ label: '', items: [created], order: -1 }, ...(entries.items as EntryGroup<Value>[])]
-      : [created, ...(entries.items as Entry<Value>[])]
+      ? createLast
+        ? [
+            ...(entries.items as EntryGroup<Value>[]),
+            { label: '', items: [created], order: entries.items.length },
+          ]
+        : [{ label: '', items: [created], order: -1 }, ...(entries.items as EntryGroup<Value>[])]
+      : createLast
+        ? [...(entries.items as Entry<Value>[]), created]
+        : [created, ...(entries.items as Entry<Value>[])]
   // The selection's icon sits in the field until the text no longer names it.
   const selectedIcon =
     selected?.icon && (inputValue === null || inputValue === selected.label) ? selected.icon : null
@@ -483,13 +501,33 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     </BaseCombobox.Item>
   )
 
+  // A trigger named only by its label would hide what it holds, which its own text shows: it
+  // is named by the label and then the value, both from text kept out of sight.
+  const labelId = `${uid}-label`
+  const valueId = `${uid}-value`
+  const named = Boolean(ariaLabel || ariaLabelledBy)
   const parts = trigger ? (
     <>
+      {named && (
+        <>
+          {ariaLabel && !ariaLabelledBy && (
+            <span id={labelId} hidden>
+              {ariaLabel}
+            </span>
+          )}
+          <span id={valueId} hidden>
+            <BaseCombobox.Value>
+              {(value: Entry<Value> | Entry<Value>[] | null) =>
+                Array.isArray(value) ? value.map(entryLabel).join(', ') : entryLabel(value)
+              }
+            </BaseCombobox.Value>
+          </span>
+        </>
+      )}
       <Tooltip content={triggerTooltip}>
         <BaseCombobox.Trigger
           id={id}
-          aria-label={ariaLabel || undefined}
-          aria-labelledby={ariaLabelledBy}
+          aria-labelledby={named ? `${ariaLabelledBy || labelId} ${valueId}` : undefined}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
           aria-required={ariaRequired || required || undefined}
@@ -632,7 +670,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       setOwnOpen(next)
       // A picker opens to a fresh search; a field of chips keeps what is half typed.
       if (!next && (trigger || !props.multiple)) {
-        setInputValue(null)
+        clearQuery(null)
       }
       onOpenChange?.(next)
     },
@@ -655,7 +693,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
         const action = next.find((entry) => entry.action)
         if (action) {
           details.cancel()
-          setInputValue('')
+          clearQuery()
           onCreate?.(String(action.value))
           return
         }

@@ -53,9 +53,11 @@ export {
 } from './components/ConfirmModal'
 export {
   ContextMenuProvider,
+  type MenuCloseTrigger,
   type MenuOpener,
   type OpenMenu,
   type OpenMenuOptions,
+  useCloseMenu,
   useContextMenu,
   useMenuOpenedBy,
   useOpenMenu,

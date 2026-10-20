@@ -20,7 +20,13 @@ import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../list/rowMe
 import { ActionMenu } from './ActionMenu'
 import { Avatar } from './Avatar'
 import { buttonClasses } from './buttonClasses'
-import { type OpenMenu, useContextMenu, useOpenMenu } from './ContextMenu'
+import {
+  type MenuCloseTrigger,
+  type OpenMenu,
+  useCloseMenu,
+  useContextMenu,
+  useOpenMenu,
+} from './ContextMenu'
 import type { MenuSize } from './Menu'
 import { type MenuEntry, type MenuSearch, menuDivider } from './MenuEntries'
 
@@ -180,6 +186,55 @@ export const AtThePointer: StoryObj = {
     const { left, top } = area.getBoundingClientRect()
     fireEvent.contextMenu(area, { clientX: left + 8, clientY: top + 8 })
     await expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeVisible()
+  },
+}
+
+function TerminalMenuDemo({ closeOn }: { closeOn: MenuCloseTrigger[] }) {
+  const openMenu = useOpenMenu()
+  const closeMenu = useCloseMenu()
+  return (
+    <div className="flex max-w-md flex-col gap-2">
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: a story's surface */}
+      <div
+        className="h-40 overflow-y-auto rounded-md border theme-border theme-muted-panel p-3 font-mono text-xs"
+        onContextMenu={(e) =>
+          openMenu(
+            e,
+            [
+              { label: 'Copy', icon: <CopyIcon />, onClick: () => {} },
+              { label: 'Clear', icon: <TrashIcon />, onClick: () => {} },
+            ],
+            { closeOn, size: 'sm' },
+          )
+        }
+      >
+        {Array.from({ length: 30 }, (_, line) => `$ step ${line + 1} done`).map((text) => (
+          <div key={text}>{text}</div>
+        ))}
+      </div>
+      <button type="button" className={triggerClassName} onClick={closeMenu}>
+        Close the menu from the host
+      </button>
+    </div>
+  )
+}
+
+/** A menu over a surface that moves under it, such as a terminal: `closeOn` closes it on a
+ *  wheel outside it, the window losing focus or resizing, and `useCloseMenu` lets the host
+ *  close it itself. */
+export const ClosesOnScroll: StoryObj<{ closeOn: MenuCloseTrigger[] }> = {
+  args: { closeOn: ['wheel', 'blur', 'resize'] },
+  argTypes: {
+    closeOn: { control: 'inline-check', options: ['wheel', 'blur', 'resize'] },
+  },
+  render: ({ closeOn }) => <TerminalMenuDemo closeOn={closeOn} />,
+  play: async ({ canvasElement }) => {
+    const area = within(canvasElement).getByText('$ step 1 done')
+    const { left, top } = area.getBoundingClientRect()
+    fireEvent.contextMenu(area, { clientX: left + 8, clientY: top + 8 })
+    await expect(await screen.findByRole('menuitem', { name: 'Copy' })).toBeVisible()
+    fireEvent.wheel(area)
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   },
 }
 
@@ -380,6 +435,7 @@ export const MixedIconSizes: StoryObj = {
   ),
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Label actions' }))
+    await screen.findByRole('menuitem', { name: 'Delete' })
     const labels = ['Rename', 'Move to folder', 'Bug', 'Copy link', 'Delete'].map(
       (name) => screen.getByText(name).getBoundingClientRect().left,
     )
