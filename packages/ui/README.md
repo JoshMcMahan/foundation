@@ -59,6 +59,15 @@ even for a one-word name. The host sets the tints with `--avatar-person`,
 edge `--avatar-agent-ring`. An agent's avatar (`kind="agent"`) is a rounded
 square under either coloring, so its shape and not only its color sets it apart.
 
+A run's warnings and the workflow editor's problems may carry a problem `code`, `params` and
+`type`, as a server's problem details do. Bind `data.useProblemMessage` to `useCodeMessage` from
+`@parallelworks/problem/react`, and they read in the app's language: the message at
+`apiErrors.<code>` in the app's use-intl catalog, or the shared one. It gets each one's `type` too:
+for a type that names an application, such as `/problems/workflow/undefined_input`, the message at
+`apiErrors.workflow.undefined_input` comes first. The app's own codes can stay at the top level of
+`apiErrors`; another registry's go under its name, so a code both use keeps each one's message and
+params. A code with no message, or no `useProblemMessage`, shows the `message` the server sent.
+
 Menus, selects, pickers, popovers, tooltips and hover cards open over the page,
 or over the fullscreen element while there is one. Opened inside a `<dialog>`
 shown with `showModal()`, they open inside that dialog instead: the browser
@@ -806,7 +815,9 @@ each linking to its job or step: the link opens the subworkflows, matrix and job
 it and what it is in into view below the graph's view bar, readable, and moves focus to it. Each job and step a warning is about, and each one it sits
 inside, carries a mark that lists the warnings on hover, so one skipped without a log is still
 flagged. A job name a matrix ran as several jobs marks each of them. `dag.warningCount` words the
-count.
+count. A warning with a `code` reads as the host's `useProblemMessage` words it, and one whose `type`
+names a page, such as `/problems/workflow/undefined_input`, links to that page in a new tab
+(`dag.warningAbout`); the editor's problems list does the same (`problemAbout`).
 
 The editor checks YAML against the schemas a host registers with `configureEditorYaml` from
 `@parallelworks/ui/editor`. The job, step, input and settings dialogs edit their YAML at their own

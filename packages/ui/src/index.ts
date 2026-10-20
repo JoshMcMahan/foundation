@@ -238,7 +238,10 @@ export {
 } from './components/Popover'
 export {
   type AvatarColoring,
+  type CodedProblem,
   type PersistedStateHook,
+  type ProblemMessage,
+  type ProblemParams,
   type RunFileResult,
   type UIData,
   type UILinkComponent,
@@ -253,6 +256,7 @@ export {
   useNavigation,
   useOptionalWorkflowEngine,
   usePersistedState,
+  useProblemText,
   useProvisionCorsRules,
   useRunFile,
   useSlots,

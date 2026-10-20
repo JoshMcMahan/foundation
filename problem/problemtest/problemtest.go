@@ -5,6 +5,7 @@ package problemtest
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,30 +15,46 @@ import (
 	"github.com/parallelworks/foundation/problem"
 )
 
-// CheckCatalog fails t unless the JSON catalog at path has a message at
-// apiErrors.<code> for every type in registries, using only the type's Params
-// as ICU arguments. The shared codes' messages ship with @parallelworks/problem,
-// so the catalog needs only the application's own.
+// CheckCatalog fails tb unless the JSON catalog at path has a message for
+// every type in registries, using only the type's Params as ICU arguments. It
+// reads apiErrors as useCodeMessage in @parallelworks/problem/react does: a
+// type's message is at apiErrors.<name>.<code>, under its registry's name,
+// when the catalog has one there, and otherwise at apiErrors.<code>. So an
+// application's own codes can stay at the top level while another registry's
+// go under its name. Messages nest one level, as a type URI names one
+// application; a deeper object, or a value that is no message, fails to
+// parse. The shared codes' messages ship with @parallelworks/problem, so the
+// catalog needs only the applications' own.
 func CheckCatalog(tb testing.TB, path string, registries ...*problem.Registry) {
 	tb.Helper()
 	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		tb.Fatalf("read catalog: %v", err)
+		return
 	}
 	var catalog struct {
-		APIErrors map[string]string `json:"apiErrors"`
+		APIErrors map[string]any `json:"apiErrors"`
 	}
 	if err := json.Unmarshal(raw, &catalog); err != nil {
 		tb.Fatalf("parse %s: %v", path, err)
+		return
 	}
-	check(tb, path, catalog.APIErrors, registries)
+	messages, err := flatten(catalog.APIErrors)
+	if err != nil {
+		tb.Fatalf("parse %s: %v", path, err)
+		return
+	}
+	check(tb, path, messages, registries, clientKeys)
 }
 
 // CheckMessages is CheckCatalog for an apiErrors map the caller has already
-// loaded, such as a catalog split into one file per namespace.
+// loaded, such as a catalog split into one file per namespace. Its keys are
+// those CheckCatalog reads, with a message under an application's name at
+// <name>.<code>, so a split catalog can pass an application's messages either
+// flattened under its name or at the top level.
 func CheckMessages(tb testing.TB, messages map[string]string, registries ...*problem.Registry) {
 	tb.Helper()
-	check(tb, "catalog", messages, registries)
+	check(tb, "catalog", messages, registries, clientKeys)
 }
 
 // CheckGoCatalog fails tb unless c, a catalog a server localizes problems
@@ -51,7 +68,7 @@ func CheckGoCatalog(tb testing.TB, c *problem.Catalog, registries ...*problem.Re
 			msgs[string(code)] = msg
 		}
 		if lang == "en" {
-			check(tb, "en catalog", msgs, registries)
+			check(tb, "en catalog", msgs, registries, goKeys)
 			continue
 		}
 		for _, r := range registries {
@@ -66,17 +83,65 @@ func CheckGoCatalog(tb testing.TB, c *problem.Catalog, registries ...*problem.Re
 	}
 }
 
-func check(tb testing.TB, where string, messages map[string]string, registries []*problem.Registry) {
+// flatten reads a catalog's apiErrors as use-intl does, into dotted keys: a
+// message stays at its code, and one under an application's name, such as
+// {"workflow": {"unknown_input": "..."}}, is at "workflow.unknown_input".
+func flatten(apiErrors map[string]any) (map[string]string, error) {
+	messages := make(map[string]string, len(apiErrors))
+	// Sorted, so a catalog with several bad values always reports the same one.
+	for _, key := range slices.Sorted(maps.Keys(apiErrors)) {
+		switch v := apiErrors[key].(type) {
+		case string:
+			messages[key] = v
+		case map[string]any:
+			for _, code := range slices.Sorted(maps.Keys(v)) {
+				msg, ok := v[code].(string)
+				if !ok {
+					return nil, fmt.Errorf("apiErrors.%s.%s is not a message: messages nest one level, under an application's name", key, code)
+				}
+				messages[key+"."+code] = msg
+			}
+		default:
+			return nil, fmt.Errorf("apiErrors.%s is neither a message nor an application's messages", key)
+		}
+	}
+	return messages, nil
+}
+
+// clientKeys are the keys a client catalog may keep a type's message at, in
+// the order useCodeMessage reads them: under its registry's name, then at the
+// top level.
+func clientKeys(r *problem.Registry, code problem.Code) []string {
+	return []string{r.Name() + "." + string(code), string(code)}
+}
+
+// goKeys is the key a Go catalog, which holds one registry's messages, keeps a
+// type's message at.
+func goKeys(_ *problem.Registry, code problem.Code) []string {
+	return []string{string(code)}
+}
+
+// check reports each type in registries that messages has no message for at
+// any of its keys, or whose message, at the first key messages has, uses an
+// argument the type doesn't declare.
+func check(tb testing.TB, where string, messages map[string]string, registries []*problem.Registry, keys func(*problem.Registry, problem.Code) []string) {
 	tb.Helper()
 	for _, r := range registries {
 		for _, typ := range r.Types() {
-			msg, ok := messages[string(typ.Code)]
-			if !ok || msg == "" {
-				tb.Errorf("%s has no apiErrors.%s message", where, typ.Code)
-				continue
-			}
-			if err := CheckArgs(msg, typ.Params); err != nil {
-				tb.Errorf("%s apiErrors.%s: %v", where, typ.Code, err)
+			tried := keys(r, typ.Code)
+			i := slices.IndexFunc(tried, func(key string) bool {
+				_, ok := messages[key]
+				return ok
+			})
+			switch {
+			case i < 0:
+				tb.Errorf("%s has no apiErrors.%s message", where, strings.Join(tried, " or apiErrors."))
+			case messages[tried[i]] == "":
+				tb.Errorf("%s has no apiErrors.%s message", where, tried[i])
+			default:
+				if err := CheckArgs(messages[tried[i]], typ.Params); err != nil {
+					tb.Errorf("%s apiErrors.%s: %v", where, tried[i], err)
+				}
 			}
 		}
 	}

@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import { createWorkflowEngine } from '@parallelworks/workflow-parser'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
+import { type ProblemMessage, UIProvider } from '../components/Provider'
 import DependencyGraph, { type ViewMode } from './DependencyGraph'
 import type { RunWarning } from './runWarnings'
 import {
@@ -67,7 +69,7 @@ const meta: Meta<typeof RunGraph> = {
     warnings: {
       control: 'object',
       description:
-        'The run’s `warnings`: each one’s `message`, its `job`, its `step` index when it is about a step, and the `path` of subworkflow steps it is under, such as `["release", "step_1"]`.',
+        'The run’s `warnings`: each one’s `message`, its `job`, its `step` index when it is about a step, and the `path` of subworkflow steps it is under, such as `["release", "step_1"]`. A warning may also carry a problem `code` and `params`, which the host’s `useProblemMessage` words in the reader’s language, and a `type`, the page it links to, which `useProblemMessage` gets too, to pick the messages of the application it names.',
     },
     viewMode: {
       control: 'inline-radio',
@@ -120,6 +122,62 @@ export const SubworkflowStep: Story = {
     ],
   },
   play: follow('Release › publish › Upload › roll back', 'subworkflows/release/step_1/upload:1'),
+}
+
+const engine = createWorkflowEngine()
+
+// A host's catalog in Spanish, as `useCodeMessage` from `@parallelworks/problem/react` gives it: a
+// message for one code, none for any other.
+const spanishMessage: ProblemMessage = (code, params) =>
+  code === 'undefined_input'
+    ? `No hay ninguna entrada "${params?.['name']}". ¿Quisiste decir "${params?.['suggestion']}"?`
+    : undefined
+const useSpanishMessage = () => spanishMessage
+const withSpanishCatalog: Decorator = (Story) => (
+  <UIProvider engine={engine} data={{ useProblemMessage: useSpanishMessage }}>
+    <Story />
+  </UIProvider>
+)
+
+const UNDEFINED_INPUT = {
+  message: 'There’s no input "rundir". Did you mean "run_dir"?',
+  code: 'undefined_input',
+  params: { name: 'rundir', suggested: 'true', suggestion: 'run_dir' },
+}
+
+/** A warning with a code the host has a message for: it reads in the host's language. */
+export const CodedInTheHostsLanguage: Story = {
+  decorators: [withSpanishCatalog],
+  args: { warnings: [{ job: 'deploy', ...UNDEFINED_INPUT }] },
+  play: async ({ canvasElement }) => {
+    const list = within(within(canvasElement).getByTestId('run-warnings'))
+    await expect(list.getByText(/No hay ninguna entrada "rundir"/)).toBeInTheDocument()
+  },
+}
+
+/** A warning with a code the host has no message for: it keeps the text the server sent. */
+export const CodedWithoutAMessage: Story = {
+  decorators: [withSpanishCatalog],
+  args: {
+    warnings: [{ job: 'deploy', message: NOT_COMPLETED_WARNING, code: 'replaced_keyword' }],
+  },
+}
+
+/** A warning whose type names a page: it links there, in a new tab. One whose type is
+ *  `about:blank`, or that has none, doesn't. */
+export const WithAPage: Story = {
+  args: {
+    warnings: [
+      { job: 'deploy', ...UNDEFINED_INPUT, type: '/problems/workflow/undefined_input' },
+      { job: 'test', step: 1, message: NOT_COMPLETED_WARNING, type: 'about:blank' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const list = within(within(canvasElement).getByTestId('run-warnings'))
+    const links = list.getAllByRole('link', { name: /About this warning/ })
+    await expect(links).toHaveLength(1)
+    await expect(links[0]).toHaveAttribute('href', '/problems/workflow/undefined_input')
+  },
 }
 
 /** Every kind at once, in the list of jobs and steps, opened; a link goes back to the graph. */

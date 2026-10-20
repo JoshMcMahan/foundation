@@ -1,3 +1,4 @@
+import type { ProblemParams } from '../components/Provider'
 import type { GraphEdit, GraphEditResult } from '../editing'
 import type { Box } from './editorPrimitives'
 import type { ListedProblem } from './ProblemsButton'
@@ -6,7 +7,16 @@ import type { SettingsView } from './settingsViews'
 export type { Box }
 
 export interface EditorProblem {
+  /** Its text, shown when it has no `code` or the host has no message for it. */
   message: string
+  /** Its stable code, which the host's `useProblemMessage` shows in the reader's language with
+   *  `params`. */
+  code?: string | null | undefined
+  /** The values the code's message shows, by name. */
+  params?: ProblemParams | null | undefined
+  /** The URI of the page that explains it, which the problems list links to, and which the host's
+   *  `useProblemMessage` gets with its `code`. `about:blank` has none. */
+  type?: string | null | undefined
   line: number
   job?: string
   step?: number

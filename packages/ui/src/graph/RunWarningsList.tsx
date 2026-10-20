@@ -1,10 +1,11 @@
 import { Callout } from '../components/Callout'
 import { keyedByContent, withPositionKeys } from '../components/keys'
-import { useStrings, useWorkflowEngine } from '../components/Provider'
+import { useProblemText, useStrings, useWorkflowEngine } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
 import { toneIcon } from '../components/tone'
 import { cx } from '../cx'
 import { WarningIcon } from '../icons'
+import { ProblemPageLink } from './ProblemPageLink'
 import type { LocatedWarning, RunWarning, WarningTarget } from './runWarnings'
 import type { WorkflowJob, WorkflowStep } from './types'
 import { jobLabel } from './util'
@@ -37,6 +38,7 @@ export function WarningMark({
   className?: string | undefined
 }) {
   const { dag } = useStrings()
+  const problemText = useProblemText()
   if (warnings.length === 0) {
     return null
   }
@@ -46,7 +48,7 @@ export function WarningMark({
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {keyedByContent(warnings, (w) => w.message).map(({ key, item }) => (
             <li key={key}>
-              <WarningText message={item.message} />
+              <WarningText message={problemText(item)} />
             </li>
           ))}
         </ul>
@@ -111,6 +113,7 @@ export function RunWarningsList({
 }) {
   const { dag } = useStrings()
   const engine = useWorkflowEngine()
+  const problemText = useProblemText()
   if (warnings.length === 0) {
     return null
   }
@@ -132,19 +135,22 @@ export function RunWarningsList({
           return (
             <li key={key} className="flex flex-col items-start gap-0.5">
               <span className="min-w-0 break-words">
-                <WarningText message={item.warning.message} />
+                <WarningText message={problemText(item.warning)} />
               </span>
-              {target && onShow ? (
-                <button
-                  type="button"
-                  onClick={() => onShow(target)}
-                  className="cursor-pointer rounded-sm text-xs font-medium underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)"
-                >
-                  {where}
-                </button>
-              ) : (
-                <span className="text-xs">{where}</span>
-              )}
+              <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                {target && onShow ? (
+                  <button
+                    type="button"
+                    onClick={() => onShow(target)}
+                    className="cursor-pointer rounded-sm text-xs font-medium underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)"
+                  >
+                    {where}
+                  </button>
+                ) : (
+                  <span className="text-xs">{where}</span>
+                )}
+                <ProblemPageLink type={item.warning.type} label={dag.warningAbout} />
+              </span>
             </li>
           )
         })}

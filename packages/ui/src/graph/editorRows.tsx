@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef } from 'react'
 import type { FloatingAnchor } from '../components/floating'
+import { useProblemText } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { AddIcon, DragHandleIcon, MoreIcon, WarningIcon } from '../icons'
@@ -199,6 +200,7 @@ function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; st
   // The list itself, which changes only when the problems do: filtering it in the selector would
   // run for every row on every store change, a drag's pointer moves included.
   const problems = useUi(api, (state) => state.problems, NO_PROBLEMS)
+  const problemText = useProblemText()
   // A job's badge also lists its steps' problems, which stay in view while its steps are closed.
   const mine = useMemo(
     () =>
@@ -207,7 +209,7 @@ function ProblemBadge({ api, job, step }: { api: GraphEditorApi; job: string; st
         : problemsIn(problems, job, step),
     [problems, job, step],
   )
-  const messages = mine.map((problem) => problem.message).join('\n')
+  const messages = mine.map(problemText).join('\n')
   const line = mine[0]?.line ?? 0
   if (!messages) {
     return null

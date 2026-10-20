@@ -55,6 +55,7 @@ vi.mock('../editor/Monaco', () => ({
 }))
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
+import { type ProblemMessage, UIProvider } from '../components/Provider'
 import { optionsOf } from '../test/combobox'
 import { isSectionOpen, openSection, toggleSection } from '../test/section'
 import { hoverTooltip } from '../test/tooltip'
@@ -2426,6 +2427,48 @@ describe('problems and the YAML beside the graph', () => {
     fireEvent.click(within(list).getByRole('button', { name: /test reads needs\.lint/ }))
     expect(pick).toHaveBeenCalledOnce()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '2 problems' })).toBeNull())
+  })
+
+  it('shows a coded problem in the host’s words, and links it to its page', async () => {
+    // Worded only for the workflow engine's code, which the host tells apart by its type.
+    const hostMessage: ProblemMessage = (code, params, type) =>
+      code === 'job_not_needed' && type === '/problems/workflow/job_not_needed'
+        ? `${params?.['job']} no necesita ${params?.['needed']}.`
+        : undefined
+    const useHostMessage = () => hostMessage
+    const coded = [
+      {
+        ...problems[0]!,
+        code: 'job_not_needed',
+        params: { job: 'test', needed: 'lint' },
+        type: '/problems/workflow/job_not_needed',
+      },
+      problems[1]!,
+    ]
+    render(
+      <UIProvider data={{ useProblemMessage: useHostMessage }}>
+        <DependencyGraphPreview
+          yml={graph}
+          editor={editor({ problems: coded, listedProblems: coded })}
+        />
+      </UIProvider>,
+    )
+    const count = screen
+      .getAllByRole('button', { name: '2 problems' })
+      .find((button) => button.hasAttribute('aria-expanded'))
+    fireEvent.click(count as HTMLElement)
+    const list = screen.getByRole('dialog', { name: '2 problems' })
+    expect(within(list).getByText('test no necesita lint.')).toBeInTheDocument()
+    expect(within(list).getByText('unit reads matrix.os')).toBeInTheDocument()
+    const links = within(list).getAllByRole('link', { name: /About this problem/ })
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/problems/workflow/job_not_needed')
+    fireEvent.keyDown(list, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '2 problems' })).toBeNull())
+    fireEvent.click(within(jobRow('test')).getByRole('button', { name: 'Test' }))
+    expect((await hoverTooltip(badge(jobRow('test')))).textContent).toBe(
+      'test no necesita lint.\nunit reads matrix.os',
+    )
   })
 
   it('brings a picked problem’s job, or step, into view selected and opens it', () => {

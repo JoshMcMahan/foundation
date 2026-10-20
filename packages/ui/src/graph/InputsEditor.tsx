@@ -14,7 +14,7 @@ import type { FloatingAnchor } from '../components/floating'
 import { IconButton } from '../components/IconButton'
 import { type MenuEntry, type MenuSearch, menuDivider } from '../components/MenuEntries'
 import { NumberInput } from '../components/NumberInput'
-import { useWorkflowEditing } from '../components/Provider'
+import { useProblemText, useWorkflowEditing } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import type { GraphEdit, InputPath, WorkflowEditing } from '../editing'
@@ -337,10 +337,11 @@ function InputRow({
     (state) => state.open.includes(copy) && !state.drag && !state.resizing,
   )
   const selected = useUi(api?.store ?? EMPTY_STORE, (state) => state.selection.includes(rowKey))
+  const problemText = useProblemText()
   const problems = useUi(api?.store ?? EMPTY_STORE, (state) =>
     state.problems
       .filter((problem) => problem.input && key(problem.input) === rowKey)
-      .map((problem) => `${problem.line}\n${problem.message}`)
+      .map((problem) => `${problem.line}\n${problemText(problem)}`)
       .join('\n\n'),
   )
   if (!api) {

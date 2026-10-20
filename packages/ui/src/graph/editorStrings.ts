@@ -16,6 +16,7 @@ export const GRAPH_EDITOR_STRINGS = {
   stepCount: (count: number) => (count === 1 ? '1 step' : `${count} steps`),
   problemCount: (count: number) => (count === 1 ? '1 problem' : `${count} problems`),
   problemLine: (line: number) => `Line ${line}`,
+  problemAbout: 'About this problem',
   connectOutHint:
     'Drag onto a job to make it depend on this node. Drop on a circle to cover every job in that node.',
   connectInHint:

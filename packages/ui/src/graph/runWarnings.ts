@@ -1,4 +1,5 @@
 import { createContext, use } from 'react'
+import type { ProblemParams } from '../components/Provider'
 import type { WorkflowJob } from './types'
 
 /** Something probably wrong with a run's workflow, found when the run was created, about one of its jobs or steps. */
@@ -10,8 +11,18 @@ export interface RunWarning {
   job: string
   /** The step's index among the job's steps as the run lists them; absent for the job's own. */
   step?: number | null | undefined
-  /** What is wrong and what to write instead. Text in backticks shows as code. */
+  /** What is wrong and what to write instead. Text in backticks shows as code. It shows when the
+   *  warning has no `code`, or the host has no message for it. */
   message: string
+  /** The warning's stable code, such as `undefined_input`, which the host's `useProblemMessage`
+   *  shows in the reader's language with `params`. */
+  code?: string | null | undefined
+  /** The values the code's message shows, by name. */
+  params?: ProblemParams | null | undefined
+  /** The URI of the page that explains it, such as `/problems/workflow/undefined_input`, which the
+   *  warning links to, and which the host's `useProblemMessage` gets with its `code`. `about:blank`
+   *  has none. */
+  type?: string | null | undefined
 }
 
 /** A subworkflow step on the way to a warning: its level's prefix, its job and its index. */

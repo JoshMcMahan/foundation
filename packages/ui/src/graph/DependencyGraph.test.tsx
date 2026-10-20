@@ -73,7 +73,7 @@ vi.mock('../logviewer', () => ({
 vi.mock('./AnnotationBanner', () => ({ AnnotationBanner: () => null }))
 
 import { detectMatrixGroups, emptyLayout, layoutFromCols } from '@parallelworks/workflow-parser'
-import { type RunFileResult, UIProvider } from '../components/Provider'
+import { type ProblemMessage, type RunFileResult, UIProvider } from '../components/Provider'
 import DependencyGraph, {
   addCleanupSteps,
   DependencyGraphPreview,
@@ -1047,6 +1047,91 @@ describe('DependencyGraph run warnings', () => {
       />,
     )
     expect(list().queryByRole('button')).toBeNull()
+  })
+
+  // The host's catalog, as `useCodeMessage` gives it: a message for one code, none for any other.
+  const hostMessage: ProblemMessage = (code, params) =>
+    code === 'undefined_input' ? `No hay ninguna entrada "${params?.['name']}".` : undefined
+  const useHostMessage = () => hostMessage
+
+  it('shows a coded warning in the host’s words, and its own text for a code it has none for', () => {
+    render(
+      <UIProvider data={{ useProblemMessage: useHostMessage }}>
+        <DependencyGraph
+          run={{
+            ...skippedRun,
+            warnings: [
+              {
+                job: 'notify',
+                message: 'There’s no input "rundir".',
+                code: 'undefined_input',
+                params: { name: 'rundir' },
+              },
+              { job: 'build', message: 'From a newer server.', code: 'from_a_newer_server' },
+            ],
+          }}
+        />
+      </UIProvider>,
+    )
+    expect(list().getByText('No hay ninguna entrada "rundir".')).toBeInTheDocument()
+    expect(list().queryByText('There’s no input "rundir".')).toBeNull()
+    expect(list().getByText('From a newer server.')).toBeInTheDocument()
+  })
+
+  it('gives the host a coded warning’s type, so it can word another app’s code as that app does', () => {
+    // As `useCodeMessage` does with a catalog that keeps the workflow engine's messages under its
+    // name, beside the host's own for the same code.
+    const byApp: ProblemMessage = (code, params, type) => {
+      if (code !== 'undefined_input') return undefined
+      return type === '/problems/workflow/undefined_input'
+        ? `No hay ninguna entrada "${params?.['name']}".`
+        : `El formulario no tiene el campo "${params?.['name']}".`
+    }
+    const useByApp = () => byApp
+    render(
+      <UIProvider data={{ useProblemMessage: useByApp }}>
+        <DependencyGraph
+          run={{
+            ...skippedRun,
+            warnings: [
+              {
+                job: 'notify',
+                message: 'There’s no input "rundir".',
+                code: 'undefined_input',
+                params: { name: 'rundir' },
+                type: '/problems/workflow/undefined_input',
+              },
+              {
+                job: 'build',
+                message: 'No field "title".',
+                code: 'undefined_input',
+                params: { name: 'title' },
+              },
+            ],
+          }}
+        />
+      </UIProvider>,
+    )
+    expect(list().getByText('No hay ninguna entrada "rundir".')).toBeInTheDocument()
+    expect(list().getByText('El formulario no tiene el campo "title".')).toBeInTheDocument()
+  })
+
+  it('shows a coded warning’s own text when the host renders no codes', () => {
+    renderWarned([{ job: 'notify', message: ALWAYS, code: 'older_always' }])
+    expect(list().getByText('always', { selector: 'code' })).toBeInTheDocument()
+  })
+
+  it('links a warning to the page its type names, and only a page', () => {
+    renderWarned([
+      { job: 'notify', message: 'one', type: '/problems/workflow/older_always' },
+      { job: 'notify', message: 'two', type: 'about:blank' },
+      { job: 'notify', message: 'three' },
+      { job: 'build', message: 'four', type: 'javascript:alert(1)' },
+    ])
+    const links = list().getAllByRole('link', { name: /About this warning/ })
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/problems/workflow/older_always')
+    expect(links[0]).toHaveAttribute('target', '_blank')
   })
 
   it('takes the count and its wording from the host', () => {
