@@ -184,6 +184,57 @@ export const OneTimeSecretRevealed: StoryObj<{ wrap: boolean }> = {
   },
 }
 
+const TOKEN = 'pwk_live_8f3b2c71e9a04d6b9c5f1e2a7d3b4c8e9f0a1b2c'
+
+/** A value in the line, such as a token shown once right after it is made: as wide as the
+ *  value, on a quiet surface that reads on a tinted callout and a panel alike, its copy button
+ *  right after it. The copy confirms with its check alone, as the change shows right there. A
+ *  long value breaks inside it rather than widening the page. `secret` still masks it. */
+export const InlineValue: StoryObj = {
+  render: () => (
+    <div className="flex max-w-xl flex-col gap-4 p-8">
+      <Callout tone="success" title="Token created">
+        <p className="mb-2">Copy it now. You won't be able to see it again.</p>
+        <CopyCodeBlock inline text={TOKEN} label="token" />
+      </Callout>
+      <Callout tone="info" title="Webhook secret">
+        <p className="mb-2">Sign each request with this secret.</p>
+        <CopyCodeBlock inline text="whsec_4b1c9e" label="webhook secret" />
+      </Callout>
+      <Callout tone="warning" title="Recovery code">
+        <p className="mb-2">Store it somewhere safe, masked until you show it.</p>
+        <CopyCodeBlock inline secret text="RC-7Q2M-91XK-4TPA" label="recovery code" />
+      </Callout>
+      <div className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) p-4 text-sm">
+        <p className="mb-2">Your workspace ID</p>
+        <CopyCodeBlock inline text="ws_01HZX4K9" label="workspace ID" />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(TOKEN)).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Copy token' })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Show value' }))
+    await expect(canvas.getByText('RC-7Q2M-91XK-4TPA')).toBeInTheDocument()
+    // Leaves the page at rest, as a reader sees it once they look away.
+    canvas.getByRole('button', { name: 'Show value' }).blur()
+  },
+}
+
+/** A long token at phone width stays on its one line and scrolls sideways inside the chip,
+ *  rather than breaking a character onto a line of its own; its buttons stay pinned after it. */
+export const InlineValueAtPhoneWidth: StoryObj = {
+  render: () => (
+    <div style={{ maxWidth: 390 }} className="box-border p-4">
+      <Callout tone="success" title="Token created">
+        <p className="mb-2">Copy it now. You won't be able to see it again.</p>
+        <CopyCodeBlock inline text="tdm_pat_9c4e1b7a2f6d8e0b3a5c7f9e1d2b4a6c" label="token" />
+      </Callout>
+    </div>
+  ),
+}
+
 const YAML = `name: train-resnet
 on:
   schedule: "0 2 * * *"

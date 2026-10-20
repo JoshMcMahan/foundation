@@ -1,4 +1,5 @@
 import {
+  Children,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useState,
 } from 'react'
 import { cx } from '../cx'
+import { CheckIcon, ChevronRightIcon } from '../icons'
 import { pickerEndClassName, pickerHintClassName } from './comboboxItems'
 import {
   type FloatingAnchor,
@@ -21,7 +23,9 @@ export interface ListboxNavigationOptions<T> {
   onChoose: (item: T, index: number) => void
   /** Called on Escape, such as to close the list until the text changes. */
   onDismiss?: (() => void) | undefined
-  /** False while the list isn't shown: the keys are then the host's own. Default true. */
+  /** False while the list isn't shown: the keys are then the host's own. A list that hides
+   *  itself while empty passes false then too, or Escape dismisses what isn't there. Default
+   *  true. */
   open?: boolean | undefined
   /** Past the end comes the start, and before the start the end. Default true. */
   loop?: boolean | undefined
@@ -95,7 +99,20 @@ export function useListboxNavigation<T>({
   /** Handles a key the list owns, and says whether it did; leave the rest to the host. */
   const handleKey = (event: AnyKeyboardEvent): boolean => {
     const composing = 'nativeEvent' in event ? event.nativeEvent.isComposing : event.isComposing
-    if (!shownOpen || composing) {
+    if (!open || composing) {
+      return false
+    }
+    // An empty list still shows, such as to say nothing matches, so Escape still dismisses it;
+    // the other keys have nothing to move over or choose and stay the host's.
+    if (event.key === 'Escape') {
+      if (!onDismiss) {
+        return false
+      }
+      onDismiss()
+      event.preventDefault()
+      return true
+    }
+    if (!shownOpen) {
       return false
     }
     const ctrlOnly = event.ctrlKey && !event.metaKey && !event.altKey
@@ -111,12 +128,6 @@ export function useListboxNavigation<T>({
         break
       case homeEnd && event.key === 'End':
         setActive(step(count, -1))
-        break
-      case event.key === 'Escape':
-        if (!onDismiss) {
-          return false
-        }
-        onDismiss()
         break
       case event.key === 'Enter' || chooseKeys.includes(event.key): {
         if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) {
@@ -201,7 +212,8 @@ export function ListboxPanel({
   className,
   children,
 }: ListboxPanelProps) {
-  const hasOptions = Array.isArray(children) ? children.some(Boolean) : Boolean(children)
+  // Nested lists, nulls and falses alike count as nothing, as a mapped empty list renders.
+  const hasOptions = Children.toArray(children).length > 0
   const body = (
     <>
       <div
@@ -258,10 +270,17 @@ export interface ListboxOptionProps {
   inline?: boolean | undefined
   /** Short muted text at the row's end, such as a key. */
   hint?: ReactNode
+  /** In a list of choices that stay chosen, such as the labels on an issue: true shows the
+   *  check at the row's end and tells assistive technology, false leaves it unchecked. Leave
+   *  it out for a list that only acts. */
+  checked?: boolean | undefined
+  /** The option opens more choices, such as a submenu or a next step: a chevron ends the row. */
+  submenu?: boolean | undefined
   className?: string | undefined
 }
 
-/** One option of a ListboxPanel: an icon, its label and description, and a hint at its end. */
+/** One option of a ListboxPanel: an icon, its label and description, and at its end a hint, a
+ *  check while it is chosen and a chevron when it opens more. */
 export function ListboxOption({
   option,
   icon,
@@ -269,12 +288,28 @@ export function ListboxOption({
   description,
   inline = false,
   hint,
+  checked,
+  submenu = false,
   className,
 }: ListboxOptionProps) {
+  const checkable = checked !== undefined
   return (
     // The box keeps focus and names the highlighted option, so options take no Tab stop; its
     // arrow keys and Enter choose.
-    <div {...option} className={cx(panelItemClassName, inline && 'items-baseline', className)}>
+    <div
+      {...option}
+      // Named here as well as in `option`, so the checks see the role that aria-checked is for.
+      role="option"
+      tabIndex={-1}
+      aria-checked={checked}
+      data-checked={checked || undefined}
+      className={cx(
+        panelItemClassName,
+        inline && 'items-baseline',
+        checked && 'font-medium',
+        className,
+      )}
+    >
       {icon && <span className="flex shrink-0 items-center self-center">{icon}</span>}
       <span className={cx('flex min-w-0', inline ? 'items-baseline gap-3' : 'flex-col')}>
         <span className="truncate">{label}</span>
@@ -289,9 +324,16 @@ export function ListboxOption({
           </span>
         )}
       </span>
-      {hint && (
+      {(hint || checkable || submenu) && (
         <span className={pickerEndClassName}>
-          <span className={pickerHintClassName}>{hint}</span>
+          {hint && <span className={pickerHintClassName}>{hint}</span>}
+          {/* Beside a hint, the check keeps its place while unchecked, so hints line up. */}
+          {checkable && (checked || hint) && (
+            <span className={cx('flex items-center', hint && 'w-3.5')}>
+              {checked && <CheckIcon aria-hidden="true" className="size-3.5" />}
+            </span>
+          )}
+          {submenu && <ChevronRightIcon aria-hidden="true" className="size-3 opacity-60" />}
         </span>
       )}
     </div>

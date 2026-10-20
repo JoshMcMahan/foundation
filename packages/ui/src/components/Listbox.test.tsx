@@ -99,4 +99,68 @@ describe('useListboxNavigation', () => {
     // Shift+Enter is a new line, not a choice.
     expect(fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })).toBe(true)
   })
+
+  it('dismisses on Escape while nothing matches, leaving the other keys to the box', () => {
+    const onDismiss = vi.fn()
+    function Search({ open = true }: { open?: boolean }) {
+      const list = useListboxNavigation<string>({ items: [], onChoose: vi.fn(), onDismiss, open })
+      return (
+        <>
+          <input aria-label="Find" {...list.hostProps} onKeyDown={(e) => list.handleKey(e)} />
+          <ListboxPanel listProps={list.listProps} aria-label="Results" empty="No matches">
+            {null}
+          </ListboxPanel>
+        </>
+      )
+    }
+    const { rerender } = render(<Search />)
+    const box = screen.getByRole('textbox', { name: 'Find' })
+    expect(screen.getByText('No matches')).toBeInTheDocument()
+    expect(fireEvent.keyDown(box, { key: 'ArrowDown' })).toBe(true)
+    expect(fireEvent.keyDown(box, { key: 'Enter' })).toBe(true)
+    expect(fireEvent.keyDown(box, { key: 'Escape' })).toBe(false)
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+    // Closed, Escape is the host's again, such as to close a dialog.
+    rerender(<Search open={false} />)
+    expect(fireEvent.keyDown(box, { key: 'Escape' })).toBe(true)
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ListboxOption', () => {
+  function Labels({ hint }: { hint?: string }) {
+    const items = ['Bug', 'Feature', 'More labels']
+    const list = useListboxNavigation({ items, onChoose: vi.fn() })
+    return (
+      <ListboxPanel listProps={list.listProps} aria-label="Labels">
+        <ListboxOption option={list.optionProps(0)} label="Bug" hint={hint} checked />
+        <ListboxOption option={list.optionProps(1)} label="Feature" hint={hint} checked={false} />
+        <ListboxOption option={list.optionProps(2)} label="More labels" submenu />
+      </ListboxPanel>
+    )
+  }
+
+  it('marks a checked option with the trailing check, and one that opens more with a chevron', () => {
+    render(<Labels />)
+    const bug = screen.getByRole('option', { name: 'Bug' })
+    const feature = screen.getByRole('option', { name: 'Feature' })
+    const more = screen.getByRole('option', { name: 'More labels' })
+    expect(bug).toHaveAttribute('aria-checked', 'true')
+    expect(bug).toHaveAttribute('data-checked')
+    expect(bug.querySelectorAll('svg')).toHaveLength(1)
+    expect(feature).toHaveAttribute('aria-checked', 'false')
+    expect(feature).not.toHaveAttribute('data-checked')
+    expect(feature.querySelector('svg')).toBeNull()
+    expect(more).not.toHaveAttribute('aria-checked')
+    expect(more.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1)
+  })
+
+  it('keeps the check its place beside a hint, so hints line up', () => {
+    render(<Labels hint="3" />)
+    const slot = (name: string) =>
+      screen.getByRole('option', { name: new RegExp(`^${name}`) }).querySelector('[class~="w-3.5"]')
+    expect(slot('Bug')?.querySelector('svg')).not.toBeNull()
+    expect(slot('Feature')).not.toBeNull()
+    expect(slot('Feature')?.querySelector('svg')).toBeNull()
+  })
 })

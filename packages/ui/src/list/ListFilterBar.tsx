@@ -35,6 +35,7 @@ import {
   fieldOperators,
   isDatePreset,
   isMultiple,
+  operatorCount,
   parseDay,
   toDay,
 } from './filterModel'
@@ -166,7 +167,7 @@ export function FilterChip({
   const shown = all.slice(0, 2)
   const hidden = all.length - shown.length
   const valueText = unset ? (showsAny ? t.any : t.pending) : t.list(shown)
-  const operatorText = t.operator(filter.op, filter.values.length)
+  const operatorText = t.operator(filter.op, operatorCount(field, filter))
   const noValuePart =
     filter.op === 'isSet' ||
     filter.op === 'isNotSet' ||
@@ -231,6 +232,7 @@ export function FilterChip({
           {operators.length > 1 ? (
             <OperatorMenu
               filters={filters}
+              field={field}
               filter={filter}
               operators={operators}
               open={open === 'operator'}
@@ -373,19 +375,21 @@ function FieldMenu({
 
 function OperatorMenu({
   filters,
+  field,
   filter,
   operators,
   open,
   onOpenChange,
 }: {
   filters: ListFilters
+  field: Field
   filter: ActiveFilter
   operators: readonly FilterOperator[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const t = useStrings().filters
-  const count = filter.values.length
+  const count = operatorCount(field, filter)
   const text = t.operator(filter.op, count)
   return (
     <Menu.Root open={open} onOpenChange={onOpenChange}>
@@ -418,7 +422,7 @@ function OperatorMenu({
         >
           {operators.map((op) => (
             <MenuRadioItem key={op} value={op}>
-              {t.operator(op, Math.max(count, 1))}
+              {t.operator(op, count)}
             </MenuRadioItem>
           ))}
         </Menu.RadioGroup>

@@ -3,6 +3,7 @@ import { type ReactNode, useMemo, useState } from 'react'
 import { expect, screen, userEvent, within } from 'storybook/test'
 import { Avatar } from '../components/Avatar'
 import { buttonClasses } from '../components/buttonClasses'
+import { UIProvider } from '../components/Provider'
 import { StatusBadge, StatusDot } from '../components/StatusBadge'
 import { Table } from '../components/Table'
 import type { Tone } from '../components/tone'
@@ -625,4 +626,64 @@ function RequiredDemo() {
 
 export const RequiredAndPinned: StoryObj = {
   render: () => <RequiredDemo />,
+}
+
+// A host that words the condition by a plural rule: "one" for a single value, "other" for many.
+const PLURAL_CONDITIONS = {
+  filters: {
+    operator: (op: string, n: number) =>
+      op === 'is' ? (n === 1 ? 'is' : 'is any of') : op === 'isNot' ? 'is not' : op,
+  },
+}
+
+function WordedByCountDemo() {
+  const filters = useListFilters<Resource>({
+    storageKey: 'story-worded-by-count',
+    fields: [
+      {
+        key: 'org',
+        label: 'Organization',
+        icon: <OrganizationIcon />,
+        kind: 'enum',
+        multiple: false,
+        options: ORGS,
+      },
+      {
+        key: 'provider',
+        label: 'Provider',
+        kind: 'enum',
+        options: [
+          { value: 'aws', label: 'AWS' },
+          { value: 'gcp', label: 'Google Cloud' },
+        ],
+      },
+    ],
+    defaultFilters: [{ field: 'provider', op: 'is', values: ['aws', 'gcp'] }],
+    remember: false,
+  })
+  return (
+    <UIProvider strings={PLURAL_CONDITIONS}>
+      <div className="bg-(--theme-app-bg) p-4">
+        <ListFilterBar filters={filters} />
+      </div>
+    </UIProvider>
+  )
+}
+
+/** Under host strings that word the condition by count, as a plural rule does, a field of one
+ *  value reads "is" just added, with nothing chosen yet, and only a field of many reads "is any of" once
+ *  more than one is chosen. */
+export const ConditionWordedByCount: StoryObj = {
+  render: () => <WordedByCountDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Added from the menu, with nothing chosen yet.
+    await userEvent.click(canvas.getByRole('button', { name: 'Filter' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Organization' }))
+    await userEvent.keyboard('{Escape}')
+    const org = await canvas.findByRole('group', { name: /^Organization/ })
+    await expect(within(org).getByText('is')).toBeInTheDocument()
+    const provider = canvas.getByRole('group', { name: /^Provider/ })
+    await expect(within(provider).getByText('is any of')).toBeInTheDocument()
+  },
 }

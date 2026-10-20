@@ -760,3 +760,112 @@ function AnchoredListboxDemo() {
 export const ListboxAnchored: StoryObj = {
   render: () => <AnchoredListboxDemo />,
 }
+
+const LABELS = [
+  { name: 'Bug', count: 12 },
+  { name: 'Feature', count: 31 },
+  { name: 'Design', count: 7 },
+  { name: 'Docs', count: 4 },
+]
+const MORE_LABELS = 'All labels'
+
+function CheckedListboxDemo() {
+  const [query, setQuery] = useState('')
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set(['Bug']))
+  const [opened, setOpened] = useState<string | null>(null)
+  const matches = LABELS.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
+  const items = [...matches.map((l) => l.name), ...(query ? [] : [MORE_LABELS])]
+  const list = useListboxNavigation({
+    items,
+    homeEnd: true,
+    onChoose: (name) => {
+      if (name === MORE_LABELS) {
+        setOpened(name)
+        return
+      }
+      setChosen((was) => {
+        const next = new Set(was)
+        if (!next.delete(name)) {
+          next.add(name)
+        }
+        return next
+      })
+    },
+    // With a query, Escape clears it; without one there is nothing left to clear.
+    onDismiss: () => setQuery(''),
+  })
+  return (
+    <div className="flex max-w-xs flex-col gap-2 text-sm">
+      <input
+        aria-label="Filter labels"
+        placeholder="Filter labels…"
+        {...list.hostProps}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value)
+          list.setActive(0)
+        }}
+        onKeyDown={(event) => {
+          list.handleKey(event)
+        }}
+        className={fieldBox()}
+      />
+      <ListboxPanel
+        listProps={list.listProps}
+        aria-label="Labels"
+        empty="No labels match"
+        footer="Enter checks · Esc clears"
+      >
+        {matches.map((label, index) => (
+          <ListboxOption
+            key={label.name}
+            option={list.optionProps(index)}
+            label={label.name}
+            hint={String(label.count)}
+            checked={chosen.has(label.name)}
+          />
+        ))}
+        {!query && (
+          <ListboxOption
+            key={MORE_LABELS}
+            option={list.optionProps(matches.length)}
+            label={MORE_LABELS}
+            submenu
+          />
+        )}
+      </ListboxPanel>
+      <span className="text-(--theme-muted-text-color)">
+        Checked: {[...chosen].join(', ') || 'none'}
+        {opened && ` · opened ${opened}`}
+      </span>
+    </div>
+  )
+}
+
+/** Options that stay chosen take `checked`, which ends the row with a check and tells assistive
+ *  technology, and keeps its place beside a hint so counts line up. `submenu` ends a row that
+ *  opens more choices with a chevron. Escape still clears the query while nothing matches. */
+export const ListboxChecked: StoryObj = {
+  render: () => <CheckedListboxDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const box = canvas.getByRole('textbox', { name: 'Filter labels' })
+    await expect(canvas.getByRole('option', { name: /^Bug/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    await userEvent.click(box)
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+    await expect(canvas.getByRole('option', { name: /^Feature/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    await userEvent.type(box, 'zzz')
+    await expect(canvas.getByText('No labels match')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await expect(box).toHaveValue('')
+    await expect(canvas.getByRole('option', { name: MORE_LABELS })).not.toHaveAttribute(
+      'aria-checked',
+    )
+  },
+}

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { createRef } from 'react'
 import { hoverTooltip } from '../test/tooltip'
 import { Avatar, AvatarGroup, avatarInitials } from './Avatar'
 import { UIProvider } from './Provider'
+import { Tooltip } from './Tooltip'
 
 describe('avatarInitials', () => {
   it('takes the first and last word of a name', () => {
@@ -263,5 +265,34 @@ describe('AvatarGroup', () => {
     )
     expect(screen.getByText('+1.500')).toBeInTheDocument()
     expect(screen.getByText('1500 weitere')).toBeInTheDocument()
+  })
+
+  it('passes other attributes and its ref to its element', () => {
+    const ref = createRef<HTMLSpanElement>()
+    render(
+      <AvatarGroup ref={ref} label="2 people here" data-testid="stack" style={{ marginTop: 4 }}>
+        <Avatar name="Ada Lovelace" />
+        <Avatar name="Grace Hopper" />
+      </AvatarGroup>,
+    )
+    const group = screen.getByRole('group', { name: '2 people here' })
+    expect(ref.current).toBe(group)
+    expect(group).toHaveAttribute('data-testid', 'stack')
+    expect(group).toHaveStyle({ marginTop: '4px', '--avatar-ring': 'var(--theme-panel-bg)' })
+  })
+
+  it('can be the direct child of a tooltip', async () => {
+    render(
+      <UIProvider>
+        <Tooltip content="Ada Lovelace and Grace Hopper">
+          <AvatarGroup label="2 people here">
+            <Avatar name="Ada Lovelace" />
+            <Avatar name="Grace Hopper" />
+          </AvatarGroup>
+        </Tooltip>
+      </UIProvider>,
+    )
+    const tooltip = await hoverTooltip(screen.getByRole('group', { name: '2 people here' }))
+    expect(tooltip).toHaveTextContent('Ada Lovelace and Grace Hopper')
   })
 })

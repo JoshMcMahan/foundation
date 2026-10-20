@@ -108,6 +108,13 @@ export function isMultiple(field: AnyField): boolean {
   return (field.kind === 'enum' || field.kind === 'people') && field.multiple !== false
 }
 
+/** How many values a condition's words are for: the values chosen, and one while none is, so a
+ *  chip just added reads "is" rather than "is any of"; never more than one where only one can be
+ *  chosen. Hosts that word the condition by count, as a plural rule does, get the right form. */
+export function operatorCount(field: AnyField, filter: ActiveFilter): number {
+  return isMultiple(field) ? Math.max(filter.values.length, 1) : 1
+}
+
 /** Whether a filter narrows anything yet: a value chosen, or a condition that needs none. */
 export function isComplete(filter: ActiveFilter): boolean {
   if (filter.op === 'isSet' || filter.op === 'isNotSet') {

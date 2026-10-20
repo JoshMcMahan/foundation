@@ -1,5 +1,13 @@
 import { Avatar as BaseAvatar } from '@base-ui/react/avatar'
-import { Children, type CSSProperties, createContext, type ReactNode, use, useMemo } from 'react'
+import {
+  Children,
+  type ComponentPropsWithRef,
+  type CSSProperties,
+  createContext,
+  type ReactNode,
+  use,
+  useMemo,
+} from 'react'
 import { cx } from '../cx'
 import { categoryClasses } from './category'
 import { useAvatarColoring, useLocale, useStrings } from './Provider'
@@ -253,7 +261,10 @@ export function Avatar({
   return <Tooltip content={tooltip === true ? named : tooltip}>{avatar}</Tooltip>
 }
 
-export interface AvatarGroupProps {
+/** Any other span attribute and the ref reach the stack's element, so the group can be a
+ *  Tooltip's or a popover's direct child. */
+export interface AvatarGroupProps
+  extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   /** Avatars, each possibly wrapped, such as in a hover card. Each child counts as one. */
   children: ReactNode
   /** Shows at most this many; the rest become a "+N" chip. */
@@ -320,6 +331,8 @@ export function AvatarGroup({
   ringColor,
   label,
   className,
+  style,
+  ...spanProps
 }: AvatarGroupProps) {
   const { common } = useStrings()
   const locale = useLocale()
@@ -330,8 +343,9 @@ export function AvatarGroup({
   return (
     <AvatarGroupContext value={context}>
       <span
+        {...spanProps}
         {...(label ? { role: 'group', 'aria-label': label } : {})}
-        style={{ '--avatar-ring': ringColor ?? 'var(--theme-panel-bg)' } as CSSProperties}
+        style={{ '--avatar-ring': ringColor ?? 'var(--theme-panel-bg)', ...style } as CSSProperties}
         className={cx('inline-flex shrink-0 items-center', OVERLAP_CLASSES[size], className)}
       >
         {shown}

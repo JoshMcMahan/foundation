@@ -614,18 +614,22 @@ export const AvatarGroups: StoryObj<AvatarGroupArgs> = {
         </div>
       </UIProvider>
       <div className="flex items-center gap-3 p-4">
-        <AvatarGroup
-          size={size}
-          max={3}
-          total={9}
-          ringColor="var(--theme-app-bg)"
-          showOverflow={false}
-        >
-          {GROUP_PEOPLE.slice(0, 3).map((name) => (
-            <Avatar key={name} name={name} />
-          ))}
-        </AvatarGroup>
-        <span className="text-(--theme-muted-text-color)">9 online, on the page background</span>
+        {/* The whole stack is the tooltip's trigger: the group takes its props and ref. */}
+        <Tooltip content="Ada Lovelace, Grace Hopper, Alan Turing and 6 others">
+          <AvatarGroup
+            size={size}
+            max={3}
+            total={9}
+            ringColor="var(--theme-app-bg)"
+            showOverflow={false}
+            label="9 online"
+          >
+            {GROUP_PEOPLE.slice(0, 3).map((name) => (
+              <Avatar key={name} name={name} />
+            ))}
+          </AvatarGroup>
+        </Tooltip>
+        <span className="text-(--theme-muted-text-color)">9 online, one tooltip for the stack</span>
       </div>
     </div>
   ),

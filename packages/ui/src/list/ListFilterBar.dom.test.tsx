@@ -213,6 +213,65 @@ describe('a URL store', () => {
   })
 })
 
+describe('a condition worded by count', () => {
+  // As a plural rule words it: "one" for 1, "other" for 0 and for many.
+  const byCount = {
+    filters: {
+      operator: (op: string, n: number) =>
+        op === 'is' ? (n === 1 ? 'is' : 'is any of') : op === 'isNot' ? 'is not' : op,
+    },
+  }
+  function Single() {
+    const view = useListView<{ priority: string }>({
+      storageKey: 'single',
+      columns: [{ key: 'name', label: 'Name', alwaysVisible: true }],
+      filterFields: [
+        {
+          key: 'priority',
+          label: 'Priority',
+          kind: 'enum',
+          multiple: false,
+          options: [
+            { value: 'high', label: 'High' },
+            { value: 'low', label: 'Low' },
+          ],
+          value: (r) => r.priority,
+        },
+      ],
+    })
+    return (
+      <ListPage view={view} toolbar={<ListFilterMenu view={view} />}>
+        {null}
+      </ListPage>
+    )
+  }
+
+  it('reads "is" on a chip just added, before any value is chosen', async () => {
+    render(
+      <UIProvider strings={byCount}>
+        <Single />
+      </UIProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Priority' }))
+    const chip = await screen.findByRole('group', { name: /^Priority/ })
+    expect(within(chip).getByText('is')).toBeInTheDocument()
+    expect(within(chip).queryByText('is any of')).toBeNull()
+  })
+
+  it('reads "is" in the condition menu too, on a field of one value', async () => {
+    localStorage.setItem('single:filters', JSON.stringify({ priority: ['high'] }))
+    render(
+      <UIProvider strings={byCount}>
+        <Single />
+      </UIProvider>,
+    )
+    const chip = screen.getByRole('group', { name: 'Priority is High' })
+    fireEvent.click(within(chip).getByRole('button', { name: 'Condition: is' }))
+    expect(await screen.findByRole('menuitemradio', { name: 'is' })).toBeInTheDocument()
+  })
+})
+
 describe('a date chip', () => {
   function Dated() {
     const view = useListView<{ due: string }>({
