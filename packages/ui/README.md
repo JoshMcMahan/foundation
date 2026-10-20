@@ -131,7 +131,8 @@ Each need has one component. Reach for it before styling markup by hand.
 | A live relative time or duration | `RelativeTime` (with a `fallback`, an `exact` style for its tooltip, or `show="absolute"`), `Elapsed` |
 | Fetching again on demand | `RefreshButton`; `variant="inline"` in a line of details; `loading` on an `ActionToolbar` action |
 | Rendered Markdown | `Markdown` |
-| Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
+| Code or YAML to read, such as a run's resolved workflow | `CodeBlock`: highlighted, numbered, with copy and, given a `filename`, download; `fill` for a view that is the code |
+| Code or YAML to edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
 | A run's jobs, steps, logs, annotations and warnings | `DependencyGraph` from `./graph`, as a graph or a list |
 | A workflow's jobs drawn from its YAML, or edited by hand | `DependencyGraphPreview` from `./graph`, editable with an `editor`; `InputsFormEditor` for its run form |
 | A value that survives a reload | `usePersistedState` |
@@ -168,6 +169,11 @@ Some pairs look alike and are split on purpose:
   its tone, for anything. A `RunStatusIcon` shows the status of something that
   ran as an icon beside its name, and turns while it runs; `runStatusTone` gives
   a badge for the same status the same tone.
+- **CodeBlock or CopyCodeBlock.** A `CodeBlock` is code to read, such as a
+  file or a workflow: a header names it, its lines are highlighted and
+  numbered, and it can fill a pane. A `CopyCodeBlock` is a command or a value
+  to copy, such as an install line or a new API key, with its copy button over
+  it and `secret` to mask it.
 - **Select or Combobox.** A `Select` picks from a short list it shows in full.
   A `Combobox` filters as you type, for a list long enough to search, and is the
   one that takes several values, new ones, or free text (`Autocomplete`).

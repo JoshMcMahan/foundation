@@ -7,9 +7,18 @@ import { math } from '@streamdown/math'
 // once markdown renders. The build keeps this a bare import of the katex
 // package, so the host's bundler resolves the fonts relative to that sheet.
 import 'katex/dist/katex.min.css'
-import { useEffect, useState } from 'react'
-import { defaultRehypePlugins, type PluginConfig, Streamdown } from 'streamdown'
+import { type ComponentType, type HTMLAttributes, useEffect, useMemo, useState } from 'react'
+import {
+  type ControlsConfig,
+  defaultComponents,
+  defaultRehypePlugins,
+  type ExtraProps,
+  type PluginConfig,
+  Streamdown,
+  useIsCodeFenceIncomplete,
+} from 'streamdown'
 import { cx } from '../cx'
+import { CodeBlock } from './CodeBlock'
 import { CODE_THEMES } from './codeTheme'
 import { ExternalLink } from './ExternalLink'
 import { rehypeHttpsImagesOnly } from './httpsImages'
@@ -56,6 +65,112 @@ const httpsImagesRehypePlugins = [
   rehypeCodeBreaks,
 ]
 
+interface CodeControls {
+  copy: boolean
+  /** The file's name without its extension, or null for no download button. */
+  download: string | null
+}
+
+// The renderer's own reading of `controls`: on unless turned off, as a whole,
+// for code, or per button.
+function codeControls(controls: ControlsConfig | undefined): CodeControls {
+  if (controls === false) {
+    return { copy: false, download: null }
+  }
+  const code = controls === undefined || controls === true ? true : controls.code
+  if (code === false) {
+    return { copy: false, download: null }
+  }
+  if (code === undefined || code === true) {
+    return { copy: true, download: 'file' }
+  }
+  const { download } = code
+  return {
+    copy: code.copy !== false,
+    download: download === false ? null : typeof download === 'object' ? download.filename : 'file',
+  }
+}
+
+const EXTENSIONS: Record<string, string> = {
+  javascript: 'js',
+  typescript: 'ts',
+  python: 'py',
+  ruby: 'rb',
+  rust: 'rs',
+  golang: 'go',
+  bash: 'sh',
+  shell: 'sh',
+  shellscript: 'sh',
+  zsh: 'sh',
+  console: 'sh',
+  markdown: 'md',
+  text: 'txt',
+  plaintext: 'txt',
+  csharp: 'cs',
+  kotlin: 'kt',
+  powershell: 'ps1',
+  dockerfile: 'Dockerfile',
+}
+
+// The download's extension for a fence's language: its usual one where it has
+// a name of its own, the language itself where that is one, such as yaml or go.
+function extensionFor(language: string): string {
+  const lang = language.toLowerCase()
+  return EXTENSIONS[lang] ?? (/^[a-z0-9+]{1,10}$/.test(lang) ? lang : 'txt')
+}
+
+const LANGUAGE = /language-([^\s]+)/
+const START_LINE = /startLine=(\d+)/
+const NO_LINE_NUMBERS = /\bnoLineNumbers\b/
+
+type CodeProps = HTMLAttributes<HTMLElement> & ExtraProps & { 'data-block'?: string }
+
+const DefaultCode = defaultComponents.code as ComponentType<CodeProps>
+
+function textOf(children: unknown): string {
+  if (typeof children === 'string') {
+    return children
+  }
+  if (Array.isArray(children)) {
+    return children.map(textOf).join('')
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    return textOf((children as { props: { children?: unknown } }).props.children)
+  }
+  return ''
+}
+
+// A fenced block renders as the CodeBlock a page uses, so the two can't drift;
+// inline code and diagrams stay the renderer's own. Until the diagram plugin
+// has loaded, a diagram's fence shows as its code.
+function makeCode(controls: CodeControls, diagrams: boolean) {
+  return function MarkdownCode(props: CodeProps) {
+    const incomplete = useIsCodeFenceIncomplete()
+    const language = props.className?.match(LANGUAGE)?.[1] ?? ''
+    if (!('data-block' in props) || (diagrams && language === 'mermaid')) {
+      return <DefaultCode {...props} />
+    }
+    const meta = props.node?.properties?.['metastring']
+    const metastring = typeof meta === 'string' ? meta : ''
+    const start = Number.parseInt(metastring.match(START_LINE)?.[1] ?? '', 10)
+    return (
+      <CodeBlock
+        className="my-3.5"
+        code={textOf(props.children)}
+        language={language}
+        copy={controls.copy}
+        filename={
+          controls.download === null ? undefined : `${controls.download}.${extensionFor(language)}`
+        }
+        lineNumbers={NO_LINE_NUMBERS.test(metastring) ? false : undefined}
+        startLine={start >= 1 ? start : 1}
+        maxHeight={400}
+        streaming={incomplete}
+      />
+    )
+  }
+}
+
 export default function MarkdownImpl({
   children,
   isStreaming,
@@ -81,6 +196,11 @@ export default function MarkdownImpl({
     }
   }, [needsMermaid])
   const plugins = needsMermaid && pluginsWithMermaid ? pluginsWithMermaid : basePlugins
+  // Built once per controls setting: the renderer re-renders every block when a
+  // component changes identity.
+  const { copy, download } = codeControls(controls)
+  const diagrams = plugins === pluginsWithMermaid
+  const code = useMemo(() => makeCode({ copy, download }, diagrams), [copy, download, diagrams])
   return (
     <div
       className={cx('markdown whitespace-normal text-start w-full', compact && 'markdown-compact')}
@@ -94,6 +214,7 @@ export default function MarkdownImpl({
         rehypePlugins={httpsImagesOnly ? httpsImagesRehypePlugins : rehypePlugins}
         shikiTheme={CODE_THEMES}
         components={{
+          code,
           a: ({ node, ...props }) => (
             <ExternalLink {...props} className={cx('link wrap-break-word', props.className)} />
           ),

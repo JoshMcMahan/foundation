@@ -111,6 +111,9 @@ export interface UIStrings {
     opensInNewTab: string
     /** Names a code editor that has no label of its own. */
     codeEditor: string
+    /** Names a block of code that has no title of its own, by its language,
+     *  such as "yaml code"; `language` is empty when it has none. */
+    codeOf: (language: string) => string
     /** Shown when someone types in a read-only code editor. */
     readOnlyText: string
     /** Names the handle that resizes a panel. */
@@ -1040,6 +1043,7 @@ const DEFAULTS: UIProviderValue = {
       no: 'No',
       opensInNewTab: '(opens in a new tab)',
       codeEditor: 'Code editor',
+      codeOf: (language) => (language ? `${language} code` : 'Code'),
       readOnlyText: 'This text is read-only.',
       resizePanel: 'Resize panel',
       panelWidth: (px) => `${px} pixels wide`,

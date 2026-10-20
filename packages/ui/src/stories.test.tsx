@@ -13,6 +13,7 @@ import * as accessDrawer from './access/AccessDrawer.stories'
 import * as accessPanel from './access/AccessPanel.stories'
 import * as breadcrumbs from './components/Breadcrumbs.stories'
 import * as callout from './components/Callout.stories'
+import * as codeBlock from './components/CodeBlock.stories'
 import * as combobox from './components/Combobox.stories'
 import * as copy from './components/CopyButton.stories'
 import * as charts from './components/chart.stories'
@@ -80,6 +81,7 @@ const SUITES = {
   accessPanel,
   breadcrumbs,
   callout,
+  codeBlock,
   charts,
   kbd,
   tags,
