@@ -278,3 +278,34 @@ export const Grouped: StoryObj<EventArgs> = {
     }
   },
 }
+
+/** A job's details, dense: `size="xs"` sets small type, and `truncate` keeps a
+ *  long value to one line with all of it on hover, while `copy` still copies
+ *  the whole value. */
+export const DenseAndTruncated: StoryObj<{ size: 'sm' | 'xs'; truncate: boolean }> = {
+  args: { size: 'xs', truncate: true },
+  argTypes: {
+    size: { control: 'inline-radio', options: ['sm', 'xs'] },
+    truncate: { description: 'DescriptionListItem: one line, cut off with an ellipsis' },
+  },
+  render: ({ size, truncate }) =>
+    frame(
+      360,
+      <DescriptionList variant="divided" size={size}>
+        <DescriptionListItem label="Job ID" mono copy truncate={truncate}>
+          {SESSION_ID}
+        </DescriptionListItem>
+        <DescriptionListItem label="Partition">gpu-a100</DescriptionListItem>
+        <DescriptionListItem label="Nodes" mono truncate={truncate}>
+          gpu-a100-[0001-0016],gpu-a100-[0040-0048],gpu-a100-0101
+        </DescriptionListItem>
+        <DescriptionListItem label="Working directory" mono truncate={truncate}>
+          /home/ada/projects/vision/experiments/2026-10-14/run-17
+        </DescriptionListItem>
+      </DescriptionList>,
+    ),
+  play: async ({ canvasElement, args }) => {
+    const nodes = within(canvasElement).getByText(/gpu-a100-\[0001/)
+    await expect(nodes.classList.contains('truncate')).toBe(args.truncate)
+  },
+}

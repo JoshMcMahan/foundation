@@ -59,6 +59,7 @@ export const STRETCHED_LINK_ROW =
 
 export function NameCell({
   icon,
+  iconTile = false,
   name,
   subtitle,
   href,
@@ -67,6 +68,9 @@ export function NameCell({
   children,
 }: {
   icon: ReactNode
+  /** Sets the icon in a small bordered tile, so rows whose icons differ in
+   *  weight, such as kinds of token or runner, still line up. */
+  iconTile?: boolean | undefined
   name: string
   subtitle?: string | undefined
   /** The name's link. Inside a `ListRow` with an `href`, the whole row is
@@ -79,9 +83,20 @@ export function NameCell({
   children?: ReactNode
 }) {
   const stretch = useContext(StretchRowLinkContext)
+  const hasIcon = icon !== null && icon !== undefined && icon !== false
+  // The cell is a grid of the icon's column and the name's, so what stacks
+  // under the name lines up with it past an icon of any width.
+  const columns = hasIcon ? 'col-span-2 grid grid-cols-subgrid items-center' : 'flex items-center'
   const inner = (
     <>
-      {icon}
+      {hasIcon &&
+        (iconTile ? (
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-(--theme-border) text-(--theme-muted-text-color) [&>svg]:size-3.5">
+            {icon}
+          </span>
+        ) : (
+          icon
+        ))}
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
           <div
@@ -98,23 +113,57 @@ export function NameCell({
   )
   return (
     <Table.Item className="py-2.5">
-      {href ? (
-        <AppLink
-          href={href}
-          data-row-link={stretch || undefined}
-          className={cx(
-            'group/namecell flex items-center gap-2.5 min-w-0 cursor-pointer',
-            stretch && STRETCHED_LINK,
-          )}
-        >
-          {inner}
-        </AppLink>
-      ) : (
-        <div className="flex items-center gap-2.5 min-w-0">{inner}</div>
-      )}
-      {/* Lined up with the name, past the icon (h-5 w-5 and the gap-2.5 beside it). */}
-      {children && <div className="pl-[1.875rem]">{children}</div>}
+      <div
+        className={cx(
+          'grid min-w-0',
+          hasIcon ? 'grid-cols-[auto_minmax(0,1fr)] gap-x-2.5' : 'grid-cols-[minmax(0,1fr)]',
+        )}
+      >
+        {href ? (
+          <AppLink
+            href={href}
+            data-row-link={stretch || undefined}
+            className={cx(
+              'group/namecell min-w-0 cursor-pointer',
+              columns,
+              stretch && STRETCHED_LINK,
+            )}
+          >
+            {inner}
+          </AppLink>
+        ) : (
+          <div className={cx('min-w-0', columns)}>{inner}</div>
+        )}
+        {!!children && (
+          <div className={hasIcon ? 'col-start-2 min-w-0' : 'min-w-0'}>{children}</div>
+        )}
+      </div>
     </Table.Item>
+  )
+}
+
+/** A row's column text: muted 13px, or monospace for an ID, a path or a
+ *  hash. The style sits on the text rather than the cell, so it carries over
+ *  when a narrow list stacks the column under the name. */
+export function ListCellText({
+  mono = false,
+  className,
+  children,
+}: {
+  mono?: boolean | undefined
+  className?: string | undefined
+  children: ReactNode
+}) {
+  return (
+    <span
+      className={cx(
+        'text-(--theme-muted-text-color)',
+        mono ? 'font-mono text-xs' : 'text-[13px]',
+        className,
+      )}
+    >
+      {children}
+    </span>
   )
 }
 
@@ -193,6 +242,14 @@ const ACTIONS_CELL_PAD_PX = 28
 
 /** Width the trailing actions column reserves for `count` always-visible
  * buttons plus the hover `⋯` trigger. */
+/** The lane of a row whose only action is a `⋯` shown on hover. With a mouse
+ *  it claims no width: the `⋯` floats over the row's end while hovered, so
+ *  the last column ends at the list's edge as the first starts at it, and the
+ *  lane's 4px makes up that column's padding to the edge's 16px. On a touch
+ *  screen, where the `⋯` always shows, the lane keeps its width. */
+export const FLOATING_ACTIONS_LANE =
+  'pointer-fine:w-0! pointer-fine:min-w-0! pointer-fine:pl-0! pointer-fine:pr-1!'
+
 export function actionsColumnWidth(count: number): number {
   const buttons = count + 1
   return buttons * ACTION_BUTTON_PX + (buttons - 1) * ACTION_GAP_PX + ACTIONS_CELL_PAD_PX
@@ -263,7 +320,7 @@ export function ListActionsHeader({
   actionCount = 0,
   className,
 }: {
-  view?: { showActions: boolean; actionsWidth: number }
+  view?: { showActions: boolean; actionsWidth: number; alwaysShowActions?: boolean }
   actionCount?: number
   className?: string
 }) {
@@ -273,6 +330,7 @@ export function ListActionsHeader({
     return null
   }
   const width = view ? view.actionsWidth : actionsColumnWidth(actionCount)
+  const floating = !!view && !view.alwaysShowActions && view.actionsWidth === actionsColumnWidth(0)
   return (
     <Table.Header
       caps={false}
@@ -280,6 +338,7 @@ export function ListActionsHeader({
       className={cx(
         // Below 44rem, where ListRow folds pinned buttons into ⋯, only ⋯ needs room.
         'relative py-2 text-right @max-[44rem]:w-[52px]! @max-[44rem]:min-w-[52px]!',
+        floating && FLOATING_ACTIONS_LANE,
         className,
       )}
     >

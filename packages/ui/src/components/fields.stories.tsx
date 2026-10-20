@@ -1362,3 +1362,42 @@ export const ErrorBeside: StoryObj = {
     )
   },
 }
+
+interface FormErrorArgs {
+  size: 'sm' | 'md'
+  inline: boolean
+}
+
+/** An error about a whole form or an action, such as a Save that failed:
+ *  `size="md"` sets it in the body's size, under the form, in a card footer's
+ *  rule and padding through `className`, or `inline` within a line. */
+export const FormLevelErrors: StoryObj<FormErrorArgs> = {
+  args: { size: 'md', inline: false },
+  argTypes: {
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+    inline: { description: 'Sits in a line of text instead of a line of its own.' },
+  },
+  render: ({ size, inline }) => (
+    <div className="flex max-w-md flex-col gap-4">
+      <div className="panel">
+        <p className="m-0 px-3 py-3 text-sm">Webhook endpoint</p>
+        <ErrorText
+          size={size}
+          inline={inline}
+          className="border-t border-(--theme-border) px-3 py-2"
+        >
+          The endpoint answered 502 Bad Gateway. Check that it is reachable and try again.
+        </ErrorText>
+      </div>
+      <p className="m-0 text-sm text-(--theme-muted-text-color)">
+        Saving the label failed:{' '}
+        <ErrorText size={size} inline>
+          a label with this name already exists.
+        </ErrorText>
+      </p>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getAllByRole('alert')).toHaveLength(2)
+  },
+}

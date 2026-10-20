@@ -1,4 +1,5 @@
 import type { Breadcrumb } from './Breadcrumbs'
+import { HeaderActionsFit } from './headerActionsFit'
 
 export type PageHeaderRegion = 'titleActions' | 'actions' | 'toolbar'
 
@@ -68,6 +69,8 @@ function sameNodes(a: readonly HTMLElement[], b: readonly HTMLElement[]): boolea
  * provider.
  */
 export class PageHeaderStore {
+  /** Which of the declared actions the bar has moved into its "…" menu. */
+  readonly actionsFit = new HeaderActionsFit()
   private declarations = new Map<number, Declaration>()
   private listeners = new Set<() => void>()
   private snapshot = EMPTY

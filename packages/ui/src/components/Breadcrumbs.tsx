@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react'
+import { type ReactNode, useLayoutEffect, useState } from 'react'
 import { cx } from '../cx'
 import { ChevronRightIcon, MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
@@ -15,6 +15,9 @@ export interface Breadcrumb {
   /** Empty while the name is still loading: the trail shows a placeholder. */
   label: string
   href?: string | undefined
+  /** Before the label, such as the section a page belongs to; also beside
+   *  the crumb's row once it folds into the "…" menu. */
+  icon?: ReactNode
 }
 
 export interface BreadcrumbsProps {
@@ -68,14 +71,15 @@ export function Breadcrumbs({
 
   const menuItem = (crumb: Breadcrumb, index: number): MenuEntry => {
     const name = crumb.label || common.loading
+    const icon = crumb.icon
     if (crumb.href) {
-      return { label: name, href: crumb.href }
+      return { label: name, icon, href: crumb.href }
     }
     if (onSelect) {
-      return { label: name, onClick: () => onSelect(crumb, index) }
+      return { label: name, icon, onClick: () => onSelect(crumb, index) }
     }
     // Still part of the path, so it shows, but there is nowhere to go.
-    return { label: name, disabled: true, onClick: () => {} }
+    return { label: name, icon, disabled: true, onClick: () => {} }
   }
 
   return (
@@ -115,19 +119,29 @@ export function Breadcrumbs({
               ) : (
                 <Tooltip content={crumb.label} overflowOnly>
                   {crumb.href ? (
-                    <AppLink href={crumb.href} className={cx(crumbText, crumbLink, 'max-w-48')}>
-                      {crumb.label}
+                    <AppLink
+                      href={crumb.href}
+                      className={cx(crumbText, crumbLink, crumb.icon && withIcon, 'max-w-48')}
+                    >
+                      <CrumbLabel crumb={crumb} />
                     </AppLink>
                   ) : onSelect ? (
                     <button
                       type="button"
                       onClick={() => onSelect(crumb, index)}
-                      className={cx(crumbText, crumbLink, 'max-w-48 cursor-pointer text-start')}
+                      className={cx(
+                        crumbText,
+                        crumbLink,
+                        crumb.icon && withIcon,
+                        'max-w-48 cursor-pointer text-start',
+                      )}
                     >
-                      {crumb.label}
+                      <CrumbLabel crumb={crumb} />
                     </button>
                   ) : (
-                    <span className={cx(crumbText, 'max-w-48')}>{crumb.label}</span>
+                    <span className={cx(crumbText, crumb.icon && withIcon, 'max-w-48')}>
+                      <CrumbLabel crumb={crumb} />
+                    </span>
                   )}
                 </Tooltip>
               )}
@@ -146,9 +160,12 @@ export function Breadcrumbs({
               <Tooltip content={last.label} overflowOnly>
                 <Last
                   aria-current={current}
-                  className="m-0 block truncate text-[13px] font-medium leading-none text-(--theme-app)"
+                  className={cx(
+                    'm-0 block truncate text-[13px] font-medium leading-none text-(--theme-app)',
+                    last.icon && withIcon,
+                  )}
                 >
-                  {last.label}
+                  <CrumbLabel crumb={last} />
                 </Last>
               </Tooltip>
             )}
@@ -183,6 +200,22 @@ export function Breadcrumbs({
 }
 
 const crumbText = 'block truncate text-(--theme-muted-text-color)'
+// A crumb with an icon lays the two out in a row, the label still truncating.
+const withIcon = 'flex items-center gap-1'
+
+function CrumbLabel({ crumb }: { crumb: Breadcrumb }) {
+  if (!crumb.icon) {
+    return crumb.label
+  }
+  return (
+    <>
+      <span aria-hidden="true" className="inline-flex shrink-0 [&_svg]:size-3.5">
+        {crumb.icon}
+      </span>
+      <span className="min-w-0 truncate">{crumb.label}</span>
+    </>
+  )
+}
 const crumbLink =
   'rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-link)'
 

@@ -263,3 +263,19 @@ describe('ActionToolbar', () => {
     warn.mockRestore()
   })
 })
+
+describe('a busy toolbar action', () => {
+  it('shows a spinner, keeps focus and can’t be pressed again', () => {
+    const onClick = vi.fn()
+    render(
+      <ActionToolbar
+        groups={[[{ key: 'refresh', label: 'Refresh', icon, onClick, loading: true }]]}
+      />,
+    )
+    const refresh = screen.getByRole('button', { name: 'Refresh' })
+    expect(refresh).toHaveAttribute('aria-busy', 'true')
+    expect(refresh).not.toBeDisabled()
+    fireEvent.click(refresh)
+    expect(onClick).not.toHaveBeenCalled()
+  })
+})

@@ -24,7 +24,7 @@ Hosts bind strings, navigation, data hooks and the workflow engine through
 ```tsx
 <UIProvider
   strings={{ common: { save: 'Speichern' }, fileExplorer: { preview: { open: 'Öffnen' } } }}
-  navigation={{ goTo: navigate }}
+  navigation={{ goTo: navigate, goBack: router.history.back, canGoBack: router.history.canGoBack }}
   data={{ useRunFile, usePersistedState }}
   slots={{ link: RouterLink }}
   engine={() => import('./engine').then((m) => m.engine)}
@@ -77,6 +77,8 @@ Each need has one component. Reach for it before styling markup by hand.
 | A link out of the app | `ExternalLink` |
 | Work under way | `Loader`; `Skeleton` in a `LoadingRegion` for the shape of content still loading |
 | Nothing to show yet, or nothing matches | `EmptyState` |
+| A page, card or section that couldn't show what it was asked for, such as a 404 | `ErrorPage`, its words chosen by the status |
+| A list page's toolbar and its loading, error, empty and no-match states | `ListToolbar` in `ListPage` with `total`, `matches`, `empty` and `noMatches` (from `./list`) |
 | A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
 | A number, a date, a color | `NumberInput`, `DatePicker`, `ColorInput` |
 | A one-time code, such as a sign-in check | `OneTimeCodeInput` |

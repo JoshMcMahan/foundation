@@ -7,10 +7,26 @@ import { useStickyTop } from './stickyTop'
 /** Which way a column sorts, as `aria-sort` names it. */
 export type SortDirection = 'ascending' | 'descending' | 'none'
 
-/** `comfortable` gives each row room; `compact` fits a short key and value list. */
-export type TableDensity = 'comfortable' | 'compact'
+/** `comfortable` gives each row room; `compact` fits a short key and value
+ *  list; `dense` sets small type in tight rows, for a table inside a card or
+ *  a panel of figures. */
+export type TableDensity = 'comfortable' | 'compact' | 'dense'
 
 const DensityContext = createContext<TableDensity>('comfortable')
+// Whether a header sets its title in small capitals unless it says otherwise.
+const CapsContext = createContext(true)
+
+const cellY: Record<TableDensity, string> = {
+  comfortable: 'py-4',
+  compact: 'py-1.5 text-sm',
+  dense: 'py-1 text-xs',
+}
+
+const headerY: Record<TableDensity, string> = {
+  comfortable: 'py-3',
+  compact: 'py-2',
+  dense: 'py-1.5',
+}
 
 // A header and the cells under it share their side padding, so a column's
 // title lines up with its values.
@@ -24,15 +40,7 @@ interface ItemProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
   const density = useContext(DensityContext)
   return (
-    <td
-      {...tdProps}
-      className={cx(
-        cellX,
-        density === 'compact' ? 'py-1.5 text-sm' : 'py-4',
-        !wrap && 'whitespace-nowrap',
-        className,
-      )}
-    >
+    <td {...tdProps} className={cx(cellX, cellY[density], !wrap && 'whitespace-nowrap', className)}>
       {children}
     </td>
   )
@@ -48,7 +56,8 @@ interface HeaderProps {
   sort?: SortDirection | undefined
   /** Sorts by this column, or flips its direction. */
   onSort?: (() => void) | undefined
-  /** False sets the title in sentence case instead of small capitals. */
+  /** False sets the title in sentence case instead of small capitals. The
+   *  table's `caps` by default. */
   caps?: boolean | undefined
 }
 
@@ -58,8 +67,9 @@ const sortIcons = {
   none: SortUnsortedIcon,
 } as const
 
-function Header({ children, className, style, colSpan, sort, onSort, caps = true }: HeaderProps) {
+function Header({ children, className, style, colSpan, sort, onSort, caps }: HeaderProps) {
   const density = useContext(DensityContext)
+  const tableCaps = useContext(CapsContext)
   const Icon = sortIcons[sort ?? 'none']
   return (
     <th
@@ -69,9 +79,9 @@ function Header({ children, className, style, colSpan, sort, onSort, caps = true
       aria-sort={onSort ? (sort ?? 'none') : undefined}
       className={cx(
         cellX,
-        density === 'compact' ? 'py-2' : 'py-3',
+        headerY[density],
         'text-left text-xs font-medium',
-        caps && 'uppercase tracking-wider',
+        (caps ?? tableCaps) && 'uppercase tracking-wider',
         className,
       )}
     >
@@ -107,6 +117,21 @@ function Header({ children, className, style, colSpan, sort, onSort, caps = true
 interface TableProps {
   children?: React.ReactNode
   density?: TableDensity | undefined
+  /** Each column's width, in order, such as `['20%', '8rem', undefined]`; a
+   *  column left undefined takes what the others leave. With
+   *  `table-fixed` in `className`, the widths hold whatever the cells hold. */
+  columns?: readonly (string | undefined)[] | undefined
+  /** False sets every header in sentence case, as a small table in a card
+   *  reads best; a header's own `caps` still wins. */
+  caps?: boolean | undefined
+  /** Drops the outer side padding of the first and last columns and the
+   *  header's fill, for a table inside something already padded, such as a
+   *  card: it reads as part of the card, its titles in line with the card's
+   *  other content and set apart by the rule under them. */
+  flush?: boolean | undefined
+  /** Rules a line between columns as well as rows, for a grid of figures to
+   *  read across and down. */
+  columnDividers?: boolean | undefined
   borderless?: boolean
   /** When false, drops the theme-panel background. */
   panel?: boolean
@@ -154,12 +179,16 @@ const isHeaderChild = (child: unknown): boolean => {
  *  the children, then `<tr>`s of `Table.Item`s. */
 export function Table({
   density = 'comfortable',
+  columns,
+  caps = true,
+  flush = false,
+  columnDividers = false,
   borderless = false,
   panel = true,
   className,
   wrapperClassName = '',
   tbodyClassName = 'divide-y',
-  theadClassName = 'theme-muted-panel',
+  theadClassName,
   children,
   roundedTop = false,
   rounded = false,
@@ -175,50 +204,74 @@ export function Table({
 
   return (
     <DensityContext value={density}>
-      <div
-        aria-busy={isLoading}
-        className={cx(
-          'flex w-full flex-col',
-          !hasOverflow && !stickyHeader && 'overflow-hidden',
-          wrapperClassName,
-        )}
-      >
-        {isLoading ? (
-          <div className="flex h-32 items-center justify-center">
-            <Loader />
-          </div>
-        ) : (
-          <div
-            className={cx(
-              'inline-block min-w-full align-middle',
-              !stickyHeader && 'overflow-x-auto',
-              panel && 'theme-panel',
-              !borderless && 'border theme-border',
-              rounded && 'rounded-xl',
-              roundedBottom && 'rounded-b-xl',
-              roundedTop && 'rounded-t-xl',
-            )}
-          >
-            <table className={cx('min-w-full divide-y theme-border', className)} {...tableProps}>
-              <thead
-                ref={setThead}
+      <CapsContext value={caps}>
+        <div
+          aria-busy={isLoading}
+          className={cx(
+            'flex w-full flex-col',
+            !hasOverflow && !stickyHeader && 'overflow-hidden',
+            wrapperClassName,
+          )}
+        >
+          {isLoading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader />
+            </div>
+          ) : (
+            <div
+              className={cx(
+                'inline-block min-w-full align-middle',
+                !stickyHeader && 'overflow-x-auto',
+                panel && 'theme-panel',
+                !borderless && 'border theme-border',
+                rounded && 'rounded-xl',
+                roundedBottom && 'rounded-b-xl',
+                roundedTop && 'rounded-t-xl',
+              )}
+            >
+              <table
                 className={cx(
-                  // Collapsed borders stay where the row was, so the line under
-                  // a stuck header is a shadow that moves with it. It sits on
-                  // the sticky layer, under menus and popovers. Its `top` is set
-                  // as it renders, below the chrome pinned above it.
-                  stickyHeader &&
-                    'sticky top-0 z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
-                  theadClassName,
+                  'min-w-full divide-y theme-border',
+                  flush &&
+                    '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
+                  columnDividers && '[&_tr]:divide-x [&_tr]:divide-(--theme-border)',
+                  className,
                 )}
+                {...tableProps}
               >
-                <tr>{childList.filter(isHeaderChild)}</tr>
-              </thead>
-              <tbody className={tbodyClassName}>{childList.filter((c) => !isHeaderChild(c))}</tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                {columns && (
+                  // The table's row rules are a divide between its children; a
+                  // collapsed column group's own would draw under the last row.
+                  <colgroup className="border-0">
+                    {columns.map((width, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: a column is its position
+                      <col key={i} style={width ? { width } : undefined} />
+                    ))}
+                  </colgroup>
+                )}
+                <thead
+                  ref={setThead}
+                  className={cx(
+                    // Collapsed borders stay where the row was, so the line under
+                    // a stuck header is a shadow that moves with it. It sits on
+                    // the sticky layer, under menus and popovers. Its `top` is set
+                    // as it renders, below the chrome pinned above it.
+                    stickyHeader &&
+                      'sticky top-0 z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
+                    theadClassName ??
+                      (flush ? 'text-(--theme-muted-text-color)' : 'theme-muted-panel'),
+                  )}
+                >
+                  <tr>{childList.filter(isHeaderChild)}</tr>
+                </thead>
+                <tbody className={tbodyClassName}>
+                  {childList.filter((c) => !isHeaderChild(c))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </CapsContext>
     </DensityContext>
   )
 }

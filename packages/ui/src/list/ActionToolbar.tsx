@@ -14,6 +14,7 @@ import {
 } from 'react'
 import { AppLink } from '../components/AppLink'
 import { buttonClasses } from '../components/buttonClasses'
+import { Loader } from '../components/Loader'
 import { MenuPopup, MenuSeparator } from '../components/Menu'
 import { MenuEntries, useRunAction, warnIfInert } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
@@ -56,6 +57,18 @@ export type ToolbarAction = RowAction & {
    *  action at most: the rest are outlined, so it stands out. */
   primary?: boolean | undefined
   hidden?: boolean
+  /** Busy with what it started, such as a refresh: a spinner takes the icon's
+   *  place, and it keeps focus but can't be pressed again until done, in the
+   *  toolbar or as a row of its `…` menu. */
+  loading?: boolean | undefined
+}
+
+/** A loading action as its menu row shows it: the spinner for its icon, and
+ *  not to be chosen until done. */
+function asMenuRow(action: ToolbarAction): ToolbarAction {
+  return action.loading
+    ? { ...action, icon: <Loader inline decorative size="1em" />, disabled: true }
+    : action
 }
 
 /** A pre-rendered element (e.g. a button component that owns its modal). */
@@ -74,15 +87,16 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
   const runAction = useRunAction()
   const folded = use(FoldedContext)
   if (placement === 'menu') {
-    return <MenuEntries entries={[action]} />
+    return <MenuEntries entries={[asMenuRow(action)]} />
   }
   warnIfInert(action, 'ActionToolbar')
+  const loading = action.loading === true
   const iconOnly = Boolean(action.icon) && placement === 'toolbar' && folded
   const className = actionClasses(action, iconOnly)
   const reason = action.disabled ? action.disabledReason : undefined
   const content = (
     <>
-      {action.icon}
+      {loading ? <Loader inline decorative size="1em" /> : action.icon}
       {/* Folded, the label stays the name, and the tooltip shows it. */}
       {iconOnly ? <span className="sr-only">{action.label}</span> : action.label}
       {/* The tooltip is only seen, so the reason is also part of the name. */}
@@ -99,7 +113,8 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
         href={action.href}
         reloadDocument={action.reloadDocument}
         target={action.target}
-        disabled={action.disabled}
+        disabled={action.disabled || loading}
+        aria-busy={loading || undefined}
         className={className}
       />
     )
@@ -113,12 +128,13 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
       <Toggle
         pressed={action.checked}
         onPressedChange={run}
-        disabled={action.disabled}
+        disabled={action.disabled || loading}
+        aria-busy={loading || undefined}
         className={className}
       />
     )
     control = inToolbar ? (
-      <Toolbar.Button render={toggle} disabled={action.disabled}>
+      <Toolbar.Button render={toggle} disabled={action.disabled || loading} focusableWhenDisabled>
         {content}
       </Toolbar.Button>
     ) : (
@@ -128,7 +144,13 @@ export function ToolbarButton({ action }: { action: ToolbarAction }) {
     // Focusable while disabled, so keyboard users can reach the reason.
     const Control = inToolbar ? Toolbar.Button : BaseButton
     control = (
-      <Control onClick={run} disabled={action.disabled} focusableWhenDisabled className={className}>
+      <Control
+        onClick={run}
+        disabled={action.disabled || loading}
+        aria-busy={loading || undefined}
+        focusableWhenDisabled
+        className={className}
+      >
         {content}
       </Control>
     )
@@ -168,7 +190,7 @@ function OverflowMenu({ items }: { items: ToolbarItem[][] }) {
                 'element' in item ? (
                   <Fragment key={item.key}>{item.element}</Fragment>
                 ) : (
-                  <MenuEntries key={item.key} entries={[item]} />
+                  <MenuEntries key={item.key} entries={[asMenuRow(item)]} />
                 ),
               )}
             </Fragment>

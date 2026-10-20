@@ -106,3 +106,18 @@ describe('Breadcrumbs', () => {
     )
   })
 })
+
+describe('crumb icons', () => {
+  it('draws an icon before a crumb’s label, out of its name', () => {
+    render(
+      <Breadcrumbs
+        crumbs={[
+          { label: 'Projects', href: '/projects', icon: <svg data-testid="projects-icon" /> },
+          { label: 'Atlas' },
+        ]}
+      />,
+    )
+    const link = screen.getByRole('link', { name: 'Projects' })
+    expect(link).toContainElement(screen.getByTestId('projects-icon'))
+  })
+})

@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
-import { ChevronLeftIcon, ChevronRightIcon } from '../icons'
+import { formatInteger } from '../format'
+import { ChevronLeftIcon, ChevronRightIcon, MoreIcon } from '../icons'
+import { AppLink } from './AppLink'
+import { buttonClasses } from './buttonClasses'
 import { IconButton } from './IconButton'
-import { useStrings } from './Provider'
+import { useLocale, useStrings } from './Provider'
 import { Select } from './Select'
 
 /** Page sizes a list offers; the first is the default. */
@@ -27,7 +30,34 @@ export interface PaginationProps {
   onPageSizeChange?: ((size: number) => void) | undefined
   /** Replaces "1–50 of 200", such as with the time range a page covers. */
   summary?: ReactNode
+  /** Numbers the pages between previous and next, for a list a reader jumps
+   *  around in, such as a catalog: the first and last, and a window around
+   *  the current one, with gaps between. `max` is how many steps show at
+   *  most, gaps included (7 by default, 5 at least). Needs a `total`; hidden
+   *  on a phone-width screen, where previous and next remain. */
+  pageNumbers?: boolean | { max?: number | undefined } | undefined
   className?: string | undefined
+}
+
+/** The pages to number, counting from 0, with `null` for a gap: all of them
+ *  when they fit in `max` steps, and otherwise the first and last around a
+ *  window on the current one, `max` steps in all. */
+export function pageSteps(page: number, count: number, max = 7): (number | null)[] {
+  const steps = Math.max(5, Math.floor(max))
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i)
+  if (count <= steps) {
+    return range(0, count - 1)
+  }
+  // The first page, a gap, and the window, when the window reaches the start.
+  if (page < steps - 3) {
+    return [...range(0, steps - 3), null, count - 1]
+  }
+  if (page > count - (steps - 2)) {
+    return [0, null, ...range(count - (steps - 2), count - 1)]
+  }
+  const side = Math.floor((steps - 5) / 2)
+  return [0, null, ...range(page - side, page + side), null, count - 1]
 }
 
 /** Steps through a list a page at a time: where the page sits in the list,
@@ -43,6 +73,7 @@ export function Pagination({
   pageSizes = PAGE_SIZES,
   onPageSizeChange,
   summary,
+  pageNumbers = false,
   className,
 }: PaginationProps) {
   const t = useStrings().list
@@ -90,6 +121,32 @@ export function Pagination({
           onPageChange={onPageChange}
           pageHref={pageHref}
         />
+        {pageNumbers && pageCount !== undefined && pageCount > 1 && (
+          <ol className="m-0 hidden list-none items-center gap-1 p-0 sm:flex">
+            {pageSteps(
+              page,
+              pageCount,
+              typeof pageNumbers === 'object' ? pageNumbers.max : undefined,
+            ).map((step, i) => (
+              <li key={step ?? `gap-${i}`} className="flex">
+                {step === null ? (
+                  <MoreIcon
+                    aria-hidden="true"
+                    className="size-3.5 w-5 text-(--theme-muted-text-color)"
+                  />
+                ) : (
+                  <PageNumber
+                    to={step}
+                    current={step === page}
+                    label={t.page(step + 1)}
+                    onPageChange={onPageChange}
+                    pageHref={pageHref}
+                  />
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
         <PageStep
           to={page + 1}
           enabled={hasMore}
@@ -129,5 +186,46 @@ function PageStep({
       disabled={!enabled}
       onClick={() => onPageChange?.(to)}
     />
+  )
+}
+
+// The current page reads as a pressed toggle does, so it is told apart without
+// the fill a primary action has.
+const numberClassName = cx(
+  buttonClasses({ variant: 'outline', size: 'sm' }),
+  'min-w-7 px-1.5 tabular-nums aria-[current=page]:border-(--theme-link) aria-[current=page]:bg-(--theme-accent-subtle) aria-[current=page]:text-(--theme-app)',
+)
+
+function PageNumber({
+  to,
+  current,
+  label,
+  onPageChange,
+  pageHref,
+}: {
+  to: number
+  current: boolean
+  label: string
+  onPageChange: ((page: number) => void) | undefined
+  pageHref: ((page: number) => string) | undefined
+}) {
+  // In the host's locale, in full: page 1,204, never 1.2K.
+  const number = formatInteger(to + 1, useLocale())
+  const props = {
+    'aria-label': label,
+    'aria-current': current ? ('page' as const) : undefined,
+    className: numberClassName,
+  }
+  if (pageHref) {
+    return (
+      <AppLink {...props} href={pageHref(to)}>
+        {number}
+      </AppLink>
+    )
+  }
+  return (
+    <button type="button" {...props} onClick={() => !current && onPageChange?.(to)}>
+      {number}
+    </button>
   )
 }

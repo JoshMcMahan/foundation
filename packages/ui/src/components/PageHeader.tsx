@@ -9,8 +9,12 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { cx } from '../cx'
+import { MoreIcon } from '../icons'
+import { ActionMenu } from './ActionMenu'
 import { type Breadcrumb, Breadcrumbs } from './Breadcrumbs'
-import { useSlots } from './Provider'
+import { buttonClasses } from './buttonClasses'
+import { HeaderActionsFit, HeaderActionsFitContext, overflowingActions } from './headerActionsFit'
+import { useSlots, useStrings } from './Provider'
 import { type PageHeaderRegion, PageHeaderStore, type RegionNodes } from './pageHeaderStore'
 
 export type { Breadcrumb } from './Breadcrumbs'
@@ -124,7 +128,11 @@ function DeclaredHeader({
   return (
     <>
       {fills.titleActions && createPortal(titleActions, nodes.titleActions)}
-      {fills.actions && createPortal(actions, nodes.actions)}
+      {fills.actions &&
+        createPortal(
+          <HeaderActionsFitContext value={store.actionsFit}>{actions}</HeaderActionsFitContext>,
+          nodes.actions,
+        )}
       {fills.toolbar && createPortal(toolbar, nodes.toolbar)}
     </>
   )
@@ -172,6 +180,7 @@ export function PageHeaderBar({
       titleActions={header.titleActions.length > 0 && <Mounts nodes={header.titleActions} />}
       actions={header.actions.length > 0 && <Mounts nodes={header.actions} />}
       toolbar={header.toolbar.length > 0 && <Mounts nodes={header.toolbar} />}
+      fit={store.actionsFit}
       compact={compact}
       className={className}
     />
@@ -215,6 +224,7 @@ function HeaderLayout({
   titleActions,
   actions,
   toolbar,
+  fit: sharedFit,
   compact = false,
   className,
 }: {
@@ -222,21 +232,33 @@ function HeaderLayout({
   titleActions: ReactNode
   actions: ReactNode
   toolbar: ReactNode
+  /** The store's, when the actions are declared elsewhere; without one the bar keeps its own. */
+  fit?: HeaderActionsFit | undefined
   compact?: boolean
   className?: string | undefined
 }) {
   const { breadcrumbPin, navToggle } = useSlots()
+  const { list: t } = useStrings()
+  const [ownFit] = useState(() => new HeaderActionsFit())
+  const fit = sharedFit ?? ownFit
+  const [row, setRow] = useState<HTMLDivElement | null>(null)
+  const [lead, setLead] = useState<HTMLDivElement | null>(null)
+  const [end, setEnd] = useState<HTMLDivElement | null>(null)
+  useActionsFit(fit, row, lead, end)
+  useSyncExternalStore(fit.subscribe, fit.getVersion, fit.getVersion)
+  const moved = fit.menu()
   const hasTrail = breadcrumbs.length > 0
   return (
     <div className={cx('@container w-full shrink-0 bg-(--theme-app-bg)', className)}>
       <div
+        ref={setRow}
         className={cx(
           'flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
           compact ? 'h-8' : 'h-12',
         )}
       >
         {/* Grows to the room the actions leave, so the trail can measure it. */}
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div ref={setLead} className="flex min-w-0 flex-1 items-center gap-2">
           {navToggle?.()}
           {hasTrail && <Breadcrumbs crumbs={breadcrumbs} heading />}
           {present(titleActions) && (
@@ -244,9 +266,114 @@ function HeaderLayout({
           )}
           {hasTrail && breadcrumbPin?.({ crumbs: breadcrumbs })}
         </div>
-        {present(actions) && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+        {present(actions) && (
+          <div ref={setEnd} className="flex shrink-0 items-center gap-1">
+            <HeaderActionsFitContext value={fit}>{actions}</HeaderActionsFitContext>
+            {moved.length > 0 && (
+              <ActionMenu
+                items={moved}
+                label={t.moreActions}
+                triggerClassName={buttonClasses({ variant: 'ghost', size: 'xs', iconOnly: true })}
+              >
+                <MoreIcon />
+              </ActionMenu>
+            )}
+          </div>
+        )}
       </div>
       {present(toolbar) && <div className="px-4">{toolbar}</div>}
     </div>
   )
+}
+
+// The bar's spacing, in pixels: gap-4 between the trail and the actions, gap-2
+// in the trail's row.
+const ROW_GAP = 16
+const LEAD_GAP = 8
+// The least of the trail worth keeping beside the actions: the page's name,
+// truncated, with a folded "…" before it.
+const TRAIL_MIN_WIDTH = 160
+// Below this width the bar folds the actions' labels to their icons
+// (`@max-md`), so an action has one width folded and another not.
+const FOLD_WIDTH = 448
+
+/**
+ * Fits the actions to the bar. Labels fold to their icons first, by the bar's
+ * own container query; when the folded actions still leave the trail too
+ * little room, the trailing ones move into a "…" menu at the end, last first,
+ * until the rest fit. It measures each action as it shows and remembers its
+ * width while it has moved, so the answer doesn't depend on what has moved.
+ */
+function useActionsFit(
+  fit: HeaderActionsFit,
+  row: HTMLElement | null,
+  lead: HTMLElement | null,
+  end: HTMLElement | null,
+) {
+  const [widths] = useState(() => new Map<string, number>())
+  useLayoutEffect(() => {
+    if (!row || !lead || !end) {
+      fit.setOverflow([])
+      return
+    }
+    const measure = () => {
+      const rowWidth = row.clientWidth
+      if (rowWidth === 0) {
+        // Not laid out, as in a test without layout: everything shows.
+        fit.setOverflow([])
+        return
+      }
+      const folded = rowWidth < FOLD_WIDTH
+      const key = (id: string, fold: boolean) => `${fold ? 'folded' : 'full'}:${id}`
+      const items = [...end.querySelectorAll<HTMLElement>('[data-header-action]')].map(
+        (el) => el.dataset['headerAction'] ?? '',
+      )
+      for (const el of end.querySelectorAll<HTMLElement>('[data-header-action]')) {
+        const id = el.dataset['headerAction'] ?? ''
+        const control = el.firstElementChild
+        if (!fit.isOverflowed(id) && control) {
+          widths.set(key(id, folded), control.getBoundingClientRect().width)
+        }
+      }
+      const width = (id: string) => widths.get(key(id, folded)) ?? widths.get(key(id, !folded)) ?? 0
+      const style = getComputedStyle(row)
+      let leadMin = 0
+      let leadItems = 0
+      for (const child of lead.children) {
+        const w = child.tagName === 'NAV' ? TRAIL_MIN_WIDTH : child.getBoundingClientRect().width
+        if (w > 0) {
+          leadMin += w
+          leadItems++
+        }
+      }
+      leadMin += Math.max(0, leadItems - 1) * LEAD_GAP
+      const room =
+        rowWidth -
+        Number.parseFloat(style.paddingLeft || '0') -
+        Number.parseFloat(style.paddingRight || '0') -
+        leadMin -
+        ROW_GAP
+      fit.setOverflow(
+        overflowingActions(
+          items.map((id) => ({ id, width: width(id) })),
+          end.getBoundingClientRect().width,
+          items.filter((id) => fit.isOverflowed(id)),
+          room,
+        ),
+      )
+    }
+    measure()
+    const resize = new ResizeObserver(measure)
+    resize.observe(row)
+    resize.observe(end)
+    // Actions come and go as the page's declarations do, and the trail's row
+    // changes as title actions load.
+    const changes = new MutationObserver(measure)
+    changes.observe(end, { childList: true, subtree: true })
+    changes.observe(lead, { childList: true })
+    return () => {
+      resize.disconnect()
+      changes.disconnect()
+    }
+  }, [fit, row, lead, end, widths])
 }

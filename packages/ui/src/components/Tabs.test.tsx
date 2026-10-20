@@ -120,3 +120,34 @@ describe('Tabs', () => {
     await waitFor(() => expect(openTooltip()).toHaveTextContent('Overview'))
   })
 })
+
+it('counts what each tab holds, and colors one that needs attention', () => {
+  render(
+    <Tabs
+      label="Resources"
+      items={[
+        { value: 'vms', label: 'VMs', count: 1204 },
+        { value: 'disks', label: 'Disks', count: 23, tone: 'warning' },
+      ]}
+    />,
+  )
+  expect(screen.getByRole('tab', { name: /VMs/ })).toHaveTextContent('1.2K')
+  const disks = screen.getByRole('tab', { name: /Disks/ })
+  expect(disks).toHaveTextContent('23')
+  expect(disks).toHaveClass('text-(--theme-warning)')
+})
+
+it('sets segmented tabs small', () => {
+  render(
+    <Tabs
+      label="Views"
+      variant="segmented"
+      size="sm"
+      items={[
+        { value: 'list', label: 'List' },
+        { value: 'board', label: 'Board' },
+      ]}
+    />,
+  )
+  expect(screen.getByRole('tab', { name: 'List' })).toHaveClass('h-6', 'text-xs')
+})

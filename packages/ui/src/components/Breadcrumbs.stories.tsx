@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { RefreshIcon, UploadIcon } from '../icons'
+import { ClusterIcon, FolderIcon, RefreshIcon, UploadIcon } from '../icons'
 import { type Breadcrumb, Breadcrumbs, type BreadcrumbsProps } from './Breadcrumbs'
 import { Button } from './Button'
 
@@ -216,4 +216,21 @@ export const InARow: StoryObj<RowArgs> = {
 
 function RowTrail(args: BreadcrumbsArgs) {
   return <Breadcrumbs current={args.current} label={args.label || undefined} {...useGoUp(args)} />
+}
+
+/** Crumbs with icons before their labels, such as the section a page belongs
+ *  to; a folded crumb keeps its icon in the "…" menu. The text stays 13px. */
+export const WithIcons: Story = {
+  args: {
+    crumbs: [
+      { label: 'Compute', href: '/compute', icon: <ClusterIcon /> },
+      { label: 'Clusters', href: '/compute/clusters', icon: <FolderIcon /> },
+      { label: 'gpu-a100-east' },
+    ],
+  },
+  render: (args) => <Trail {...args} />,
+  play: async ({ canvasElement }) => {
+    const nav = within(canvasElement).getByRole('navigation', { name: 'Breadcrumb' })
+    await expect(within(nav).getByRole('link', { name: 'Clusters' })).toBeVisible()
+  },
 }

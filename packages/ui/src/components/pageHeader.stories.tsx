@@ -3,12 +3,18 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import {
+  ArchiveIcon,
   CancelIcon,
+  CopyIcon,
   EditIcon,
   ExternalLinkIcon,
   FavoriteIcon,
   FavoriteOutlineIcon,
+  RunWorkflowIcon,
   SaveIcon,
+  ShareIcon,
+  StopIcon,
+  TerminalIcon,
   TrashIcon,
 } from '../icons'
 import type { Breadcrumb } from './PageHeader'
@@ -18,7 +24,8 @@ import { useLink } from './Provider'
 import { SegmentedControl } from './SegmentedControl'
 
 /** What a host's shell does: the provider above everything, the bar in its
- *  chrome, and the routes in a scrolling main beside a sidebar. */
+ *  chrome, and the routes in a scrolling main beside a sidebar, which a
+ *  phone screen leaves out. */
 function Shell({
   children,
   compact = false,
@@ -40,7 +47,7 @@ function Shell({
         {!narrow && (
           <nav
             aria-label="Sections"
-            className="flex shrink-0 flex-col gap-2 border-r border-(--theme-border) p-3 text-xs text-(--theme-muted-text-color)"
+            className="flex shrink-0 max-sm:hidden flex-col gap-2 border-r border-(--theme-border) p-3 text-xs text-(--theme-muted-text-color)"
             style={{ width: '11rem' }}
           >
             <p className="m-0 font-medium text-(--theme-app)">Workspace</p>
@@ -602,4 +609,80 @@ export const ActionLinks: StoryObj<ActionLinkArgs> = {
 export const ActionLinksDisabled: StoryObj<ActionLinkArgs> = {
   ...ActionLinks,
   args: { ...ActionLinks.args, disabled: true },
+}
+
+/** A command under way: a spinner takes the icon's place, and the action keeps
+ *  focus but can't be pressed again until it's done. */
+export const BusyAction: StoryObj<{ loading: boolean }> = {
+  args: { loading: true },
+  argTypes: { loading: { description: 'PageHeaderAction and PageHeaderAddButton: busy' } },
+  render: ({ loading }) => (
+    <Shell>
+      <PageHeader
+        breadcrumbs={[{ label: 'Workflows', href: '/workflows' }, { label: 'nightly-train' }]}
+        actions={
+          <>
+            <PageHeaderAction
+              icon={RunWorkflowIcon}
+              label="Run"
+              loading={loading}
+              onClick={() => {}}
+            />
+            <PageHeaderAddButton label="New schedule" loading={loading} onClick={() => {}} />
+          </>
+        }
+      />
+    </Shell>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const run = within(canvasElement).getByRole('button', { name: 'Run' })
+    await expect(run.getAttribute('aria-busy')).toBe(args.loading ? 'true' : null)
+  },
+}
+
+function CrowdedPage({ narrow }: { narrow: boolean }) {
+  return (
+    <Shell narrow={narrow}>
+      <PageHeader
+        breadcrumbs={[{ label: 'Workflows', href: '/workflows' }, { label: 'nightly-train' }]}
+        titleActions={
+          <PageHeaderAction icon={EditIcon} iconOnly label="Rename" onClick={() => {}} />
+        }
+        actions={
+          <>
+            <PageHeaderAction icon={RunWorkflowIcon} label="Run" onClick={() => {}} />
+            <PageHeaderAction
+              icon={StopIcon}
+              label="Stop"
+              onClick={() => {}}
+              disabled
+              disabledReason="Nothing is running"
+            />
+            <PageHeaderAction icon={TerminalIcon} label="Terminal" href="/terminal" />
+            <PageHeaderAction icon={CopyIcon} label="Duplicate" onClick={() => {}} />
+            <PageHeaderAction icon={ShareIcon} label="Share" onClick={() => {}} />
+            <PageHeaderAction icon={ArchiveIcon} label="Archive" onClick={() => {}} />
+            <PageHeaderAction icon={TrashIcon} label="Delete" destructive onClick={() => {}} />
+          </>
+        }
+      />
+      <p className="m-0">Seven commands in a bar that has room for some of them.</p>
+    </Shell>
+  )
+}
+
+/** More commands than the bar has room for: their labels fold to icons first,
+ *  and then the trailing ones move into a "…" menu, last first, so the trail
+ *  keeps the room to name the page. Toggle `narrow` for a phone. */
+export const CrowdedActions: Story = {
+  args: { narrow: true },
+  render: ({ narrow }) => <CrowdedPage narrow={narrow} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await waitFor(() => expect(canvas.getByRole('button', { name: 'More actions' })).toBeVisible())
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await expect(
+      await within(document.body).findByRole('menuitem', { name: 'Delete' }),
+    ).toBeVisible()
+  },
 }

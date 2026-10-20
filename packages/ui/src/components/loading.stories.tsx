@@ -38,8 +38,27 @@ export const Loaders: StoryObj<LoaderProps> = {
   argTypes: {
     size: { control: { type: 'range', min: 16, max: 160 } },
     variant: { control: 'inline-radio', options: ['spinner', 'logo'] },
+    fill: { control: 'inline-radio', options: [undefined, 'screen', 'page', 'section'] },
   },
   render: (args) => <Loader {...args} />,
+}
+
+/** A route on its way: the logo centered in the page's region at 40px, as
+ *  `fill="page"` gives it. `screen` centers in the whole window at 48px, while
+ *  the app starts; `section` in a pane with no height of its own. */
+export const PageLoader: StoryObj<Pick<LoaderProps, 'fill'>> = {
+  name: 'Page loader',
+  args: { fill: 'page' },
+  argTypes: { fill: { control: 'inline-radio', options: ['screen', 'page', 'section'] } },
+  render: ({ fill }) => (
+    // A region of its own, as a page's scrolling area is; inline, since stories aren't scanned.
+    <div className="panel" style={{ height: fill === 'section' ? undefined : '20rem' }}>
+      <Loader variant="logo" fill={fill} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('status', { name: 'Loading…' })).toBeVisible()
+  },
 }
 
 // Pending until the refresh it started settles, which the play holds open.

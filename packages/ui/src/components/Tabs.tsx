@@ -5,6 +5,7 @@ import { AppLink } from './AppLink'
 import {
   SegmentContent,
   type SegmentLayout,
+  type SegmentTone,
   segmentClassName,
   segmentGroupClassName,
 } from './segmented'
@@ -17,6 +18,11 @@ export interface TabItem<Value extends string = string> {
   icon?: ReactNode
   /** Beside the label, or in the corner when only the icon shows. */
   badge?: ReactNode
+  /** How many things the view holds, as a pill after the label. */
+  count?: number | undefined
+  /** Colors the label and the count, for a view that needs attention, such
+   *  as what failed or what has been left behind. */
+  tone?: SegmentTone | undefined
   /** Navigates instead of showing a panel, for tabs that are pages. */
   href?: string
   disabled?: boolean
@@ -32,8 +38,8 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
   defaultValue?: Value | undefined
   onValueChange?: ((value: Value) => void) | undefined
   /** `line` underlines the current tab across a page; `segmented` matches a
-   *  SegmentedControl, for a few views in a small space. `fill` and `iconOnly`
-   *  apply to `segmented`. */
+   *  SegmentedControl, for a few views in a small space. `fill`, `iconOnly`
+   *  and `size` apply to `segmented`. */
   variant?: 'line' | 'segmented' | undefined
   /** At the tab row's far end, such as a picker for what the tabs show. */
   end?: ReactNode
@@ -45,6 +51,12 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
   testId?: string | undefined
   /** The `TabPanel`s; tabs that are pages leave this to the router. */
   children?: ReactNode
+}
+
+// A toned tab keeps its tone while current; the underline still marks it.
+const lineTone: Record<SegmentTone, string> = {
+  warning: 'text-(--theme-warning)',
+  danger: 'text-(--theme-error-text)',
 }
 
 /** Views of one thing, one shown at a time: panels below the tabs, or pages
@@ -59,6 +71,7 @@ export function Tabs<Value extends string>({
   variant = 'line',
   fill = false,
   iconOnly = false,
+  size = 'md',
   end,
   sticky,
   className,
@@ -66,7 +79,7 @@ export function Tabs<Value extends string>({
   children,
 }: TabsProps<Value>) {
   const segmented = variant === 'segmented'
-  const layout = { fill, iconOnly: segmented && iconOnly }
+  const layout = { fill, iconOnly: segmented && iconOnly, size }
   // Held here as well as in Base UI, since a segmented tab's look follows it.
   const [own, setOwn] = useState(defaultValue ?? items[0]?.value)
   const current = value ?? own
@@ -84,8 +97,13 @@ export function Tabs<Value extends string>({
         {...(item.href ? { nativeButton: false, render: <AppLink href={item.href} /> } : {})}
         className={
           segmented
-            ? segmentClassName(item.value === current, layout)
-            : 'flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-2 text-sm font-semibold theme-muted-text transition-colors hover:theme-text focus-visible:rounded-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus) data-active:text-(--theme-link) data-disabled:cursor-not-allowed data-disabled:opacity-50'
+            ? segmentClassName(item.value === current, layout, item.tone)
+            : cx(
+                'flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-2 text-sm font-semibold transition-colors focus-visible:rounded-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus) data-disabled:cursor-not-allowed data-disabled:opacity-50',
+                item.tone
+                  ? lineTone[item.tone]
+                  : 'theme-muted-text hover:theme-text data-active:text-(--theme-link)',
+              )
         }
       >
         <SegmentContent {...item} iconOnly={layout.iconOnly} />

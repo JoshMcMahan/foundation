@@ -168,3 +168,29 @@ describe('DescriptionListGroup', () => {
     expect(screen.getByRole('group', { name: 'Target' })).toHaveTextContent('Session')
   })
 })
+
+describe('DescriptionList size and truncation', () => {
+  it('sets small type, and cuts a long value to a line', () => {
+    render(
+      <DescriptionList size="xs">
+        <DescriptionListItem label="Nodes" mono truncate>
+          node-0001,node-0002,node-0003
+        </DescriptionListItem>
+      </DescriptionList>,
+    )
+    const value = screen.getByText('node-0001,node-0002,node-0003')
+    expect(value).toHaveClass('truncate', 'font-mono', 'text-[0.75rem]')
+    expect(value.closest('dl')).toHaveClass('text-xs')
+  })
+
+  it('lets a group set the size of every list in it', () => {
+    render(
+      <DescriptionListGroup size="xs">
+        <DescriptionList title="Actor">
+          <DescriptionListItem label="Name">Ada</DescriptionListItem>
+        </DescriptionList>
+      </DescriptionListGroup>,
+    )
+    expect(screen.getByText('Ada').closest('dl')).toHaveClass('text-xs')
+  })
+})

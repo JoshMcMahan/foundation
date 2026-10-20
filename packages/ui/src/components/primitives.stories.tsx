@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { formatBytes } from '../format'
+import { ClusterIcon, UploadIcon } from '../icons'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -18,7 +19,7 @@ import { Autocomplete, Combobox } from './Combobox'
 import { ConfirmModal } from './ConfirmModal'
 import { CreateModal, CreateModalSwitch } from './CreateModal'
 import { DatePicker } from './DatePicker'
-import { EmptyState } from './EmptyState'
+import { EmptyState, type EmptyStateVariant } from './EmptyState'
 import { ExternalLink } from './ExternalLink'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { InfoTip } from './InfoTip'
@@ -637,16 +638,29 @@ export const AvatarGroups: StoryObj<AvatarGroupArgs> = {
   },
 }
 
-/** Where there is nothing yet: a panel stands in for a whole list, and bare sits
- *  inside something that already frames it. */
-export const EmptyStates: StoryObj<{ variant: 'panel' | 'bare' }> = {
-  args: { variant: 'panel' },
-  argTypes: { variant: { control: 'inline-radio', options: ['panel', 'bare'] } },
-  render: ({ variant }) => (
+/** Where there is nothing yet: a panel stands in for a whole list, plain gives
+ *  a list or page body the same room with no frame, dashed marks a place to add
+ *  the first item, and bare sits inside something that already frames it. The
+ *  icon is a bare, faded glyph. */
+export const EmptyStates: StoryObj<{
+  variant: EmptyStateVariant
+  headingLevel: 2 | 3 | 4 | undefined
+}> = {
+  args: { variant: 'panel', headingLevel: undefined },
+  argTypes: {
+    variant: { control: 'inline-radio', options: ['panel', 'plain', 'dashed', 'bare'] },
+    headingLevel: {
+      control: 'inline-radio',
+      options: [undefined, 2, 3, 4],
+      description: 'Makes the title a heading, for an empty state that stands in for a section.',
+    },
+  },
+  render: ({ variant, headingLevel }) => (
     <div className="max-w-xl">
       <EmptyState
         variant={variant}
-        icon={<span aria-hidden="true">∅</span>}
+        headingLevel={headingLevel}
+        icon={<ClusterIcon />}
         title="No clusters yet"
         description="Connect machines you run, or start new ones in the cloud."
         action={
@@ -657,6 +671,40 @@ export const EmptyStates: StoryObj<{ variant: 'panel' | 'bare' }> = {
       />
     </div>
   ),
+}
+
+/** Every look side by side: a page body, an upload target and a sidebar. */
+export const EmptyStateVariants: StoryObj = {
+  render: () => (
+    <div className="flex max-w-xl flex-col gap-6">
+      <EmptyState
+        variant="plain"
+        icon={<ClusterIcon />}
+        title="No clusters yet"
+        description="Clusters you connect or start show here."
+      />
+      <EmptyState
+        variant="dashed"
+        headingLevel={3}
+        icon={<UploadIcon />}
+        title="No thumbnails"
+        description="Upload an image to show on the workflow’s card."
+        action={
+          <Button variant="secondary" size="sm" icon={<UploadIcon />}>
+            Upload image
+          </Button>
+        }
+      />
+      <div className="panel w-64">
+        <EmptyState variant="bare" title="No recent files" />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('heading', { level: 3, name: 'No thumbnails' }),
+    ).toBeVisible()
+  },
 }
 
 type ModalArgs = Pick<ModalProps, 'align' | 'dismissible' | 'size'> & { paragraphs: number }
@@ -971,7 +1019,9 @@ export const StickyTableHeader: StoryObj<{ stickyHeader: boolean }> = {
  *  `compact` fits a short list of keys and values. */
 export const Tables: StoryObj<{ density: TableDensity }> = {
   args: { density: 'comfortable' },
-  argTypes: { density: { control: 'inline-radio', options: ['comfortable', 'compact'] } },
+  argTypes: {
+    density: { control: 'inline-radio', options: ['comfortable', 'compact', 'dense'] },
+  },
   render: (args) => <TablesDemo {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -987,6 +1037,55 @@ export const Tables: StoryObj<{ density: TableDensity }> = {
     await userEvent.click(within(name).getByRole('button'))
     await expect(name).toHaveAttribute('aria-sort', 'descending')
     await expect(canvas.getAllByRole('row')[1]).toHaveTextContent('gamma')
+  },
+}
+
+interface TableOptionsArgs {
+  density: TableDensity
+  caps: boolean
+  flush: boolean
+  columnDividers: boolean
+}
+
+/** A small table inside a card: `dense` type, sentence-case headers for the
+ *  whole table, `flush` edges against the card's own padding, fixed column
+ *  widths, and column dividers for a grid of figures. */
+export const TableOptions: StoryObj<TableOptionsArgs> = {
+  args: { density: 'dense', caps: false, flush: true, columnDividers: false },
+  argTypes: {
+    density: { control: 'inline-radio', options: ['comfortable', 'compact', 'dense'] },
+    caps: { description: 'Sets every header in small capitals.' },
+    flush: {
+      description:
+        'Drops the outer side padding of the first and last columns and the header fill, for a table in a padded card.',
+    },
+    columnDividers: { description: 'Rules a line between columns as well as rows.' },
+  },
+  render: (args) => (
+    <div className="panel max-w-xl p-4">
+      <Table
+        {...args}
+        borderless
+        panel={false}
+        columns={['40%', '20%', undefined]}
+        className="table-fixed"
+      >
+        <Table.Header>Partition</Table.Header>
+        <Table.Header className="text-right">Nodes</Table.Header>
+        <Table.Header>State</Table.Header>
+        {clusters.map((cluster) => (
+          <tr key={cluster.name}>
+            <Table.Item>{cluster.name}</Table.Item>
+            <Table.Item className="text-right tabular-nums">{cluster.nodes}</Table.Item>
+            <Table.Item>{cluster.status}</Table.Item>
+          </tr>
+        ))}
+      </Table>
+    </div>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const header = within(canvasElement).getByRole('columnheader', { name: 'Partition' })
+    await expect(header.classList.contains('uppercase')).toBe(args.caps)
   },
 }
 

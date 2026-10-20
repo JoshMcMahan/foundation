@@ -184,3 +184,42 @@ export const InAField: StoryObj<Args> = {
     await expect(canvas.getByRole('group', { name: 'Notify me about' })).toBeInTheDocument()
   },
 }
+
+type Arch = 'amd64' | 'arm64' | 'gpu'
+
+/** The machine types a project may use, with a live summary of what the filter
+ *  lets through that the group names as its description. All stands apart
+ *  from the options, and a pressed option shows a check as well as its tint. */
+export const WithSummary: StoryObj<Args> = {
+  args: { all: true, size: 'md' },
+  render: function Render({ size }) {
+    const [value, setValue] = useState<Arch[]>(['amd64'])
+    const options: ToggleGroupOption<Arch>[] = [
+      { value: 'amd64', label: 'x86-64', icon: <DesktopIcon /> },
+      { value: 'arm64', label: 'Arm', icon: <ClusterIcon /> },
+      { value: 'gpu', label: 'GPU', icon: <CloudIcon /> },
+    ]
+    return (
+      <div className="flex flex-col gap-2">
+        <ToggleGroup
+          label="Machine types"
+          options={options}
+          value={value}
+          onValueChange={setValue}
+          all
+          size={size}
+          aria-describedby="types-summary"
+        />
+        <p id="types-summary" aria-live="polite" className="m-0 text-xs theme-muted-text">
+          {value.length === 0 ? 'Every type is allowed' : `${value.length} of 3 types allowed`}
+        </p>
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('group', { name: 'Machine types' })).toHaveAccessibleDescription(
+      '1 of 3 types allowed',
+    )
+  },
+}

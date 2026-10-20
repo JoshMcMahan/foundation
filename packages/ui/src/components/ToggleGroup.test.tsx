@@ -111,3 +111,19 @@ describe('ToggleGroup', () => {
     expect(onValueChange).not.toHaveBeenCalled()
   })
 })
+
+describe('ToggleGroup chrome', () => {
+  it('passes its description through and sets All apart from the options', () => {
+    render(
+      <>
+        <p id="summary">2 of 3 states</p>
+        <Filter all aria-describedby="summary" />
+      </>,
+    )
+    expect(screen.getByRole('group', { name: 'State' })).toHaveAccessibleDescription(
+      '2 of 3 states',
+    )
+    const all = screen.getByRole('button', { name: /All/ })
+    expect(all.nextElementSibling).toHaveAttribute('aria-hidden', 'true')
+  })
+})

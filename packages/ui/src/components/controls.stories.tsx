@@ -466,6 +466,55 @@ export const CardsInPage: StoryObj<{
   },
 }
 
+interface SegmentArgs {
+  size: 'sm' | 'md'
+  fill: boolean | 'narrow'
+  disabled: boolean
+}
+
+/** Who can see a workspace: one choice always current. A choice that can't be
+ *  picked now stays in place, and `disabled` holds the whole control for a
+ *  reader without the right to change it. `fill="narrow"` shares a phone's
+ *  width and sits at its own from `sm`. */
+export const SegmentedStates: StoryObj<SegmentArgs> = {
+  name: 'Segmented control states',
+  args: { size: 'md', fill: 'narrow', disabled: false },
+  argTypes: {
+    size: { control: 'inline-radio', options: ['sm', 'md'] },
+    fill: { control: 'inline-radio', options: [false, true, 'narrow'] },
+    disabled: { description: 'None of the choices can be changed.' },
+  },
+  render: function Render(args) {
+    const [value, setValue] = useState<'private' | 'team' | 'everyone'>('team')
+    return (
+      <div className="max-w-md">
+        <SegmentedControl
+          {...args}
+          label="Visibility"
+          options={[
+            { value: 'private', label: 'Only me' },
+            { value: 'team', label: 'My team', count: 8 },
+            { value: 'everyone', label: 'Everyone', disabled: true },
+          ]}
+          value={value}
+          onValueChange={setValue}
+        />
+      </div>
+    )
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Everyone' })).toHaveAttribute('data-disabled')
+    if (!args.disabled) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Only me' }))
+      await expect(canvas.getByRole('button', { name: 'Only me' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+    }
+  },
+}
+
 type RunFilter = 'all' | 'running' | 'failed'
 
 function SearchSortDemo({ size }: { size: 'sm' | 'md' }) {
@@ -519,7 +568,15 @@ export const SearchAndSort: StoryObj<{ size: 'sm' | 'md' }> = {
   },
 }
 
-function PaginationDemo({ known, sizes }: { known: boolean; sizes: boolean }) {
+function PaginationDemo({
+  known,
+  sizes,
+  numbers,
+}: {
+  known: boolean
+  sizes: boolean
+  numbers: boolean
+}) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   return (
@@ -529,19 +586,22 @@ function PaginationDemo({ known, sizes }: { known: boolean; sizes: boolean }) {
       pageSize={pageSize}
       {...(known ? { total: 420 } : { hasNext: page < 4, summary: `Runs from page ${page + 1}` })}
       onPageChange={setPage}
+      pageNumbers={numbers}
       {...(sizes ? { onPageSizeChange: setPageSize } : {})}
     />
   )
 }
 
 /** Where a page sits in the list, with previous and next. Without a total, a
- *  list that only knows whether more follow says what the page covers itself. */
-export const PaginationStory: StoryObj<{ known: boolean; sizes: boolean }> = {
+ *  list that only knows whether more follow says what the page covers itself.
+ *  `pageNumbers` numbers the pages between them, for a list read out of order. */
+export const PaginationStory: StoryObj<{ known: boolean; sizes: boolean; numbers: boolean }> = {
   name: 'Pagination',
-  args: { known: true, sizes: true },
+  args: { known: true, sizes: true, numbers: false },
   argTypes: {
     known: { description: 'The list knows its total.' },
     sizes: { description: 'Offers page sizes.' },
+    numbers: { description: 'Numbers the pages; needs a total.' },
   },
   render: (args) => <PaginationDemo {...args} />,
   play: async ({ canvasElement, args }) => {
@@ -552,6 +612,37 @@ export const PaginationStory: StoryObj<{ known: boolean; sizes: boolean }> = {
       // With room to spare, the position shows in full.
       await expect(position.scrollWidth).toBeLessThanOrEqual(position.clientWidth)
     }
+  },
+}
+
+/** Numbered pages of a 30-a-page catalog: the first and last, a window around
+ *  the current page, and gaps between, as links the address names. */
+export const PaginationNumbers: StoryObj = {
+  name: 'Pagination with page numbers',
+  render: function Render() {
+    const [page, setPage] = useState(6)
+    return (
+      <Pagination
+        className="max-w-2xl border-t border-(--theme-border)"
+        page={page}
+        pageSize={30}
+        total={600}
+        onPageChange={setPage}
+        pageNumbers
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Page 7' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Page 20' }))
+    await expect(canvas.getByRole('button', { name: 'Page 20' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   },
 }
 

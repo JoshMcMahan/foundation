@@ -274,6 +274,100 @@
   }
 }
 
+/* ErrorPage: the status code in the theme's gradient over two slowly drifting
+ * glows and a faint grid. A theme that sets --gradient-start and --gradient-mid
+ * picks the two colors; otherwise they are its link color, kept vivid, and that color turned toward
+ * violet, which read on the page in either scheme. */
+@utility error-page-code {
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start, oklch(from var(--theme-link) l max(c, 0.14) h)) 0%,
+    var(--gradient-mid, oklch(from var(--theme-link) l max(c, 0.14) calc(h + 45))) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.error-page-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  animation: error-page-float 8s ease-in-out infinite;
+}
+
+/* Stronger in the dark, where a faint glow on a dark page disappears. */
+.error-page-glow-start {
+  background-color: light-dark(
+    color-mix(
+      in oklab,
+      var(--gradient-start, oklch(from var(--theme-link) l max(c, 0.14) h)) 12%,
+      transparent
+    ),
+    color-mix(
+      in oklab,
+      var(--gradient-start, oklch(from var(--theme-link) l max(c, 0.14) h)) 20%,
+      transparent
+    )
+  );
+}
+
+.error-page-glow-mid {
+  background-color: light-dark(
+    color-mix(
+      in oklab,
+      var(--gradient-mid, oklch(from var(--theme-link) l max(c, 0.14) calc(h + 45))) 12%,
+      transparent
+    ),
+    color-mix(
+      in oklab,
+      var(--gradient-mid, oklch(from var(--theme-link) l max(c, 0.14) calc(h + 45))) 20%,
+      transparent
+    )
+  );
+}
+
+.error-page-grid {
+  background-image:
+    linear-gradient(var(--theme-app) 1px, transparent 1px),
+    linear-gradient(90deg, var(--theme-app) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.03;
+}
+
+.error-page-content {
+  animation: error-page-in 0.5s ease-out both;
+}
+
+@keyframes error-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes error-page-float {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(24px, -24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-page-glow,
+  .error-page-content {
+    animation: none;
+  }
+}
+
 /* Geist itself loads from fonts.css; without it these fall back to system-ui. */
 @theme {
   --font-geist-sans: "Geist Sans";

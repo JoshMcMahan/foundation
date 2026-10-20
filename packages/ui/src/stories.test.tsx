@@ -16,6 +16,7 @@ import * as combobox from './components/Combobox.stories'
 import * as copy from './components/CopyButton.stories'
 import * as controls from './components/controls.stories'
 import * as descriptionList from './components/DescriptionList.stories'
+import * as errorPage from './components/ErrorPage.stories'
 import * as fields from './components/fields.stories'
 import * as loading from './components/loading.stories'
 import * as markdown from './components/Markdown.stories'
@@ -24,6 +25,7 @@ import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as primitives from './components/primitives.stories'
 import * as sections from './components/sections.stories'
+import * as tabs from './components/Tabs.stories'
 import * as themeEditor from './components/ThemeEditor.stories'
 import * as toasts from './components/Toast.stories'
 import * as toggleGroup from './components/ToggleGroup.stories'
@@ -45,6 +47,7 @@ import * as appShell from './list/appShell.stories'
 import * as filterBar from './list/filterBar.stories'
 import * as list from './list/ListTable.stories'
 import * as listControls from './list/listControls.stories'
+import * as listPage from './list/listPage.stories'
 import * as stickyHeaders from './list/stickyHeaders.stories'
 import * as userHoverCard from './list/UserHoverCard.stories'
 import * as logviewer from './logviewer/LogViewer.stories'
@@ -74,6 +77,8 @@ const SUITES = {
   icons,
   sections,
   descriptionList,
+  errorPage,
+  tabs,
   loading,
   markdown,
   combobox,
@@ -89,6 +94,7 @@ const SUITES = {
   list,
   listControls,
   filterBar,
+  listPage,
   stickyHeaders,
   appShell,
   userHoverCard,

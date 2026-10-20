@@ -29,6 +29,9 @@ export interface ColumnDef {
    * then sorts the list: it shows, and sets, the same order as Display
    * options' Ordering. */
   orderBy?: string
+  /** `end` sets the header and the cells against the column's far edge, for
+   * figures, sizes and times that compare best lined up on their last digit. */
+  align?: 'start' | 'end'
 }
 
 /** Column responsive importance; `low` drops before `medium`. See {@link ColumnDef.priority}. */
@@ -51,6 +54,12 @@ function columnResponsiveClass(col: ColumnDef, i: number): string {
     return PRIORITY_SHOW_CLASS.medium
   }
   return col.priority ? PRIORITY_SHOW_CLASS[col.priority] : ''
+}
+
+/** A column's classes for its header and every cell: when it shows, and how it aligns. */
+function columnClass(col: ColumnDef, i: number): string {
+  const show = columnResponsiveClass(col, i)
+  return col.align === 'end' ? (show ? `${show} text-right` : 'text-right') : show
 }
 
 interface GroupByOption {
@@ -331,7 +340,7 @@ export function useListView<T>({
     [columns, hiddenKeys],
   )
 
-  const columnClasses = useMemo(() => visibleColumns.map(columnResponsiveClass), [visibleColumns])
+  const columnClasses = useMemo(() => visibleColumns.map(columnClass), [visibleColumns])
   const columnStacks = useMemo(() => visibleColumns.map(stacks), [visibleColumns])
 
   const toggleColumn = useCallback(

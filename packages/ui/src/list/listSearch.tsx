@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { buttonClasses } from '../components/buttonClasses'
-import { usePersistedState, useStrings } from '../components/Provider'
+import { useLocale, usePersistedState, useStrings } from '../components/Provider'
 import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
+import { formatInteger } from '../format'
 import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
 const NO_TERMS: string[] = []
-
-// Grouped in the reader's locale: 1,204 or 1.204.
-const COUNT = new Intl.NumberFormat()
 
 /** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active). */
 export function useListSearch(enabled = true, storageKey?: string) {
@@ -107,7 +105,7 @@ export function ListSearchControl({
 }: {
   search: ListSearch
   placeholder: string
-  label?: string
+  label?: string | undefined
 }) {
   const { common, list } = useStrings()
   const label = labelProp ?? common.search
@@ -195,13 +193,16 @@ export function ListCount({
   nounPlural: string
 }) {
   const { list: t } = useStrings()
+  // Grouped in the host's locale: 1,204 or 1.204.
+  const locale = useLocale()
+  const count = (n: number) => formatInteger(n, locale)
   return (
     <div className="flex items-center h-8">
       {/* A status, so a screen reader hears the count change as a filter narrows it. */}
       <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
         {filterActive
-          ? t.matchCount(COUNT.format(matches), COUNT.format(total), nounPlural)
-          : t.count(COUNT.format(total), total === 1 ? noun : nounPlural)}
+          ? t.matchCount(count(matches), count(total), nounPlural)
+          : t.count(count(total), total === 1 ? noun : nounPlural)}
       </span>
     </div>
   )

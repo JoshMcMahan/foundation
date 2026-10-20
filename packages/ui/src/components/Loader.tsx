@@ -12,7 +12,8 @@ const LOGO_RINGS = [
 ]
 
 export interface LoaderProps {
-  /** The spinner's size, in pixels or any CSS length. */
+  /** The spinner's size, in pixels or any CSS length: 48 by default, and 40
+   *  when it fills a page or a section. */
   size?: number | string
   /** Shown under the spinner, and its accessible name. Without one, the
    *  loader is named with the provider's `loading` string. */
@@ -25,18 +26,42 @@ export interface LoaderProps {
   /** Beside text that already says what is happening, such as a busy button's
    *  label: hidden from assistive technology, and in the text's color. */
   decorative?: boolean
+  /** Centers it in the room it stands for, so the page needs no box of its
+   *  own: `screen` the whole window, such as while the app starts; `page` the
+   *  page's scrolling region, such as while a route loads; `section` a pane
+   *  or a card with no height of its own. */
+  fill?: 'screen' | 'page' | 'section' | undefined
 }
+
+// Full literal strings, so Tailwind's scanner emits them.
+const fillClasses = {
+  screen: 'flex min-h-dvh w-full items-center justify-center',
+  // As tall as the window, held to the region when the region has a height.
+  page: 'flex h-dvh max-h-full w-full items-center justify-center',
+  section: 'flex w-full items-center justify-center py-16',
+} as const
 
 /** Something on the way that has no shape to sketch yet. When its shape is
  *  known, such as rows of a list, sketch it with `Skeleton` instead. */
-export function Loader({
+export function Loader({ fill, ...props }: LoaderProps) {
+  if (!fill) {
+    return <LoaderMark {...props} />
+  }
+  return (
+    <div className={fillClasses[fill]}>
+      <LoaderMark {...props} size={props.size ?? (fill === 'screen' ? 48 : 40)} />
+    </div>
+  )
+}
+
+function LoaderMark({
   size = 48,
   label,
   variant = 'spinner',
   inline = false,
   color,
   decorative = false,
-}: LoaderProps) {
+}: Omit<LoaderProps, 'fill'>) {
   const { loading } = useStrings().common
   const dimension = typeof size === 'number' ? `${size}px` : size
   const spinner = (

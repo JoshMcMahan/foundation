@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { Pagination } from './Pagination'
+import { Pagination, pageSteps } from './Pagination'
 import { UIProvider, type UIStrings } from './Provider'
 
 it('shows where the page sits and steps to the next', () => {
@@ -67,4 +67,52 @@ it('renders nothing for a single page with no more rows', () => {
     <Pagination page={0} pageSize={50} total={30} hasNext={false} onPageChange={() => {}} />,
   )
   expect(container).toBeEmptyDOMElement()
+})
+
+describe('page numbers', () => {
+  it.each([
+    [0, 5, [0, 1, 2, 3, 4]],
+    [0, 20, [0, 1, 2, 3, 4, null, 19]],
+    [4, 20, [0, null, 3, 4, 5, null, 19]],
+    [15, 20, [0, null, 14, 15, 16, null, 19]],
+    [16, 20, [0, null, 15, 16, 17, 18, 19]],
+  ])('numbers page %i of %i as %j', (page, count, steps) => {
+    expect(pageSteps(page, count)).toEqual(steps)
+  })
+
+  it('never shows fewer than five steps', () => {
+    expect(pageSteps(10, 20, 3)).toEqual([0, null, 10, null, 19])
+  })
+
+  it('marks the current page and steps to another, named for each page', () => {
+    const onPageChange = vi.fn()
+    render(
+      <Pagination page={3} pageSize={10} total={200} onPageChange={onPageChange} pageNumbers />,
+    )
+    expect(screen.getByRole('button', { name: 'Page 4' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Page 20' }))
+    expect(onPageChange).toHaveBeenCalledWith(19)
+  })
+
+  it('links each page under pageHref', () => {
+    render(
+      <Pagination
+        page={0}
+        pageSize={10}
+        total={30}
+        pageHref={(page) => `?page=${page + 1}`}
+        pageNumbers={{ max: 5 }}
+      />,
+    )
+    expect(screen.getByRole('link', { name: 'Page 3' })).toHaveAttribute('href', '?page=3')
+  })
+})
+
+it("numbers pages in the host's locale, in full", () => {
+  render(
+    <UIProvider locale="de-DE">
+      <Pagination page={1203} pageSize={10} total={20000} onPageChange={() => {}} pageNumbers />
+    </UIProvider>,
+  )
+  expect(screen.getByRole('button', { name: 'Page 1204' })).toHaveTextContent('1.204')
 })

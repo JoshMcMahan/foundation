@@ -3,8 +3,9 @@ import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group'
 import type { ReactNode } from 'react'
 import { cx } from '../cx'
 import { formatCount } from '../format'
+import { CheckIcon } from '../icons'
 import { buttonClasses } from './buttonClasses'
-import { useStrings } from './Provider'
+import { useLocale, useStrings } from './Provider'
 
 export interface ToggleGroupOption<T extends string> {
   value: T
@@ -33,6 +34,9 @@ export interface ToggleGroupProps<T extends string> {
   all?: boolean | { count?: number | undefined } | undefined
   size?: 'sm' | 'md' | undefined
   disabled?: boolean | undefined
+  /** Names an element that says more about the group, such as a live summary
+   *  of what the filter lets through. */
+  'aria-describedby'?: string | undefined
   testId?: string
 }
 
@@ -59,6 +63,7 @@ export function ToggleGroup<T extends string>({
   all = false,
   size = 'sm',
   disabled = false,
+  'aria-describedby': describedBy,
   testId,
 }: ToggleGroupProps<T>) {
   const strings = useStrings()
@@ -67,6 +72,7 @@ export function ToggleGroup<T extends string>({
   return (
     <BaseToggleGroup<string>
       aria-label={label}
+      aria-describedby={describedBy}
       data-testid={testId}
       className="flex flex-wrap items-center gap-1"
       multiple={multiple}
@@ -86,6 +92,10 @@ export function ToggleGroup<T extends string>({
       }}
     >
       {all && <Chip value={ALL} label={strings.common.all} count={allCount} size={size} />}
+      {/* All clears the others rather than joining them, so a rule sets it apart. */}
+      {all && options.length > 0 && (
+        <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-(--theme-border)" />
+      )}
       {options.map((option) => (
         <Chip key={option.value} {...option} size={size} />
       ))}
@@ -102,25 +112,34 @@ function Chip({
   testId,
   size,
 }: ToggleGroupOption<string> & { size: 'sm' | 'md' }) {
+  const locale = useLocale()
   return (
     <Toggle
       value={value}
       disabled={disabled}
       data-testid={testId}
       // The outline button's pressed border alone reads faintly across a row of
-      // chips; the selection tint says which are on at a glance.
+      // chips; the selection tint says which are on at a glance, and the check
+      // says it without color.
       className={cx(
         'group aria-pressed:bg-(--theme-accent-subtle)',
         buttonClasses({ variant: 'outline', size }),
       )}
     >
-      {icon}
+      {/* An option that's off dims its icon, such as a logo or a status dot, so
+          the pressed ones lead. */}
+      {icon && (
+        <span className="inline-flex shrink-0 transition-opacity group-not-aria-pressed:opacity-55">
+          {icon}
+        </span>
+      )}
       {label}
       {count !== undefined && (
         <span className="tabular-nums text-(--theme-muted-text-color) group-aria-pressed:text-(--theme-app)">
-          {formatCount(count)}
+          {formatCount(count, locale)}
         </span>
       )}
+      <CheckIcon aria-hidden="true" className="hidden shrink-0 group-aria-pressed:block" />
     </Toggle>
   )
 }

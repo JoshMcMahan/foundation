@@ -265,3 +265,26 @@ describe('Table sticky header', () => {
     expect(thead().style.top).toBe('')
   })
 })
+
+describe('table options', () => {
+  it('sizes its columns, sets its headers in sentence case, and keeps a header’s own choice', () => {
+    const { container } = render(
+      <Table columns={['20%', undefined]} caps={false} density="dense" flush columnDividers>
+        <Table.Header>Name</Table.Header>
+        <Table.Header caps>Nodes</Table.Header>
+        <tr>
+          <Table.Item>a</Table.Item>
+          <Table.Item>1</Table.Item>
+        </tr>
+      </Table>,
+    )
+    const cols = container.querySelectorAll('colgroup col')
+    expect(cols).toHaveLength(2)
+    expect(cols[0]).toHaveStyle({ width: '20%' })
+    expect(screen.getByRole('columnheader', { name: 'Name' })).not.toHaveClass('uppercase')
+    expect(screen.getByRole('columnheader', { name: 'Nodes' })).toHaveClass('uppercase')
+    expect(screen.getByRole('cell', { name: 'a' })).toHaveClass('py-1', 'text-xs')
+    // The colgroup stays out of the body, where the table's rows go.
+    expect(container.querySelector('tbody colgroup')).toBeNull()
+  })
+})

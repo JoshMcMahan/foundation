@@ -598,6 +598,8 @@ export interface UIStrings {
     paginationPrevious: string
     paginationNext: string
     pagination: string
+    /** A numbered page's name in `Pagination`, counting from 1. */
+    page: (page: number) => string
     removeSearchTerm: (term: string) => string
   }
   /** The chip row of a list's active filters, its Filter menu and its pickers. Field and option
@@ -650,7 +652,32 @@ export interface UIStrings {
     yes: string
     no: string
   }
+  /** `ErrorPage`'s words: the way back, and a title and description for each kind of error. */
+  errorPage: {
+    /** Back through the browser's history. */
+    back: string
+    /** Back to the app's start, when there is no history to go back through. */
+    home: string
+    /** The title when nothing more is known about the error. */
+    error: string
+    /** The title for a status no kind covers, such as 418. */
+    statusTitle: (status: string) => string
+    titles: Record<ErrorPageKind, string>
+    descriptions: Record<ErrorPageKind, string>
+  }
 }
+
+/** What went wrong, which picks an `ErrorPage`'s words: `notFound` (404),
+ *  `forbidden` (403), `unauthenticated` (401), `unavailable` (502, 503 and
+ *  504), `server` (any other 5xx), and `network` for a request that never
+ *  reached the server. */
+export type ErrorPageKind =
+  | 'notFound'
+  | 'forbidden'
+  | 'unauthenticated'
+  | 'unavailable'
+  | 'server'
+  | 'network'
 
 /** What a host passes to translate the strings: any group, any string in it, at any depth.
  *  A string it leaves out stays in English. */
@@ -720,6 +747,13 @@ export interface UINavigation {
    * `sourceUrl` is a page the server resolved for it, when there is one. */
   openStepSource: (uses: string, sourceUrl?: string) => void
   openExternal: (href: string) => void
+  /** Goes back one entry in the history, such as an error page's "Back". Bind it
+   *  to the router's history; the browser's by default. */
+  goBack: () => void
+  /** Whether there is an entry of this app's to go back to; when there isn't, an
+   *  error page offers the way home instead. Bind it to the router's own
+   *  answer; by default, whether the tab's history holds more than this page. */
+  canGoBack: () => boolean
 }
 
 export type WorkflowJsonRef =
@@ -1408,6 +1442,7 @@ const DEFAULTS: UIProviderValue = {
       paginationPrevious: 'Previous',
       paginationNext: 'Next',
       pagination: 'Pagination',
+      page: (page) => `Page ${page}`,
       removeSearchTerm: (term) => `Remove filter ${term}`,
     },
     filters: {
@@ -1447,6 +1482,28 @@ const DEFAULTS: UIProviderValue = {
       yes: 'Yes',
       no: 'No',
     },
+    errorPage: {
+      back: 'Back',
+      home: 'Back to home',
+      error: 'This page couldn’t load',
+      statusTitle: (status) => `Error ${status}`,
+      titles: {
+        notFound: 'Could not find the requested page',
+        forbidden: 'No access',
+        unauthenticated: 'Signed out',
+        unavailable: 'The service is unreachable',
+        server: 'Something went wrong on our side',
+        network: 'You’re offline',
+      },
+      descriptions: {
+        notFound: 'This page does not exist, or you do not have access to it.',
+        forbidden: 'You can’t open this. Ask an administrator for access.',
+        unauthenticated: 'Your session ended. Sign in again to pick up where you were.',
+        unavailable: 'The server isn’t answering right now. Try again in a moment.',
+        server: 'The page couldn’t load because of an error on the server.',
+        network: 'The server couldn’t be reached. Check your connection and try again.',
+      },
+    },
   },
   navigation: {
     goTo: (to) => {
@@ -1467,6 +1524,8 @@ const DEFAULTS: UIProviderValue = {
         window.open(url, '_blank')
       }
     },
+    goBack: () => window.history.back(),
+    canGoBack: () => typeof window !== 'undefined' && window.history.length > 1,
   },
   data: {
     useRunFile: defaultUseRunFile,
@@ -1729,6 +1788,8 @@ export function UIProvider({
       ),
     openExternal: (href) =>
       (navigationRef.current?.openExternal ?? DEFAULTS.navigation.openExternal)(href),
+    goBack: () => (navigationRef.current?.goBack ?? DEFAULTS.navigation.goBack)(),
+    canGoBack: () => (navigationRef.current?.canGoBack ?? DEFAULTS.navigation.canGoBack)(),
   }))
   return (
     <StringsContext value={mergedStrings}>

@@ -14,14 +14,29 @@ export function formatBytes(bytes: number): string {
   return `${sizeNumber.format(bytes / 1024 ** unit)} ${BYTE_UNITS[unit]}`
 }
 
-const countNumber = new Intl.NumberFormat(undefined, {
-  notation: 'compact',
-  maximumFractionDigits: 1,
-})
+const countNumbers = new Map<string | undefined, Intl.NumberFormat>()
+const plainNumbers = new Map<string | undefined, Intl.NumberFormat>()
 
-/** A count short enough for a status line: 512, 1.2K, 3.4M. */
-export function formatCount(n: number): string {
-  return countNumber.format(n)
+/** A count short enough for a status line: 512, 1.2K, 3.4M. `locale`, such
+ *  as `useLocale()` gives, wins over the browser's. */
+export function formatCount(n: number, locale?: string | undefined): string {
+  let format = countNumbers.get(locale)
+  if (!format) {
+    format = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 })
+    countNumbers.set(locale, format)
+  }
+  return format.format(n)
+}
+
+/** A whole number in full, grouped as `locale` groups it: 1,204 or 1.204.
+ *  `locale`, such as `useLocale()` gives, wins over the browser's. */
+export function formatInteger(n: number, locale?: string | undefined): string {
+  let format = plainNumbers.get(locale)
+  if (!format) {
+    format = new Intl.NumberFormat(locale)
+    plainNumbers.set(locale, format)
+  }
+  return format.format(n)
 }
 
 // Japanese has no narrow units and would fall back to English.

@@ -11,6 +11,7 @@ import { CopyButton } from './CopyButton'
 import { InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
 import { withPathBreaks } from './pathBreaks'
+import { Tooltip } from './Tooltip'
 
 /** `plain` sets rows apart by space alone; `divided` rules a line between them; `card`
  *  also frames them in a panel. */
@@ -28,9 +29,25 @@ export interface DescriptionListProps
    *  list is too narrow for both side by side. In a DescriptionListGroup, the group's
    *  `stacked` decides. */
   stacked?: boolean | undefined
+  /** `xs` sets smaller type, for a dense panel of details such as a job's;
+   *  in a DescriptionListGroup, the group's `size` decides. */
+  size?: DescriptionListSize | undefined
   /** Styles the box around the list, such as its margins or width. */
   className?: string | undefined
 }
+
+export type DescriptionListSize = 'sm' | 'xs'
+
+// Full literal strings, so Tailwind's scanner emits them.
+const sizeText: Record<DescriptionListSize, string> = { sm: 'text-sm', xs: 'text-xs' }
+const sizeLeading: Record<DescriptionListSize, string> = { sm: 'leading-5', xs: 'leading-4' }
+const sizeMono: Record<DescriptionListSize, string> = {
+  sm: 'font-mono text-[0.8125rem]',
+  xs: 'font-mono text-[0.75rem]',
+}
+
+// The list's size, which its rows' line height and monospace follow.
+const SizeContext = createContext<DescriptionListSize | null>(null)
 
 // Rows are the list's children, so the variant pads them: a ruled row needs room
 // above and below its line.
@@ -63,23 +80,26 @@ export default function DescriptionList({
   title,
   headingLevel = 3,
   stacked = false,
+  size: sizeProp,
   className,
   children,
   ...props
 }: DescriptionListProps) {
   const grouped = useContext(InGroup)
+  const size = useContext(SizeContext) ?? sizeProp ?? 'sm'
   const titleId = useId()
   const Heading = `h${headingLevel}` as const
   const list = (
     <dl
       {...props}
       className={cx(
-        'm-0 text-sm',
+        'm-0',
+        sizeText[size],
         grouped ? 'col-span-full grid grid-cols-subgrid' : columns(stacked),
         variantClasses[variant],
       )}
     >
-      {children}
+      <SizeContext value={size}>{children}</SizeContext>
     </dl>
   )
   // A dl takes no name of its own, so a titled list is a group named by its title.
@@ -113,11 +133,14 @@ export default function DescriptionList({
  *  all of them stack together when the panel is narrow. */
 export function DescriptionListGroup({
   stacked = false,
+  size,
   className,
   children,
 }: {
   /** Puts each label over its value at any width. */
   stacked?: boolean | undefined
+  /** Every list's type size, so the lists in one panel match. */
+  size?: DescriptionListSize | undefined
   /** Styles the box around the group, such as its margins or width. */
   className?: string | undefined
   /** `DescriptionList`s. */
@@ -127,7 +150,9 @@ export function DescriptionListGroup({
     // The lists subgrid onto these columns, so every row's label sizes the one column.
     <div className={cx('@container/dl min-w-0', className)}>
       <div className={cx(columns(stacked), 'gap-y-6')}>
-        <InGroup value>{children}</InGroup>
+        <InGroup value>
+          {size ? <SizeContext value={size}>{children}</SizeContext> : children}
+        </InGroup>
       </div>
     </div>
   )
@@ -145,6 +170,10 @@ export interface DescriptionListItemProps {
   /** Adds a button that copies the value: `true` copies its text as shown; a string
    *  copies that instead, such as a full ID behind a shortened one. */
   copy?: boolean | string | undefined
+  /** Keeps the value to one line, cut off with an ellipsis, and shows it whole
+   *  on hover, for a long ID or a list of nodes in a dense panel. `copy` still
+   *  copies all of it. */
+  truncate?: boolean | undefined
   className?: string | undefined
 }
 
@@ -158,14 +187,17 @@ export function DescriptionListItem({
   tooltip,
   mono = false,
   copy = false,
+  truncate = false,
   className,
 }: DescriptionListItemProps) {
   const labelId = useId()
+  const size = useContext(SizeContext) ?? 'sm'
+  const leading = sizeLeading[size]
   return (
     // A div may group a dt and its dd in a dl. Spanning the list's columns on a subgrid,
     // it keeps every row's label column one width and lets a divided list rule each row.
     <div className={cx('col-span-full grid grid-cols-subgrid gap-y-0.5', className)}>
-      <dt className="min-w-0 leading-5 wrap-break-word text-(--theme-muted-text-color)">
+      <dt className={cx('min-w-0 wrap-break-word text-(--theme-muted-text-color)', leading)}>
         {/* Names the copy button; the info button beside it stays out of that name. */}
         <span id={labelId}>{label}</span>
         {tooltip && <InfoTip className="ml-1 align-[-2px]" text={tooltip} />}
@@ -177,15 +209,20 @@ export function DescriptionListItem({
           <>
             {/* Wraps between a path's segments first, and mid-word only for a segment
                 too long for a line of its own, such as a hash. */}
-            <div
-              data-value
-              className={cx(
-                'min-w-0 leading-5 wrap-anywhere',
-                mono && 'font-mono text-[0.8125rem]',
-              )}
-            >
-              {withPathBreaks(children)}
-            </div>
+            {truncate ? (
+              <Tooltip content={children} overflowOnly>
+                <div data-value className={cx('min-w-0 truncate', leading, mono && sizeMono[size])}>
+                  {children}
+                </div>
+              </Tooltip>
+            ) : (
+              <div
+                data-value
+                className={cx('min-w-0 wrap-anywhere', leading, mono && sizeMono[size])}
+              >
+                {withPathBreaks(children)}
+              </div>
+            )}
             {copy !== false && (
               <CopyValue text={copy === true ? undefined : copy} label={label} labelId={labelId} />
             )}
@@ -203,8 +240,9 @@ const EMPTY_MARK = '—'
 // as punctuation a screen reader may skip.
 function EmptyValue() {
   const { common: t } = useStrings()
+  const size = useContext(SizeContext) ?? 'sm'
   return (
-    <span className="leading-5 text-(--theme-muted-text-color)">
+    <span className={cx('text-(--theme-muted-text-color)', sizeLeading[size])}>
       <span aria-hidden="true">{EMPTY_MARK}</span>
       <span className="sr-only">{t.noValue}</span>
     </span>
