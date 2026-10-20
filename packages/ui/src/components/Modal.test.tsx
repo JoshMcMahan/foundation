@@ -271,6 +271,82 @@ describe('ConfirmModal focus, pending and errors', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Restart' })).toHaveFocus())
   })
 
+  it('focuses the first field in the body, even in a destructive dialog', async () => {
+    render(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        destructive
+        title="Delete domain?"
+        confirmLabel="Delete"
+        onConfirm={vi.fn()}
+      >
+        <label>
+          Type the domain to confirm
+          <input />
+        </label>
+        <label>
+          Reason
+          <textarea />
+        </label>
+      </ConfirmModal>,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Type the domain to confirm' })).toHaveFocus(),
+    )
+  })
+
+  it('keeps to the buttons when the body holds no field, or only a checkbox', async () => {
+    render(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        destructive
+        title="Delete cluster?"
+        confirmLabel="Delete"
+        onConfirm={vi.fn()}
+      >
+        <p>Its disks are erased.</p>
+        <label>
+          <input type="checkbox" />
+          Also delete its snapshots
+        </label>
+      </ConfirmModal>,
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
+  })
+
+  it('focuses a button when told to, despite a field', async () => {
+    render(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Rename?"
+        confirmLabel="Rename"
+        onConfirm={vi.fn()}
+        initialFocus="confirm"
+      >
+        <input aria-label="Name" />
+      </ConfirmModal>,
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename' })).toHaveFocus())
+  })
+
+  it('falls back to the rule for the buttons when first-control finds no field', async () => {
+    render(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        destructive
+        title="Delete?"
+        confirmLabel="Delete"
+        onConfirm={vi.fn()}
+        initialFocus="first-control"
+      />,
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
+  })
+
   it('waits on work the host runs, and shows why the last try failed', async () => {
     const onConfirm = vi.fn()
     render(

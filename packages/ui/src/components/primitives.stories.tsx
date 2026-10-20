@@ -27,7 +27,7 @@ import { InfoTip } from './InfoTip'
 import { Input } from './Input'
 import { positionKeys } from './keys'
 import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Meter'
-import { Modal, type ModalProps } from './Modal'
+import { Modal, type ModalProps, type ModalSize } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
 import { type AvatarColoring, UIProvider } from './Provider'
@@ -980,7 +980,10 @@ export const ConfirmModalStory: StoryObj<ConfirmArgs> = {
   argTypes: {
     pending: { description: 'Work the host runs: the buttons wait.' },
     error: { control: 'text', description: 'Why the last confirm failed.' },
-    initialFocus: { control: 'inline-radio', options: [undefined, 'cancel', 'confirm'] },
+    initialFocus: {
+      control: 'inline-radio',
+      options: [undefined, 'cancel', 'confirm', 'first-control'],
+    },
   },
   render: (args) => <ConfirmDemo {...args} />,
   play: async ({ canvasElement }) => {
@@ -1000,6 +1003,41 @@ export const DestructiveConfirmModal: StoryObj = {
     const dialog = await screen.findByRole('alertdialog', { name: 'Delete cluster?' })
     await waitFor(() => expect(dialog).toBeVisible())
     await expect(dialog).toHaveAccessibleDescription('Its jobs stop and its disks are erased.')
+  },
+}
+
+function RenameDemo() {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('gpu-cluster-east')
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Open modal
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Rename cluster"
+        description="Jobs that name it by its old name stop finding it."
+        confirmLabel="Rename"
+        confirmDisabled={!name.trim()}
+        onConfirm={() => setOpen(false)}
+      >
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+      </ConfirmModal>
+    </>
+  )
+}
+
+/** With a field in the body, focus starts in it rather than on a button, so the reader types
+ *  at once. */
+export const ConfirmModalWithField: StoryObj = {
+  name: 'Confirm modal, with a field',
+  render: () => <RenameDemo />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Rename cluster' })
+    await waitFor(() => expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveFocus())
   },
 }
 
@@ -1121,7 +1159,7 @@ export const CreateModalStory: StoryObj = {
   },
 }
 
-function NewIssueDemo({ failing }: { failing: boolean }) {
+function NewIssueDemo({ failing, size }: { failing: boolean; size?: ModalSize | undefined }) {
   const [open, setOpen] = useState(false)
   const [team, setTeam] = useState('Web')
   const [error, setError] = useState<string>()
@@ -1149,6 +1187,7 @@ function NewIssueDemo({ failing }: { failing: boolean }) {
         namePlaceholder="Issue title"
         footerHint="Enter creates · ⌘Enter creates and opens"
         error={error}
+        size={size}
         onSubmit={async (name, _description, _favorite, { modifier }) => {
           if (failing) {
             setError(`The ${team} team is archived. Pick another team.`)
@@ -1164,14 +1203,28 @@ function NewIssueDemo({ failing }: { failing: boolean }) {
 
 /** A hint at the footer's start, which a failed submit's error replaces; a search atop a long
  *  type menu; and ⌘/Ctrl+Enter, which tells the host to open what it made. */
-export const CreateModalHints: StoryObj<{ failing: boolean }> = {
+export const CreateModalHints: StoryObj<{ failing: boolean; size: ModalSize }> = {
   name: 'Create modal, hint and error',
-  args: { failing: false },
-  argTypes: { failing: { description: 'Story only: the submit fails with an error.' } },
-  render: ({ failing }) => <NewIssueDemo failing={failing} />,
+  args: { failing: false, size: 'lg' },
+  argTypes: {
+    failing: { description: 'Story only: the submit fails with an error.' },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg', 'xl'] },
+  },
+  render: ({ failing, size }) => <NewIssueDemo failing={failing} size={size} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
     await expect(await screen.findByText('Enter creates · ⌘Enter creates and opens')).toBeVisible()
+  },
+}
+
+/** `xl`, for a long body such as an issue's description in a rich text editor. */
+export const CreateModalWide: StoryObj = {
+  name: 'Create modal, wide',
+  render: () => <NewIssueDemo failing={false} size="xl" />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
+    const dialog = await screen.findByRole('dialog')
+    await waitFor(() => expect(dialog).toBeVisible())
   },
 }
 

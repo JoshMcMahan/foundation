@@ -73,7 +73,7 @@ export function segmentClassName(
   tone?: SegmentTone | undefined,
 ) {
   return cx(
-    'relative flex min-w-0 cursor-pointer items-center justify-center rounded-md font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-focus) data-disabled:cursor-not-allowed data-disabled:opacity-50',
+    'relative flex min-w-0 cursor-pointer items-center justify-center rounded-md font-medium transition-colors duration-150 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-focus) data-disabled:cursor-not-allowed data-disabled:opacity-50',
     current
       ? 'bg-(--theme-panel-bg) shadow-sm ring-1 ring-(--theme-border)'
       : 'hover:not-data-disabled:bg-(--theme-hover)',

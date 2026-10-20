@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRowMenuActive } from '../list/rowMenu'
 import { type OpenMenu, type OpenMenuOptions, useContextMenu } from './ContextMenu'
 import type { MenuAction, MenuEntry, MenuSearch } from './MenuEntries'
+import { toast } from './Toast'
 
 const SEARCH: MenuSearch = { placeholder: 'Search types', empty: 'No type matches' }
 
@@ -98,6 +99,42 @@ describe('the context menu', () => {
     open()
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy ID' }))
     expect(writeText).toHaveBeenCalledWith('abc-123')
+  })
+
+  it('confirms a copy without a noun, and says when copying fails', async () => {
+    const success = vi.spyOn(toast, 'success')
+    const error = vi.spyOn(toast, 'error')
+    const writeText = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('denied'))
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    render(<Menu items={[{ label: 'Copy link', copy: { text: 'https://x.test/1' } }]} />)
+    open()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy link' }))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Copied to clipboard'))
+    open()
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Copy link' }))
+    await waitFor(() => expect(error).toHaveBeenCalledWith("Couldn't copy to the clipboard"))
+    success.mockRestore()
+    error.mockRestore()
+  })
+
+  it('gives every row’s icon one width, so labels line up whatever the icon’s size', async () => {
+    render(
+      <Menu
+        items={[
+          action('Rename', { icon: <svg className="size-4" /> }),
+          action('Move', { icon: <svg className="size-3.5" /> }),
+        ]}
+      />,
+    )
+    open()
+    for (const name of ['Rename', 'Move']) {
+      const item = await screen.findByRole('menuitem', { name })
+      const slot = item.querySelector('svg')?.parentElement
+      expect(slot).toHaveClass('min-w-4', 'justify-center')
+    }
   })
 
   it('keeps a disabled item inert and names why', async () => {

@@ -111,7 +111,9 @@ export const ACCESS_STRINGS = {
   grantFailed: (principals: readonly string[], roles: readonly string[]) =>
     `Couldn’t grant ${and(roles)} to ${and(principals)}`,
   undoFailed: 'Couldn’t undo the change',
-  /** Under a failed save; `reason` is the host's error message, when it gave one. */
+  /** Why a save failed, when the host gives no `errorMessage`. */
+  failedReason: 'Something went wrong.',
+  /** Under a failed save; `reason` is the host's `errorMessage`, or `failedReason`. */
   nothingChanged: (reason: string | undefined) =>
     reason ? `${reason.replace(/\.?$/, '.')} Nothing changed.` : 'Nothing changed.',
   /** The toast after a grant. */
@@ -122,6 +124,10 @@ export const ACCESS_STRINGS = {
     `Removed ${and(principals)} from ${and(roles)}`,
   undone: 'Change undone',
   readOnly: 'View only.',
+  /** A note atop access set somewhere else, when the host gives no reason. */
+  managedElsewhere: 'Access here is set somewhere else, so it can’t be changed here.',
+  /** The note's link to where access is set, when the host doesn't name it. */
+  manageAccess: 'Manage access',
   /** After `readOnly` when the host gives no reason. */
   readOnlyReason: 'Only people who manage access can make changes.',
   /** Names the switch between open to everyone and only those listed. */

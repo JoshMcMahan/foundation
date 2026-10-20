@@ -381,6 +381,35 @@ describe('AccessDrawer', () => {
     expect(within(ask).getByText(/Still has Login via research-team/)).toBeInTheDocument()
   })
 
+  it('says why a save failed in the host’s words, from the error it rejected with', async () => {
+    class Coded extends Error {
+      readonly code: string
+      constructor(code: string) {
+        super('raw server text')
+        this.code = code
+      }
+    }
+    const onChange = vi
+      .fn<(change: AccessChange) => Promise<void>>()
+      .mockRejectedValue(new Coded('last_admin'))
+    render(
+      <Host
+        onChange={onChange}
+        errorMessage={(error) =>
+          error instanceof Coded && error.code === 'last_admin'
+            ? 'It needs at least one admin.'
+            : undefined
+        }
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Sudo/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove bio-admins from Sudo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Sudo' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('It needs at least one admin. Nothing changed.')
+    expect(alert).not.toHaveTextContent('raw server text')
+  })
+
   it('says a failed save changed nothing, keeps the row, and retries', async () => {
     const onChange = vi
       .fn<(change: AccessChange) => Promise<void>>()
@@ -392,7 +421,9 @@ describe('AccessDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove Sudo' }))
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Couldn’t remove bio-admins from Sudo')
-    expect(alert).toHaveTextContent('The server didn’t respond. Nothing changed.')
+    // The error's own words are the server's, not the reader's: they never show.
+    expect(alert).toHaveTextContent('Something went wrong. Nothing changed.')
+    expect(alert).not.toHaveTextContent('The server didn’t respond')
     expect(screen.getByRole('button', { name: 'Remove bio-admins from Sudo' })).toBeInTheDocument()
     await act(async () => fireEvent.click(within(alert).getByRole('button', { name: 'Retry' })))
     expect(onChange).toHaveBeenCalledTimes(2)

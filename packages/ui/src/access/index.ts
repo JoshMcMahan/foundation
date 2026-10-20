@@ -3,6 +3,7 @@ export {
   AccessDrawer,
   type AccessDrawerProps,
   type AccessEditorProps,
+  type AccessManagedElsewhere,
   AccessPanel,
   type AccessPanelProps,
 } from './AccessDrawer'

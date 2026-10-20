@@ -79,9 +79,10 @@ interface MenuLinkAction extends MenuActionBase {
   copy?: never
 }
 
-/** Copies `copy.text` to the clipboard, confirmed with a toast naming `copy.label`. */
+/** Copies `copy.text` to the clipboard, confirmed with a toast naming `copy.label`, or
+ *  saying only that it copied without one. A failure says so too. */
 interface MenuCopyAction extends MenuActionBase {
-  copy: { text: string; label: string }
+  copy: { text: string; label?: string | undefined }
   onClick?: never
   checked?: never
   href?: never
@@ -384,8 +385,12 @@ function RowContent({
   return (
     <>
       {icon !== undefined && icon !== null && (
-        // On the first line's height, so it stays beside the label above a description.
-        <span className="flex h-5 shrink-0 items-center in-data-[size=sm]:h-4">{icon}</span>
+        // On the first line's height, so it stays beside the label above a description. At
+        // least 16px wide with the glyph centered, so a smaller icon doesn't pull its label
+        // out of line with the rows around it.
+        <span className="flex h-5 min-w-4 shrink-0 items-center justify-center in-data-[size=sm]:h-4">
+          {icon}
+        </span>
       )}
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="wrap-break-word">{label}</span>

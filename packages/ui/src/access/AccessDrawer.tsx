@@ -118,6 +118,25 @@ export interface AccessEditorProps {
   /** Each person and group holds one role here. Their row picks it from a list, a change
    *  swaps the old role for the new one in a single change, and the grant form picks one. */
   singleRole?: boolean | undefined
+  /** Why a save failed, in the reader's words, under "Couldn’t grant…": a fixed sentence, or
+   *  one made from what `onChange` rejected with, such as a localized message for its error
+   *  code. Without it, a generic sentence; the error's own message never shows, as a
+   *  server's words aren't the reader's. */
+  errorMessage?: string | ((error: unknown) => string | undefined) | undefined
+  /** Access here is set somewhere else, such as on what the resource is part of: the list
+   *  shows, read-only, under a note that says where, with a link there. */
+  managedElsewhere?: AccessManagedElsewhere | undefined
+}
+
+export interface AccessManagedElsewhere {
+  /** Where access is set and why: "This team follows the workspace’s access." Without it, a
+   *  generic sentence. */
+  reason?: ReactNode
+  /** Where to change it, through the host's router. */
+  href?: string | undefined
+  /** The link's text, which says where it goes: "Workspace access". Without it, "Manage
+   *  access". */
+  linkLabel?: string | undefined
 }
 
 export interface AccessDrawerProps extends AccessEditorProps {
@@ -130,6 +149,9 @@ export interface AccessDrawerProps extends AccessEditorProps {
 export interface AccessPanelProps extends AccessEditorProps {
   /** On the panel's frame. */
   className?: string | undefined
+  /** Under the list, inside the frame and ruled off from it: a note or actions about access
+   *  as a whole. The grant form takes its place while it shows. */
+  footer?: ReactNode
 }
 
 interface Failure {
@@ -180,6 +202,8 @@ function useAccessEditor(
     defaultArrangement = singleRole ? 'principal' : 'role',
     visibility,
     rules,
+    errorMessage,
+    managedElsewhere,
   }: AccessEditorProps,
   inline: boolean,
 ): AccessEditor {
@@ -230,7 +254,9 @@ function useAccessEditor(
 
   const match = useQueryMatch()
   const filtered = useFiltered(model, arrangement, query.trim(), match, t)
-  const editable = !readOnly && onChange !== undefined
+  const editable = !readOnly && !managedElsewhere && onChange !== undefined
+  const messageOf = (error: unknown) =>
+    (typeof errorMessage === 'function' ? errorMessage(error) : errorMessage) || t.failedReason
   const sectionId = (id: string) => `${uid}${arrangement}${id}`
 
   const names = (changed: AccessChange) => {
@@ -523,12 +549,33 @@ function useAccessEditor(
 
   const list = (
     <div className="@container/access flex min-h-0 flex-1 flex-col">
-      {readOnly && (
-        <div className="px-4 pt-3">
+      {managedElsewhere ? (
+        // Ruled off by the switch or the filter below it; on its own when nothing is.
+        <div className={cx('px-4 pt-3', empty && !visibility && 'pb-3')}>
           <Callout tone="info" icon={<LockIcon />}>
-            {t.readOnly} {readOnlyReason ?? t.readOnlyReason}
+            {/* The link beside the note where both fit, under it where the note would be
+                squeezed into a narrow column. */}
+            <div className="flex flex-col items-start gap-2 @min-[30rem]/access:flex-row @min-[30rem]/access:gap-3">
+              <div className="min-w-0 flex-1">{managedElsewhere.reason ?? t.managedElsewhere}</div>
+              {managedElsewhere.href !== undefined && (
+                // One line tall, so the button centers on the note's first line.
+                <div className="flex shrink-0 items-center @min-[30rem]/access:h-5">
+                  <Button size="sm" variant="secondary" href={managedElsewhere.href}>
+                    {managedElsewhere.linkLabel ?? t.manageAccess}
+                  </Button>
+                </div>
+              )}
+            </div>
           </Callout>
         </div>
+      ) : (
+        readOnly && (
+          <div className="px-4 pt-3">
+            <Callout tone="info" icon={<LockIcon />}>
+              {t.readOnly} {readOnlyReason ?? t.readOnlyReason}
+            </Callout>
+          </div>
+        )
       )}
       {visibilityRow}
       {!empty && (
@@ -580,6 +627,9 @@ function useAccessEditor(
           <LoadingRegion label={t.loading}>
             <RowsSkeleton />
           </LoadingRegion>
+        ) : empty && managedElsewhere ? (
+          // Saying no one has access, with nothing to do about it here, would only alarm.
+          ruleRows
         ) : empty ? (
           <>
             {ruleRows}
@@ -743,7 +793,7 @@ export function AccessDrawer({ open, onClose, width = 560, ...props }: AccessDra
 
 /** The access editor inline on a page, such as a settings section, rather than in a drawer: the
  *  list in a frame, which the grant form takes over with a back arrow in its own header. */
-export function AccessPanel({ className, ...props }: AccessPanelProps) {
+export function AccessPanel({ className, footer, ...props }: AccessPanelProps) {
   const t = useAccessStrings()
   const editor = useAccessEditor(props, true)
   return (
@@ -774,13 +824,20 @@ export function AccessPanel({ className, ...props }: AccessPanelProps) {
         </div>
       )}
       {editor.body}
-      {editor.footer && <div className={dialogFooterClassName}>{editor.footer}</div>}
+      {editor.footer ? (
+        <div className={dialogFooterClassName}>{editor.footer}</div>
+      ) : (
+        footer !== undefined &&
+        footer !== null &&
+        footer !== false && (
+          <div className="border-t border-(--theme-border) px-4 py-3 text-sm text-(--theme-muted-text-color)">
+            {footer}
+          </div>
+        )
+      )}
     </section>
   )
 }
-
-const messageOf = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : undefined
 
 const anchorOf = (failure: Failure, arrangement: AccessArrangement) =>
   arrangement === 'role' ? (failure.roleId ?? '') : failure.principalId

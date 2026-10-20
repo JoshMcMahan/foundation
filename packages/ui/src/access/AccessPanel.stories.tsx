@@ -22,6 +22,12 @@ interface StoryArgs {
   /** Passes `rules`, locked rows ahead of the grants. */
   withRules: boolean
   readOnly: boolean
+  /** Passes `managedElsewhere`: access set on what it is part of, read-only with a link there. */
+  managed: boolean
+  /** Passes `footer`, a note under the list. */
+  withFooter: boolean
+  /** Passes `errorMessage`, which words a failed save from its error. */
+  withErrorMessage: boolean
   /** Story only: every save fails. */
   failSaves: boolean
   /** Story only: milliseconds a save takes. */
@@ -35,6 +41,9 @@ const meta: Meta<StoryArgs> = {
     withVisibility: true,
     withRules: true,
     readOnly: false,
+    managed: false,
+    withFooter: false,
+    withErrorMessage: false,
     failSaves: false,
     saveDelay: 400,
   },
@@ -80,7 +89,26 @@ function useAccess({ failSaves, saveDelay }: Pick<StoryArgs, 'failSaves' | 'save
   }
 }
 
-function Settings({ singleRole, withVisibility, withRules, readOnly, ...args }: StoryArgs) {
+const MANAGED = {
+  reason: 'This team follows the workspace’s access, so it’s changed there.',
+  href: '#workspace-access',
+  linkLabel: 'Workspace access',
+}
+
+/** As a host words a failure from its error's code; never the error's own message. */
+const describeFailure = () => 'The server didn’t answer in time. Try again in a moment.'
+
+function Settings({
+  singleRole,
+  withVisibility,
+  withRules,
+  readOnly,
+  managed,
+  withFooter,
+  withErrorMessage,
+  grants,
+  ...args
+}: StoryArgs & { grants?: AccessGrant[] }) {
   const access = useAccess(args)
   return (
     <div className="min-h-screen bg-(--theme-app-bg) px-4 py-8 text-(--theme-app) sm:px-8">
@@ -93,13 +121,28 @@ function Settings({ singleRole, withVisibility, withRules, readOnly, ...args }: 
           resourceName={WORKSPACE}
           roles={WORKSPACE_ROLES}
           principals={WORKSPACE_PRINCIPALS}
-          grants={access.grants}
+          grants={grants ?? access.grants}
           onChange={access.onChange}
           singleRole={singleRole}
           visibility={withVisibility ? access.visibility : undefined}
           rules={withRules ? RULES : undefined}
           readOnly={readOnly}
           readOnlyReason="Only workspace admins can change it."
+          managedElsewhere={managed ? MANAGED : undefined}
+          errorMessage={withErrorMessage ? describeFailure : undefined}
+          footer={
+            withFooter ? (
+              <>
+                Guests see only the teams they’re added to.{' '}
+                <a
+                  href="#guests"
+                  className="text-(--theme-link) underline-offset-2 hover:underline"
+                >
+                  About guests
+                </a>
+              </>
+            ) : undefined
+          }
         />
       </div>
     </div>
@@ -125,7 +168,7 @@ export const Visibility: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const open = canvas.getByRole('button', { name: 'Everyone in the workspace' })
-    await userEvent.click(open)
+    fireEvent.click(open)
     await waitFor(() => expect(open).toHaveAttribute('aria-pressed', 'true'))
   },
 }
@@ -136,7 +179,9 @@ export const VisibilityFailed: Story = {
   render: (args) => <Settings {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Everyone in the workspace' }))
+    // A click as a mouse makes it: a scripted one also focuses the segment as a keyboard
+    // would, and its ring would read as the choice.
+    fireEvent.click(canvas.getByRole('button', { name: 'Everyone in the workspace' }))
     await expect(
       await canvas.findByText('Couldn’t change to Everyone in the workspace'),
     ).toBeVisible()
@@ -180,9 +225,66 @@ export const InlineReadOnly: Story = {
   render: (args) => <Settings {...args} />,
 }
 
+/** Access set somewhere else, such as a team's that follows its workspace: the list shows,
+ *  read-only, under a note that says where, with a link there. */
+export const ManagedElsewhere: Story = {
+  args: { managed: true },
+  render: (args) => <Settings {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('link', { name: 'Workspace access' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Grant access' })).toBeNull()
+  },
+}
+
+/** Access set somewhere else with nothing granted here: only the note, not an empty list. */
+export const ManagedElsewhereEmpty: Story = {
+  args: { managed: true, withVisibility: false, withRules: false },
+  render: (args) => <Settings {...args} grants={[]} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText('No access granted')).toBeNull()
+  },
+}
+
+/** A note or actions under the list, inside the frame. */
+export const WithFooter: Story = {
+  args: { withFooter: true },
+  render: (args) => <Settings {...args} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('link', { name: 'About guests' })).toBeVisible()
+  },
+}
+
+/** A failed save says why in the host's words, from `errorMessage`; without it, a generic
+ *  sentence. The error's own message never shows. */
+export const SaveFailed: Story = {
+  args: { failSaves: true, saveDelay: 0, withErrorMessage: true },
+  render: (args) => <Settings {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // A click as a mouse makes it: a scripted one also focuses the segment as a keyboard
+    // would, and its ring would read as the choice.
+    fireEvent.click(canvas.getByRole('button', { name: 'Everyone in the workspace' }))
+    await expect(
+      await canvas.findByText(
+        'The server didn’t answer in time. Try again in a moment. Nothing changed.',
+      ),
+    ).toBeVisible()
+  },
+}
+
 /** The same editor in a drawer, as a page without a settings section opens it. */
 export const InDrawer: Story = {
-  render: function Render({ singleRole, withVisibility, withRules, readOnly, ...args }) {
+  render: function Render({
+    singleRole,
+    withVisibility,
+    withRules,
+    readOnly,
+    managed,
+    withErrorMessage,
+    withFooter: _footer,
+    ...args
+  }) {
     const access = useAccess(args)
     const [open, setOpen] = useState(true)
     return (
@@ -206,6 +308,8 @@ export const InDrawer: Story = {
           visibility={withVisibility ? access.visibility : undefined}
           rules={withRules ? RULES : undefined}
           readOnly={readOnly}
+          managedElsewhere={managed ? MANAGED : undefined}
+          errorMessage={withErrorMessage ? describeFailure : undefined}
         />
       </div>
     )

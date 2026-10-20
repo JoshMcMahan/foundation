@@ -24,6 +24,22 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('week')
   })
 
+  it('lifts a keyboard-focused segment above its neighbors, so its ring shows whole', () => {
+    render(
+      <SegmentedControl
+        label="Range"
+        value="week"
+        options={[
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+        ]}
+      />,
+    )
+    for (const name of ['Day', 'Week']) {
+      expect(screen.getByRole('button', { name }).className).toMatch(/\bfocus-visible:z-10\b/)
+    }
+  })
+
   it('keeps the current choice when it is pressed again', () => {
     const onChange = vi.fn()
     render(

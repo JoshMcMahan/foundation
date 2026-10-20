@@ -11,7 +11,7 @@ import { type ComboboxItems, comboboxLeaves } from './comboboxItems'
 import { Disclosure } from './Disclosure'
 import { ErrorText } from './Field'
 import type { MenuEntry, MenuSearch } from './MenuEntries'
-import { Modal } from './Modal'
+import { Modal, type ModalSize } from './Modal'
 import { useStrings } from './Provider'
 import { Switch } from './Switch'
 import { Tooltip } from './Tooltip'
@@ -58,6 +58,9 @@ interface CreateModalProps {
   footerHint?: ReactNode
   /** Why the last submit failed, at the footer's start, read out as it appears. */
   error?: ReactNode
+  /** Its width, as `Modal`'s: `xl` for a long body such as a rich text editor. It narrows to
+   *  fit a small window. */
+  size?: ModalSize | undefined
   /** Resolves true to close the modal, false to keep it open (e.g. on error). `modifier` is
    *  true when submitted with ⌘/Ctrl+Enter, so a host can create and then open what it made. */
   onSubmit: (
@@ -98,6 +101,7 @@ export function CreateModal({
   showFavorite = false,
   footerHint,
   error,
+  size = 'lg',
   onSubmit,
 }: CreateModalProps) {
   const t = useStrings().modal
@@ -190,7 +194,7 @@ export function CreateModal({
       open={open}
       onClose={onClose}
       aria-label={`${submitText}: ${typeLabel}`}
-      size="lg"
+      size={size}
       dismissible={!isDirty}
       // The name, ahead of the type chip; a form without one starts at its first control.
       initialFocus={() => nameRef.current ?? true}

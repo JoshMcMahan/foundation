@@ -5,6 +5,19 @@ import { ErrorText } from './Field'
 import { Modal, type ModalSize } from './Modal'
 import { useStrings } from './Provider'
 
+/** What the reader types or picks in, which takes focus ahead of the buttons. A checkbox or
+ *  radio doesn't: a destructive dialog with one still opens on Cancel. Inputs a picker keeps
+ *  out of the tab order, for its form value, aren't fields. */
+const FIELDS = [
+  'input:not([disabled]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[role="combobox"]:not([disabled]):not([aria-disabled="true"])',
+  '[contenteditable="true"]',
+]
+  .map((field) => `${field}:not([tabindex="-1"]):not([aria-hidden="true"])`)
+  .join(', ')
+
 export interface ConfirmModalProps {
   open: boolean
   onClose: () => void
@@ -29,9 +42,11 @@ export interface ConfirmModalProps {
   cancelLabel?: string | undefined
   /** When false, the dialog stays open after a successful confirm. */
   closeOnConfirm?: boolean | undefined
-  /** Which button has focus as it opens. Cancel for a destructive dialog, so a stray Enter
-   *  destroys nothing; the confirm button otherwise, so the keyboard answers at once. */
-  initialFocus?: 'cancel' | 'confirm' | undefined
+  /** What has focus as it opens. With a field in the body, such as a name to type, the first
+   *  of them (`first-control`), so the reader types at once. Without one, Cancel for a
+   *  destructive dialog, so a stray Enter destroys nothing, and the confirm button otherwise,
+   *  so the keyboard answers at once. */
+  initialFocus?: 'cancel' | 'confirm' | 'first-control' | undefined
   /** Work the host runs for it, such as a mutation already under way: the buttons wait, and
    *  the dialog can't be dismissed, as while its own handler runs. */
   pending?: boolean | undefined
@@ -55,7 +70,7 @@ export function ConfirmModal({
   align = 'top',
   cancelLabel,
   closeOnConfirm = true,
-  initialFocus = destructive ? 'cancel' : 'confirm',
+  initialFocus,
   pending: pendingProp = false,
   error,
   size = 'md',
@@ -67,6 +82,7 @@ export function ConfirmModal({
   const fired = useRef(false)
   const cancelButton = useRef<HTMLButtonElement>(null)
   const confirmButton = useRef<HTMLButtonElement>(null)
+  const bodyElement = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (open) {
       fired.current = false
@@ -117,7 +133,17 @@ export function ConfirmModal({
       size={size}
       title={title}
       description={description}
-      initialFocus={initialFocus === 'cancel' ? cancelButton : confirmButton}
+      initialFocus={() => {
+        const button = (
+          initialFocus === 'cancel' || (initialFocus !== 'confirm' && destructive)
+            ? cancelButton
+            : confirmButton
+        ).current
+        if (initialFocus === 'cancel' || initialFocus === 'confirm') {
+          return button ?? true
+        }
+        return bodyElement.current?.querySelector<HTMLElement>(FIELDS) ?? button ?? true
+      }}
       footer={
         <>
           <Button ref={cancelButton} variant="ghost" size="sm" onClick={onClose} disabled={pending}>
@@ -136,7 +162,12 @@ export function ConfirmModal({
         </>
       }
     >
-      {body}
+      {body !== undefined && (
+        // Laid out as if it weren't there; it only bounds the search for a field to focus.
+        <div ref={bodyElement} className="contents">
+          {body}
+        </div>
+      )}
     </Modal>
   )
 }

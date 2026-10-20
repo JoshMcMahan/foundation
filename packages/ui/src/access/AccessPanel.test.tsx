@@ -99,6 +99,13 @@ describe('AccessPanel', () => {
     expect(
       await screen.findByText('Couldn’t change to Only people with access'),
     ).toBeInTheDocument()
+    // The switch shows what is in effect, not the choice that failed.
+    expect(
+      within(switcher).getByRole('button', { name: 'Everyone in the workspace' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      within(switcher).getByRole('button', { name: 'Only people with access' }),
+    ).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     await waitFor(() => expect(onVisibility).toHaveBeenCalledTimes(2))
     await waitFor(() =>
@@ -136,5 +143,43 @@ describe('AccessPanel', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Grant access' })[0] as HTMLElement)
     expect(await screen.findByRole('region', { name: 'Grant access' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to access' })).toBeInTheDocument()
+  })
+
+  it('shows a footer under the list, and the grant form in its place', async () => {
+    render(<Panel footer={<p>Guests never see private teams.</p>} />)
+    expect(screen.getByText('Guests never see private teams.')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Grant access' })[0] as HTMLElement)
+    await screen.findByRole('button', { name: 'Back to access' })
+    expect(screen.queryByText('Guests never see private teams.')).toBeNull()
+  })
+
+  it('shows access set somewhere else read-only, saying where, with a link there', () => {
+    render(
+      <Panel
+        managedElsewhere={{
+          reason: 'This team follows the workspace’s access.',
+          href: '/settings/access',
+          linkLabel: 'Workspace access',
+        }}
+      />,
+    )
+    expect(screen.getByText('This team follows the workspace’s access.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Workspace access' })).toHaveAttribute(
+      'href',
+      '/settings/access',
+    )
+    expect(screen.queryByRole('button', { name: 'Grant access' })).toBeNull()
+    expect(screen.getByText('Lin Zhou')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Role for Lin Zhou' })).toBeNull()
+    expect(screen.queryByText('View only.', { exact: false })).toBeNull()
+  })
+
+  it('says only where access is set when nothing is granted here', () => {
+    render(<Panel grants={[]} rules={[]} visibility={undefined} managedElsewhere={{}} />)
+    expect(
+      screen.getByText('Access here is set somewhere else, so it can’t be changed here.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('No access granted')).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
   })
 })

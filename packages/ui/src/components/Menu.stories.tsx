@@ -351,6 +351,42 @@ export const RichRows: StoryObj<{ size: MenuSize }> = {
   },
 }
 
+/** Icons of different sizes, a 16px glyph, a 14px one and a color dot, sit in one 16px slot,
+ *  so every label starts on the same line. A copy without a noun still confirms it copied. */
+export const MixedIconSizes: StoryObj = {
+  render: () => (
+    <ActionMenu
+      label="Label actions"
+      items={[
+        { label: 'Rename', icon: <RenameIcon className="size-4" />, onClick: () => {} },
+        { label: 'Move to folder', icon: <FolderIcon className="size-3.5" />, onClick: () => {} },
+        {
+          label: 'Bug',
+          icon: <span className="size-2 rounded-full bg-(--theme-error)" />,
+          onClick: () => {},
+        },
+        { label: 'Copy link', icon: <CopyIcon className="size-3.5" />, copy: { text: '#bug' } },
+        menuDivider,
+        {
+          label: 'Delete',
+          icon: <TrashIcon className="size-4" />,
+          destructive: true,
+          onClick: () => {},
+        },
+      ]}
+    >
+      <MoreIcon />
+    </ActionMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Label actions' }))
+    const labels = ['Rename', 'Move to folder', 'Bug', 'Copy link', 'Delete'].map(
+      (name) => screen.getByText(name).getBoundingClientRect().left,
+    )
+    await expect(new Set(labels.map(Math.round)).size).toBe(1)
+  },
+}
+
 /** The same rows at `size="sm"`, as a 12px toolbar's menus use. */
 export const Compact: StoryObj = {
   render: function Render() {
