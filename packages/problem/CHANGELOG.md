@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/parallelworks/foundation/compare/problem-v0.4.0...problem-v0.5.0) (2026-10-20)
+
+
+### Features
+
+* run warnings and editor problems take a problem code, params and type ([#423](https://github.com/parallelworks/foundation/issues/423)) ([72cc81e](https://github.com/parallelworks/foundation/commit/72cc81ee87531d0bab37d24f522cb3a11c31ba10))
+
 ## [0.4.0](https://github.com/parallelworks/foundation/compare/problem-v0.3.0...problem-v0.4.0) (2026-10-13)
 
 
