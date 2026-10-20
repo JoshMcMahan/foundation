@@ -37,6 +37,7 @@ export function useGrantView({
   onCancel,
   focusLater,
   boundary,
+  singleRole = false,
   t,
 }: {
   model: AccessModel
@@ -59,6 +60,8 @@ export function useGrantView({
   focusLater: (find: () => HTMLElement | null | undefined) => void
   /** The drawer's body, above its footer, which the open list fills. */
   boundary: Element | null
+  /** One role each: the form picks one, and granting it takes the role each already holds. */
+  singleRole?: boolean
   t: AccessStrings
 }): { body: ReactNode; footer: ReactNode } {
   const uid = useId()
@@ -132,7 +135,15 @@ export function useGrantView({
 
   const grant = () => {
     setConfirming(false)
-    onGrant({ grant: plan.grant, revoke: [] })
+    // Holding one role each, whoever gets the new one gives up the one they had.
+    const revoke = singleRole
+      ? [...new Set(plan.grant.map((granted) => granted.principalId))].flatMap((principalId) =>
+          (model.held.get(principalId) ?? [])
+            .filter((held) => !roleIds.includes(held.id))
+            .map((held) => ({ principalId, roleId: held.id })),
+        )
+      : []
+    onGrant({ grant: plan.grant, revoke })
   }
   const statusId = `${uid}status`
 
@@ -164,14 +175,26 @@ export function useGrantView({
         <label htmlFor={`${uid}roles`} className="mb-1.5 block text-sm font-medium">
           {t.rolesLabel}
         </label>
-        <Combobox<string>
-          multiple
-          id={`${uid}roles`}
-          items={roleItems}
-          value={roleIds}
-          onValueChange={(next) => onSelectionChange({ principalIds, roleIds: next })}
-          placeholder={t.searchRoles}
-        />
+        {singleRole ? (
+          <Combobox<string>
+            id={`${uid}roles`}
+            items={roleItems}
+            value={roleIds[0] ?? null}
+            onValueChange={(next) =>
+              onSelectionChange({ principalIds, roleIds: next === null ? [] : [next] })
+            }
+            placeholder={t.searchRoles}
+          />
+        ) : (
+          <Combobox<string>
+            multiple
+            id={`${uid}roles`}
+            items={roleItems}
+            value={roleIds}
+            onValueChange={(next) => onSelectionChange({ principalIds, roleIds: next })}
+            placeholder={t.searchRoles}
+          />
+        )}
       </div>
       {toEveryone && roles.length > 0 && (
         <Callout tone="warning" title={t.everyoneWarningTitle(roleNames, people)}>

@@ -5,6 +5,7 @@ import type { OpenMenu } from '../components/ContextMenu'
 import { EmptyState } from '../components/EmptyState'
 import {
   isMenuDivider,
+  isMenuGroup,
   isMenuSubmenu,
   type MenuEntry,
   useRunAction,
@@ -288,10 +289,12 @@ export function ListRow({
 
   // Hide the overflow "..." when every menu item is already shown as a pinned
   // action (e.g. a single pinned action) — the menu would only duplicate it.
-  // A submenu (e.g. Copy) can never be pinned, so it always keeps "..." visible.
+  // A submenu (e.g. Copy) or a group can never be pinned, so either keeps "..." visible.
   const pinnedLabels = new Set((pinnedActions ?? []).map((a) => a.label))
   const hasOverflowItems = items.some(
-    (item) => !isMenuDivider(item) && (isMenuSubmenu(item) || !pinnedLabels.has(item.label)),
+    (item) =>
+      !isMenuDivider(item) &&
+      (isMenuSubmenu(item) || isMenuGroup(item) || !pinnedLabels.has(item.label)),
   )
 
   return (

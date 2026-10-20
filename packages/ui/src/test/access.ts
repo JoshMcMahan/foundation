@@ -241,3 +241,53 @@ export function wait(ms: number, signal?: AbortSignal): Promise<void> {
     })
   })
 }
+
+// A workspace where each person and group holds one role, edited inline in its settings.
+export const WORKSPACE = 'northwind'
+
+export const WORKSPACE_ROLES: AccessRole[] = [
+  {
+    id: 'admin',
+    name: 'Admin',
+    description: 'Manage the workspace, its members and its settings.',
+    permissions: ['workspace:manage', 'issues:write', 'issues:read'],
+    privileged: true,
+  },
+  {
+    id: 'member',
+    name: 'Member',
+    description: 'Create and edit issues, projects and decisions.',
+    permissions: ['issues:write', 'issues:read'],
+  },
+  {
+    id: 'viewer',
+    name: 'Viewer',
+    description: 'Read everything, change nothing.',
+    permissions: ['issues:read'],
+  },
+]
+
+export const WORKSPACE_PRINCIPALS: AccessPrincipal[] = [
+  { id: 'group:platform', name: 'Platform', kind: 'group', memberCount: 6 },
+  { id: 'group:contractors', name: 'Contractors', kind: 'group', memberCount: 3 },
+  { id: 'user:ada', name: 'Ada Okafor', kind: 'user', detail: 'ada' },
+  { id: 'user:lin', name: 'Lin Zhou', kind: 'user', detail: 'lin' },
+  { id: 'user:sam', name: 'Sam Reyes', kind: 'user', detail: 'sam' },
+  { id: 'user:noor', name: 'Noor Haddad', kind: 'user', detail: 'noor' },
+]
+
+export const WORKSPACE_GRANTS: AccessGrant[] = [
+  { principalId: 'group:platform', roleId: 'member' },
+  { principalId: 'group:contractors', roleId: 'viewer' },
+  { principalId: 'user:ada', roleId: 'admin' },
+  { principalId: 'user:lin', roleId: 'member' },
+]
+
+export const WORKSPACE_ADMINS = [
+  { name: 'Ada Okafor' },
+  { name: 'Marcus Bell' },
+  { name: 'Priya Nair' },
+  { name: 'Tomás Ruiz' },
+  { name: 'Hana Sato' },
+  { name: 'Ola Berg' },
+]

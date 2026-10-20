@@ -9,7 +9,8 @@ import { buttonClasses } from './buttonClasses'
 import { Combobox } from './Combobox'
 import { type ComboboxItems, comboboxLeaves } from './comboboxItems'
 import { Disclosure } from './Disclosure'
-import type { MenuEntry } from './MenuEntries'
+import { ErrorText } from './Field'
+import type { MenuEntry, MenuSearch } from './MenuEntries'
 import { Modal } from './Modal'
 import { useStrings } from './Provider'
 import { Switch } from './Switch'
@@ -22,11 +23,16 @@ interface CreateModalProps {
   typeLabel: string
   /** Makes the type chip a dropdown to switch between sibling form types. */
   typeMenu?: MenuEntry[] | undefined
+  /** A search atop the type chip's menu, for a long list such as many teams. */
+  typeMenuSearch?: MenuSearch | undefined
   namePlaceholder: string
   hideName?: boolean
   initialName?: string | undefined
   showDescription?: boolean
   descriptionPlaceholder?: string
+  /** Takes the description's place, such as a rich text editor. Typing in it counts as
+   *  unsaved input, as the description's does. */
+  descriptionField?: ReactNode
   submitLabel?: string
   submittingLabel?: string
   validateName?: ((name: string) => string | null) | undefined
@@ -48,8 +54,18 @@ interface CreateModalProps {
   dirty?: boolean
   /** Show a favorite toggle in the footer. */
   showFavorite?: boolean
-  /** Resolves true to close the modal, false to keep it open (e.g. on error). */
-  onSubmit: (name: string, description: string, favorite: boolean) => Promise<boolean>
+  /** Muted text at the footer's start, such as which keys submit. `error` takes its place. */
+  footerHint?: ReactNode
+  /** Why the last submit failed, at the footer's start, read out as it appears. */
+  error?: ReactNode
+  /** Resolves true to close the modal, false to keep it open (e.g. on error). `modifier` is
+   *  true when submitted with ⌘/Ctrl+Enter, so a host can create and then open what it made. */
+  onSubmit: (
+    name: string,
+    description: string,
+    favorite: boolean,
+    how: { modifier: boolean },
+  ) => Promise<boolean>
 }
 
 /** Submits on Enter in the name field or ⌘/Ctrl+Enter from anywhere in the panel. */
@@ -59,11 +75,13 @@ export function CreateModal({
   typeIcon,
   typeLabel,
   typeMenu,
+  typeMenuSearch,
   namePlaceholder,
   hideName = false,
   initialName,
   showDescription = true,
   descriptionPlaceholder,
+  descriptionField,
   submitLabel,
   submittingLabel,
   validateName,
@@ -78,6 +96,8 @@ export function CreateModal({
   onNameChange,
   dirty = false,
   showFavorite = false,
+  footerHint,
+  error,
   onSubmit,
 }: CreateModalProps) {
   const t = useStrings().modal
@@ -139,7 +159,7 @@ export function CreateModal({
     requestAnimationFrame(() => setNameFlash(true))
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (modifier = false) => {
     if (!canSubmit) {
       if (!hideName && !submitting && (!name.trim() || nameError)) {
         flashName()
@@ -152,7 +172,7 @@ export function CreateModal({
     // their own errors, and letting it escape would leave the button stuck on
     // its submitting label with no way back.
     try {
-      close = await onSubmit(name.trim(), description.trim(), favorite)
+      close = await onSubmit(name.trim(), description.trim(), favorite, { modifier })
     } catch (error) {
       console.error(error)
     } finally {
@@ -176,7 +196,7 @@ export function CreateModal({
       initialFocus={() => nameRef.current ?? true}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          handleSubmit()
+          handleSubmit(true)
         }
       }}
       onMouseDown={(e) => {
@@ -193,23 +213,34 @@ export function CreateModal({
       }}
       footer={
         <>
-          {showFavorite && (
-            <div className="me-auto">
-              <Tooltip content={favorite ? t.favoriteHintOn : t.favoriteHintOff}>
-                <Toggle
-                  pressed={favorite}
-                  onPressedChange={setFavorite}
-                  aria-label={t.favorite}
-                  className={buttonClasses({ variant: 'ghost', size: 'sm' })}
-                >
-                  {favorite ? (
-                    <FavoriteIcon className="text-(--theme-favorite)" />
-                  ) : (
-                    <FavoriteOutlineIcon />
-                  )}
-                  {favorite ? t.favorited : t.favorite}
-                </Toggle>
-              </Tooltip>
+          {(showFavorite || footerHint || error) && (
+            <div className="me-auto flex min-w-0 items-center gap-3">
+              {showFavorite && (
+                <Tooltip content={favorite ? t.favoriteHintOn : t.favoriteHintOff}>
+                  <Toggle
+                    pressed={favorite}
+                    onPressedChange={setFavorite}
+                    aria-label={t.favorite}
+                    className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+                  >
+                    {favorite ? (
+                      <FavoriteIcon className="text-(--theme-favorite)" />
+                    ) : (
+                      <FavoriteOutlineIcon />
+                    )}
+                    {favorite ? t.favorited : t.favorite}
+                  </Toggle>
+                </Tooltip>
+              )}
+              {error ? (
+                <ErrorText>{error}</ErrorText>
+              ) : (
+                footerHint && (
+                  <p className="m-0 min-w-0 text-xs text-(--theme-muted-text-color)">
+                    {footerHint}
+                  </p>
+                )
+              )}
             </div>
           )}
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -219,7 +250,7 @@ export function CreateModal({
             <Button
               variant="primary"
               size="sm"
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               aria-disabled={!canSubmit}
               loading={submitting}
             >
@@ -229,12 +260,23 @@ export function CreateModal({
         </>
       }
     >
-      <div onChangeCapture={() => setInteracted(true)}>
+      {/* Input events too, which a rich editor sends where a field sends change. Only from
+          an editable element: setting state on a field's input event, ahead of its own
+          change handler, makes the browser drop the field's first character. */}
+      <div
+        onChangeCapture={() => setInteracted(true)}
+        onInputCapture={(e) => {
+          if (e.target instanceof HTMLElement && e.target.isContentEditable) {
+            setInteracted(true)
+          }
+        }}
+      >
         <div>
           {typeMenu && typeMenu.length > 0 ? (
             <ActionMenu
               items={typeMenu}
               label={typeLabel}
+              search={typeMenuSearch}
               triggerClassName="inline-flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-(--theme-muted-panel-bg) text-xs font-medium text-(--theme-muted-text-color) transition-colors hover:text-(--theme-app)"
             >
               {typeIcon}
@@ -273,7 +315,7 @@ export function CreateModal({
                   if (e.key === 'Enter' && !e.nativeEvent.isComposing && !e.metaKey && !e.ctrlKey) {
                     e.preventDefault()
                     e.stopPropagation()
-                    handleSubmit()
+                    handleSubmit(false)
                   }
                 }}
                 placeholder={namePlaceholder}
@@ -302,7 +344,9 @@ export function CreateModal({
                   {hint}
                 </p>
               )}
-              {showDescription ? (
+              {showDescription && descriptionField ? (
+                <div className="mt-1.5">{descriptionField}</div>
+              ) : showDescription ? (
                 <textarea
                   autoComplete="off"
                   data-1p-ignore

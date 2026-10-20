@@ -8,14 +8,18 @@ interface CloseDetails {
 
 /** The `onOpenChange` of a modal or drawer that the host opens and closes:
  *  Escape and a press outside close it unless it's not `dismissible`, and a
- *  press on a toast never does, since the toast sits above the backdrop. */
+ *  press on a toast never does, since the toast sits above the backdrop.
+ *
+ *  An Escape whose default a layer inside already prevented is that layer's,
+ *  such as a picker of the host's own or an editor's suggestions: it closes
+ *  them, and the next Escape closes the dialog. */
 export function closeHandler(dismissible: boolean, onClose: () => void) {
   return (next: boolean, details: CloseDetails) => {
     if (next) {
       return
     }
     if (
-      (!dismissible && details.reason === 'escape-key') ||
+      (details.reason === 'escape-key' && (!dismissible || details.event?.defaultPrevented)) ||
       (details.reason === 'outside-press' && pressedToast(details.event))
     ) {
       details.cancel()

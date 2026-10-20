@@ -10,6 +10,7 @@ import type React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as accessDrawer from './access/AccessDrawer.stories'
+import * as accessPanel from './access/AccessPanel.stories'
 import * as breadcrumbs from './components/Breadcrumbs.stories'
 import * as callout from './components/Callout.stories'
 import * as combobox from './components/Combobox.stories'
@@ -73,6 +74,7 @@ vi.mock('react-zoom-pan-pinch', () => ({
 const SUITES = {
   primitives,
   accessDrawer,
+  accessPanel,
   breadcrumbs,
   callout,
   icons,

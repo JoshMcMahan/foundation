@@ -1,5 +1,5 @@
 import { Menu as BaseMenu } from '@base-ui/react/menu'
-import type { ReactNode } from 'react'
+import { createContext, type ReactNode, use } from 'react'
 import { cx } from '../cx'
 import { CheckIcon, ChevronRightIcon } from '../icons'
 import {
@@ -13,12 +13,29 @@ import { usePopupContainer } from './popupContainer'
 // Root, Trigger, Group, RadioGroup and FilterProvider carry no styles, so callers
 // use Base UI's directly; the parts below give every menu one look.
 
-const itemClassName = panelItemClassName
+// A small menu's rows are 12px with less padding, for a compact toolbar whose own text is 12px.
+// The rows find it by the popup's data-size, so each part keeps one class list.
+const itemClassName = cx(
+  panelItemClassName,
+  'in-data-[size=sm]:gap-1.5 in-data-[size=sm]:px-1.5 in-data-[size=sm]:py-1',
+)
 
 type Styled<Props> = Omit<Props, 'className'> & { className?: string | undefined }
 
+/** A menu's rows: `md` is the standard 14px row, `sm` a 12px one for a compact toolbar. */
+export type MenuSize = 'md' | 'sm'
+
+interface MenuLook {
+  size: MenuSize
+  themeClassName: string | undefined
+}
+
+// A submenu portals apart from its parent, so it inherits the parent's look through context.
+const MenuLookContext = createContext<MenuLook>({ size: 'md', themeClassName: undefined })
+
 export interface MenuPopupProps {
   children: ReactNode
+  /** On this popup alone, such as a wider floor: `min-w-64`. */
   className?: string | undefined
   side?: BaseMenu.Positioner.Props['side']
   align?: BaseMenu.Positioner.Props['align']
@@ -26,6 +43,21 @@ export interface MenuPopupProps {
   anchor?: BaseMenu.Positioner.Props['anchor']
   /** Keeps the popup's children mounted while closed, so state they own survives. */
   keepMounted?: boolean
+  /** The rows' size; a submenu takes its parent's. */
+  size?: MenuSize | undefined
+  /** Classes on this popup and every submenu it opens, such as token overrides that give a
+   *  terminal's menus its own colors: `[--theme-app-bg:#111827] [--theme-app:#f9fafb]`. */
+  themeClassName?: string | undefined
+  /** At least as wide as the element it opens from. */
+  matchAnchorWidth?: boolean | undefined
+  /** Names the menu, where its trigger's text doesn't. */
+  label?: string | undefined
+  /** Lines above the rows that aren't choices, such as who is signed in. They stay in view
+   *  as the rows scroll, ruled off from them. */
+  header?: ReactNode
+  /** Rows under the scrolling ones, ruled off from them and always in view, such as "See all".
+   *  The arrow keys reach them last. */
+  footer?: ReactNode
 }
 
 /** The portal, positioner and popup every menu needs. */
@@ -36,29 +68,69 @@ export function MenuPopup({
   align = 'start',
   anchor,
   keepMounted = false,
+  size,
+  themeClassName,
+  matchAnchorWidth = false,
+  label,
+  header,
+  footer,
 }: MenuPopupProps) {
   const portal = usePopupContainer()
+  const inherited = use(MenuLookContext)
+  const look: MenuLook = {
+    size: size ?? inherited.size,
+    themeClassName: themeClassName ?? inherited.themeClassName,
+  }
+  const pinned = header !== undefined || footer !== undefined
   return (
-    <BaseMenu.Portal {...portal} keepMounted={keepMounted}>
-      <BaseMenu.Positioner
-        side={side}
-        align={align}
-        anchor={anchor}
-        sideOffset={4}
-        className={positionerClassName}
-      >
-        <BaseMenu.Popup
-          className={cx(
-            'min-w-44 max-h-(--available-height) overflow-y-auto',
-            panelListClassName,
-            panelClassName,
-            className,
-          )}
+    <MenuLookContext value={look}>
+      <BaseMenu.Portal {...portal} keepMounted={keepMounted}>
+        <BaseMenu.Positioner
+          side={side}
+          align={align}
+          anchor={anchor}
+          sideOffset={4}
+          className={positionerClassName}
         >
-          {children}
-        </BaseMenu.Popup>
-      </BaseMenu.Positioner>
-    </BaseMenu.Portal>
+          <BaseMenu.Popup
+            data-size={look.size}
+            aria-label={label}
+            className={cx(
+              'min-w-44 max-h-(--available-height)',
+              pinned ? 'flex flex-col' : ['overflow-y-auto', panelListClassName],
+              panelClassName,
+              look.size === 'sm' && 'text-xs',
+              look.themeClassName,
+              className,
+              // Last, so a floor in className doesn't undo it.
+              matchAnchorWidth && 'min-w-[max(11rem,var(--anchor-width))]',
+            )}
+          >
+            {pinned ? (
+              <>
+                {header !== undefined && (
+                  <div className="shrink-0 border-b border-(--theme-border) px-3 py-2">
+                    {header}
+                  </div>
+                )}
+                <div className={cx('min-h-0 flex-1 overflow-y-auto', panelListClassName)}>
+                  {children}
+                </div>
+                {footer !== undefined && (
+                  <div
+                    className={cx('shrink-0 border-t border-(--theme-border)', panelListClassName)}
+                  >
+                    {footer}
+                  </div>
+                )}
+              </>
+            ) : (
+              children
+            )}
+          </BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </MenuLookContext>
   )
 }
 
@@ -94,7 +166,8 @@ export function MenuCheckboxItem({
   return (
     <BaseMenu.CheckboxItem closeOnClick {...props} className={cx(itemClassName, className)}>
       {children}
-      <BaseMenu.CheckboxItemIndicator className="ml-auto">
+      {/* On the first line's height, so it stays beside the label above a description. */}
+      <BaseMenu.CheckboxItemIndicator className="ms-auto flex h-5 shrink-0 items-center ps-2 in-data-[size=sm]:h-4">
         <CheckIcon className="size-3.5 opacity-80" />
       </BaseMenu.CheckboxItemIndicator>
     </BaseMenu.CheckboxItem>
@@ -125,7 +198,7 @@ export function MenuSeparator({ className }: { className?: string | undefined })
 
 export function MenuGroupLabel({ children }: { children: ReactNode }) {
   return (
-    <BaseMenu.GroupLabel className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-(--theme-muted-text-color)">
+    <BaseMenu.GroupLabel className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-(--theme-muted-text-color) in-data-[size=sm]:px-1.5">
       {children}
     </BaseMenu.GroupLabel>
   )

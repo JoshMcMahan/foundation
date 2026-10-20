@@ -1,5 +1,5 @@
 import { Collapsible } from '@base-ui/react/collapsible'
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 import { cx } from '../cx'
 import { ChevronRightIcon } from '../icons'
 
@@ -23,6 +23,14 @@ export interface DisclosureProps {
   summaryClassName?: string | undefined
   /** On the revealed detail: its indent and spacing. */
   panelClassName?: string | undefined
+  /** False drops the chevron, for a row that reads as a toggle on its own, such as a whole
+   *  list row that opens its detail. */
+  chevron?: boolean | undefined
+  /** Controls beside the summary, outside the toggle, so a row can hold buttons without
+   *  nesting them in it. */
+  actions?: ReactNode
+  /** On the whole disclosure, summary and detail, such as a row's own menu. */
+  onContextMenu?: MouseEventHandler<HTMLDivElement> | undefined
   children: ReactNode
 }
 
@@ -39,8 +47,28 @@ export function Disclosure({
   className,
   summaryClassName,
   panelClassName,
+  chevron = true,
+  actions,
+  onContextMenu,
   children,
 }: DisclosureProps) {
+  const toggle = (
+    <Collapsible.Trigger
+      className={cx(
+        'group/disclosure flex min-w-0 items-start gap-2 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
+        disabled ? 'cursor-default' : 'cursor-pointer',
+        summaryClassName,
+      )}
+    >
+      {summary}
+      {!disabled && chevron && (
+        <ChevronRightIcon
+          aria-hidden="true"
+          className="mt-1 h-3.5 w-3.5 shrink-0 opacity-70 transition-transform group-data-panel-open/disclosure:rotate-90 motion-reduce:transition-none"
+        />
+      )}
+    </Collapsible.Trigger>
+  )
   return (
     <Collapsible.Root
       open={open}
@@ -48,22 +76,16 @@ export function Disclosure({
       defaultOpen={defaultOpen}
       disabled={disabled}
       className={className}
+      onContextMenu={onContextMenu}
     >
-      <Collapsible.Trigger
-        className={cx(
-          'group/disclosure flex min-w-0 items-start gap-2 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
-          disabled ? 'cursor-default' : 'cursor-pointer',
-          summaryClassName,
-        )}
-      >
-        {summary}
-        {!disabled && (
-          <ChevronRightIcon
-            aria-hidden="true"
-            className="mt-1 h-3.5 w-3.5 shrink-0 opacity-70 transition-transform group-data-panel-open/disclosure:rotate-90 motion-reduce:transition-none"
-          />
-        )}
-      </Collapsible.Trigger>
+      {actions ? (
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1">{toggle}</div>
+          <div className="flex shrink-0 items-center gap-1">{actions}</div>
+        </div>
+      ) : (
+        toggle
+      )}
       <Collapsible.Panel
         keepMounted={keepMounted}
         className={cx(collapsePanelClassName, panelClassName)}

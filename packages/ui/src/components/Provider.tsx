@@ -9,6 +9,7 @@ import type { GraphEditorText, InputsEditorText } from '../graph/editorStrings'
 import type { RunLink } from '../graph/types'
 import type { FilterOperator } from '../list/filterModel'
 import { safeUrl } from '../safeUrl'
+import { ContextMenuProvider } from './ContextMenu'
 import { useLocalPersistedState } from './persistedState'
 import { Toaster } from './Toast'
 import { TooltipProvider } from './Tooltip'
@@ -1815,7 +1816,9 @@ export function UIProvider({
                     inline <style>, which a same-origin style policy blocks and
                     reports. theme.css ships that rule instead. */}
                   <CSPProvider nonce={nonce} disableStyleElements>
-                    <TooltipProvider>{children}</TooltipProvider>
+                    <TooltipProvider>
+                      <ContextMenuProvider>{children}</ContextMenuProvider>
+                    </TooltipProvider>
                     <Toaster />
                   </CSPProvider>
                 </AvatarColoringContext>

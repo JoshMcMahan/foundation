@@ -1,13 +1,18 @@
 import { Collapsible } from '@base-ui/react/collapsible'
-import { type ReactNode, useEffect, useId, useRef } from 'react'
+import { type MouseEvent, type ReactNode, useEffect, useId, useRef } from 'react'
+import { Avatar } from '../components/Avatar'
 import { Button } from '../components/Button'
 import { Callout } from '../components/Callout'
+import type { OpenMenu } from '../components/ContextMenu'
 import { collapsePanelClassName } from '../components/Disclosure'
 import { IconButton } from '../components/IconButton'
 import { Loader } from '../components/Loader'
+import type { MenuEntry } from '../components/MenuEntries'
+import { menuDivider } from '../components/MenuEntries'
+import { Select } from '../components/Select'
 import { StatusBadge } from '../components/StatusBadge'
 import { cx } from '../cx'
-import { AddIcon, ChevronRightIcon, LockIcon, OrganizationIcon, TrashIcon } from '../icons'
+import { AddIcon, ChevronRightIcon, KeyIcon, LockIcon, OrganizationIcon, TrashIcon } from '../icons'
 import {
   type AccessModel,
   alsoHas,
@@ -21,7 +26,7 @@ import {
 } from './model'
 import { PrincipalTile } from './PrincipalPicker'
 import type { AccessStrings } from './strings'
-import type { AccessPrincipal, AccessRole } from './types'
+import type { AccessPrincipal, AccessRole, AccessRule } from './types'
 
 /** The id the owner's section has among the roles' sections. */
 export const OWNER_SECTION = '__owner'
@@ -43,6 +48,12 @@ export interface ListActions {
   onCancelRemove: () => void
   onRemove: (removal: PendingRemoval) => void
   onGrantMore: (principalId: string) => void
+  /** Gives a principal this one role in place of the ones it holds, where each holds one. */
+  onChangeRole: (principalId: string, roleId: string) => void
+  /** Each principal holds one role here. */
+  singleRole: boolean
+  /** Opens a row's own menu on a right-click. */
+  openMenu: OpenMenu
   /** The failed save's callout, and where it belongs: under the role or principal it was about. */
   failure: { node: ReactNode; roleId?: string | undefined; principalId: string } | undefined
 }
@@ -84,8 +95,10 @@ function Section({
   aside,
   narrowAside,
   notice,
+  onContextMenu,
   children,
 }: {
+  onContextMenu?: ((e: MouseEvent) => void) | undefined
   id: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -107,6 +120,7 @@ function Section({
       onOpenChange={onOpenChange}
       disabled={disabled}
       className="border-b border-(--theme-border)"
+      onContextMenu={onContextMenu}
     >
       <Collapsible.Trigger
         id={id}
@@ -159,15 +173,21 @@ function Row({
   meta,
   action,
   muted,
+  onContextMenu,
 }: {
   lead?: ReactNode
   title: ReactNode
   meta?: ReactNode
   action?: ReactNode
   muted?: boolean
+  onContextMenu?: ((e: MouseEvent) => void) | undefined
 }) {
   return (
-    <div className="flex items-center gap-3 py-1.5 ps-11 pe-4 @min-[30rem]/access:ps-11">
+    // biome-ignore lint/a11y/noStaticElementInteractions: the row's menu repeats its buttons
+    <div
+      className="flex items-center gap-3 py-1.5 ps-11 pe-4 @min-[30rem]/access:ps-11"
+      onContextMenu={onContextMenu}
+    >
       {lead}
       <div className={cx('min-w-0 flex-1', muted && 'text-(--theme-muted-text-color)')}>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 text-sm wrap-anywhere">
@@ -484,6 +504,13 @@ export function ByRole({
           return (
             <Row
               key={principalId}
+              onContextMenu={rowMenu(actions, () =>
+                rowEntries(model, principal, actions, t, {
+                  principalId,
+                  roleIds: [roleId],
+                  all: false,
+                }),
+              )}
               lead={lead}
               title={principalLabel(principal, t)}
               meta={[aboutOf(principal, t), hint].filter(Boolean).join(' · ')}
@@ -576,6 +603,17 @@ export function ByPrincipal({
         open={expanded.has(principalId)}
         onOpenChange={(open) => onExpandedChange(principalId, open)}
         lead={<PrincipalTile principal={principal} className="hidden @min-[30rem]/access:flex" />}
+        onContextMenu={
+          held.length > 0
+            ? rowMenu(actions, () =>
+                rowEntries(model, principal, actions, t, {
+                  principalId,
+                  roleIds: held.map((role) => role.id),
+                  all: true,
+                }),
+              )
+            : undefined
+        }
         notice={failure}
         title={principalLabel(principal, t)}
         description={everyone ? t.everyoneJoinLater : aboutOf(principal, t)}
@@ -715,4 +753,254 @@ function RoleRow({
       }
     />
   )
+}
+
+/** A row's right-click menu, which repeats what its buttons do; none while read-only. */
+function rowMenu(actions: ListActions, entries: () => MenuEntry[]) {
+  if (actions.readOnly) {
+    return undefined
+  }
+  return (e: MouseEvent) => {
+    e.stopPropagation()
+    actions.openMenu(e, entries())
+  }
+}
+
+/** A principal's row menu: its role, where each holds one, more roles otherwise, then removal. */
+function rowEntries(
+  model: AccessModel,
+  principal: AccessPrincipal,
+  actions: ListActions,
+  t: AccessStrings,
+  removal: PendingRemoval,
+): MenuEntry[] {
+  const held = new Set((model.held.get(principal.id) ?? []).map((role) => role.id))
+  const lead: MenuEntry[] = actions.singleRole
+    ? [
+        {
+          label: t.roleMenu,
+          icon: <KeyIcon />,
+          items: model.grantable.map((role) => ({
+            label: role.name,
+            description: role.description,
+            checked: held.has(role.id),
+            onClick: () => {
+              if (!held.has(role.id) || held.size > 1) {
+                actions.onChangeRole(principal.id, role.id)
+              }
+            },
+          })),
+        },
+      ]
+    : isOwner(model, principal.id)
+      ? []
+      : [
+          {
+            label: t.grantMoreRoles,
+            icon: <AddIcon />,
+            onClick: () => actions.onGrantMore(principal.id),
+          },
+        ]
+  return [
+    ...lead,
+    ...(lead.length > 0 ? [menuDivider] : []),
+    {
+      label:
+        removal.all || actions.singleRole
+          ? t.removeAccess
+          : t.confirmRemove(removal.roleIds.map((id) => model.roleById.get(id)?.name ?? id)),
+      icon: <TrashIcon />,
+      destructive: true,
+      onClick: () => actions.onAskRemove(removal),
+    },
+  ]
+}
+
+/** A reason someone has access that no grant here changes, locked ahead of the grants. */
+export function RuleRow({
+  rule,
+  roleName,
+  lead,
+  t,
+}: {
+  rule: AccessRule
+  roleName: string | undefined
+  /** Lines its title up with the rows below: in a chevron's column, in a tile's, or after both. */
+  lead: 'chevron' | 'tile' | 'both'
+  t: AccessStrings
+}) {
+  const people = rule.people ?? []
+  const shown = people.slice(0, 4)
+  const more = people.length - shown.length
+  const icon = rule.icon ?? <LockIcon />
+  return (
+    <div className="flex items-center gap-3 border-b border-(--theme-border) px-4 py-2.5">
+      {lead === 'chevron' ? (
+        <span
+          aria-hidden="true"
+          className="flex size-4 shrink-0 items-center justify-center text-(--theme-muted-text-color) [&_svg]:size-4"
+        >
+          {icon}
+        </span>
+      ) : (
+        <>
+          {lead === 'both' && <span aria-hidden="true" className="size-4 shrink-0" />}
+          <span
+            aria-hidden="true"
+            className="hidden size-8 shrink-0 items-center justify-center rounded-md bg-(--theme-muted-panel-bg) text-(--theme-muted-text-color) @min-[30rem]/access:flex [&_svg]:size-4"
+          >
+            {icon}
+          </span>
+        </>
+      )}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-medium wrap-anywhere">{rule.title}</span>
+        {rule.detail && (
+          <span className="text-xs wrap-anywhere text-(--theme-muted-text-color)">
+            {rule.detail}
+          </span>
+        )}
+      </span>
+      {shown.length > 0 && (
+        <>
+          <span className="sr-only">
+            {t.ruleMembers(
+              shown.map((person) => person.name),
+              more,
+            )}
+          </span>
+          <span
+            aria-hidden="true"
+            // Side by side rather than overlapping, which would cut off their initials.
+            className="hidden shrink-0 items-center gap-1 @min-[30rem]/access:flex"
+          >
+            {shown.map((person, index) => (
+              <Avatar
+                key={`${person.name}-${index.toString()}`}
+                name={person.name}
+                src={person.avatarUrl}
+                size="md"
+                decorative
+              />
+            ))}
+            {more > 0 && (
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-(--theme-muted-panel-bg) text-[11px] font-medium tabular-nums text-(--theme-muted-text-color)">
+                {t.moreMembers(more)}
+              </span>
+            )}
+          </span>
+        </>
+      )}
+      {roleName && (
+        <span className="shrink-0 text-xs text-(--theme-muted-text-color)">{roleName}</span>
+      )}
+      <Locked />
+    </div>
+  )
+}
+
+/** Person and group one by one where each holds one role: a flat row each, its role picked
+ *  from a list on the row. */
+export function ByPrincipalSingle({ model, order, actions, t, sectionId }: ViewProps) {
+  return order.map((principalId) => {
+    const principal = model.principalById.get(principalId)
+    if (!principal) {
+      return null
+    }
+    const owner = isOwner(model, principalId)
+    const held = model.held.get(principalId) ?? []
+    const inheritedRoles = (model.inherited.get(principalId) ?? []).map((holding) => holding.role)
+    const role = held[0]
+    const name = principalLabel(principal, t)
+    const failure = actions.failure?.principalId === principalId ? actions.failure.node : undefined
+    const removal: PendingRemoval = {
+      principalId,
+      roleIds: held.map((r) => r.id),
+      all: held.length > 1,
+    }
+    if (actions.removal?.principalId === principalId) {
+      return (
+        <div key={principalId} className="border-b border-(--theme-border)">
+          <RemoveConfirm
+            model={model}
+            removal={actions.removal}
+            saving={actions.saving.size > 0}
+            onCancel={actions.onCancelRemove}
+            onConfirm={() => actions.removal && actions.onRemove(actions.removal)}
+            t={t}
+          />
+        </div>
+      )
+    }
+    const saving = held.some((r) => actions.saving.has(key({ principalId, roleId: r.id })))
+    const options = [
+      ...model.grantable,
+      ...(role && !model.grantable.includes(role) ? [role] : []),
+    ].map((r) => ({ value: r.id, label: r.name }))
+    const control = owner ? (
+      <StatusBadge size="md" variant="info">
+        {t.owner}
+      </StatusBadge>
+    ) : !role ? (
+      <span className="shrink-0 text-sm text-(--theme-muted-text-color)">
+        {inheritedRoles.map((r) => r.name).join(', ')}
+      </span>
+    ) : actions.readOnly ? (
+      <span className="shrink-0 text-sm text-(--theme-muted-text-color)">{role.name}</span>
+    ) : (
+      <Select<string>
+        size="sm"
+        aria-label={t.roleFor(name)}
+        items={options}
+        value={role.id}
+        disabled={saving}
+        onValueChange={(next) => {
+          if (next !== null && (next !== role.id || held.length > 1)) {
+            actions.onChangeRole(principalId, next)
+          }
+        }}
+        className="w-36 shrink-0"
+      />
+    )
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: the row's menu repeats its controls
+      <div
+        key={principalId}
+        id={sectionId(principalId)}
+        tabIndex={-1}
+        className="border-b border-(--theme-border) outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus)"
+        onContextMenu={
+          role && !owner
+            ? rowMenu(actions, () => rowEntries(model, principal, actions, t, removal))
+            : undefined
+        }
+      >
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <PrincipalTile principal={principal} className="hidden @min-[30rem]/access:flex" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium wrap-anywhere">{name}</span>
+            {aboutOf(principal, t) && (
+              <span className="text-xs wrap-anywhere text-(--theme-muted-text-color)">
+                {aboutOf(principal, t)}
+              </span>
+            )}
+          </span>
+          {control}
+          {owner || !role ? (
+            <Locked />
+          ) : (
+            !actions.readOnly && (
+              <RemoveButton
+                label={t.removeRole(name, role.name)}
+                saving={saving}
+                removal={removal}
+                onAsk={actions.onAskRemove}
+              />
+            )
+          )}
+        </div>
+        {failure && <div className="px-4 pb-3">{failure}</div>}
+      </div>
+    )
+  })
 }

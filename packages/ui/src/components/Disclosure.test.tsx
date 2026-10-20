@@ -62,3 +62,25 @@ describe('DisclosurePanel', () => {
     expect(screen.getByText('steps')).toHaveAttribute('id', 'steps')
   })
 })
+
+describe('Disclosure rows', () => {
+  it('holds actions beside the toggle, not inside it, and can drop the chevron', () => {
+    const onContextMenu = vi.fn()
+    const { container } = render(
+      <Disclosure
+        summary="gpu-east"
+        chevron={false}
+        actions={<button type="button">Stop</button>}
+        onContextMenu={onContextMenu}
+      >
+        detail
+      </Disclosure>,
+    )
+    const toggle = screen.getByRole('button', { name: 'gpu-east' })
+    const stop = screen.getByRole('button', { name: 'Stop' })
+    expect(toggle).not.toContainElement(stop)
+    expect(toggle.querySelector('svg')).toBeNull()
+    fireEvent.contextMenu(container.firstElementChild as Element)
+    expect(onContextMenu).toHaveBeenCalledOnce()
+  })
+})

@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { MoreIcon, StopIcon } from '../icons'
 import { Button } from './Button'
 import { Disclosure } from './Disclosure'
+import { IconButton } from './IconButton'
 import { InfoTip } from './InfoTip'
 import { Section, type SectionSpacing, type SectionTone, type SectionVariant } from './Section'
 import { Select } from './Select'
@@ -481,5 +483,49 @@ export const Disclosures: StoryObj<{ disabled: boolean }> = {
       await userEvent.click(canvas.getByRole('button', { name: /Read/ }))
       await waitFor(() => expect(canvas.getByText('name: build')).toBeVisible())
     }
+  },
+}
+
+/** A whole row that toggles its detail, as a list of clusters has: no chevron, with its own
+ *  buttons beside the toggle rather than in it, and its menu on a right-click. */
+export const DisclosureRow: StoryObj<{ chevron: boolean }> = {
+  args: { chevron: false },
+  argTypes: { chevron: { description: 'False drops the chevron.' } },
+  render: ({ chevron }) => (
+    <div className="max-w-xl rounded-xl border theme-border text-sm">
+      {['gpu-cluster-east', 'cpu-batch-west'].map((name) => (
+        <Disclosure
+          key={name}
+          chevron={chevron}
+          className="border-b theme-border px-3 py-2 last:border-b-0"
+          summaryClassName="w-full items-center"
+          summary={
+            <>
+              <StatusDot variant="success" />
+              <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+              <span className="theme-muted-text">4 nodes</span>
+            </>
+          }
+          actions={
+            <>
+              <IconButton label={`Stop ${name}`} icon={<StopIcon />} />
+              <IconButton label={`More actions for ${name}`} icon={<MoreIcon />} />
+            </>
+          }
+          panelClassName="pt-2 ps-4"
+        >
+          <p className="m-0 theme-muted-text">Started 3 hours ago in us-east-1.</p>
+        </Disclosure>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const toggle = canvas.getByRole('button', { name: /gpu-cluster-east/ })
+    await expect(toggle).not.toContainElement(
+      canvas.getByRole('button', { name: 'Stop gpu-cluster-east' }),
+    )
+    await userEvent.click(toggle)
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'true'))
   },
 }

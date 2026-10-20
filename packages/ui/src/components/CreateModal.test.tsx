@@ -196,3 +196,89 @@ describe('CreateModal fields with help', () => {
     expect(screen.getByRole('button', { name: 'More information' })).toBeInTheDocument()
   })
 })
+
+describe('CreateModal submit details', () => {
+  it('tells the host when ⌘/Ctrl+Enter submitted it', async () => {
+    const onSubmit = vi.fn(() => Promise.resolve(true))
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        onSubmit={onSubmit}
+      />,
+    )
+    const name = await screen.findByPlaceholderText('Issue title')
+    fireEvent.change(name, { target: { value: 'Fix login' } })
+    fireEvent.keyDown(name, { key: 'Enter', metaKey: true })
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith('Fix login', '', false, { modifier: true }),
+    )
+  })
+
+  it('shows a hint at the footer’s start, and an error in its place', async () => {
+    const { rerender } = render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        footerHint="⌘Enter to create and open"
+        onSubmit={vi.fn()}
+      />,
+    )
+    expect(await screen.findByText('⌘Enter to create and open')).toBeInTheDocument()
+    rerender(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        footerHint="⌘Enter to create and open"
+        error="The team is archived."
+        onSubmit={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('The team is archived.')
+    expect(screen.queryByText('⌘Enter to create and open')).toBeNull()
+  })
+
+  it('takes a description field of the host’s own', async () => {
+    render(
+      <CreateModal
+        open
+        onClose={vi.fn()}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        descriptionField={<textarea aria-label="Description editor" />}
+        onSubmit={vi.fn()}
+      />,
+    )
+    expect(await screen.findByRole('textbox', { name: 'Description editor' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Add description…' })).toBeNull()
+  })
+
+  it('counts typing in a rich editor as unsaved, so Escape keeps the form', async () => {
+    const onClose = vi.fn()
+    render(
+      <CreateModal
+        open
+        onClose={onClose}
+        typeLabel="Issue"
+        namePlaceholder="Issue title"
+        descriptionField={
+          // biome-ignore lint/a11y/useSemanticElements: stands in for a rich text editor
+          <div role="textbox" aria-label="Description editor" contentEditable tabIndex={0} />
+        }
+        onSubmit={vi.fn()}
+      />,
+    )
+    const editor = await screen.findByRole('textbox', { name: 'Description editor' })
+    // jsdom doesn't compute isContentEditable.
+    Object.defineProperty(editor, 'isContentEditable', { value: true })
+    fireEvent.input(editor)
+    fireEvent.keyDown(editor, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})

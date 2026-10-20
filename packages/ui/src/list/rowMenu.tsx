@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
-import { useCallback, useState } from 'react'
-import type { OpenMenu } from '../components/ContextMenu'
+import { useCallback, useRef, useState } from 'react'
+import { type OpenMenu, useMenuOpenedBy, useOpenMenu } from '../components/ContextMenu'
 import { IconButton } from '../components/IconButton'
 import type { MenuAction, MenuEntry, MenuSubmenu } from '../components/MenuEntries'
 import { useStrings } from '../components/Provider'
@@ -58,28 +58,35 @@ export function useRowMenuActive(openMenu: OpenMenu): {
   const [active, setActive] = useState(false)
   const wrapped = useCallback<OpenMenu>(
     (at, items, options) => {
-      setActive(true)
-      openMenu(at, items, {
+      const opened = openMenu(at, items, {
         ...options,
         onClose: () => {
           setActive(false)
           options?.onClose?.()
         },
       })
+      // Nothing opened, as for a Shift+right-click left to the browser.
+      if (opened !== false) {
+        setActive(true)
+      }
+      return opened
     },
     [openMenu],
   )
   return { active, openMenu: wrapped }
 }
 
-/** Opens the row's menu on a right-click. Pass a function to build a large
- *  list's menus only when one opens, not on every render. */
+/** Opens the row's menu on a right-click; Shift+right-click keeps the browser's own. Pass a
+ *  function to build a large list's menus only when one opens, not on every render. */
 export function rowContextMenuProps(
   openMenu: OpenMenu,
   entries: MenuEntry[] | (() => MenuEntry[]),
 ) {
   return {
     onContextMenu: (e: ReactMouseEvent) => {
+      if (e.shiftKey) {
+        return
+      }
       const items = typeof entries === 'function' ? entries() : entries
       e.preventDefault()
       // A row with its own menu claims the right-click so the event doesn't
@@ -150,12 +157,18 @@ export function useCopySubmenu(): CopySubmenu {
  *  out of reach. */
 export function MoreButton({
   onOpen,
-  open = false,
-  visible = open,
+  items,
+  open: openProp,
+  visible: visibleProp,
   label,
   className,
 }: {
-  onOpen: (button: HTMLElement) => void
+  /** Opens a menu of the host's own under the button. */
+  onOpen?: ((button: HTMLElement) => void) | undefined
+  /** The menu's rows, opened in the shared menu, which a second press closes. A function
+   *  builds them only when it opens. Use this or `onOpen`. */
+  items?: MenuEntry[] | (() => MenuEntry[]) | undefined
+  /** Whether its menu is open; with `items` the shared menu tells it. */
   open?: boolean
   /** Shows at rest too. */
   visible?: boolean
@@ -165,8 +178,14 @@ export function MoreButton({
   className?: string | undefined
 }) {
   const { list: t } = useStrings()
+  const openMenu = useOpenMenu()
+  const openedBy = useMenuOpenedBy()
+  const button = useRef<HTMLButtonElement>(null)
+  const open = openProp ?? (items !== undefined && openedBy !== null && openedBy === button.current)
+  const visible = visibleProp ?? open
   return (
     <IconButton
+      ref={button}
       label={label ?? t.moreActions}
       icon={<MoreIcon />}
       aria-haspopup="menu"
@@ -174,7 +193,11 @@ export function MoreButton({
       data-popup-open={open || undefined}
       onClick={(e) => {
         e.stopPropagation()
-        onOpen(e.currentTarget)
+        if (items !== undefined) {
+          openMenu(e.currentTarget, typeof items === 'function' ? items() : items)
+        } else {
+          onOpen?.(e.currentTarget)
+        }
       }}
       className={cx(
         'focus-visible:opacity-100',

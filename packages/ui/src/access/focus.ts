@@ -7,8 +7,11 @@ type Find = () => HTMLElement | null | undefined
  *  later, which would undo wherever focus is sent next; parked, nothing is lost and it doesn't. */
 export function holdFocus(): void {
   const active = document.activeElement
+  // The drawer, or the panel inline on a page.
   const dialog =
-    active instanceof HTMLElement ? active.closest<HTMLElement>('[role="dialog"]') : null
+    active instanceof HTMLElement
+      ? active.closest<HTMLElement>('[role="dialog"], [data-access-panel]')
+      : null
   if (dialog && dialog !== active) {
     dialog.focus({ preventScroll: true })
   }

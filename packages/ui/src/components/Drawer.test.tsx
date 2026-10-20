@@ -95,3 +95,21 @@ describe('Drawer', () => {
     expect(screen.getByText('history')).toBeInTheDocument()
   })
 })
+
+describe('Drawer presses', () => {
+  it('stays open when a press starts inside and ends on the backdrop', async () => {
+    const onClose = vi.fn()
+    render(
+      <Drawer open onClose={onClose} title="Edit quota">
+        <p>Drag a selection out of here</p>
+      </Drawer>,
+    )
+    const text = await screen.findByText('Drag a selection out of here')
+    fireEvent.pointerDown(text)
+    fireEvent.mouseDown(text)
+    fireEvent.pointerUp(document.body)
+    fireEvent.mouseUp(document.body)
+    fireEvent.click(document.body)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})

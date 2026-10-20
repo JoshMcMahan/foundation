@@ -2,11 +2,13 @@ import { Menu } from '@base-ui/react/menu'
 import { type ReactNode, useCallback, useState } from 'react'
 import { cx } from '../cx'
 import { isDev } from '../dev'
+import { CheckIcon, ExternalLinkIcon } from '../icons'
 import { AppLink } from './AppLink'
 import { EmptyState } from './EmptyState'
 import { keyedByContent } from './keys'
 import {
   MenuCheckboxItem,
+  MenuGroupLabel,
   MenuItem,
   MenuLinkItem,
   MenuPopup,
@@ -19,7 +21,17 @@ import { useCopy } from './useCopy'
 
 interface MenuActionBase {
   label: string
+  /** Before the label: an icon, or a mark such as a label's color dot. It stays when the
+   *  row is checked, since the check sits at the row's end. */
   icon?: ReactNode
+  /** A second, muted line under the label, such as what a product holds. A search matches it. */
+  description?: string | undefined
+  /** The key that does the same from the page, such as `S` or `⌘K`, in plain text at the
+   *  row's end. The menu doesn't bind it; the host does. */
+  shortcut?: string | undefined
+  /** A small mark at the row's end, such as a dot for something unseen. It is hidden from
+   *  screen readers, so say what it means in `label`. */
+  badge?: ReactNode
   disabled?: boolean | undefined
   /** Why the action is disabled, shown on hover and read with its name. */
   disabledReason?: string | undefined
@@ -36,6 +48,7 @@ interface MenuClickAction extends MenuActionBase {
   href?: never
   reloadDocument?: never
   target?: never
+  current?: never
   copy?: never
 }
 
@@ -44,8 +57,12 @@ interface MenuLinkAction extends MenuActionBase {
   href: string
   /** Loads the page instead of routing, for paths the host's router doesn't serve. */
   reloadDocument?: boolean | undefined
-  /** `_blank` opens it in a new tab, such as a page outside the app. */
+  /** `_blank` opens it in a new tab, such as a page outside the app: a small arrow at the
+   *  row's end shows it, and screen readers hear it. */
   target?: '_blank' | undefined
+  /** The page the reader is on, such as the current organization in a switcher: checked at
+   *  the row's end and announced as the current page. */
+  current?: boolean | undefined
   onClick?: never
   checked?: never
   copy?: never
@@ -59,6 +76,7 @@ interface MenuCopyAction extends MenuActionBase {
   href?: never
   reloadDocument?: never
   target?: never
+  current?: never
 }
 
 /** Something a menu row does: runs `onClick`, navigates to `href`, or copies
@@ -72,13 +90,27 @@ export interface MenuSubmenu {
   icon?: ReactNode
   items: MenuEntry[]
   search?: MenuSearch | undefined
+  /** The key that opens it from the page, in plain text by the chevron. */
+  shortcut?: string | undefined
+  /** Can't be opened, such as Labels where there are none. */
+  disabled?: boolean | undefined
+  /** Why it can't be opened, shown on hover and read with its name. */
+  disabledReason?: string | undefined
+  /** More text a menu's search matches, beside the label; a match shows all its rows. */
+  keywords?: string | undefined
+}
+
+/** Rows under a heading, which names them for screen readers too. */
+export interface MenuGroup {
+  group: string
+  items: MenuEntry[]
 }
 
 export interface MenuDivider {
   divider: true
 }
 
-export type MenuEntry = MenuAction | MenuSubmenu | MenuDivider
+export type MenuEntry = MenuAction | MenuSubmenu | MenuGroup | MenuDivider
 
 export const menuDivider: MenuDivider = { divider: true }
 
@@ -90,7 +122,9 @@ export interface MenuSearch {
 }
 
 export const isMenuDivider = (entry: MenuEntry): entry is MenuDivider => 'divider' in entry
-export const isMenuSubmenu = (entry: MenuEntry): entry is MenuSubmenu => 'items' in entry
+export const isMenuGroup = (entry: MenuEntry): entry is MenuGroup => 'group' in entry
+export const isMenuSubmenu = (entry: MenuEntry): entry is MenuSubmenu =>
+  'items' in entry && !('group' in entry)
 
 /** Gives a menu root its search's filter; `children` renders the root with the query. */
 export function MenuFilter({
@@ -129,7 +163,11 @@ export function MenuEntries({
   }
   const needle = query.trim()
   const shown = needle
-    ? searchMatches(entries, (a) => matches(needle, a.label, a.keywords))
+    ? searchMatches(
+        entries,
+        (a) => matches(needle, a.label, a.description, a.keywords),
+        (submenu) => matches(needle, submenu.label, submenu.keywords),
+      )
     : entries
   return (
     <>
@@ -148,44 +186,151 @@ export function MenuEntries({
   )
 }
 
-// Every action a search can reach, once each, with submenus opened out.
-function searchMatches(entries: MenuEntry[], match: (action: MenuAction) => boolean): MenuAction[] {
+// Every action a search can reach, once each, with submenus and groups opened out. A submenu
+// the query names shows every action in it; a disabled one shows none, as it can't be opened.
+function searchMatches(
+  entries: MenuEntry[],
+  match: (action: MenuAction) => boolean,
+  matchSubmenu: (submenu: MenuSubmenu) => boolean,
+): MenuAction[] {
   const found = new Map<string, MenuAction>()
-  const walk = (list: MenuEntry[]) => {
+  const walk = (list: MenuEntry[], all: boolean) => {
     for (const entry of list) {
-      if (isMenuSubmenu(entry)) {
-        walk(entry.items)
-      } else if (!isMenuDivider(entry) && !found.has(entry.label) && match(entry)) {
+      if (isMenuDivider(entry)) {
+        continue
+      }
+      if (isMenuGroup(entry)) {
+        walk(entry.items, all)
+      } else if (isMenuSubmenu(entry)) {
+        if (!entry.disabled) {
+          walk(entry.items, all || matchSubmenu(entry))
+        }
+      } else if (!found.has(entry.label) && (all || match(entry))) {
         found.set(entry.label, entry)
       }
     }
   }
-  walk(entries)
+  walk(entries, false)
   return [...found.values()]
 }
 
+const entryKey = (entry: MenuEntry) =>
+  isMenuDivider(entry) ? 'divider' : isMenuGroup(entry) ? `group:${entry.group}` : entry.label
+
 function EntryRows({ entries }: { entries: MenuEntry[] }) {
-  return keyedByContent(entries, (entry) => (isMenuDivider(entry) ? 'divider' : entry.label)).map(
-    ({ key, item }) =>
-      isMenuDivider(item) ? (
-        <MenuSeparator key={key} />
-      ) : isMenuSubmenu(item) ? (
-        <SubmenuRow key={key} submenu={item} />
-      ) : (
-        <ActionRow key={key} action={item} />
-      ),
+  return keyedByContent(entries, entryKey).map(({ key, item }) =>
+    isMenuDivider(item) ? (
+      <MenuSeparator key={key} />
+    ) : isMenuGroup(item) ? (
+      <Menu.Group key={key}>
+        <MenuGroupLabel>{item.group}</MenuGroupLabel>
+        <EntryRows entries={item.items} />
+      </Menu.Group>
+    ) : isMenuSubmenu(item) ? (
+      <SubmenuRow key={key} submenu={item} />
+    ) : (
+      <ActionRow key={key} action={item} />
+    ),
+  )
+}
+
+/** A key as `aria-keyshortcuts` spells it: `⌘K` reads Meta+K, `⇧P` Shift+P. */
+export function ariaKeyShortcut(shortcut: string | undefined): string | undefined {
+  if (!shortcut) {
+    return undefined
+  }
+  const names: Record<string, string> = {
+    '⌘': 'Meta',
+    '⌃': 'Control',
+    '⌥': 'Alt',
+    '⇧': 'Shift',
+  }
+  const parts: string[] = []
+  let rest = shortcut.replace(/\s+/g, '')
+  while (rest.length > 1 && names[rest[0] ?? '']) {
+    parts.push(names[rest[0] ?? ''] ?? '')
+    rest = rest.slice(1)
+  }
+  for (const part of rest.split('+').filter(Boolean)) {
+    parts.push(part.length === 1 ? part.toUpperCase() : part)
+  }
+  return parts.join('+')
+}
+
+/** A detail at the row's end, held to the first line's height so it sits beside the label
+ *  even when a description adds a second. */
+function RowEnd({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx('flex h-5 shrink-0 items-center in-data-[size=sm]:h-4', className)}
+    >
+      {children}
+    </span>
+  )
+}
+
+const shortcutClassName =
+  'ps-3 text-xs text-(--theme-muted-text-color) tabular-nums in-data-[size=sm]:text-[11px]'
+
+/** A row's icon, label, second line and end details, laid out alike in every kind of row. */
+function RowContent({
+  icon,
+  label,
+  description,
+  end,
+}: {
+  icon?: ReactNode
+  label: ReactNode
+  description?: string | undefined
+  end?: ReactNode
+}) {
+  return (
+    <>
+      {icon !== undefined && icon !== null && (
+        // On the first line's height, so it stays beside the label above a description.
+        <span className="flex h-5 shrink-0 items-center in-data-[size=sm]:h-4">{icon}</span>
+      )}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="wrap-break-word">{label}</span>
+        {description && (
+          <span className="text-xs text-(--theme-muted-text-color) in-data-[size=sm]:text-[11px]">
+            {description}
+          </span>
+        )}
+      </span>
+      {end}
+    </>
   )
 }
 
 function SubmenuRow({ submenu }: { submenu: MenuSubmenu }) {
+  const reason = submenu.disabled ? submenu.disabledReason : undefined
   return (
     <MenuFilter search={submenu.search}>
       {(query) => (
-        <Menu.SubmenuRoot>
-          <MenuSubmenuTrigger>
-            {submenu.icon}
-            {submenu.label}
-          </MenuSubmenuTrigger>
+        <Menu.SubmenuRoot disabled={submenu.disabled}>
+          <Tooltip content={reason} side="right">
+            <MenuSubmenuTrigger
+              disabled={submenu.disabled}
+              aria-keyshortcuts={ariaKeyShortcut(submenu.shortcut)}
+            >
+              <RowContent
+                icon={submenu.icon}
+                label={
+                  <>
+                    {submenu.label}
+                    {reason && <span className="sr-only">. {reason}</span>}
+                  </>
+                }
+                end={
+                  submenu.shortcut && (
+                    <RowEnd className={shortcutClassName}>{submenu.shortcut}</RowEnd>
+                  )
+                }
+              />
+            </MenuSubmenuTrigger>
+          </Tooltip>
           <MenuPopup side="inline-end">
             <MenuEntries entries={submenu.items} search={submenu.search} query={query} />
           </MenuPopup>
@@ -231,17 +376,27 @@ export function useRunAction(): (action: MenuAction) => void {
   )
 }
 
-function ActionRow({ action }: { action: MenuAction }) {
+/** One action as a menu row: a link, an on/off choice, or a plain item. */
+export function ActionRow({ action }: { action: MenuAction }) {
   warnIfInert(action, 'MenuEntries')
   const runAction = useRunAction()
-  const className = cx(action.destructive && destructiveClassName)
-  const content = (
+  const className = cx(
+    action.description && 'items-start',
+    action.destructive && destructiveClassName,
+    action.current && 'font-medium',
+  )
+  const keyshortcuts = ariaKeyShortcut(action.shortcut)
+  const end = (trailing?: ReactNode) => (
     <>
-      {action.icon}
-      {action.label}
+      {action.badge !== undefined && action.badge !== null && action.badge !== false && (
+        <RowEnd className="ps-2">{action.badge}</RowEnd>
+      )}
+      {action.shortcut && <RowEnd className={shortcutClassName}>{action.shortcut}</RowEnd>}
+      {trailing}
     </>
   )
   if (action.href && !action.disabled) {
+    const newTab = action.target === '_blank'
     return (
       <MenuLinkItem
         render={
@@ -249,36 +404,67 @@ function ActionRow({ action }: { action: MenuAction }) {
             href={action.href}
             reloadDocument={action.reloadDocument}
             target={action.target}
+            aria-current={action.current ? 'page' : undefined}
           />
         }
+        aria-keyshortcuts={keyshortcuts}
         className={className}
       >
-        {content}
+        <RowContent
+          icon={action.icon}
+          label={action.label}
+          description={action.description}
+          end={end(
+            action.current ? (
+              <RowEnd className="ps-2">
+                <CheckIcon className="size-3.5 opacity-80" />
+              </RowEnd>
+            ) : newTab ? (
+              // The words for a screen reader come from the link itself.
+              <RowEnd className="ps-2 text-(--theme-muted-text-color)">
+                <ExternalLinkIcon className="size-3" />
+              </RowEnd>
+            ) : undefined,
+          )}
+        />
       </MenuLinkItem>
     )
   }
   const run = () => runAction(action)
   const reason = action.disabled ? action.disabledReason : undefined
-  const label = (
-    <>
-      {content}
-      {reason && <span className="sr-only">. {reason}</span>}
-    </>
+  const content = (trailing?: ReactNode) => (
+    <RowContent
+      icon={action.icon}
+      label={
+        <>
+          {action.label}
+          {reason && <span className="sr-only">. {reason}</span>}
+        </>
+      }
+      description={action.description}
+      end={end(trailing)}
+    />
   )
   return (
     <Tooltip content={reason} side="right">
       {action.checked === undefined ? (
-        <MenuItem disabled={action.disabled} onClick={run} className={className}>
-          {label}
+        <MenuItem
+          disabled={action.disabled}
+          onClick={run}
+          aria-keyshortcuts={keyshortcuts}
+          className={className}
+        >
+          {content()}
         </MenuItem>
       ) : (
         <MenuCheckboxItem
           checked={action.checked}
           onCheckedChange={run}
           disabled={action.disabled}
+          aria-keyshortcuts={keyshortcuts}
           className={className}
         >
-          {label}
+          {content()}
         </MenuCheckboxItem>
       )}
     </Tooltip>

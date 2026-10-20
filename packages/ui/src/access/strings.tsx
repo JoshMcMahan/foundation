@@ -124,6 +124,27 @@ export const ACCESS_STRINGS = {
   readOnly: 'View only.',
   /** After `readOnly` when the host gives no reason. */
   readOnlyReason: 'Only people who manage access can make changes.',
+  /** Names the switch between open to everyone and only those listed. */
+  visibility: 'Who can see it',
+  /** The switch's choice that limits it to the people and groups listed. */
+  restrictedLabel: 'Only people with access',
+  /** The toast after the switch saves; `choice` is the label now chosen. */
+  visibilityChanged: (choice: string) => `Changed to ${choice}`,
+  visibilityFailed: (choice: string) => `Couldn’t change to ${choice}`,
+  /** Names the role picker on a row where each person or group holds one role. */
+  roleFor: (principal: string) => `Role for ${principal}`,
+  /** A row menu's submenu of roles. */
+  roleMenu: 'Role',
+  /** A row menu's action that takes every role the row holds here. */
+  removeAccess: 'Remove access',
+  /** The toast after a row's one role is swapped for another. */
+  roleChanged: (principal: string, role: string) => `Changed ${principal} to ${role}`,
+  roleChangeFailed: (principal: string, role: string) => `Couldn’t change ${principal} to ${role}`,
+  /** Read with a rule's faces: the first few by name, and how many more. */
+  ruleMembers: (names: readonly string[], more: number) =>
+    more > 0
+      ? `Includes ${and([...names, `${more.toLocaleString()} more`])}`
+      : `Includes ${and(names)}`,
   emptyTitle: 'No access granted',
   emptyDescription: (resource: string) =>
     `Grant a role to a person or group to give them access to ${resource}.`,

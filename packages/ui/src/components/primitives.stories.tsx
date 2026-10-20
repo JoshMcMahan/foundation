@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { formatBytes } from '../format'
-import { ClusterIcon, UploadIcon } from '../icons'
+import { ClusterIcon, MoreIcon, UploadIcon } from '../icons'
 import {
   applyTheme,
   DEFAULT_PRESET,
@@ -11,12 +11,13 @@ import {
   schemeFor,
   THEME_PRESETS,
 } from '../theme/index'
+import { ActionMenu } from './ActionMenu'
 import { Avatar, AvatarGroup, type AvatarSize } from './Avatar'
 import { Button } from './Button'
 import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
 import { Autocomplete, Combobox } from './Combobox'
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmModal, useConfirm } from './ConfirmModal'
 import { CreateModal, CreateModalSwitch } from './CreateModal'
 import { DatePicker } from './DatePicker'
 import { EmptyState, type EmptyStateVariant } from './EmptyState'
@@ -707,9 +708,17 @@ export const EmptyStateVariants: StoryObj = {
   },
 }
 
-type ModalArgs = Pick<ModalProps, 'align' | 'dismissible' | 'size'> & { paragraphs: number }
+type ModalArgs = Pick<ModalProps, 'align' | 'dismissible' | 'size' | 'closeButton'> & {
+  paragraphs: number
+}
 
-function ModalDemo({ align, dismissible, size = 'md', paragraphs = 1 }: Partial<ModalArgs>) {
+function ModalDemo({
+  align,
+  dismissible,
+  closeButton,
+  size = 'md',
+  paragraphs = 1,
+}: Partial<ModalArgs>) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -721,6 +730,7 @@ function ModalDemo({ align, dismissible, size = 'md', paragraphs = 1 }: Partial<
         onClose={() => setOpen(false)}
         align={align}
         dismissible={dismissible}
+        closeButton={closeButton}
         size={size}
         title="Release notes"
         description="Focus stays inside until the modal closes, then returns to the button that opened it."
@@ -749,10 +759,11 @@ const openModal = async (canvasElement: HTMLElement, name = 'Open modal') => {
  *  and the backdrop close it. */
 export const ModalStory: StoryObj<ModalArgs> = {
   name: 'Modal',
-  args: { align: 'top', dismissible: true, size: 'md', paragraphs: 1 },
+  args: { align: 'top', dismissible: true, closeButton: false, size: 'md', paragraphs: 1 },
   argTypes: {
     align: { control: 'inline-radio', options: ['top', 'center'] },
     dismissible: { control: 'boolean', description: 'False ignores Escape and the backdrop.' },
+    closeButton: { control: 'boolean', description: 'A close button at the header’s end.' },
     size: { control: 'inline-radio', options: ['sm', 'md', 'lg', 'xl'] },
     paragraphs: {
       control: { type: 'range', min: 1, max: 30 },
@@ -833,7 +844,102 @@ export const ModalNotDismissible: StoryObj = {
   },
 }
 
-function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
+function ContentModalDemo() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Open modal
+      </Button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        size="lg"
+        title="Connect from your terminal"
+        description="Run this once on the machine you connect from."
+        closeButton
+      >
+        <pre className="m-0 overflow-x-auto rounded-md bg-(--theme-muted-panel-bg) p-3 font-mono text-xs">
+          pw ssh login-1.gpu-cluster-east
+        </pre>
+      </Modal>
+    </>
+  )
+}
+
+/** A modal that only shows something, with no footer to close it: the close button in its
+ *  header does, as Escape and the backdrop do. It opens and closes with a short fade and
+ *  scale, a fade alone under reduced motion. */
+export const ModalCloseButton: StoryObj = {
+  name: 'Modal, close button',
+  render: () => <ContentModalDemo />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Connect from your terminal' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  },
+}
+
+function FormModalDemo() {
+  const [open, setOpen] = useState(false)
+  const [saved, setSaved] = useState('')
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        Open modal
+      </Button>
+      {saved && <p className="mt-2 text-sm">Saved {saved}</p>}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        size="lg"
+        title="New knowledge entry"
+        onSubmit={(event) => {
+          setSaved(String(new FormData(event.currentTarget).get('title') ?? ''))
+          setOpen(false)
+        }}
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="submit">
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <Input label="Title" name="title" defaultValue="Deploying to staging" />
+          <Input label="Tags" name="tags" placeholder="ops, release" />
+        </div>
+      </Modal>
+    </>
+  )
+}
+
+/** One form across the body and the footer: Enter in a field, or the footer's submit button,
+ *  saves. */
+export const ModalForm: StoryObj = {
+  name: 'Modal, form',
+  render: () => <FormModalDemo />,
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'New knowledge entry' })
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Tags' }), 'ops{Enter}')
+    await expect(await within(canvasElement).findByText('Saved Deploying to staging')).toBeVisible()
+  },
+}
+
+interface ConfirmArgs {
+  destructive?: boolean
+  pending?: boolean
+  error?: string
+  initialFocus?: 'cancel' | 'confirm' | undefined
+}
+
+function ConfirmDemo({ destructive = false, pending, error, initialFocus }: ConfirmArgs) {
   const [open, setOpen] = useState(false)
   const [snapshots, setSnapshots] = useState(false)
   return (
@@ -851,6 +957,9 @@ function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
         }
         confirmLabel={destructive ? 'Delete' : 'Confirm'}
         onConfirm={() => setOpen(false)}
+        pending={pending}
+        error={error || undefined}
+        initialFocus={initialFocus}
       >
         {destructive && (
           <label className="flex items-center gap-2 text-sm">
@@ -863,9 +972,17 @@ function ConfirmDemo({ destructive = false }: { destructive?: boolean }) {
   )
 }
 
-export const ConfirmModalStory: StoryObj = {
+/** Left-aligned question, a ruled footer, Cancel beside the action. Focus starts on the action,
+ *  and on Cancel when the action can't be undone. */
+export const ConfirmModalStory: StoryObj<ConfirmArgs> = {
   name: 'Confirm modal',
-  render: () => <ConfirmDemo />,
+  args: { pending: false, error: '', initialFocus: undefined },
+  argTypes: {
+    pending: { description: 'Work the host runs: the buttons wait.' },
+    error: { control: 'text', description: 'Why the last confirm failed.' },
+    initialFocus: { control: 'inline-radio', options: [undefined, 'cancel', 'confirm'] },
+  },
+  render: (args) => <ConfirmDemo {...args} />,
   play: async ({ canvasElement }) => {
     await openModal(canvasElement)
     // The dialog portals outside the story canvas.
@@ -883,6 +1000,83 @@ export const DestructiveConfirmModal: StoryObj = {
     const dialog = await screen.findByRole('alertdialog', { name: 'Delete cluster?' })
     await waitFor(() => expect(dialog).toBeVisible())
     await expect(dialog).toHaveAccessibleDescription('Its jobs stop and its disks are erased.')
+  },
+}
+
+/** A failed confirm keeps the dialog open and says why, so the reader can try again. */
+export const ConfirmModalError: StoryObj = {
+  name: 'Confirm modal, failed',
+  render: () => (
+    <ConfirmDemo destructive error="The cluster has running jobs. Stop them, then try again." />
+  ),
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete cluster?' })
+    await expect(within(dialog).getByRole('alert')).toBeVisible()
+  },
+}
+
+function UseConfirmDemo() {
+  const { confirm, dialog } = useConfirm()
+  const [members, setMembers] = useState(['Ada Okafor', 'Lin Zhou'])
+  const [tries, setTries] = useState(0)
+  return (
+    <>
+      <ul className="w-72 space-y-1 text-sm">
+        {members.map((name) => (
+          <li key={name} className="flex items-center justify-between gap-2">
+            {name}
+            <ActionMenu
+              label={`More actions for ${name}`}
+              items={[
+                {
+                  label: 'Remove from workspace',
+                  destructive: true,
+                  onClick: () =>
+                    void confirm({
+                      title: `Remove ${name}?`,
+                      description: 'They lose access to every team in the workspace.',
+                      confirmLabel: 'Remove',
+                      destructive: true,
+                      // The first try fails, to show the error in place.
+                      onConfirm: async () => {
+                        await new Promise((resolve) => setTimeout(resolve, 400))
+                        setTries((n) => n + 1)
+                        if (tries === 0) {
+                          throw new Error(`${name} owns a team. Hand it over first.`)
+                        }
+                        setMembers((all) => all.filter((m) => m !== name))
+                      },
+                      errorMessage: (failure) =>
+                        failure instanceof Error ? failure.message : 'Something went wrong.',
+                    }),
+                },
+              ]}
+            >
+              <MoreIcon />
+            </ActionMenu>
+          </li>
+        ))}
+      </ul>
+      {dialog}
+    </>
+  )
+}
+
+/** `useConfirm` asks from a menu row without dialog state by hand. A failure shows in the
+ *  dialog, which stays open for another try. */
+export const UseConfirm: StoryObj = {
+  name: 'Confirm modal, from a menu',
+  render: () => <UseConfirmDemo />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'More actions for Ada Okafor' }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove from workspace' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Remove Ada Okafor?' })
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
+    )
   },
 }
 
@@ -923,6 +1117,60 @@ export const CreateModalStory: StoryObj = {
     await expect(advanced).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(advanced)
     await waitFor(() => expect(screen.getByPlaceholderText('nearest')).toBeVisible())
+  },
+}
+
+function NewIssueDemo({ failing }: { failing: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [team, setTeam] = useState('Web')
+  const [error, setError] = useState<string>()
+  const [made, setMade] = useState('')
+  const teams = ['Web', 'Platform', 'Research', 'Design', 'Data', 'Mobile', 'Support', 'Infra']
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        New issue
+      </Button>
+      {made && <p className="mt-2 text-sm">{made}</p>}
+      <CreateModal
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          setError(undefined)
+        }}
+        typeLabel={team}
+        typeMenu={teams.map((name) => ({
+          label: name,
+          checked: name === team,
+          onClick: () => setTeam(name),
+        }))}
+        typeMenuSearch={{ placeholder: 'Search teams', empty: 'No team matches' }}
+        namePlaceholder="Issue title"
+        footerHint="Enter creates · ⌘Enter creates and opens"
+        error={error}
+        onSubmit={async (name, _description, _favorite, { modifier }) => {
+          if (failing) {
+            setError(`The ${team} team is archived. Pick another team.`)
+            return false
+          }
+          setMade(modifier ? `Created and opened “${name}”` : `Created “${name}”`)
+          return true
+        }}
+      />
+    </>
+  )
+}
+
+/** A hint at the footer's start, which a failed submit's error replaces; a search atop a long
+ *  type menu; and ⌘/Ctrl+Enter, which tells the host to open what it made. */
+export const CreateModalHints: StoryObj<{ failing: boolean }> = {
+  name: 'Create modal, hint and error',
+  args: { failing: false },
+  argTypes: { failing: { description: 'Story only: the submit fails with an error.' } },
+  render: ({ failing }) => <NewIssueDemo failing={failing} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'New issue' }))
+    await expect(await screen.findByText('Enter creates · ⌘Enter creates and opens')).toBeVisible()
   },
 }
 

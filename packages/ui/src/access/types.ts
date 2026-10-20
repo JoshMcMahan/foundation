@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { TimeValue } from '../format'
 
 /** A named set of permissions. People and groups are granted roles, never permissions one by
@@ -79,4 +80,32 @@ export interface AccessGroupDetails {
   memberCount: number
   /** When its membership last changed. */
   updatedAt?: TimeValue
+}
+
+/** A reason someone has access that no grant here changes, such as "Workspace admins always
+ *  have access". It shows, locked, ahead of the grants. */
+export interface AccessRule {
+  id: string
+  /** In the leading column, in place of a section's chevron. */
+  icon?: ReactNode
+  title: string
+  /** A line under the title, such as who sets it. */
+  detail?: string | undefined
+  /** A few of the people it covers, shown as overlapping faces: four, then how many more. */
+  people?: readonly AccessMember[] | undefined
+  /** The role it gives, when it gives everyone it covers the same one. */
+  roleId?: string | undefined
+}
+
+/** Whether a resource is open to everyone who can see what it is in, or only to those listed. */
+export interface AccessVisibility {
+  restricted: boolean
+  /** Saves the switch, as `onChange` saves a grant: until the promise settles the switch shows
+   *  it is saving, and when it rejects the panel says nothing changed and offers to retry. */
+  // biome-ignore lint/suspicious/noConfusingVoidType: accepts sync and async handlers
+  onChange: (restricted: boolean) => void | Promise<unknown>
+  /** The open choice, which names what it is open to: "Everyone in the workspace". */
+  openLabel: string
+  /** The restricted choice; defaults to the strings' "Only people with access". */
+  restrictedLabel?: string | undefined
 }

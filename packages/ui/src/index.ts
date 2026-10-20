@@ -1,4 +1,4 @@
-export { ActionMenu } from './components/ActionMenu'
+export { ActionMenu, type ActionMenuProps } from './components/ActionMenu'
 export {
   AppLink,
   type AppLinkProps,
@@ -45,11 +45,20 @@ export {
   type ComboboxItems,
   type ComboboxProps,
 } from './components/Combobox'
-export { ConfirmModal, type ConfirmModalProps } from './components/ConfirmModal'
 export {
+  ConfirmModal,
+  type ConfirmModalProps,
+  type ConfirmRequest,
+  useConfirm,
+} from './components/ConfirmModal'
+export {
+  ContextMenuProvider,
+  type MenuOpener,
   type OpenMenu,
   type OpenMenuOptions,
   useContextMenu,
+  useMenuOpenedBy,
+  useOpenMenu,
 } from './components/ContextMenu'
 export {
   CopyButton,
@@ -144,14 +153,19 @@ export {
   type MenuPopupProps,
   MenuRadioItem,
   MenuSeparator,
+  type MenuSize,
   MenuSubmenuTrigger,
 } from './components/Menu'
 export {
+  isMenuDivider,
+  isMenuGroup,
+  isMenuSubmenu,
   type MenuAction,
   type MenuDivider,
   MenuEntries,
   type MenuEntry,
   MenuFilter,
+  type MenuGroup,
   type MenuSearch,
   type MenuSubmenu,
   menuDivider,
@@ -303,6 +317,7 @@ export {
   TooltipProvider,
   type TooltipSide,
 } from './components/Tooltip'
+export { useClosingValue } from './components/useClosingValue'
 export { type CopyOptions, useCopy } from './components/useCopy'
 export { useCssIsDark } from './components/useCssIsDark'
 export { useApplyTheme, useColorMode } from './components/useTheme'

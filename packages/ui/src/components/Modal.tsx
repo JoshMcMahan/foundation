@@ -1,8 +1,11 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Dialog } from '@base-ui/react/dialog'
-import type { ReactNode } from 'react'
+import { type FormEvent, type ReactNode, useRef } from 'react'
 import { cx } from '../cx'
+import { CloseIcon } from '../icons'
 import { closeHandler, dialogFooterClassName } from './dismiss'
+import { IconButton } from './IconButton'
+import { useStrings } from './Provider'
 import { usePopupContainer } from './popupContainer'
 
 /** The panel a modal draws by default; pass `panel={false}` to paint your own. */
@@ -23,8 +26,22 @@ const sizeClasses = {
 
 export type ModalSize = keyof typeof sizeClasses
 
+// A fade with a slight scale, as every popup has; with reduced motion it only fades.
+const popupMotion =
+  'transition-[transform,opacity] duration-150 ease-out data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:data-starting-style:scale-100 motion-reduce:data-ending-style:scale-100'
+const backdropMotion =
+  'transition-opacity duration-150 ease-out data-starting-style:opacity-0 data-ending-style:opacity-0'
+
+const CONTROLS =
+  'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]):not([data-modal-close]), a[href], [tabindex]:not([tabindex="-1"]):not([data-modal-close])'
+
+/** The first control in a panel other than its close button, or the panel itself. */
+function firstControlIn(panel: HTMLElement | null): HTMLElement | boolean {
+  return panel?.querySelector<HTMLElement>(CONTROLS) ?? panel ?? true
+}
+
 export interface ModalProps
-  extends Omit<Dialog.Popup.Props, 'className' | 'children' | 'render' | 'title'> {
+  extends Omit<Dialog.Popup.Props, 'className' | 'children' | 'render' | 'title' | 'onSubmit'> {
   open: boolean
   onClose: () => void
   /** The header's heading, which names the modal. Without one, name it with
@@ -50,6 +67,12 @@ export interface ModalProps
   panel?: boolean
   /** The backdrop's dimming, for a modal that needs a darker or blurred stage. */
   backdropClassName?: string
+  /** Adds a close button at the header's end, for a modal whose footer doesn't close it,
+   *  such as one that only shows something. It needs no title. */
+  closeButton?: boolean | undefined
+  /** Makes the header, body and footer one form, so a `type="submit"` button in the footer
+   *  submits it, as Enter in a field does. The page never reloads: its default is prevented. */
+  onSubmit?: ((event: FormEvent<HTMLFormElement>) => void) | undefined
   /** On the panel. */
   className?: string
   /** The body. With a title or a footer it sits padded between them and scrolls
@@ -73,18 +96,68 @@ export function Modal({
   align = 'top',
   panel = true,
   backdropClassName = 'bg-black/40',
+  closeButton = false,
+  onSubmit,
   className,
   children,
+  initialFocus,
   ...popupProps
 }: ModalProps) {
   const portal = usePopupContainer()
+  const { common } = useStrings()
+  const panelElement = useRef<HTMLDivElement | null>(null)
   const onOpenChange = closeHandler(dismissible, onClose)
-  const header = title !== undefined || description !== undefined
+  const titled = title !== undefined || description !== undefined
+  const header = titled || closeButton
   const body = children !== undefined && children !== null && children !== false
-  const laidOut = header || footer !== undefined
+  const laidOut = header || footer !== undefined || onSubmit !== undefined
+  const sections = (
+    <>
+      {header && (
+        <div className={cx('flex shrink-0 items-start gap-3 px-4 pt-4', !body && 'pb-4')}>
+          {titled && (
+            <div className="min-w-0 flex-1">
+              {title !== undefined && (
+                <ModalTitle className="m-0 text-lg font-semibold wrap-break-word">
+                  {title}
+                </ModalTitle>
+              )}
+              {description !== undefined && (
+                <ModalDescription className="m-0 mt-1.5 text-sm text-(--theme-muted-text-color)">
+                  {description}
+                </ModalDescription>
+              )}
+            </div>
+          )}
+          {closeButton && (
+            <Dialog.Close
+              data-modal-close=""
+              render={
+                <IconButton
+                  icon={<CloseIcon />}
+                  label={common.close}
+                  // Level with the title's first line, and flush with the panel's padding.
+                  className="-me-1.5 ms-auto mt-0"
+                />
+              }
+            />
+          )}
+        </div>
+      )}
+      {body && (
+        // A short window scrolls the body alone, keeping the title and the actions in view.
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          {children}
+        </div>
+      )}
+      {footer !== undefined && <div className={dialogFooterClassName}>{footer}</div>}
+    </>
+  )
   const content = (
     <Dialog.Portal {...portal}>
-      <Dialog.Backdrop className={cx('fixed inset-0 z-(--layer-modal)', backdropClassName)} />
+      <Dialog.Backdrop
+        className={cx('fixed inset-0 z-(--layer-modal)', backdropMotion, backdropClassName)}
+      />
       <Dialog.Viewport
         className={cx(
           // pb keeps tall panels (max-h-full) off the window's bottom edge, and
@@ -95,38 +168,44 @@ export function Modal({
       >
         <Dialog.Popup
           {...popupProps}
+          ref={(element: HTMLDivElement | null) => {
+            panelElement.current = element
+            const forward = popupProps.ref
+            if (typeof forward === 'function') {
+              forward(element)
+            } else if (forward) {
+              forward.current = element
+            }
+          }}
+          initialFocus={
+            initialFocus ??
+            // The close button comes first, but opening on it would greet the reader with its
+            // ring and tip: focus starts on the first control after it, or the panel itself.
+            (closeButton ? () => firstControlIn(panelElement.current) : undefined)
+          }
           className={cx(
             panel && modalPanelClassName,
             size && [sizeClasses[size], 'max-w-full'],
             laidOut && 'flex max-h-full flex-col',
             'outline-none',
+            popupMotion,
             className,
           )}
         >
-          {laidOut ? (
-            <>
-              {header && (
-                <div className={cx('shrink-0 px-4 pt-4', !body && 'pb-4')}>
-                  {title !== undefined && (
-                    <ModalTitle className="m-0 text-lg font-semibold">{title}</ModalTitle>
-                  )}
-                  {description !== undefined && (
-                    <ModalDescription className="m-0 mt-1.5 text-sm text-(--theme-muted-text-color)">
-                      {description}
-                    </ModalDescription>
-                  )}
-                </div>
-              )}
-              {body && (
-                // A short window scrolls the body alone, keeping the title and the actions in view.
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-                  {children}
-                </div>
-              )}
-              {footer !== undefined && <div className={dialogFooterClassName}>{footer}</div>}
-            </>
-          ) : (
+          {!laidOut ? (
             children
+          ) : onSubmit ? (
+            <form
+              className="flex min-h-0 flex-1 flex-col"
+              onSubmit={(event) => {
+                event.preventDefault()
+                onSubmit(event)
+              }}
+            >
+              {sections}
+            </form>
+          ) : (
+            sections
           )}
         </Dialog.Popup>
       </Dialog.Viewport>
