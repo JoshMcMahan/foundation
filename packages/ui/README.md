@@ -47,6 +47,17 @@ rule a select or scroll area would inject ships in `theme.css`. A host that
 renders on the server passes its policy's `nonce`, which the few components
 that emit a script to place themselves before hydration put on it.
 
+Pass `locale`, the app's language as a BCP 47 tag such as `de-DE`, so relative
+times, exact times, durations and the date picker read as the app's own text
+does. Without it they follow the date library's default locale, or the browser's.
+`useLocale()` reads it, for a host formatting with `formatDateTime`.
+
+Menus, selects, pickers, popovers, tooltips and hover cards open over the page,
+or over the fullscreen element while there is one. Opened inside a `<dialog>`
+shown with `showModal()`, they open inside that dialog instead: the browser
+draws a modal dialog above everything else and leaves the page behind it inert,
+so a popup over the page would open under it, out of reach.
+
 ## Which component?
 
 Each need has one component. Reach for it before styling markup by hand.

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { UIProvider } from '../components/Provider'
 import { Table } from '../components/Table'
 import { memoryStorage } from '../test/storage'
 import { openTooltip } from '../test/tooltip'
@@ -210,10 +211,26 @@ describe('ListPage bleed', () => {
 })
 
 describe('ListError', () => {
-  it('announces the failure and names what failed', () => {
+  it("announces the failure and names what failed, never in the server's words", () => {
     render(<ListError error={new Error('upstream timed out')} noun="clusters" />)
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load clusters")
-    expect(screen.getByRole('alert')).toHaveTextContent('upstream timed out')
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't load clusters")
+    expect(alert).toHaveTextContent('Something went wrong. Try again in a moment.')
+    expect(alert).not.toHaveTextContent('upstream timed out')
+  })
+
+  it("says what went wrong in the host's words, or the provider's", () => {
+    const { unmount } = render(
+      <ListError error={new Error('503')} noun="clusters" message="The service is down." />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('The service is down.')
+    unmount()
+    render(
+      <UIProvider strings={{ list: { couldNotLoadHint: 'Inténtalo de nuevo.' } }}>
+        <ListError error={new Error('503')} />
+      </UIProvider>,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Inténtalo de nuevo.')
   })
 
   it("falls back to the provider's noun", () => {

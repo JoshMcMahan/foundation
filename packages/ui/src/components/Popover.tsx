@@ -9,7 +9,7 @@ import {
   tipClassName,
   toPositionerAnchor,
 } from './floating'
-import { useFullscreenContainer } from './fullscreen'
+import { usePopupContainer } from './popupContainer'
 
 /** A button that closes the popover it sits in. */
 export const PopoverClose = BasePopover.Close
@@ -92,7 +92,7 @@ export function Popover({
   children,
   ...popupProps
 }: PopoverProps) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   const tip = variant === 'tip'
   const popup = useRef<HTMLDivElement>(null)
   const actions = useRef<BasePopover.Root.Actions>(null)
@@ -112,7 +112,7 @@ export function Popover({
           {...(openOnHover ? { delay: 300, closeDelay: 150 } : {})}
         />
       )}
-      <BasePopover.Portal container={fullscreen}>
+      <BasePopover.Portal {...portal}>
         <BasePopover.Positioner
           side={side}
           align={align}

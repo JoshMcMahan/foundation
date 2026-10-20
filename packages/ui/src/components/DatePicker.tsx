@@ -7,8 +7,8 @@ import { buttonClasses } from './buttonClasses'
 import { useFieldLabelledControl } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
-import { useFullscreenContainer } from './fullscreen'
-import { useStrings } from './Provider'
+import { useLocale, useStrings } from './Provider'
+import { usePopupContainer } from './popupContainer'
 
 export interface DatePickerProps {
   /** As a native date input holds it: `yyyy-MM-dd`, or with `withTime` the local
@@ -58,9 +58,9 @@ function parseDay(value: string | undefined): Date | undefined {
 const timeOf = (value: string | undefined) => value?.match(/T(\d{2}:\d{2}(?::\d{2})?)/)?.[1]
 
 /** The locale's first day of the week, where the browser reports it; Sunday otherwise. */
-function firstWeekday(): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
+function firstWeekday(tag: string | undefined): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   try {
-    const locale = new Intl.Locale(navigator.language) as Intl.Locale & {
+    const locale = new Intl.Locale(tag ?? navigator.language) as Intl.Locale & {
       getWeekInfo?: () => { firstDay: number }
       weekInfo?: { firstDay: number }
     }
@@ -71,11 +71,27 @@ function firstWeekday(): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   }
 }
 
-const caption = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' })
-const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' })
-const longDay = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' })
-const shownDay = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
-const longWeekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' })
+function dateFormats(locale: string | undefined) {
+  return {
+    caption: new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }),
+    weekday: new Intl.DateTimeFormat(locale, { weekday: 'narrow' }),
+    longDay: new Intl.DateTimeFormat(locale, { dateStyle: 'full' }),
+    shownDay: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }),
+    longWeekday: new Intl.DateTimeFormat(locale, { weekday: 'long' }),
+    weekStartsOn: firstWeekday(locale),
+  }
+}
+
+// Built once per locale, since every picker on a page shares one; the browser's without a locale.
+const formatsByLocale = new Map<string | undefined, ReturnType<typeof dateFormats>>()
+function formatsFor(locale: string | undefined) {
+  let formats = formatsByLocale.get(locale)
+  if (!formats) {
+    formats = dateFormats(locale)
+    formatsByLocale.set(locale, formats)
+  }
+  return formats
+}
 
 const calendarClassNames: Partial<ClassNames> = {
   root: 'relative p-3',
@@ -132,13 +148,13 @@ export function DatePicker({
   size = 'md',
   className,
 }: DatePickerProps) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   const t = useStrings().datePicker
   const { common } = useStrings()
   // The trigger is a button Base UI doesn't name from a Field's label, so it reads the Field.
   const field = useFieldLabelledControl()
   const [open, setOpen] = useState(false)
-  const [weekStartsOn] = useState(firstWeekday)
+  const { caption, weekday, longDay, shownDay, longWeekday, weekStartsOn } = formatsFor(useLocale())
   const day = parseDay(value)
   const time = timeOf(value) ?? timeOf(min) ?? '00:00'
   const earliest = parseDay(min)
@@ -190,7 +206,7 @@ export function DatePicker({
             {day ? shownDay.format(day) : (placeholder ?? t.pickDate)}
           </span>
         </Popover.Trigger>
-        <Popover.Portal container={fullscreen}>
+        <Popover.Portal {...portal}>
           <Popover.Positioner align="start" sideOffset={4} className={positionerClassName}>
             <Popover.Popup className={panelClassName}>
               <DayPicker
@@ -300,7 +316,7 @@ const rangeClassNames: Partial<ClassNames> = {
  *  date filter's picker. Months, weekdays and labels follow the reader's locale. */
 export function Calendar({ min, max, defaultMonth, autoFocus = false, ...props }: CalendarProps) {
   const t = useStrings().datePicker
-  const [weekStartsOn] = useState(firstWeekday)
+  const { caption, weekday, longDay, longWeekday, weekStartsOn } = formatsFor(useLocale())
   const outOfRange: Matcher[] = [
     ...(min ? [{ before: min }] : []),
     ...(max ? [{ after: max }] : []),

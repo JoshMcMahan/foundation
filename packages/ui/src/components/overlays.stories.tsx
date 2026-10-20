@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { DisplayIcon, FilterIcon, KeyboardIcon, MoreIcon } from '../icons'
 import { onTop } from '../test/stacking'
 import { ActionMenu } from './ActionMenu'
 import { Button } from './Button'
+import { DatePicker } from './DatePicker'
 import { Drawer, type DrawerProps } from './Drawer'
 import { IconButton } from './IconButton'
 import { Modal } from './Modal'
@@ -415,5 +416,68 @@ export const PopupsInDialogsStory: StoryObj = {
     const filter = await screen.findByRole('dialog', { name: 'Filter' })
     await userEvent.click(within(filter).getByRole('combobox', { name: 'Filter size' }))
     await shows('option', 'Medium')
+  },
+}
+
+function PopupsInNativeDialog() {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [due, setDue] = useState('2026-10-30')
+  const menu = [
+    { label: 'Duplicate', onClick: () => {} },
+    { label: 'Archive', onClick: () => {} },
+  ]
+  return (
+    <div className="p-8">
+      <Button onClick={() => dialog.current?.showModal()}>Open native dialog</Button>
+      <dialog
+        ref={dialog}
+        aria-label="New issue"
+        // Stories are left out of the package's css build, so only its own classes apply.
+        style={{ margin: 'auto', width: '24rem' }}
+        className="rounded-xl border border-(--theme-border) bg-(--theme-app-bg) p-4 text-(--theme-app) shadow-(--theme-shadow-lg)"
+      >
+        <div className="flex flex-col gap-3">
+          <p className="m-0 text-sm font-semibold">New issue</p>
+          <Select items={sizes} defaultValue="medium" aria-label="Size" />
+          <DatePicker aria-label="Due" value={due} onValueChange={setDue} />
+          <div className="flex items-center gap-2">
+            <ActionMenu items={menu} label="Issue actions">
+              <MoreIcon />
+            </ActionMenu>
+            <Popover title="Labels" trigger={<Button size="sm">Labels</Button>}>
+              <p className="m-0 text-sm">No labels yet</p>
+            </Popover>
+            <Button className="ml-auto" onClick={() => dialog.current?.close()}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </dialog>
+    </div>
+  )
+}
+
+/** A host's own `<dialog>`, shown with showModal, sits in the browser's top layer.
+ *  Menus, selects, pickers and popovers opened inside it open inside it too, over
+ *  it and past its edges, and Escape closes the popup before the dialog. */
+export const PopupsInNativeDialogStory: StoryObj = {
+  name: 'Popups in a native dialog',
+  render: () => <PopupsInNativeDialog />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const shows = async (role: string, name: string) => {
+      const el = await screen.findByRole(role, { name })
+      await waitFor(() => expect(onTop(el), `${name} is covered`).toBe(true))
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Open native dialog' }))
+    const dialog = canvasElement.querySelector('dialog') as HTMLDialogElement
+    await waitFor(() => expect(dialog.open).toBe(true))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Issue actions' }))
+    await shows('menuitem', 'Archive')
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    expect(dialog.open).toBe(true)
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Size' }))
+    await shows('option', 'Large')
   },
 }

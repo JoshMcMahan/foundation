@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
+import { UIProvider } from '../components/Provider'
 import { memoryStorage } from '../test/storage'
 import type { ActiveFilter } from './filterModel'
 import { ListFilterBar } from './ListFilterBar'
@@ -183,5 +184,26 @@ describe('a URL store', () => {
     localStorage.setItem('url:filters', JSON.stringify({ status: ['running'] }))
     render(<UrlHarness initial={null} />)
     expect(rows()).toBe('alice,carol')
+  })
+})
+
+describe('a date chip', () => {
+  function Dated() {
+    const view = useListView<{ due: string }>({
+      storageKey: 'dated',
+      columns: [{ key: 'name', label: 'Name', alwaysVisible: true }],
+      filterFields: [{ key: 'due', label: 'Due', kind: 'date', value: (r) => r.due }],
+      defaultFilters: [{ field: 'due', op: 'is', values: ['2020-03-14'] }],
+    })
+    return <ListPage view={view}>{null}</ListPage>
+  }
+
+  it("reads its day in the provider's locale", () => {
+    render(
+      <UIProvider locale="de-DE">
+        <Dated />
+      </UIProvider>,
+    )
+    expect(screen.getByRole('group', { name: 'Due is 14.03.2020' })).toBeInTheDocument()
   })
 })

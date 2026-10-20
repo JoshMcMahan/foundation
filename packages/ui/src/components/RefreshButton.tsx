@@ -7,7 +7,8 @@ import { useRelativeTime } from './relativeTime'
 import { Tooltip } from './Tooltip'
 
 export interface RefreshButtonProps {
-  /** May return a promise; the button spins until it settles. */
+  /** May return a promise; the button spins until it settles. A rejection only
+   *  stops the spinning, so report a failure from the handler. */
   onRefresh: () => unknown
   /** Spins for a refresh the host tracks itself, such as a revalidation. */
   refreshing?: boolean | undefined
@@ -39,7 +40,10 @@ export function RefreshButton({
     const result = onRefresh()
     if (result instanceof Promise) {
       setPending(true)
-      result.finally(() => setPending(false))
+      // The host reports its own failure; `finally` would hand the rejection on
+      // to a promise nobody holds, as an unhandled rejection.
+      const done = () => setPending(false)
+      result.then(done, done)
     }
   }
 

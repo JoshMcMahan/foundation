@@ -16,6 +16,11 @@ export interface AvatarProps {
   colorKey?: string | null | undefined
   size?: AvatarSize | undefined
   status?: AvatarStatus | undefined
+  /** Hides it from assistive technology, for an avatar beside the name it shows, which a
+   *  screen reader would otherwise read twice. */
+  decorative?: boolean | undefined
+  /** On the avatar's round shape, so a ring or a shadow follows the circle: its margin,
+   *  ring or hover effect. */
   className?: string | undefined
 }
 
@@ -66,18 +71,32 @@ export function avatarInitials(name: string | undefined): string {
 
 /** A person's picture, or their initials while it loads or when it fails. It is
  *  one image to assistive technology, named for the person, whichever shows,
- *  and their presence when it has a status dot. */
-export function Avatar({ src, name, colorKey, size = 'md', status, className }: AvatarProps) {
+ *  and their presence when it has a status dot, unless it is `decorative`. */
+export function Avatar({
+  src,
+  name,
+  colorKey,
+  size = 'md',
+  status,
+  decorative = false,
+  className,
+}: AvatarProps) {
   const { common } = useStrings()
   const who = name || common.userAvatar
   // A nameless avatar shows "?", which a color would only make look like someone's.
   const colorBy = colorKey === undefined ? name?.trim() : colorKey
   return (
     <span
-      role="img"
-      // The dot's color is its only sign of the status, so the name says it too.
-      aria-label={status ? common.withPresence(who, common.presence[status]) : who}
-      className={cx('relative inline-flex shrink-0', className)}
+      {...(decorative
+        ? { 'aria-hidden': true }
+        : {
+            role: 'img',
+            // The dot's color is its only sign of the status, so the name says it too.
+            'aria-label': status ? common.withPresence(who, common.presence[status]) : who,
+          })}
+      // Exactly the circle's box, rounded as it is, so a ring here traces the circle;
+      // the status dot overflows it unclipped.
+      className={cx('relative inline-flex shrink-0 rounded-full', className)}
     >
       <BaseAvatar.Root
         className={cx(

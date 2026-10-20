@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, render, screen } from '@testing-library/react'
 import { DateTime } from 'luxon'
 import { hoverTooltip } from '../test/tooltip'
+import { UIProvider } from './Provider'
 import { Elapsed, RelativeTime, useClock, useRelativeTime } from './relativeTime'
 import { TooltipProvider } from './Tooltip'
 
@@ -128,6 +129,15 @@ describe('useClock', () => {
 })
 
 describe('Elapsed', () => {
+  it("reads in the provider's locale", () => {
+    render(
+      <UIProvider locale="ja-JP">
+        <Elapsed start={ago(75)} end={START} />
+      </UIProvider>,
+    )
+    expect(screen.getByText(/^1 分\s?15 秒$/)).toBeInTheDocument()
+  })
+
   it('counts while running and stops at its end', () => {
     const { rerender } = render(<Elapsed start={ago(75)} />)
     expect(screen.getByText('1m 15s').tagName).toBe('TIME')
@@ -166,6 +176,30 @@ describe('RelativeTime', () => {
     expect(time).toHaveAttribute('dateTime', at.toISO())
     const tooltip = await hoverTooltip(time)
     expect(tooltip).toHaveTextContent(at.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS))
+  })
+
+  it("reads in the provider's locale, the exact time too", async () => {
+    render(
+      <UIProvider locale="de-DE">
+        <RelativeTime value={ago(5 * 60)} />
+      </UIProvider>,
+    )
+    const time = screen.getByText('vor 5 Minuten')
+    const tip = await hoverTooltip(time)
+    expect(tip).toHaveTextContent(
+      DateTime.fromMillis(ago(5 * 60))
+        .setLocale('de-DE')
+        .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS),
+    )
+  })
+
+  it("keeps the date library's locale without one from the provider", () => {
+    render(
+      <UIProvider>
+        <RelativeTime value={ago(5 * 60)} />
+      </UIProvider>,
+    )
+    expect(screen.getByText('5 minutes ago')).toBeInTheDocument()
   })
 
   it('renders nothing without a time', () => {

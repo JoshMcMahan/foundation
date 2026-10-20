@@ -1,7 +1,7 @@
 import { PreviewCard } from '@base-ui/react/preview-card'
 import type { ReactElement, ReactNode, SyntheticEvent } from 'react'
 import { cardClassName, positionerClassName } from './floating'
-import { useFullscreenContainer } from './fullscreen'
+import { usePopupContainer } from './popupContainer'
 
 export interface HoverCardProps {
   /** Mounted only while open, so a card that loads its own data loads on first hover. */
@@ -35,11 +35,11 @@ const pressHandlers = {
  *  reachable another way, such as the page the anchor links to. The card
  *  stays open while the pointer is over it. */
 export function HoverCard({ card, children, defaultOpen = false }: HoverCardProps) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   return (
     <PreviewCard.Root defaultOpen={defaultOpen}>
       <PreviewCard.Trigger delay={350} closeDelay={150} render={children} />
-      <PreviewCard.Portal container={fullscreen}>
+      <PreviewCard.Portal {...portal}>
         <PreviewCard.Positioner
           side="bottom"
           align="start"

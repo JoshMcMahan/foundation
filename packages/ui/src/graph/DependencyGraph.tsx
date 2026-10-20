@@ -25,7 +25,13 @@ import { IconButton } from '../components/IconButton'
 import { InfoTip } from '../components/InfoTip'
 import { Loader } from '../components/Loader'
 import { Modal } from '../components/Modal'
-import { useRunFile, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
+import {
+  useLocale,
+  useRunFile,
+  useSlots,
+  useStrings,
+  useWorkflowEngine,
+} from '../components/Provider'
 import { RunStatusIcon } from '../components/RunStatusIcon'
 import { Elapsed } from '../components/relativeTime'
 import { useStickyTop } from '../components/stickyTop'
@@ -1358,6 +1364,7 @@ export default function DependencyGraph({
   }, [containerEl, fixedHeight])
 
   const { common, dag: dagStrings } = useStrings()
+  const locale = useLocale()
   const stepHeaderRef = useRef<HTMLDivElement>(null)
   const slots = useSlots()
   const [sidebarEl, setSidebarEl] = useState<HTMLDivElement | null>(null)
@@ -2205,7 +2212,7 @@ export default function DependencyGraph({
             <div className="flex flex-col">
               <div className="text-xs">{dagStrings.submitted}</div>
               <div className="text-sm font-semibold flex items-center gap-x-1">
-                {formatDateTime(startDt, 'short')}
+                {formatDateTime(startDt, 'short', locale)}
               </div>
             </div>
             {/* Spacer */}

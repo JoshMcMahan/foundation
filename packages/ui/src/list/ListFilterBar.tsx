@@ -21,7 +21,7 @@ import {
   MenuSeparator,
 } from '../components/Menu'
 import { Popover } from '../components/Popover'
-import { useStrings } from '../components/Provider'
+import { useLocale, useStrings } from '../components/Provider'
 import { useQueryMatch } from '../components/search'
 import { cx } from '../cx'
 import { AddIcon, CheckIcon, CloseIcon } from '../icons'
@@ -63,6 +63,7 @@ function valueParts(
   filter: ActiveFilter,
   t: Strings,
   labels: Map<string, FilterOption>,
+  locale: string | undefined,
 ) {
   const labelOf = (v: string) =>
     labels.get(v)?.label ??
@@ -79,7 +80,7 @@ function valueParts(
       return t.datePreset(v)
     }
     const day = parseDay(v)
-    return day ? t.formatDate(day) : v
+    return day ? t.formatDate(day, locale) : v
   }
   switch (field.kind) {
     case 'date':
@@ -159,7 +160,8 @@ export function FilterChip({
   const isDraft = filters.draft === filter.field
   const removable = !field.required && !(field.pinned && unset)
   const operators = fieldOperators(field)
-  const { all, icons } = valueParts(field, filter, t, seen)
+  const locale = useLocale()
+  const { all, icons } = valueParts(field, filter, t, seen, locale)
   const shown = all.slice(0, 2)
   const hidden = all.length - shown.length
   const valueText = unset ? (showsAny ? t.any : t.pending) : t.list(shown)

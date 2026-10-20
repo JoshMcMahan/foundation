@@ -3,9 +3,9 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { ArrowLeftIcon, CloseIcon } from '../icons'
 import { closeHandler, dialogFooterClassName } from './dismiss'
-import { useFullscreenContainer } from './fullscreen'
 import { IconButton } from './IconButton'
 import { useStrings } from './Provider'
+import { usePopupContainer } from './popupContainer'
 import { useSplitter } from './splitter'
 
 export interface DrawerProps
@@ -81,7 +81,7 @@ export function Drawer({
   children,
   ...popupProps
 }: DrawerProps) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   const { common } = useStrings()
   const container = useRef<HTMLDivElement>(null)
   const viewport = useRef<HTMLDivElement>(null)
@@ -113,9 +113,9 @@ export function Drawer({
     >
       {contained && <div ref={container} className="contents" />}
       <BaseDrawer.Portal
-        container={contained ? container : fullscreen}
+        container={contained ? container : portal.container}
         keepMounted={keepMounted}
-        className={contained ? 'contents' : undefined}
+        className={contained ? 'contents' : portal.className}
       >
         {modal !== false && (
           <BaseDrawer.Backdrop

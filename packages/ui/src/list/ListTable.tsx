@@ -138,25 +138,29 @@ export function GroupRow({
   )
 }
 
+/** Says a list couldn't load. It never shows the error's own text, which is
+ *  the server's words, in its language and not written for the reader. */
 export function ListError({
-  error,
   noun,
+  message,
 }: {
-  error: unknown
+  /** What failed. It is not shown: pass `message` to say what went wrong. */
+  error?: unknown
   /** What failed to load, as the heading names it: "Couldn't load clusters". */
   noun?: string | undefined
+  /** What went wrong, in the reader's words, such as the host's own text for the error.
+   *  Defaults to a generic line from the strings. */
+  message?: ReactNode
 }) {
   const { list: t } = useStrings()
-  const message =
-    error && typeof error === 'object' && 'message' in error
-      ? String((error as { message?: unknown }).message)
-      : undefined
   return (
     <div role="alert" className="flex flex-col items-center justify-center gap-3 py-20 text-center">
       <ErrorIcon aria-hidden="true" className="h-10 w-10 text-(--theme-error)" />
       <div className="space-y-1">
         <p className="text-sm font-medium text-(--theme-app)">{t.couldNotLoad(noun ?? t.data)}</p>
-        {message && <p className="max-w-md text-xs text-(--theme-muted-text-color)">{message}</p>}
+        <p className="max-w-md text-xs text-(--theme-muted-text-color)">
+          {message ?? t.couldNotLoadHint}
+        </p>
       </div>
     </div>
   )

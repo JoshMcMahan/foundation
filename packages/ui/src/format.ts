@@ -28,8 +28,9 @@ export function formatCount(n: number): string {
 const UNIT_DISPLAY: Record<string, 'narrow' | 'short'> = { ja: 'short' }
 
 /** A length of time to whole seconds, in the host's locale: 45s, 2m 13s,
- *  1d 2h. Takes milliseconds or a luxon Duration; the sign is dropped. */
-export function formatDuration(value: number | Duration): string {
+ *  1d 2h. Takes milliseconds or a luxon Duration; the sign is dropped.
+ *  `locale` wins over the duration's own and luxon's default. */
+export function formatDuration(value: number | Duration, locale?: string | undefined): string {
   const duration = typeof value === 'number' ? Duration.fromMillis(value) : value
   // shiftTo keeps the largest units whole; luxon's toHuman alone would print
   // "0 days, 0 hours, 3,723 seconds" (https://github.com/moment/luxon/issues/1134).
@@ -42,9 +43,10 @@ export function formatDuration(value: number | Duration): string {
       .filter(([, n]) => n !== 0)
       .map(([unit, n]) => [unit, Math.abs(n)]),
   ) as DurationObjectUnits
+  const shownLocale = locale ?? duration.locale
   const human = Duration.fromObject(
     Object.keys(shown).length > 0 ? shown : { seconds: 0 },
-    duration.locale ? { locale: duration.locale } : {},
+    shownLocale ? { locale: shownLocale } : {},
   )
   return human
     .toHuman({ unitDisplay: UNIT_DISPLAY[human.locale?.split('-')[0] ?? ''] ?? 'narrow' })
@@ -79,12 +81,15 @@ const DATE_TIME_STYLES = {
 
 /** A moment in the reader's locale: `date` reads "Mar 14, 2026", `short`
  *  "3/14/2026, 9:30 AM", `medium` "Mar 14, 2026, 9:30 AM", and `seconds` adds
- *  the seconds. Empty for a missing or invalid time. */
+ *  the seconds. `locale`, such as `useLocale()` gives, wins over the time's own
+ *  and luxon's default. Empty for a missing or invalid time. */
 export function formatDateTime(
   value: TimeValue,
   style: keyof typeof DATE_TIME_STYLES = 'medium',
+  locale?: string | undefined,
 ): string {
-  return toDateTime(value)?.toLocaleString(DATE_TIME_STYLES[style]) ?? ''
+  const time = toDateTime(value)
+  return (locale ? time?.setLocale(locale) : time)?.toLocaleString(DATE_TIME_STYLES[style]) ?? ''
 }
 
 /** Time left, rounded the way a countdown reads: whole seconds under a minute,

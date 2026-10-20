@@ -4,7 +4,7 @@ import { formatDateTime, formatDuration, type TimeValue, toDateTime } from '../f
 
 export type { TimeValue }
 
-import { type UIStrings, useStrings } from './Provider'
+import { type UIStrings, useLocale, useStrings } from './Provider'
 import { Tooltip } from './Tooltip'
 
 const SECOND = 1000
@@ -52,7 +52,7 @@ export function useClock<T>(select: (now: number) => T, running = true): T {
   return useSyncExternalStore(running ? subscribe : stopped, snapshot, snapshot)
 }
 
-/** `long` reads "5 minutes ago" in the host's locale; `compact` reads "5m",
+/** `long` reads "5 minutes ago" in the host's locale (UIProvider's `locale`); `compact` reads "5m",
  *  for a row with little room. */
 export type RelativeTimeFormat = 'long' | 'compact'
 
@@ -83,6 +83,7 @@ function unitOf(age: number) {
  *  a missing or invalid time. */
 export function useRelativeTime(value: TimeValue, format: RelativeTimeFormat = 'long'): string {
   const t = useStrings().time
+  const locale = useLocale()
   const time = toDateTime(value)
   const at = time?.toMillis() ?? null
   const last = useRef<{ key: string; label: string } | null>(null)
@@ -92,7 +93,7 @@ export function useRelativeTime(value: TimeValue, format: RelativeTimeFormat = '
     }
     const age = current - at
     const unit = unitOf(age)
-    const key = `${format}:${at}:${unit}:${Math.trunc(age / unit)}`
+    const key = `${format}:${locale}:${at}:${unit}:${Math.trunc(age / unit)}`
     if (last.current?.key !== key) {
       // The shared clock ticks once a second, so a time just recorded can sit a moment ahead of it.
       const label =
@@ -100,7 +101,9 @@ export function useRelativeTime(value: TimeValue, format: RelativeTimeFormat = '
           ? compactLabel(age, t)
           : Math.abs(age) < SECOND
             ? t.now
-            : (DateTime.fromMillis(at).toRelative({ base: DateTime.fromMillis(current) }) ?? '')
+            : (DateTime.fromMillis(at, locale ? { locale } : {}).toRelative({
+                base: DateTime.fromMillis(current),
+              }) ?? '')
       last.current = { key, label }
     }
     return last.current.label
@@ -120,12 +123,13 @@ export function RelativeTime({
   className?: string
 }) {
   const label = useRelativeTime(value, format)
+  const locale = useLocale()
   const time = toDateTime(value)
   if (!label || !time) {
     return null
   }
   return (
-    <Tooltip content={formatDateTime(time, 'seconds')}>
+    <Tooltip content={formatDateTime(time, 'seconds', locale)}>
       <time dateTime={time.toISO() ?? undefined} className={className}>
         {label}
       </time>
@@ -171,12 +175,13 @@ export function Elapsed({
   className?: string
 }) {
   const elapsed = useElapsed(start, end, running)
+  const locale = useLocale()
   if (elapsed === null) {
     return null
   }
   return (
     <time dateTime={Duration.fromMillis(elapsed).toISO() ?? undefined} className={className}>
-      {formatDuration(elapsed)}
+      {formatDuration(elapsed, locale)}
     </time>
   )
 }

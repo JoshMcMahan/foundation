@@ -1,8 +1,8 @@
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip'
 import { createContext, Fragment, type ReactElement, type ReactNode, use, useState } from 'react'
 import { positionerClassName, tipArrowClassName, tipClassName } from './floating'
-import { useFullscreenContainer } from './fullscreen'
 import { keyedByContent } from './keys'
+import { usePopupContainer } from './popupContainer'
 
 export type TooltipSide = 'top' | 'bottom' | 'left' | 'right'
 
@@ -36,9 +36,9 @@ function KbdShortcut({ keys }: { keys: string }) {
 }
 
 function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   return (
-    <BaseTooltip.Portal container={fullscreen}>
+    <BaseTooltip.Portal {...portal}>
       <BaseTooltip.Positioner side={side} sideOffset={8} className={positionerClassName}>
         <BaseTooltip.Popup className={`max-w-xs ${tipClassName}`}>
           <BaseTooltip.Arrow className={tipArrowClassName} />

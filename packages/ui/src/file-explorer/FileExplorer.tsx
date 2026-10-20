@@ -23,7 +23,13 @@ import { keyedByContent } from '../components/keys'
 import { Loader } from '../components/Loader'
 import { MenuItem, MenuPopup, MenuSeparator } from '../components/Menu'
 import type { MenuEntry } from '../components/MenuEntries'
-import { useNavigation, usePersistedState, useSlots, useStrings } from '../components/Provider'
+import {
+  useLocale,
+  useNavigation,
+  usePersistedState,
+  useSlots,
+  useStrings,
+} from '../components/Provider'
 import { RefreshButton } from '../components/RefreshButton'
 import { RelativeTime } from '../components/relativeTime'
 import { StatusBadge } from '../components/StatusBadge'
@@ -292,6 +298,7 @@ export default function FileExplorer({
   const copySubmenu = useCopySubmenu()
   const t = useStrings().fileExplorer
   const { common } = useStrings()
+  const locale = useLocale()
   const { copy } = useCopy()
   const slots = useSlots()
   const { goTo } = useNavigation()
@@ -2010,7 +2017,7 @@ export default function FileExplorer({
                                   <>
                                     <dt className="theme-muted-text">{t.chrome.created}</dt>
                                     <dd>
-                                      {formatDateTime(createdDt)}{' '}
+                                      {formatDateTime(createdDt, 'medium', locale)}{' '}
                                       <span className="theme-muted-text">
                                         · <RelativeTime value={createdDt} />
                                       </span>
@@ -2021,7 +2028,7 @@ export default function FileExplorer({
                                   <>
                                     <dt className="theme-muted-text">{t.chrome.lastModified}</dt>
                                     <dd>
-                                      {formatDateTime(modifiedDt)}{' '}
+                                      {formatDateTime(modifiedDt, 'medium', locale)}{' '}
                                       <span className="theme-muted-text">
                                         · <RelativeTime value={modifiedDt} />
                                       </span>

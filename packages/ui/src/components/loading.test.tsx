@@ -65,6 +65,30 @@ describe('RefreshButton', () => {
     expect(screen.getByRole('status')).toHaveTextContent('')
   })
 
+  it('stops spinning when the refresh fails, leaving the failure to the host', async () => {
+    let fail = (_: Error) => {}
+    const refresh = new Promise<void>((_, reject) => {
+      fail = reject
+    })
+    // The host holds the promise it returned and reports the failure itself.
+    refresh.catch(() => {})
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      render(<RefreshButton onRefresh={() => refresh} />)
+      const button = screen.getByRole('button', { name: 'Refresh' })
+      fireEvent.click(button)
+      expect(button).toHaveAttribute('aria-busy', 'true')
+      await act(async () => fail(new Error('offline')))
+      await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'false'))
+      // Rejections are reported after the microtasks that could still handle them.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+  })
+
   it('spins for a refresh the host tracks', () => {
     render(<RefreshButton onRefresh={() => {}} refreshing />)
     expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('aria-busy', 'true')

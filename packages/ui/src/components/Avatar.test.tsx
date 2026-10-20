@@ -101,4 +101,20 @@ describe('Avatar', () => {
     render(<Avatar name="Ada" status="online" />)
     expect(screen.getByTestId('online-indicator')).toBeInTheDocument()
   })
+
+  it('puts its class on the round shape, so a ring follows the circle', () => {
+    render(<Avatar name="Ada Lovelace" className="ring-2" />)
+    const avatar = screen.getByRole('img', { name: 'Ada Lovelace' })
+    expect(avatar).toHaveClass('ring-2', 'rounded-full')
+  })
+
+  it('stays out of the accessibility tree when decorative', () => {
+    render(
+      <p>
+        <Avatar name="Ada Lovelace" status="online" decorative /> Ada Lovelace
+      </p>,
+    )
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText('AL').closest('[aria-hidden="true"]')).not.toBeNull()
+  })
 })

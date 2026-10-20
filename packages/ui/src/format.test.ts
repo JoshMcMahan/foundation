@@ -53,6 +53,14 @@ describe('formatDateTime', () => {
     expect(formatDateTime(null)).toBe('')
     expect(formatDateTime('not a date')).toBe('')
   })
+
+  it("reads in the locale given, over the time's own", () => {
+    const at = DateTime.fromISO('2026-03-04T05:06:07Z', { locale: 'en-US' })
+    expect(formatDateTime(at, 'date', 'de-DE')).toBe(
+      at.setLocale('de-DE').toLocaleString(DateTime.DATE_MED),
+    )
+    expect(formatDateTime(at, 'date', undefined)).toBe(at.toLocaleString(DateTime.DATE_MED))
+  })
 })
 
 describe('formatTimeLeft', () => {

@@ -177,6 +177,7 @@ export {
   type UISlots,
   type UIStringOverrides,
   type UIStrings,
+  useLocale,
   useNavigation,
   useOptionalWorkflowEngine,
   usePersistedState,

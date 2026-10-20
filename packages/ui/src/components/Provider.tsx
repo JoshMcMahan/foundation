@@ -555,6 +555,8 @@ export interface UIStrings {
     labelId: string
     labelUrl: string
     couldNotLoad: (noun: string) => string
+    /** What `ListError` says under its heading when the host gives no message of its own. */
+    couldNotLoadHint: string
     /** What `ListError` names when the host gives no noun. */
     data: string
     /** A list's size, as `ListCount` shows it; `count` is formatted and `noun` agrees with it. */
@@ -630,8 +632,9 @@ export interface UIStrings {
     customDate: string
     /** Two days a filter spans. */
     between: (from: string, to: string) => string
-    /** A day in a chip; by default without the year while it is this year. */
-    formatDate: (date: Date) => string
+    /** A day in a chip; by default without the year while it is this year. `locale` is
+     *  UIProvider's, when the host gives one. */
+    formatDate: (date: Date, locale?: string) => string
     /** The text picker's hint. */
     textPlaceholder: string
     /** A yes-or-no filter's values. */
@@ -654,8 +657,22 @@ const OPERATOR_WORDS: Record<FilterOperator, (count: number) => string> = {
   isSet: () => 'is set',
   isNotSet: () => 'is not set',
 }
-const SHORT_DAY = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
-const MEDIUM_DAY = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+// Built once per locale; the browser's without one.
+const dayFormats = new Map<
+  string | undefined,
+  { short: Intl.DateTimeFormat; medium: Intl.DateTimeFormat }
+>()
+function dayFormat(locale: string | undefined) {
+  let formats = dayFormats.get(locale)
+  if (!formats) {
+    formats = {
+      short: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }),
+      medium: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }),
+    }
+    dayFormats.set(locale, formats)
+  }
+  return formats
+}
 
 export type UIStringOverrides = Overrides<UIStrings>
 
@@ -1347,6 +1364,7 @@ const DEFAULTS: UIProviderValue = {
       labelId: 'ID',
       labelUrl: 'URL',
       couldNotLoad: (noun) => `Couldn't load ${noun}`,
+      couldNotLoadHint: 'Something went wrong. Try again in a moment.',
       data: 'data',
       count: (count, noun) => `${count} ${noun}`,
       matchCount: (matches, total, nounPlural) => `${matches} of ${total} ${nounPlural}`,
@@ -1406,8 +1424,10 @@ const DEFAULTS: UIProviderValue = {
       },
       customDate: 'Custom…',
       between: (from, to) => `${from} – ${to}`,
-      formatDate: (date) =>
-        (date.getFullYear() === new Date().getFullYear() ? SHORT_DAY : MEDIUM_DAY).format(date),
+      formatDate: (date, locale) =>
+        dayFormat(locale)[
+          date.getFullYear() === new Date().getFullYear() ? 'short' : 'medium'
+        ].format(date),
       textPlaceholder: 'Type, then press Enter',
       yes: 'Yes',
       no: 'No',
@@ -1447,9 +1467,16 @@ const NavigationContext = createContext<UINavigation>(DEFAULTS.navigation)
 const DataContext = createContext<UIData>(DEFAULTS.data)
 const SlotsContext = createContext<UISlots>(DEFAULTS.slots)
 const EngineContext = createContext<WorkflowEngineSource | undefined>(undefined)
+const LocaleContext = createContext<string | undefined>(undefined)
 
 export function useStrings(): UIStrings {
   return useContext(StringsContext)
+}
+
+/** The host's locale for dates and times, such as `de-DE`. Undefined without one, which leaves
+ *  each format's own default: the date library's for its times, the browser's for the rest. */
+export function useLocale(): string | undefined {
+  return useContext(LocaleContext)
 }
 
 export function useNavigation(): UINavigation {
@@ -1607,6 +1634,10 @@ export interface UIProviderProps {
    *  that places them before hydration. The components render no inline
    *  `<style>`, so a policy without 'unsafe-inline' styles needs none. */
   nonce?: string | undefined
+  /** The locale dates and times read in, such as `de-DE`, as a BCP 47 tag: relative times,
+   *  exact times and the date picker. Pass the app's language, so they read as its own text
+   *  does. Without one they follow the date library's default locale, or the browser's. */
+  locale?: string | undefined
   children: React.ReactNode
 }
 
@@ -1636,6 +1667,7 @@ export function UIProvider({
   slots,
   engine: engineProp,
   nonce,
+  locale,
   children,
 }: UIProviderProps) {
   // A loader is the first one passed: an inline arrow is a new function each render, and each
@@ -1671,13 +1703,15 @@ export function UIProvider({
         <DataContext value={mergedData}>
           <SlotsContext value={stableSlots}>
             <EngineContext value={engine}>
-              {/* Base UI hides a select's or scroll area's own scrollbar with an
+              <LocaleContext value={locale}>
+                {/* Base UI hides a select's or scroll area's own scrollbar with an
                   inline <style>, which a same-origin style policy blocks and
                   reports. theme.css ships that rule instead. */}
-              <CSPProvider nonce={nonce} disableStyleElements>
-                <TooltipProvider>{children}</TooltipProvider>
-                <Toaster />
-              </CSPProvider>
+                <CSPProvider nonce={nonce} disableStyleElements>
+                  <TooltipProvider>{children}</TooltipProvider>
+                  <Toaster />
+                </CSPProvider>
+              </LocaleContext>
             </EngineContext>
           </SlotsContext>
         </DataContext>

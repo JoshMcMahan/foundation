@@ -28,6 +28,7 @@ import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Mete
 import { Modal, type ModalProps } from './Modal'
 import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
+import { UIProvider } from './Provider'
 import { RunStatusIcon, type RunStatusIconStatus, runStatusTone } from './RunStatusIcon'
 import { Elapsed, RelativeTime } from './relativeTime'
 import { SegmentedControl } from './SegmentedControl'
@@ -300,6 +301,41 @@ export const Avatars: StoryObj = {
       expect(canvas.getByRole('img', { name: 'Katherine Johnson, offline' })).toHaveTextContent(
         'KJ',
       ),
+    )
+  },
+}
+
+/** A ring passed in `className` traces the circle, so overlapping avatars read as
+ *  separate faces. Beside a printed name the avatar is `decorative`, so a screen
+ *  reader says the name once. */
+export const AvatarRings: StoryObj<{ decorative: boolean }> = {
+  args: { decorative: true },
+  render: ({ decorative }) => (
+    <div className="flex flex-col gap-4 p-8">
+      <div className="flex">
+        {['Ada Lovelace', 'Grace Hopper', 'Alan Turing', 'Radia Perlman'].map((name, index) => (
+          // Overlapping, so each ring cuts its circle out of the one before.
+          <span key={name} style={{ marginLeft: index === 0 ? 0 : -8 }} className="flex">
+            <Avatar name={name} size="md" className="ring-2 ring-(--theme-app-bg)" />
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <Avatar
+          name="Grace Hopper"
+          size="sm"
+          decorative={decorative}
+          className="ring-2 ring-(--theme-accent)"
+        />
+        Grace Hopper
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('img', { name: 'Ada Lovelace' })).toHaveClass('rounded-full')
+    await expect(canvas.queryAllByRole('img', { name: 'Grace Hopper' })).toHaveLength(
+      args.decorative ? 1 : 2,
     )
   },
 }
@@ -1462,19 +1498,23 @@ export const ProgressSegments: StoryObj<{ done: number; started: number; total: 
 const MINUTE = 60_000
 
 /** Times that keep counting while on screen, long or compact, with the exact
- *  time on hover. */
-export const RelativeTimes: StoryObj<{ format: 'long' | 'compact' }> = {
-  args: { format: 'long' },
-  argTypes: { format: { control: 'inline-radio', options: ['long', 'compact'] } },
-  render: ({ format }) => {
+ *  time on hover, in UIProvider's `locale` when the host gives one. */
+export const RelativeTimes: StoryObj<{ format: 'long' | 'compact'; locale: string }> = {
+  args: { format: 'long', locale: '' },
+  argTypes: {
+    format: { control: 'inline-radio', options: ['long', 'compact'] },
+    locale: { control: 'select', options: ['', 'de-DE', 'fr-FR', 'ja-JP'] },
+  },
+  render: ({ format, locale }) => {
     const now = Date.now()
-    return (
+    const times = (
       <div className="flex flex-col gap-2 p-8 text-sm">
         {[0.2, 5, 90, 60 * 30, 60 * 24 * 400].map((minutes) => (
           <RelativeTime key={minutes} value={now - minutes * MINUTE} format={format} />
         ))}
       </div>
     )
+    return locale ? <UIProvider locale={locale}>{times}</UIProvider> : times
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)

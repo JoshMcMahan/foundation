@@ -5,8 +5,8 @@ import { CheckIcon, ChevronDownIcon } from '../icons'
 import { type ComboboxItem, optionNaming, pickerItemClassName } from './comboboxItems'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelListClassName, positionerClassName } from './floating'
-import { useFullscreenContainer } from './fullscreen'
 import { OptionDescription } from './OptionDescription'
+import { usePopupContainer } from './popupContainer'
 import { Tooltip } from './Tooltip'
 
 /** An option of a Select: the same shape as a Combobox's, so a list moves between them as is. */
@@ -57,7 +57,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   onItemHighlighted,
   ...rootProps
 }: SelectProps<Value, Multiple>) {
-  const fullscreen = useFullscreenContainer()
+  const portal = usePopupContainer()
   const uid = useId()
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   const triggerProps = {
@@ -101,7 +101,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
           </BaseSelect.Icon>
         </BaseSelect.Trigger>
       )}
-      <BaseSelect.Portal container={fullscreen}>
+      <BaseSelect.Portal {...portal}>
         <BaseSelect.Positioner
           alignItemWithTrigger={false}
           sideOffset={4}
