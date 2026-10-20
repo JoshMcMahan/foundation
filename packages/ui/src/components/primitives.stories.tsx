@@ -1095,6 +1095,28 @@ export const Tooltips: StoryObj<{ side: 'top' | 'bottom' | 'left' | 'right' }> =
   },
 }
 
+/** A hint that adds to its anchor's name, such as what a button changes, is also the anchor's
+ *  description, so assistive technology reads it whether or not the tooltip is open. */
+export const TooltipDescribingItsAnchor: StoryObj = {
+  render: () => (
+    <div className="flex items-center gap-3 p-8 pt-20 text-sm">
+      <span>platform-api</span>
+      <Tooltip content="New repositories in this team start from this one." describesAnchor>
+        <Button variant="ghost" size="sm">
+          Make default
+        </Button>
+      </Tooltip>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByRole('button', { name: 'Make default' })
+    await expect(button).toHaveAccessibleDescription(
+      'New repositories in this team start from this one.',
+    )
+  },
+}
+
 export const InfoTips: StoryObj = {
   render: () => (
     <div className="flex items-center gap-6 p-8 text-sm">

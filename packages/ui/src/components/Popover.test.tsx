@@ -128,4 +128,82 @@ describe('Popover', () => {
     act(() => button.focus())
     await waitFor(() => expect(screen.queryByText('Display')).toBeNull())
   })
+
+  it('opens on hover after the delay it is given', async () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <Popover
+          openOnHover
+          hoverDelay={0}
+          hoverCloseDelay={100}
+          aria-label="Settings group"
+          trigger={<button type="button">Settings</button>}
+        >
+          group links
+        </Popover>,
+      )
+      const button = screen.getByRole('button', { name: 'Settings' })
+      fireEvent.mouseEnter(button)
+      fireEvent.mouseMove(button)
+      await act(() => vi.advanceTimersByTimeAsync(20))
+      expect(screen.getByText('group links')).toBeInTheDocument()
+      fireEvent.mouseLeave(button)
+      await act(() => vi.advanceTimersByTimeAsync(50))
+      expect(screen.getByText('group links')).toBeInTheDocument()
+      await act(() => vi.advanceTimersByTimeAsync(400))
+      expect(screen.queryByText('group links')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('waits 300ms on hover by default', async () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <Popover openOnHover aria-label="Help" trigger={<button type="button">Help</button>}>
+          help text
+        </Popover>,
+      )
+      const button = screen.getByRole('button', { name: 'Help' })
+      fireEvent.mouseEnter(button)
+      fireEvent.mouseMove(button)
+      await act(() => vi.advanceTimersByTimeAsync(200))
+      expect(screen.queryByText('help text')).not.toBeInTheDocument()
+      await act(() => vi.advanceTimersByTimeAsync(200))
+      expect(screen.getByText('help text')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('opens as a sheet at phone width, unless it is a tip or opened at a point', () => {
+    const sheetOf = (dialog: HTMLElement) =>
+      (dialog.parentElement as HTMLElement).className.includes('max-sm:fixed!')
+    const { unmount } = render(
+      <Popover defaultOpen aria-label="Panel" trigger={<button type="button">Open</button>}>
+        panel
+      </Popover>,
+    )
+    expect(sheetOf(screen.getByRole('dialog', { name: 'Panel' }))).toBe(true)
+    unmount()
+    render(
+      <>
+        <Popover open at={{ clientX: 10, clientY: 10 }} aria-label="At">
+          at a point
+        </Popover>
+        <Popover
+          defaultOpen
+          sheet={false}
+          aria-label="Anchored"
+          trigger={<button type="button">Open</button>}
+        >
+          anchored
+        </Popover>
+      </>,
+    )
+    expect(sheetOf(screen.getByRole('dialog', { name: 'At' }))).toBe(false)
+    expect(sheetOf(screen.getByRole('dialog', { name: 'Anchored' }))).toBe(false)
+  })
 })

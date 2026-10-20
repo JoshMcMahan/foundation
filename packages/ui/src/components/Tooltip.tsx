@@ -1,6 +1,15 @@
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip'
-import { createContext, Fragment, type ReactElement, type ReactNode, use, useState } from 'react'
-import { positionerClassName, tipArrowClassName, tipClassName } from './floating'
+import {
+  cloneElement,
+  createContext,
+  Fragment,
+  type ReactElement,
+  type ReactNode,
+  use,
+  useId,
+  useState,
+} from 'react'
+import { positionerClassName, tipClassName } from './floating'
 import { keyedByContent } from './keys'
 import { usePopupContainer } from './popupContainer'
 
@@ -39,9 +48,8 @@ function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
   const portal = usePopupContainer()
   return (
     <BaseTooltip.Portal {...portal}>
-      <BaseTooltip.Positioner side={side} sideOffset={8} className={positionerClassName}>
-        <BaseTooltip.Popup className={`max-w-xs ${tipClassName}`}>
-          <BaseTooltip.Arrow className={tipArrowClassName} />
+      <BaseTooltip.Positioner side={side} sideOffset={6} className={positionerClassName}>
+        <BaseTooltip.Popup className={tipClassName}>
           {shortcut ? (
             <span className="inline-flex items-center gap-2">
               {content}
@@ -56,12 +64,17 @@ function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
   )
 }
 
+/** How long the pointer rests on an anchor before its tooltip opens, in milliseconds.
+ *  Once one is open, the next opens at once. An anchor's own `delay` overrides it,
+ *  such as 0 on a collapsed rail where the tooltip is the only label. */
+const OPEN_DELAY = 400
+
 /** One popup serves every Tooltip below it, so each anchor costs only a trigger.
  *  UIProvider mounts it; nothing else needs to. */
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [handle] = useState(() => BaseTooltip.createHandle<TooltipPayload>())
   return (
-    <BaseTooltip.Provider>
+    <BaseTooltip.Provider delay={OPEN_DELAY}>
       <TooltipHandleContext value={handle}>{children}</TooltipHandleContext>
       <BaseTooltip.Root handle={handle} onOpenChange={skipUnclipped}>
         {({ payload }) => payload && <TooltipPopup {...payload} />}
@@ -100,10 +113,15 @@ export interface TooltipProps
   disabled?: boolean | undefined
   /** Opens only while the anchor's text is clipped, such as a truncated label. */
   overflowOnly?: boolean
+  /** Also the anchor's accessible description, for a hint that adds to its name
+   *  rather than repeating it, such as what Make default changes. Assistive
+   *  technology reads it with the anchor whether or not the tooltip is open. */
+  describesAnchor?: boolean | undefined
 }
 
 /** A visual hint for sighted pointer and keyboard users. The anchor still needs
- *  its own accessible name; use InfoTip for content everyone must reach. */
+ *  its own accessible name; `describesAnchor` also gives assistive technology the
+ *  hint. Use InfoTip for content everyone must reach, such as on a touch screen. */
 export function Tooltip({
   content,
   children,
@@ -111,27 +129,53 @@ export function Tooltip({
   shortcut,
   disabled = false,
   overflowOnly = false,
+  describesAnchor = false,
   ...anchorProps
 }: TooltipProps) {
   const handle = use(TooltipHandleContext)
+  const descriptionId = useId()
   const payload = { content, shortcut, side }
+  const described = describesAnchor && !disabled && !!content
+  const anchor = children as ReactElement<{ 'aria-describedby'?: string | undefined }>
+  const ownDescription = anchor.props['aria-describedby']
+  const describedBy = [ownDescription, anchorProps['aria-describedby'], descriptionId]
+    .filter(Boolean)
+    .join(' ')
   const trigger = (
     <BaseTooltip.Trigger
       {...anchorProps}
+      // Outside UIProvider each tooltip has its own provider-less root, so it takes the delay itself.
+      {...(!handle && anchorProps.delay === undefined && { delay: OPEN_DELAY })}
       handle={handle ?? undefined}
       payload={payload}
       disabled={disabled || !content}
       data-overflow-only={overflowOnly || undefined}
-      render={children}
+      // The anchor's own props win over the trigger's, so its description joins there.
+      render={described ? cloneElement(anchor, { 'aria-describedby': describedBy }) : children}
     />
   )
+  // The description stays in the DOM, hidden, so it is read whether or not the
+  // shared popup is showing this anchor's tip.
+  const description = described && (
+    <span id={descriptionId} hidden>
+      {content}
+    </span>
+  )
   if (handle) {
-    return trigger
+    return description ? (
+      <>
+        {trigger}
+        {description}
+      </>
+    ) : (
+      trigger
+    )
   }
   // Outside UIProvider each tooltip brings its own root.
   return (
     <BaseTooltip.Root onOpenChange={skipUnclipped}>
       {trigger}
+      {description}
       <TooltipPopup {...payload} />
     </BaseTooltip.Root>
   )

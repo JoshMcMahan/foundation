@@ -5,7 +5,6 @@ import {
   type FloatingAnchor,
   panelClassName,
   positionerClassName,
-  tipArrowClassName,
   tipClassName,
   toPositionerAnchor,
 } from './floating'
@@ -53,6 +52,12 @@ export interface PopoverOptions
   /** Also opens while the pointer rests on the trigger. A click or a tap still
    *  opens it, so touch and keyboard users reach it too. */
   openOnHover?: boolean
+  /** With `openOnHover`, how long the pointer rests on the trigger before it opens, in
+   *  milliseconds. 0 opens it at once, as for a collapsed rail's flyout. */
+  hoverDelay?: number | undefined
+  /** With `openOnHover`, how long it stays open after the pointer leaves, in milliseconds,
+   *  so the pointer can cross the gap to it. */
+  hoverCloseDelay?: number | undefined
   /** Where focus goes on opening: the first control in it, the panel itself for
    *  a list read before one item in it is picked, or nowhere, for a popover that
    *  offers an action on what the reader is doing, such as copying a selection. */
@@ -63,12 +68,26 @@ export interface PopoverOptions
   /** Stays on `side` where it doesn't fit rather than flipping to the other, for a popup that
    *  must not cover what is there, such as the control a tip describes while it is typed in. */
   keepSide?: boolean | undefined
-  /** `panel` holds controls or a list; `tip` is a tooltip-sized note with an arrow. */
+  /** At phone width, under 640px, opens as a sheet along the bottom of the screen, as wide as
+   *  the screen and scrolling inside, rather than in the strip of page beside its trigger. On
+   *  by default for a panel with a trigger; off for a tip and for a popover opened `at` a point,
+   *  which belongs where the reader is. */
+  sheet?: boolean | undefined
+  /** `panel` holds controls or a list; `tip` is a tooltip-sized note in the tooltip's look. */
   variant?: 'panel' | 'tip'
   /** On the popup: its width, padding or text size. */
   className?: string
   children: ReactNode
 }
+
+// The positioner places itself with inline styles, so the sheet's own placement needs !important.
+// The bottom gutter grows to clear a phone's home indicator.
+const sheetPositionerClassName =
+  'max-sm:fixed! max-sm:inset-x-2! max-sm:top-auto! max-sm:bottom-[max(8px,env(safe-area-inset-bottom))]! max-sm:transform-none!'
+
+// Last in the class list, so it wins over a width or height the host set for the anchored panel.
+const sheetPopupClassName =
+  'max-sm:w-auto! max-sm:max-w-none! max-sm:max-h-[min(75dvh,calc(100dvh-16px))]! max-sm:origin-bottom!'
 
 /** A panel anchored to its trigger, over the page so no container clips it. It
  *  flips and shifts to stay on screen, closes on Escape or a press outside, and
@@ -84,16 +103,20 @@ export function Popover({
   side = 'bottom',
   align = 'center',
   openOnHover = false,
+  hoverDelay = 300,
+  hoverCloseDelay = 150,
   initialFocus = 'first-control',
   anchor,
   keepSide = false,
   variant = 'panel',
+  sheet,
   className,
   children,
   ...popupProps
 }: PopoverProps) {
   const portal = usePopupContainer()
   const tip = variant === 'tip'
+  const asSheet = sheet ?? (!tip && !at)
   const popup = useRef<HTMLDivElement>(null)
   const actions = useRef<BasePopover.Root.Actions>(null)
   // Stable, so the popover re-rendering doesn't re-render every consumer of it.
@@ -109,18 +132,18 @@ export function Popover({
         <BasePopover.Trigger
           render={trigger}
           openOnHover={openOnHover}
-          {...(openOnHover ? { delay: 300, closeDelay: 150 } : {})}
+          {...(openOnHover ? { delay: hoverDelay, closeDelay: hoverCloseDelay } : {})}
         />
       )}
       <BasePopover.Portal {...portal}>
         <BasePopover.Positioner
           side={side}
           align={align}
-          sideOffset={tip ? 8 : 6}
+          sideOffset={6}
           collisionPadding={8}
           {...(keepSide && { collisionAvoidance: { side: 'none' } as const })}
           {...(at ? { anchor: toPositionerAnchor(at) } : anchor ? { anchor } : {})}
-          className={positionerClassName}
+          className={cx(positionerClassName, asSheet && sheetPositionerClassName)}
         >
           <BasePopover.Popup
             {...popupProps}
@@ -128,15 +151,15 @@ export function Popover({
             initialFocus={initialFocus === 'popup' ? popup : initialFocus === 'first-control'}
             className={cx(
               tip
-                ? cx('max-w-sm text-left', tipClassName)
+                ? cx('text-left', tipClassName)
                 : cx(
                     panelClassName,
                     'max-h-(--available-height) max-w-[calc(100vw-16px)] overflow-y-auto p-3',
                   ),
               className,
+              asSheet && sheetPopupClassName,
             )}
           >
-            {tip && <BasePopover.Arrow className={tipArrowClassName} />}
             {title && (
               <BasePopover.Title className="mb-2 text-sm font-semibold">{title}</BasePopover.Title>
             )}

@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon } from '../icons'
+import { AddIcon, KeyIcon, MailIcon, SaveIcon, ShieldIcon, TrashIcon, UploadIcon } from '../icons'
 import { Button, MethodButton } from './Button'
 import type { ButtonSize, ButtonVariant } from './buttonClasses'
 import { Card, CardHeader, type CardPadding } from './Card'
+import { FileButton } from './FileButton'
 import { IconButton } from './IconButton'
 import { Input, Textarea } from './Input'
 import { LetterBadge } from './LetterBadge'
@@ -21,40 +22,53 @@ const meta: Meta = {
 }
 export default meta
 
-const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'outline', 'ghost', 'danger']
+const VARIANTS: ButtonVariant[] = [
+  'primary',
+  'secondary',
+  'outline',
+  'ghost',
+  'danger',
+  'danger-outline',
+]
 const SIZES: ButtonSize[] = ['xs', 'sm', 'md', 'lg']
 
 /** The one button look: each variant at each size, its icon-only square, and
- *  the states every button shares. */
+ *  the states every button shares. Hovered, a button rises a pixel on a soft
+ *  shadow and settles back while pressed. */
 export const Buttons: StoryObj = {
   render: () => {
     const Demo = () => {
       const [pressed, setPressed] = useState(true)
       return (
         <div className="flex flex-col gap-6 p-8 text-sm">
-          <table className="border-separate border-spacing-x-4 border-spacing-y-2">
-            <tbody>
-              {VARIANTS.map((variant) => (
-                <tr key={variant}>
-                  <th scope="row" className="pr-2 text-left font-medium theme-muted-text">
-                    {variant}
-                  </th>
-                  {SIZES.map((size) => (
-                    <td key={size}>
-                      <Button variant={variant} size={size} icon={<AddIcon />}>
-                        Create
-                      </Button>
-                    </td>
-                  ))}
-                  {SIZES.map((size) => (
-                    <td key={`${size}-icon`}>
-                      <IconButton variant={variant} size={size} label="Add" icon={<AddIcon />} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="max-w-full overflow-x-auto">
+            <table className="border-separate border-spacing-x-4 border-spacing-y-2">
+              <tbody>
+                {VARIANTS.map((variant) => (
+                  <tr key={variant}>
+                    <th
+                      scope="row"
+                      className="whitespace-nowrap pr-2 text-left font-medium theme-muted-text"
+                    >
+                      {variant}
+                    </th>
+                    {SIZES.map((size) => (
+                      <td key={size}>
+                        <Button variant={variant} size={size} icon={<AddIcon />}>
+                          Create
+                        </Button>
+                      </td>
+                    ))}
+                    {SIZES.map((size) => (
+                      <td key={`${size}-icon`}>
+                        <IconButton variant={variant} size={size} label="Add" icon={<AddIcon />} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
@@ -106,7 +120,109 @@ export const Buttons: StoryObj = {
       'true',
     )
     await expect(canvas.getByRole('link', { name: 'Read the docs' })).toBeInTheDocument()
-    await expect(canvas.getAllByRole('button', { name: 'Add' })).toHaveLength(15)
+    await expect(canvas.getAllByRole('button', { name: 'Add' })).toHaveLength(
+      VARIANTS.length * SIZES.length,
+    )
+  },
+}
+
+function LoadingWidthDemo() {
+  const [busy, setBusy] = useState(false)
+  return (
+    <div className="flex flex-col items-start gap-3 p-8">
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" loading={busy}>
+          Revoke
+        </Button>
+        <Button variant="primary" loading={busy}>
+          Save changes
+        </Button>
+        <Button variant="primary" icon={<SaveIcon />} loading={busy}>
+          Save
+        </Button>
+        <span className="text-sm theme-muted-text">Stays put</span>
+      </div>
+      <Button variant="ghost" size="sm" onClick={() => setBusy((on) => !on)}>
+        {busy ? 'Stop' : 'Start'} loading
+      </Button>
+    </div>
+  )
+}
+
+/** Busy without an icon, the spinner sits over the label, which stays as the button's name and
+ *  width, so nothing beside it moves. With an icon, the spinner takes the icon's place. */
+export const ButtonLoadingKeepsWidth: StoryObj = {
+  name: 'Button loading keeps its width',
+  render: () => <LoadingWidthDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const save = canvas.getByRole('button', { name: 'Save changes' })
+    // Measured once the font is in, which would otherwise change the width itself.
+    await document.fonts.ready
+    const before = save.getBoundingClientRect().width
+    await userEvent.click(canvas.getByRole('button', { name: 'Start loading' }))
+    await expect(save).toHaveAttribute('aria-busy', 'true')
+    await expect(save.getBoundingClientRect().width).toBe(before)
+  },
+}
+
+/** A size class on an icon wins over the button's icon scale, as for a 14px icon in a 32px
+ *  button; an icon without one takes the scale. */
+export const ButtonIconSizes: StoryObj = {
+  name: 'Button icon sizes',
+  render: () => (
+    <div className="flex items-center gap-3 p-8">
+      <Button variant="secondary" icon={<AddIcon />}>
+        Scale (16px)
+      </Button>
+      <Button variant="secondary" icon={<AddIcon className="size-3.5" />}>
+        Own size (14px)
+      </Button>
+      <Button variant="danger-outline" size="sm" icon={<TrashIcon />}>
+        Revoke
+      </Button>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const svgs = canvasElement.querySelectorAll('svg')
+    await expect(svgs[0]?.getBoundingClientRect().width).toBe(16)
+    await expect(svgs[1]?.getBoundingClientRect().width).toBe(14)
+  },
+}
+
+function FileButtonDemo({ multiple, accept }: { multiple: boolean; accept: string }) {
+  const [names, setNames] = useState<string[]>([])
+  return (
+    <div className="flex flex-col items-start gap-3 p-8 text-sm">
+      <FileButton
+        variant="secondary"
+        icon={<UploadIcon />}
+        accept={accept || undefined}
+        multiple={multiple}
+        onFiles={(files) => setNames(files.map((f) => f.name))}
+      >
+        {multiple ? 'Upload files' : 'Upload logo'}
+      </FileButton>
+      {names.length > 0 && <p className="m-0 theme-muted-text">Picked: {names.join(', ')}</p>}
+    </div>
+  )
+}
+
+/** A button that opens the file picker: Tab reaches it and Enter or Space opens the picker. */
+export const FileButtonStory: StoryObj<{ multiple: boolean; accept: string }> = {
+  name: 'File button',
+  args: { multiple: false, accept: 'image/*' },
+  argTypes: {
+    accept: { control: 'text', description: 'The file types offered, such as image/* or .pem.' },
+  },
+  render: (args) => <FileButtonDemo {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.tab()
+    await expect(canvas.getByRole('button', { name: /^Upload/ })).toHaveFocus()
+    const input = canvasElement.querySelector('input[type=file]') as HTMLInputElement
+    await userEvent.upload(input, new File(['logo'], 'logo.png', { type: 'image/png' }))
+    await expect(canvas.getByText('Picked: logo.png')).toBeInTheDocument()
   },
 }
 

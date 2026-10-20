@@ -19,6 +19,36 @@ describe('Tooltip', () => {
   it.each([
     ['inside the provider', withProvider],
     ['on its own', render],
+  ])('can also describe its anchor, closed or open, %s', (_, mount) => {
+    mount(
+      <Tooltip content="New repositories start on this team" describesAnchor>
+        <button type="button" aria-describedby="other">
+          Make default
+        </button>
+      </Tooltip>,
+    )
+    const other = document.createElement('span')
+    other.id = 'other'
+    other.textContent = 'Owners only.'
+    document.body.append(other)
+    expect(screen.getByRole('button', { name: 'Make default' })).toHaveAccessibleDescription(
+      'Owners only. New repositories start on this team',
+    )
+    other.remove()
+  })
+
+  it('leaves the anchor undescribed by default', () => {
+    withProvider(
+      <Tooltip content="Save changes">
+        <button type="button">Save</button>
+      </Tooltip>,
+    )
+    expect(screen.getByRole('button', { name: 'Save' })).not.toHaveAttribute('aria-describedby')
+  })
+
+  it.each([
+    ['inside the provider', withProvider],
+    ['on its own', render],
   ])('shows its content when the anchor is focused, %s', async (_, mount) => {
     mount(
       <Tooltip content="Save changes">

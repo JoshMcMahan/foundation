@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
 import { HoverCard } from './HoverCard'
 
 describe('HoverCard', () => {
@@ -83,5 +84,62 @@ describe('HoverCard', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: 'in card' }), { key: 'Escape' })
     await act(() => vi.advanceTimersByTimeAsync(500))
     expect(screen.queryByRole('button', { name: 'in card' })).not.toBeInTheDocument()
+  })
+
+  describe('opened at an element the host watches', () => {
+    function Prose({ onChange = () => {} }: { onChange?: (open: boolean) => void }) {
+      const [term, setTerm] = useState<Element | null>(null)
+      return (
+        <>
+          <p>
+            Read about{' '}
+            <button type="button" className="term" onClick={(e) => setTerm(e.currentTarget)}>
+              quotas
+            </button>
+          </p>
+          <HoverCard
+            at={term}
+            open={term !== null}
+            onOpenChange={(open) => {
+              onChange(open)
+              if (!open) {
+                setTerm(null)
+              }
+            }}
+            card={<p>quota card</p>}
+          />
+        </>
+      )
+    }
+
+    it('stays closed with nothing to open at', () => {
+      render(<HoverCard at={null} open card={<p>quota card</p>} />)
+      expect(screen.queryByText('quota card')).not.toBeInTheDocument()
+    })
+
+    it('opens at the element, and asks the host to close on Escape', async () => {
+      const onChange = vi.fn()
+      render(<Prose onChange={onChange} />)
+      fireEvent.click(screen.getByRole('button', { name: 'quotas' }))
+      await act(() => vi.advanceTimersByTimeAsync(50))
+      expect(screen.getByText('quota card')).toBeInTheDocument()
+      fireEvent.keyDown(document.body, { key: 'Escape' })
+      await act(() => vi.advanceTimersByTimeAsync(500))
+      expect(onChange).toHaveBeenCalledWith(false)
+      expect(screen.queryByText('quota card')).not.toBeInTheDocument()
+    })
+
+    it('tells the host when the pointer is over the card', async () => {
+      const onPointerEnter = vi.fn()
+      const anchor = document.createElement('span')
+      document.body.append(anchor)
+      render(
+        <HoverCard at={anchor} open onPointerEnter={onPointerEnter} card={<p>quota card</p>} />,
+      )
+      await act(() => vi.advanceTimersByTimeAsync(50))
+      fireEvent.pointerEnter(screen.getByText('quota card'))
+      expect(onPointerEnter).toHaveBeenCalled()
+      anchor.remove()
+    })
   })
 })

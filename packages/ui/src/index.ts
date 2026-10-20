@@ -99,6 +99,7 @@ export {
   useFieldControl,
   useFieldLabelledControl,
 } from './components/Field'
+export { FileButton, type FileButtonProps } from './components/FileButton'
 export { type FieldBoxOptions, type FieldBoxSize, fieldBox } from './components/fieldBox'
 export type { FloatingAnchor } from './components/floating'
 export { HoverCard, type HoverCardProps } from './components/HoverCard'

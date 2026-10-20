@@ -10,8 +10,9 @@ interface ButtonOwnProps extends ButtonStyle {
   className?: string | undefined
   /** Before the label. */
   icon?: ReactNode
-  /** Busy with what it started: a spinner takes the icon's place, and it can't
-   *  be pressed again until done. */
+  /** Busy with what it started: a spinner takes the icon's place, or without an
+   *  icon sits over the label, so the button keeps its width. It can't be
+   *  pressed again until done. */
   loading?: boolean | undefined
 }
 
@@ -37,12 +38,22 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cx(buttonClasses({ variant, size, iconOnly }), className)
-  const content = (
-    <>
-      {loading ? <Loader inline decorative size="1em" /> : icon}
-      {children}
-    </>
-  )
+  const content =
+    loading && !icon ? (
+      // The label stays, unseen but still the button's name, so the button
+      // keeps its width and a row of them doesn't shift.
+      <>
+        <span className="inline-flex items-center gap-1.5 opacity-0">{children}</span>
+        <span className="absolute inset-0 flex items-center justify-center">
+          <Loader inline decorative size="1em" />
+        </span>
+      </>
+    ) : (
+      <>
+        {loading ? <Loader inline decorative size="1em" /> : icon}
+        {children}
+      </>
+    )
   if (props.href !== undefined) {
     return (
       <AppLink

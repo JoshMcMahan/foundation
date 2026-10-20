@@ -1,12 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useRef, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
-import { DisplayIcon, FilterIcon, KeyboardIcon, MoreIcon } from '../icons'
+import {
+  DisplayIcon,
+  FilterIcon,
+  FolderIcon,
+  HomeIcon,
+  KeyboardIcon,
+  MoreIcon,
+  SettingsIcon,
+} from '../icons'
 import { onTop } from '../test/stacking'
 import { ActionMenu } from './ActionMenu'
 import { Button } from './Button'
 import { DatePicker } from './DatePicker'
 import { Drawer, type DrawerProps } from './Drawer'
+import { HoverCard } from './HoverCard'
 import { IconButton } from './IconButton'
 import { Modal } from './Modal'
 import { Popover, type PopoverProps, useClosePopover } from './Popover'
@@ -208,12 +217,24 @@ export const DrawerContained: StoryObj = {
   },
 }
 
-type PopoverArgs = Pick<PopoverProps, 'side' | 'align' | 'openOnHover' | 'keepSide'>
+type PopoverArgs = Pick<
+  PopoverProps,
+  'side' | 'align' | 'openOnHover' | 'hoverDelay' | 'hoverCloseDelay' | 'keepSide' | 'sheet'
+>
 
-/** A panel of controls under the button that opens it, named by its title. */
+/** A panel of controls under the button that opens it, named by its title. At phone width it
+ *  opens as a sheet along the bottom of the screen. */
 export const PopoverStory: StoryObj<PopoverArgs> = {
   name: 'Popover',
-  args: { side: 'bottom', align: 'start', openOnHover: false, keepSide: false },
+  args: {
+    side: 'bottom',
+    align: 'start',
+    openOnHover: false,
+    hoverDelay: 300,
+    hoverCloseDelay: 150,
+    keepSide: false,
+    sheet: true,
+  },
   argTypes: {
     side: { control: 'inline-radio', options: ['top', 'bottom', 'left', 'right'] },
     align: { control: 'inline-radio', options: ['start', 'center', 'end'] },
@@ -221,9 +242,21 @@ export const PopoverStory: StoryObj<PopoverArgs> = {
       control: 'boolean',
       description: 'Also opens on hover; a press still opens it.',
     },
+    hoverDelay: {
+      control: { type: 'number', min: 0, step: 50 },
+      description: 'With openOnHover: milliseconds the pointer rests before it opens.',
+    },
+    hoverCloseDelay: {
+      control: { type: 'number', min: 0, step: 50 },
+      description: 'With openOnHover: milliseconds it stays open after the pointer leaves.',
+    },
     keepSide: {
       control: 'boolean',
       description: 'Stays on `side` where it does not fit rather than flipping to the other.',
+    },
+    sheet: {
+      control: 'boolean',
+      description: 'At phone width, opens as a sheet along the bottom of the screen.',
     },
   },
   render: (args) => (
@@ -289,6 +322,193 @@ export const PopoverOfLinks: StoryObj = {
     )
     await userEvent.click(await screen.findByRole('link', { name: 'Platform' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  },
+}
+
+function RailLink({ name }: { name: string }) {
+  const close = useClosePopover()
+  return (
+    <a
+      href={`#${name.toLowerCase()}`}
+      onClick={(e) => {
+        e.preventDefault()
+        close()
+      }}
+      className="block rounded-md px-2 py-1.5 text-sm hover:bg-(--theme-hover)"
+    >
+      {name}
+    </a>
+  )
+}
+
+const railGroups = [
+  { label: 'Home', icon: <HomeIcon />, links: ['Overview', 'Activity'] },
+  { label: 'Projects', icon: <FolderIcon />, links: ['All projects', 'Archived', 'Templates'] },
+  { label: 'Settings', icon: <SettingsIcon />, links: ['General', 'Members', 'Billing'] },
+]
+
+/** A collapsed rail: each group opens its links beside it at once on hover and stays a moment
+ *  after the pointer leaves, so it can cross to them. A press, Enter or a tap opens it too, and
+ *  focus moves in so the links are reachable from the keyboard. */
+export const PopoverRailFlyout: StoryObj = {
+  name: 'Popover, flyout on a collapsed rail',
+  render: () => (
+    <nav
+      aria-label="Main"
+      className="flex w-12 flex-col items-center gap-1 border-r border-(--theme-border) py-2"
+      style={{ height: 240 }}
+    >
+      {railGroups.map((group) => (
+        <Popover
+          key={group.label}
+          openOnHover
+          hoverDelay={0}
+          hoverCloseDelay={100}
+          side="right"
+          align="start"
+          title={group.label}
+          className="w-48"
+          trigger={
+            <button
+              type="button"
+              aria-label={group.label}
+              className="flex size-8 items-center justify-center rounded-md theme-muted-text hover:bg-(--theme-hover) data-popup-open:bg-(--theme-hover) [&_svg]:size-4"
+            >
+              {group.icon}
+            </button>
+          }
+        >
+          <div className="-mx-2 -mb-1">
+            {group.links.map((link) => (
+              <RailLink key={link} name={link} />
+            ))}
+          </div>
+        </Popover>
+      ))}
+    </nav>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Projects' }))
+    const flyout = await screen.findByRole('dialog', { name: 'Projects' })
+    await waitFor(() => expect(flyout).toBeVisible())
+    await expect(within(flyout).getByRole('link', { name: 'Archived' })).toBeVisible()
+  },
+}
+
+/** A preview after a short hover or on focus, such as a person behind their name. */
+export const HoverCardStory: StoryObj<{ defaultOpen: boolean }> = {
+  name: 'Hover card',
+  args: { defaultOpen: true },
+  render: ({ defaultOpen }) => (
+    <p className="p-8 text-sm">
+      Assigned to{' '}
+      <HoverCard
+        defaultOpen={defaultOpen}
+        card={
+          <div className="w-64 p-3 text-sm">
+            <p className="m-0 font-semibold">Grace Hopper</p>
+            <p className="m-0 mt-1 theme-muted-text">Platform team, on call this week</p>
+          </div>
+        }
+      >
+        <a href="#grace" className="font-medium underline">
+          Grace Hopper
+        </a>
+      </HoverCard>
+    </p>
+  ),
+}
+
+const glossary: Record<string, { title: string; text: string }> = {
+  quota: { title: 'Quota', text: 'The most a namespace can use of a resource at once.' },
+  'node pool': { title: 'Node pool', text: 'Machines of one shape that scale together.' },
+}
+
+/** Terms in rendered text with no element of their own to wrap: one listener on the text opens
+ *  the card at whichever term the pointer or focus is on, and keeps it open while the pointer
+ *  is over the card. The host owns the delays; Escape and a press outside ask it to close. */
+function WatchedTerms() {
+  const [term, setTerm] = useState<HTMLElement | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const later = (next: HTMLElement | null, ms: number) => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setTerm(next), ms)
+  }
+  const termAt = (target: EventTarget) =>
+    target instanceof HTMLElement ? target.closest<HTMLElement>('[data-term]') : null
+  return (
+    <div className="p-8 text-sm">
+      <p
+        className="m-0 max-w-md leading-6"
+        onPointerOver={(e) => {
+          const at = termAt(e.target)
+          if (at) {
+            later(at, 300)
+          }
+        }}
+        onPointerOut={(e) => {
+          if (termAt(e.target)) {
+            later(null, 200)
+          }
+        }}
+        onFocus={(e) => setTerm(termAt(e.target))}
+      >
+        Each namespace has a{' '}
+        <button
+          type="button"
+          data-term="quota"
+          className="cursor-help underline underline-offset-2"
+        >
+          quota
+        </button>{' '}
+        on CPU and memory, and its jobs run on a{' '}
+        <button
+          type="button"
+          data-term="node pool"
+          className="cursor-help underline underline-offset-2"
+        >
+          node pool
+        </button>{' '}
+        picked when it was created.
+      </p>
+      <HoverCard
+        at={term}
+        open={term !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            clearTimeout(timer.current)
+            setTerm(null)
+          }
+        }}
+        onPointerEnter={() => clearTimeout(timer.current)}
+        onPointerLeave={() => later(null, 200)}
+        card={
+          <div className="w-64 p-3 text-sm">
+            <p className="m-0 font-semibold">{glossary[term?.dataset['term'] ?? '']?.title}</p>
+            <p className="m-0 mt-1 theme-muted-text">
+              {glossary[term?.dataset['term'] ?? '']?.text}
+            </p>
+          </div>
+        }
+      />
+    </div>
+  )
+}
+
+export const HoverCardAtWatchedElement: StoryObj = {
+  name: 'Hover card, opened at a watched element',
+  render: () => <WatchedTerms />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    canvas.getByText('quota').focus()
+    await expect(
+      await screen.findByText('The most a namespace can use of a resource at once.'),
+    ).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByText('The most a namespace can use of a resource at once.')).toBeNull(),
+    )
   },
 }
 
