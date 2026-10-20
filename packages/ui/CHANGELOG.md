@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.83.0](https://github.com/parallelworks/foundation/compare/ui-v0.82.2...ui-v0.83.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** a meter can grow its fill in, and a swipe on a run's graph keeps it within reach ([#447](https://github.com/parallelworks/foundation/issues/447)) ([3a44cc7](https://github.com/parallelworks/foundation/commit/3a44cc77cc83213820d5c8521d740291650b2a2f))
+
+
+### Bug Fixes
+
+* **ui:** on a phone a run's graph runs down the screen, and its job list keeps names whole ([#446](https://github.com/parallelworks/foundation/issues/446)) ([72d11ef](https://github.com/parallelworks/foundation/commit/72d11ef6f7081ab0ca4cff2e2dfdcbed77fca83b))
+* **ui:** tables and the pager in a card fit as many rows as before, and filter toggles stay put on hover ([#445](https://github.com/parallelworks/foundation/issues/445)) ([00d8c7e](https://github.com/parallelworks/foundation/commit/00d8c7e5e45bcf87f4789c91c5ff562ba142c97c))
+
 ## [0.82.2](https://github.com/parallelworks/foundation/compare/ui-v0.82.1...ui-v0.82.2) (2026-10-20)
 
 
