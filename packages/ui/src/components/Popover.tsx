@@ -75,6 +75,9 @@ export interface PopoverOptions
   sheet?: boolean | undefined
   /** `panel` holds controls or a list; `tip` is a tooltip-sized note in the tooltip's look. */
   variant?: 'panel' | 'tip'
+  /** A panel's content reaches its edges, such as a list of suggestions whose rows pad
+   *  themselves and highlight edge to edge. A title keeps its own padding. */
+  flush?: boolean | undefined
   /** On the popup: its width, padding or text size. */
   className?: string
   children: ReactNode
@@ -110,6 +113,7 @@ export function Popover({
   keepSide = false,
   variant = 'panel',
   sheet,
+  flush = false,
   className,
   children,
   ...popupProps
@@ -154,14 +158,19 @@ export function Popover({
                 ? cx('text-left', tipClassName)
                 : cx(
                     panelClassName,
-                    'max-h-(--available-height) max-w-[calc(100vw-16px)] overflow-y-auto p-3',
+                    'max-h-(--available-height) max-w-[calc(100vw-16px)] overflow-y-auto',
+                    !flush && 'p-3',
                   ),
               className,
               asSheet && sheetPopupClassName,
             )}
           >
             {title && (
-              <BasePopover.Title className="mb-2 text-sm font-semibold">{title}</BasePopover.Title>
+              <BasePopover.Title
+                className={cx('mb-2 text-sm font-semibold', flush && !tip && 'px-3 pt-3')}
+              >
+                {title}
+              </BasePopover.Title>
             )}
             <CloseContext value={close}>{children}</CloseContext>
           </BasePopover.Popup>

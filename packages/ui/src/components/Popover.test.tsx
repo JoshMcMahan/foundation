@@ -207,3 +207,18 @@ describe('Popover', () => {
     expect(sheetOf(screen.getByRole('dialog', { name: 'Anchored' }))).toBe(false)
   })
 })
+
+describe('Popover flush', () => {
+  it('lets a list reach the panel edges while its title keeps its padding', () => {
+    render(
+      <Popover title="Suggestions" defaultOpen flush trigger={<button type="button">Open</button>}>
+        <ul aria-label="suggestion list">
+          <li>first</li>
+        </ul>
+      </Popover>,
+    )
+    const panel = screen.getByRole('dialog')
+    expect(panel).not.toHaveClass('p-3')
+    expect(screen.getByText('Suggestions')).toHaveClass('px-3', 'pt-3')
+  })
+})
