@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.82.0](https://github.com/parallelworks/foundation/compare/ui-v0.81.0...ui-v0.82.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** CopyCodeBlock has an inline form, list options show a check and a submenu chevron, and Escape dismisses an empty list ([#438](https://github.com/parallelworks/foundation/issues/438)) ([a90793f](https://github.com/parallelworks/foundation/commit/a90793feb7fa778c13d9e138b9aa38a3750abd99))
+
+
+### Bug Fixes
+
+* **ui:** an in-place PageHeader shows its surface, CreateModal's title and Escape behave, a CodeBlock title reads as a title, and SettingRow takes an error ([#439](https://github.com/parallelworks/foundation/issues/439)) ([4de68b7](https://github.com/parallelworks/foundation/commit/4de68b7c0effdd9a4ff54c770cc7575e92b53b7e))
+
 ## [0.81.0](https://github.com/parallelworks/foundation/compare/ui-v0.80.0...ui-v0.81.0) (2026-10-20)
 
 
