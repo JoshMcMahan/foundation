@@ -202,6 +202,84 @@ describe('ChatMessageList stick-to-bottom', () => {
   })
 })
 
+describe('ChatMessageList after a reply', () => {
+  let resized: (() => void) | undefined
+
+  beforeEach(() => {
+    mockChat.isStreaming = false
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          resized = callback
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+  })
+
+  afterEach(() => {
+    mockChat.isStreaming = true
+    resized = undefined
+    vi.unstubAllGlobals()
+  })
+
+  const renderDone = () => {
+    const props = { allMessages: [] as Message[] }
+    const result = render(
+      <ChatMessageList {...props} messages={[createMockMessage({ id: 'm1' })]} />,
+    )
+    const container = result.container.firstElementChild as HTMLElement
+    const addMessage = () =>
+      result.rerender(
+        <ChatMessageList
+          {...props}
+          messages={[createMockMessage({ id: 'm1' }), createMockMessage({ id: 'm2' })]}
+        />,
+      )
+    return { container, addMessage }
+  }
+
+  it('scrolls only the list to a new message, never the page around it', () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const { container, addMessage } = renderDone()
+    const scrollTo = vi.fn()
+    container.scrollTo = scrollTo as typeof container.scrollTo
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
+    addMessage()
+
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1200 }))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('follows a card that keeps growing while the reader sits at the bottom', () => {
+    const { container } = renderDone()
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    resized?.()
+
+    expect(container.scrollTop).toBe(1300)
+  })
+
+  it('leaves the reader where they are once they scrolled up', () => {
+    const { container } = renderDone()
+    armAtBottom(container)
+    fireEvent.wheel(container, { deltaY: -40 })
+    container.scrollTop = 200
+    fireEvent.scroll(container)
+
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    resized?.()
+
+    expect(container.scrollTop).toBe(200)
+  })
+})
+
 describe('ChatMessageList working indicator', () => {
   const toolPart: ToolCallPart = {
     kind: 'tool_call',

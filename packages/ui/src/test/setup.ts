@@ -8,4 +8,9 @@ if (typeof window !== 'undefined') {
   }
   Element.prototype.getAnimations ??= () => []
   Element.prototype.scrollIntoView ??= () => {}
+  Element.prototype.scrollTo ??= function (this: Element, options?: ScrollToOptions | number) {
+    if (typeof options === 'object' && options.top !== undefined) {
+      this.scrollTop = options.top
+    }
+  } as Element['scrollTo']
 }

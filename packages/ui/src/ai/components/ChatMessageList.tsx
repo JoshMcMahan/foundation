@@ -132,8 +132,8 @@ export default function ChatMessageList({
     const open = adapter.attachments?.onOpen
     return open ? open.bind(adapter.attachments) : undefined
   }, [adapter])
-  const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const reasoningScrollRef = useRef<HTMLDivElement>(null)
 
   const messageCount = messages.length
@@ -295,8 +295,30 @@ export default function ChatMessageList({
     ) {
       return
     }
-    bottomRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    // Scrolls the list alone: scrollIntoView would also scroll every clipped
+    // ancestor, shifting the page around the chat.
+    const el = containerRef.current
+    el.scrollTo({ top: el.scrollHeight, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }, [messageCount, isStreaming])
+
+  // Follows content that grows after its reply finished, such as a card that
+  // keeps showing what a tool is doing, while the reader sits at the bottom.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hasContent re-observes once the content mounts; it is absent in the empty state.
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(() => {
+      const el = containerRef.current
+      if (el && isNearBottomRef.current && !hasQueuedMessages) {
+        el.scrollTop = el.scrollHeight
+        lastScrollTopRef.current = el.scrollTop
+      }
+    })
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [hasContent, hasQueuedMessages])
 
   // If no messages and no streaming, just return empty scrollable container
   // The parent page handles the welcome/empty state UI. Queued messages still
@@ -326,7 +348,10 @@ export default function ChatMessageList({
       aria-busy={isStreaming || undefined}
       className="chat-thread flex-1 overflow-y-auto theme-scrollbar flex flex-col bg-(--theme-panel-bg)"
     >
-      <div className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 flex-1 px-4">
+      <div
+        ref={contentRef}
+        className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 flex-1 px-4"
+      >
         <MessageRows
           messages={messages}
           allMessages={allMessages}
@@ -456,7 +481,7 @@ export default function ChatMessageList({
           )
         })}
         {footer}
-        <div ref={bottomRef} className="h-8" />
+        <div className="h-8" />
       </div>
       {!pinned && (
         <div className="sticky bottom-4 z-10 flex h-0 items-start justify-center overflow-visible">
