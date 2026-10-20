@@ -344,7 +344,7 @@ function ToolCallBlock({ part, children }: { part: ToolCallPart; children?: Reac
         )}
         <ResultBody part={part} />
       </Disclosure>
-      {children && <div className="ml-5 mt-1.5 min-w-0">{children}</div>}
+      {children && <div className="mt-1.5 min-w-0 sm:ml-5">{children}</div>}
       {!children && !isDiff && !expanded && part.status !== 'waiting' && (
         <div
           className={cx(

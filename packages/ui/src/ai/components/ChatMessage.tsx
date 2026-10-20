@@ -219,7 +219,7 @@ function ChatMessage({
   if (hasParts && !message.content) {
     const said = replyText(message)
     return (
-      <div className={cx('group py-3 w-full', !flush && 'px-4')}>
+      <div className={cx('group py-3 w-full', !flush && 'sm:px-4')}>
         <AgentMessageParts
           message={partsMessage}
           isStreaming={isStreaming}
@@ -277,7 +277,7 @@ function ChatMessage({
       role="none"
       // A question opens a new turn, so it takes the larger space above it;
       // the room below it holds its hover actions clear of the reply.
-      className={cx('group w-full', isUser ? 'pt-8 pb-5' : 'py-3', !flush && 'px-4')}
+      className={cx('group w-full', isUser ? 'pt-8 pb-5' : 'py-3', !flush && 'sm:px-4')}
     >
       {/* Editing mode - full width container */}
       {isEditing ? (

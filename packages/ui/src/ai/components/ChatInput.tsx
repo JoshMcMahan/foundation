@@ -405,7 +405,7 @@ export default function ChatInput({
       {...(attachmentsAvailable ? dragHandlers : {})}
     >
       {isDragging && <DragOverlay className="rounded-2xl" />}
-      <div className="mx-auto w-full max-w-[var(--chat-column,50rem)] space-y-2 px-4">
+      <div className="mx-auto w-full max-w-[var(--chat-column,50rem)] space-y-2 sm:px-4">
         {notices}
         <div>
           {activity && <div className="mb-2">{activity}</div>}
