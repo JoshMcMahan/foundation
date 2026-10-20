@@ -11,6 +11,7 @@ import {
   type Ref,
   type RefObject,
   useCallback,
+  useEffect,
   useId,
   useImperativeHandle,
   useMemo,
@@ -284,6 +285,15 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
   const uid = useId()
   const [inputValue, setInputValue] = useState<string | null>(null)
   const [highlighted, setHighlighted] = useState<Entry<Value> | undefined>(undefined)
+  // Open from the start, the list opens a moment after its rows mount, as any other opening
+  // does, so it lands on the chosen row; Base UI's own first-render open would land on the first.
+  const [startsOpen] = useState(open === undefined && defaultOpen === true)
+  const [ownOpen, setOwnOpen] = useState(false)
+  useEffect(() => {
+    if (startsOpen) {
+      setOwnOpen(true)
+    }
+  }, [startsOpen])
 
   // Values the list doesn't have still show, under itemToStringLabel.
   const entryOf = (value: Value): Entry<Value> =>
@@ -613,9 +623,9 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     // button's picker is opened to choose, so it opens on a row and Enter takes it at once.
     // Base UI types `'always'` on its Autocomplete alone, though its Combobox takes it too.
     autoHighlight: (trigger ? 'always' : Boolean(creatable || onCreate)) as boolean,
-    ...(open !== undefined && { open }),
-    ...(defaultOpen !== undefined && { defaultOpen }),
+    ...(open !== undefined ? { open } : startsOpen ? { open: ownOpen } : {}),
     onOpenChange: (next: boolean) => {
+      setOwnOpen(next)
       // A picker opens to a fresh search; a field of chips keeps what is half typed.
       if (!next && (trigger || !props.multiple)) {
         setInputValue(null)

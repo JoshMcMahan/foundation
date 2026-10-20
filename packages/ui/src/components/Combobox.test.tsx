@@ -610,6 +610,22 @@ describe('Combobox as a picker', () => {
     await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith('doc'))
   })
 
+  it('opens on the chosen row when it starts open', async () => {
+    render(
+      <Combobox
+        aria-label="Team"
+        items={teams}
+        defaultValue="doc"
+        defaultOpen
+        trigger={<button type="button">Team</button>}
+      />,
+    )
+    await screen.findByRole('listbox')
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Docs/ })).toHaveAttribute('data-highlighted'),
+    )
+  })
+
   it('opens on the chosen row when its host opens it', async () => {
     render(<Picker controlled initial="doc" />)
     fireEvent.click(screen.getByRole('button', { name: 'Shortcut' }))

@@ -338,6 +338,21 @@ export const IssuesAtPhoneWidthDark: StoryObj<IssuesArgs> = {
   globals: { mode: 'dark' },
 }
 
+/** A searchable value picker, as a long list of people's, opened from its chip on a phone:
+ *  view it at 390px. */
+export const PeoplePickerOnPhone: StoryObj<IssuesArgs> = {
+  args: { link: '?assignee=maya,priya' },
+  render: (args) => <IssuesDemo link={args.link} />,
+  play: async ({ canvasElement }) => {
+    const chip = canvasElement.querySelector('[data-filter-chip=assignee]')
+    const value = chip && within(chip as HTMLElement).getByRole('combobox')
+    if (value) {
+      await userEvent.click(value)
+      await expect(await screen.findByRole('listbox')).toBeInTheDocument()
+    }
+  },
+}
+
 /** "+ Filter", then a field: its chip appears and its value picker opens on it. */
 export const AddAFilter: StoryObj<IssuesArgs> = {
   args: { link: '?status=started' },

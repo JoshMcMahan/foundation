@@ -263,7 +263,8 @@ export function FilterChip({
                 type="button"
                 ref={valueButton}
                 aria-label={t.changeValue(readAll || field.label)}
-                className={cx(partClassName, stretch && 'flex-1')}
+                // The part that gives way on a narrow row, so the × stays in reach.
+                className={cx(partClassName, 'shrink', stretch && 'flex-1')}
               >
                 {icons.length > 0 && (
                   <span className="flex shrink-0 items-center -space-x-1 [&_svg]:size-3">
@@ -277,7 +278,7 @@ export function FilterChip({
                 )}
                 <span
                   className={cx(
-                    'truncate',
+                    'min-w-0 truncate',
                     !stretch && 'max-w-40',
                     unset && 'text-(--theme-muted-text-color)',
                   )}
