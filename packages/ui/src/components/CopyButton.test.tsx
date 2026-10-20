@@ -17,6 +17,23 @@ beforeEach(() => {
 })
 
 describe('CopyButton', () => {
+  it('takes its own glyph and toast, and still turns into a check', async () => {
+    clipboard()
+    render(
+      <CopyButton
+        text="feature/login"
+        label="branch name"
+        icon={<svg data-testid="branch" />}
+        success="Copied feature/login"
+      />,
+    )
+    expect(screen.getByTestId('branch')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy branch name' }))
+    await screen.findByRole('button', { name: 'Copied branch name' })
+    expect(screen.queryByTestId('branch')).toBeNull()
+    expect(notifySuccess).toHaveBeenCalledWith('Copied feature/login')
+  })
+
   it('is named for what it copies, then says it copied it', async () => {
     const writeText = clipboard()
     render(<CopyButton text="ada@example.com" label="email address" />)
@@ -99,5 +116,20 @@ describe('CopyButton with its label shown', () => {
     expect(await screen.findByRole('button', { name: 'Copied workflow YAML' })).toHaveTextContent(
       'Copied',
     )
+  })
+})
+
+describe('CopyCodeBlock secret', () => {
+  it('masks the value itself until the eye shows it, and copies it either way', async () => {
+    const writeText = clipboard()
+    render(<CopyCodeBlock text="pk_live_51HhZ2vK8x2Q" label="API key" secret />)
+    expect(screen.queryByText('pk_live_51HhZ2vK8x2Q')).toBeNull()
+    expect(screen.getByText('Hidden value')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('pk_live_51HhZ2vK8x2Q'))
+    const eye = screen.getByRole('button', { name: 'Show value' })
+    fireEvent.click(eye)
+    expect(eye).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('pk_live_51HhZ2vK8x2Q')).toBeInTheDocument()
   })
 })

@@ -77,6 +77,24 @@ describe('HoverCardRow', () => {
   })
 })
 
+describe('HoverCardRow copy', () => {
+  it('copies its value, named for what it shows and what pressing does', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    const success = vi.spyOn(toast, 'success')
+    render(
+      <HoverCardRow icon={<span />} copy={{ text: 'a@example.com', label: 'email' }}>
+        a@example.com
+      </HoverCardRow>,
+    )
+    const button = screen.getByRole('button', { name: /^a@example\.com\W+Copy email$/ })
+    await act(async () => fireEvent.click(button))
+    expect(writeText).toHaveBeenCalledWith('a@example.com')
+    expect(success).toHaveBeenCalledWith('Copied email')
+    success.mockRestore()
+  })
+})
+
 describe('UserHoverCard copy', () => {
   it('copies an email address, naming it, from beside the linked header', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)

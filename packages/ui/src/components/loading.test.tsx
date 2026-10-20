@@ -101,6 +101,25 @@ describe('RefreshButton', () => {
     expect(screen.getByRole('button')).toHaveAccessibleName(/^Refresh\W+Updated 5 minutes ago$/)
   })
 
+  it('reads "Refreshing" while busy, keeping its name', () => {
+    render(<RefreshButton onRefresh={() => {}} refreshing />)
+    const button = screen.getByRole('button', { name: 'Refresh' })
+    expect(button).toHaveTextContent('Refreshing')
+  })
+
+  it('takes any time value, and a class of its own', () => {
+    render(
+      <RefreshButton
+        onRefresh={() => {}}
+        variant="inline"
+        className="-mx-1"
+        updatedAt={new Date(Date.now() - 2 * 60_000).toISOString()}
+      />,
+    )
+    expect(screen.getByRole('button')).toHaveTextContent('Updated 2 minutes ago')
+    expect(screen.getByRole('button')).toHaveClass('-mx-1')
+  })
+
   it('keeps its name when only the icon shows', () => {
     render(<RefreshButton onRefresh={() => {}} iconOnly />)
     expect(screen.getByRole('button', { name: 'Refresh' })).toHaveTextContent('')

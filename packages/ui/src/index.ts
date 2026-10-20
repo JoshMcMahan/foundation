@@ -73,6 +73,19 @@ export {
 } from './components/CreateModal'
 export { categoryClasses, categoryOf } from './components/category'
 export {
+  type ChartLegendItem,
+  ChartLegendList,
+  ChartTooltipContent,
+  type ChartTooltipItem,
+  SeriesSwatch,
+  type SeriesSwatchShape,
+  seriesColor,
+  seriesColors,
+  seriesOpacity,
+  seriesSlotColor,
+  useSeriesHighlight,
+} from './components/chart'
+export {
   Calendar,
   type CalendarProps,
   DatePicker,
@@ -130,6 +143,18 @@ export {
   TitleInput,
   type TitleInputProps,
 } from './components/Input'
+export {
+  ariaKeyShortcuts,
+  formatShortcut,
+  isApplePlatform,
+  Kbd,
+  type KbdProps,
+  type KbdSize,
+  type KbdVariant,
+  type KeyPlatform,
+  shortcutText,
+  useShortcutFormat,
+} from './components/Kbd'
 export { LetterBadge } from './components/LetterBadge'
 export {
   ListboxGroup,
@@ -270,6 +295,7 @@ export {
   type SegmentedOption,
 } from './components/SegmentedControl'
 export { Select, type SelectItem, type SelectProps } from './components/Select'
+export { SelectionCopy } from './components/SelectionCopy'
 export { SettingModeOption } from './components/SettingModeOption'
 export {
   SettingRow,
@@ -297,6 +323,16 @@ export type { SegmentTone } from './components/segmented'
 export { isTextEntryContext, useShortcutKey } from './components/shortcutKey'
 export { type SortDirection, Table, type TableDensity } from './components/Table'
 export { type TabItem, TabPanel, Tabs, type TabsProps } from './components/Tabs'
+export {
+  normalizeTags,
+  Tag,
+  type TagItem,
+  TagList,
+  type TagListProps,
+  type TagProps,
+  type TagStyle,
+  tagClasses,
+} from './components/Tag'
 export { ThemeEditor, type ThemeEditorProps, ThemePreview } from './components/ThemeEditor'
 export {
   type ToastAction,

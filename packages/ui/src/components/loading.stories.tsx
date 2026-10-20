@@ -64,10 +64,19 @@ export const PageLoader: StoryObj<Pick<LoaderProps, 'fill'>> = {
 // Pending until the refresh it started settles, which the play holds open.
 const neverSettles = () => new Promise(() => {})
 
-export const RefreshButtons: StoryObj<Pick<RefreshButtonProps, 'size' | 'refreshing'>> = {
+export const RefreshButtons: StoryObj<
+  Pick<RefreshButtonProps, 'size' | 'refreshing'> & { variant: RefreshButtonProps['variant'] }
+> = {
   name: 'Refresh buttons',
-  args: { size: 'md', refreshing: false },
-  argTypes: { size: { control: 'inline-radio', options: ['md', 'sm'] } },
+  args: { size: 'md', refreshing: false, variant: 'ghost' },
+  argTypes: {
+    size: { control: 'inline-radio', options: ['md', 'sm'] },
+    variant: {
+      control: 'inline-radio',
+      options: ['ghost', 'outline', 'secondary', 'primary', 'inline'],
+      description: '`inline` sits in a line of text-sized details.',
+    },
+  },
   render: (args) => (
     <div className="flex items-center gap-4">
       <RefreshButton {...args} onRefresh={neverSettles} />
@@ -86,4 +95,35 @@ export const RefreshButtons: StoryObj<Pick<RefreshButtonProps, 'size' | 'refresh
     await waitFor(() => expect(refresh).toHaveAttribute('aria-busy', 'true'))
     await expect(canvas.getByRole('button', { name: /^Updated/ })).toBeVisible()
   },
+}
+
+/** In a line of details, such as under a page's title: the inline look takes the size of the
+ *  text around it, and `updatedAt` takes any time value, here an ISO string. */
+export const RefreshInline: StoryObj<{ refreshing: boolean }> = {
+  name: 'Refresh, inline',
+  args: { refreshing: false },
+  render: ({ refreshing }) => (
+    <div className="flex items-center gap-2 p-8 text-[13px] text-(--theme-muted-text-color)">
+      <span>12 clusters</span>
+      <span aria-hidden="true">·</span>
+      <RefreshButton
+        variant="inline"
+        className="-mx-1"
+        refreshing={refreshing}
+        onRefresh={() => {}}
+        updatedAt={new Date(Date.now() - 4 * 60_000).toISOString()}
+      />
+    </div>
+  ),
+}
+
+/** While busy without a time to show, the label reads "Refreshing"; the name stays "Refresh". */
+export const RefreshBusy: StoryObj = {
+  name: 'Refresh, busy',
+  render: () => (
+    <div className="flex items-center gap-4 p-8">
+      <RefreshButton variant="primary" size="sm" refreshing onRefresh={() => {}} />
+      <RefreshButton refreshing onRefresh={() => {}} />
+    </div>
+  ),
 }

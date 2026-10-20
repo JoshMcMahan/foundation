@@ -9,6 +9,12 @@ export interface CopyOptions {
   /** No toast on success, for a control that shows its own check. A failure
    *  still says so. */
   quiet?: boolean | undefined
+  /** The whole success toast, in place of "Copied …", such as "Link copied" or one that
+   *  names the value: "Copied feature/login". */
+  success?: string | undefined
+  /** The whole failure toast, in place of "Couldn't copy …", such as one that says where
+   *  else to copy the value from. */
+  failure?: string | undefined
 }
 
 const COPIED_FOR_MS = 2000
@@ -25,15 +31,15 @@ export function useCopy(): {
   useEffect(() => () => clearTimeout(reset.current), [])
 
   const copy = useCallback(
-    async (text: string, { label, quiet = false }: CopyOptions = {}) => {
+    async (text: string, { label, quiet = false, success, failure }: CopyOptions = {}) => {
       try {
         await navigator.clipboard.writeText(text)
       } catch {
-        toast.error(label ? t.copyThingFailed(label) : t.copyFailed)
+        toast.error(failure ?? (label ? t.copyThingFailed(label) : t.copyFailed))
         return false
       }
       if (!quiet) {
-        toast.success(label ? t.copiedThing(label) : t.copiedToClipboard)
+        toast.success(success ?? (label ? t.copiedThing(label) : t.copiedToClipboard))
       }
       setCopied(true)
       clearTimeout(reset.current)

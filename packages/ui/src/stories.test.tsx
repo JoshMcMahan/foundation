@@ -15,10 +15,12 @@ import * as breadcrumbs from './components/Breadcrumbs.stories'
 import * as callout from './components/Callout.stories'
 import * as combobox from './components/Combobox.stories'
 import * as copy from './components/CopyButton.stories'
+import * as charts from './components/chart.stories'
 import * as controls from './components/controls.stories'
 import * as descriptionList from './components/DescriptionList.stories'
 import * as errorPage from './components/ErrorPage.stories'
 import * as fields from './components/fields.stories'
+import * as kbd from './components/Kbd.stories'
 import * as loading from './components/loading.stories'
 import * as markdown from './components/Markdown.stories'
 import * as menus from './components/Menu.stories'
@@ -28,6 +30,7 @@ import * as pickers from './components/pickers.stories'
 import * as primitives from './components/primitives.stories'
 import * as sections from './components/sections.stories'
 import * as tabs from './components/Tabs.stories'
+import * as tags from './components/Tag.stories'
 import * as themeEditor from './components/ThemeEditor.stories'
 import * as toasts from './components/Toast.stories'
 import * as toggleGroup from './components/ToggleGroup.stories'
@@ -77,6 +80,9 @@ const SUITES = {
   accessPanel,
   breadcrumbs,
   callout,
+  charts,
+  kbd,
+  tags,
   icons,
   sections,
   descriptionList,

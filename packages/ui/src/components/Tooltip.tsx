@@ -2,7 +2,6 @@ import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip'
 import {
   cloneElement,
   createContext,
-  Fragment,
   type ReactElement,
   type ReactNode,
   use,
@@ -10,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { positionerClassName, tipClassName } from './floating'
-import { keyedByContent } from './keys'
+import { Kbd } from './Kbd'
 import { usePopupContainer } from './popupContainer'
 
 export type TooltipSide = 'top' | 'bottom' | 'left' | 'right'
@@ -25,25 +24,6 @@ type TooltipHandle = BaseTooltip.Handle<TooltipPayload>
 
 const TooltipHandleContext = createContext<TooltipHandle | null>(null)
 
-function KbdShortcut({ keys }: { keys: string }) {
-  const parts = keys
-    .split('+')
-    .map((part) => part.trim())
-    .filter(Boolean)
-  return (
-    <span className="inline-flex items-center gap-1 align-middle">
-      {keyedByContent(parts, (p) => p).map(({ key, item: part }, idx) => (
-        <Fragment key={key}>
-          {idx > 0 && <span className="opacity-60 text-[11px]">+</span>}
-          <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded border border-current/30 bg-current/10 font-sans text-[11px] font-semibold leading-none">
-            {part}
-          </kbd>
-        </Fragment>
-      ))}
-    </span>
-  )
-}
-
 function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
   const portal = usePopupContainer()
   return (
@@ -53,7 +33,7 @@ function TooltipPopup({ content, shortcut, side }: TooltipPayload) {
           {shortcut ? (
             <span className="inline-flex items-center gap-2">
               {content}
-              <KbdShortcut keys={shortcut} />
+              <Kbd keys={shortcut} size="xs" />
             </span>
           ) : (
             content
@@ -108,7 +88,8 @@ export interface TooltipProps
   /** The anchor. It receives the trigger's props and ref, so it must pass them to its element. */
   children: ReactElement
   side?: TooltipSide
-  /** Keys shown beside the content, joined with +, such as ⌘+F. */
+  /** Keys shown beside the content as keycaps, written as `Kbd` takes them, such as
+   *  `Mod+F`: Command on an Apple keyboard, Control elsewhere. */
   shortcut?: string | undefined
   disabled?: boolean | undefined
   /** Opens only while the anchor's text is clipped, such as a truncated label. */

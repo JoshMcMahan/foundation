@@ -32,6 +32,18 @@ describe('useCopy', () => {
     vi.useRealTimers()
   })
 
+  it('says it in the caller’s own words when given them', async () => {
+    setClipboard(async () => {})
+    const { result } = renderHook(() => useCopy())
+    await act(() => result.current.copy('x', { label: 'link', success: 'Link copied' }))
+    expect(notify.success).toHaveBeenCalledWith('Link copied')
+    setClipboard(async () => {
+      throw new Error('denied')
+    })
+    await act(() => result.current.copy('x', { label: 'branch', failure: 'Copy it from the menu' }))
+    expect(notify.error).toHaveBeenCalledWith('Copy it from the menu')
+  })
+
   it('stays quiet on success when asked, and still reports a failure', async () => {
     setClipboard(async () => {})
     const { result } = renderHook(() => useCopy())

@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { IconButton } from '../components/IconButton'
+import { isApplePlatform, Kbd } from '../components/Kbd'
 import { Popover } from '../components/Popover'
 import { KeyboardIcon } from '../icons'
 import { useGraphEditorStrings } from './editorStrings'
@@ -17,7 +18,7 @@ export interface ShortcutGroup {
 }
 
 /** Whether the keyboard is an Apple one, whose Command key does what Control does elsewhere. */
-export const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+export const IS_MAC = isApplePlatform()
 
 /** Copy, paste and undo take Command on a Mac and Control elsewhere, as the handlers do. A Mac
  *  shows its symbols; elsewhere the keys go by the names their keycaps carry in the strings. */
@@ -28,6 +29,20 @@ export function modifierKeys(key: { ctrl: string; alt: string }): { mod: string;
 /** A toolbar button that opens the list of gestures and keys a pane takes. */
 export function ShortcutsButton({ groups }: { groups: ShortcutGroup[] }) {
   const t = useGraphEditorStrings()
+  // A pointer gesture, such as "Drag a handle", reads as words; only keys get keycaps.
+  const k = t.shortcutKeys
+  const gestures = new Set([
+    k.click,
+    k.drag,
+    k.dragJob,
+    k.dragCircle,
+    k.dragButton,
+    k.dragSpace,
+    k.dragHandle,
+    k.dragEdge,
+    k.rightClick,
+    k.scroll,
+  ])
   return (
     <Popover
       title={t.shortcuts}
@@ -45,14 +60,21 @@ export function ShortcutsButton({ groups }: { groups: ShortcutGroup[] }) {
                   {shortcut.combos.map((keys, i) => (
                     <Fragment key={keys.join('+')}>
                       {i > 0 && <span className="theme-muted-text">/</span>}
-                      {keys.map((key) => (
-                        <kbd
-                          key={key}
-                          className="rounded border theme-border px-1 py-px text-[11px]"
-                        >
-                          {key}
-                        </kbd>
-                      ))}
+                      {keys.some((key) => gestures.has(key)) ? (
+                        <span className="inline-flex flex-wrap items-center gap-1">
+                          {keys.map((key) =>
+                            gestures.has(key) ? (
+                              <span key={key} className="text-[11px] text-(--theme-app)">
+                                {key}
+                              </span>
+                            ) : (
+                              <Kbd key={key} keys={[key]} />
+                            ),
+                          )}
+                        </span>
+                      ) : (
+                        <Kbd keys={keys} />
+                      )}
                     </Fragment>
                   ))}
                 </dt>

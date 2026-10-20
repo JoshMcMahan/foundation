@@ -2137,21 +2137,37 @@ export const ElapsedTimes: StoryObj<{ running: boolean }> = {
   },
 }
 
-/** Links that leave the page open a new tab and say so to screen readers. */
-export const ExternalLinks: StoryObj = {
-  render: () => (
-    <div className="flex items-center gap-6 p-8 text-sm">
+/** Links that leave the page open a new tab and say so to screen readers, unless their own
+ *  words already do (`announce={false}`). */
+export const ExternalLinks: StoryObj<{ icon: boolean; announce: boolean }> = {
+  args: { icon: false, announce: false },
+  argTypes: {
+    icon: { control: 'boolean', description: 'An arrow after the text.' },
+    announce: {
+      control: 'boolean',
+      description: '"(opens in a new tab)" for screen readers; off where the text says so.',
+    },
+  },
+  render: ({ icon, announce }) => (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-8 text-sm">
       <ExternalLink href="https://example.com" className="link">
         Documentation
       </ExternalLink>
       <ExternalLink href="https://example.com" className="link" icon>
         Status page
       </ExternalLink>
+      <ExternalLink href="https://example.com" className="link" icon={icon} announce={announce}>
+        Open the terminal in a new tab
+      </ExternalLink>
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const link = within(canvasElement).getByRole('link', { name: /^Status page/ })
+    const canvas = within(canvasElement)
+    const link = canvas.getByRole('link', { name: /^Status page/ })
     await expect(link).toHaveAttribute('target', '_blank')
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    await expect(canvas.getByRole('link', { name: /terminal/ })).toHaveAccessibleName(
+      'Open the terminal in a new tab',
+    )
   },
 }

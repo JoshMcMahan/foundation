@@ -114,7 +114,11 @@ describe('Tooltip', () => {
     )
     focus(screen.getByRole('button'))
     await waitFor(() => expect(openTooltip()).not.toBeNull())
-    expect([...document.body.querySelectorAll('kbd')].map((k) => k.textContent)).toEqual(['⌘', 'F'])
+    // One <kbd> for the combination, with one inside it for each key.
+    expect([...document.body.querySelectorAll('kbd kbd')].map((k) => k.textContent)).toEqual([
+      '⌘',
+      'F',
+    ])
   })
 
   it('opens an overflowOnly tooltip only while the text is clipped', async () => {

@@ -2,6 +2,7 @@ import { type ComponentPropsWithRef, type ReactNode, type Ref, useCallback, useR
 import { cx } from '../cx'
 import { AppLink, type AppLinkProps } from './AppLink'
 import { type ButtonSize, type ButtonVariant, buttonClasses } from './buttonClasses'
+import { ariaKeyShortcuts } from './Kbd'
 import { useShortcutKey } from './shortcutKey'
 import { Tooltip } from './Tooltip'
 
@@ -58,6 +59,8 @@ export function IconButton({
   )
   const shared = {
     'aria-label': label,
+    // Says the key to assistive technology too, which never sees the tooltip.
+    'aria-keyshortcuts': shortcut ? ariaKeyShortcuts(shortcut) : undefined,
     className: cx(buttonClasses({ variant, size, iconOnly: true }), className),
   }
   const content = (

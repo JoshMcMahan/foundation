@@ -37,6 +37,7 @@ import { OptionDescription } from './OptionDescription'
 import { useLocale, useStrings } from './Provider'
 import { usePopupContainer } from './popupContainer'
 import { useQueryMatch } from './search'
+import { tagClasses } from './Tag'
 import { Tooltip } from './Tooltip'
 
 export type {
@@ -537,8 +538,11 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
                     // biome-ignore lint/suspicious/noArrayIndexKey: a value has no key of its own; the label alone may repeat
                     key={`${index}:${entry.label}`}
                     aria-label={entry.label}
-                    // The library's tag look, a pill with a hairline edge, so a chosen value reads as the tag it is.
-                    className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-full border border-(--theme-border) pr-0.5 pl-2 text-[11px] leading-none whitespace-nowrap text-(--theme-app) outline-none data-highlighted:bg-(--theme-hover)"
+                    // The library's one tag look, so a chosen value reads as the tag it becomes.
+                    className={cx(
+                      tagClasses(),
+                      'pr-0.5 outline-none data-highlighted:bg-(--theme-hover)',
+                    )}
                   >
                     {entry.label}
                     <BaseCombobox.ChipRemove
@@ -850,7 +854,11 @@ function Suggestions({
           disabled={disabled}
           aria-label={t.add(value)}
           onClick={() => onAdd(value)}
-          className="inline-flex h-5 cursor-pointer items-center gap-0.5 rounded-full border border-dashed border-(--theme-border-strong) pr-2 pl-1.5 text-[11px] leading-none text-(--theme-muted-text-color) transition-colors hover:border-solid hover:bg-(--theme-hover) hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-dashed disabled:hover:bg-transparent"
+          // The tag pill, dashed and muted until pressed: a value not yet added.
+          className={cx(
+            tagClasses(),
+            'cursor-pointer gap-0.5 border-dashed border-(--theme-border-strong) pr-2 pl-1.5 text-(--theme-muted-text-color) transition-colors hover:border-solid hover:bg-(--theme-hover) hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-dashed disabled:hover:bg-transparent',
+          )}
         >
           <AddIcon aria-hidden="true" className="size-2.5" />
           {value}

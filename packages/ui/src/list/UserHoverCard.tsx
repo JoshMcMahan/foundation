@@ -3,7 +3,9 @@ import { Avatar } from '../components/Avatar'
 import { CopyButton } from '../components/CopyButton'
 import { type UILinkComponent, useLink, useStrings } from '../components/Provider'
 import { LoadingRegion, Skeleton } from '../components/Skeleton'
+import { useCopy } from '../components/useCopy'
 import { cx } from '../cx'
+import { CheckIcon } from '../icons'
 
 /** A person's card, for `HoverCard`'s `card`. */
 export interface UserHoverCardProps {
@@ -115,7 +117,8 @@ const EMAIL = /^[^\s@]+@[^\s@]+$/
 const rowClasses = 'flex gap-2 text-(--theme-muted-text-color)'
 
 /** One detail line of a hover card: a leading icon and its content. With
- * `onClick` the line is a button. */
+ * `onClick` the line is a button; with `copy` it is a button that copies a value,
+ * such as the email address it shows, its icon turning into a check for a moment. */
 export function HoverCardRow({
   icon,
   children,
@@ -123,6 +126,7 @@ export function HoverCardRow({
   align = 'center',
   truncate = false,
   onClick,
+  copy,
 }: {
   icon: ReactNode
   children: ReactNode
@@ -131,7 +135,11 @@ export function HoverCardRow({
   align?: 'center' | 'start' | undefined
   truncate?: boolean | undefined
   onClick?: (() => void) | undefined
+  /** Copies `text` when pressed, named by `label`: "Copy email", then a toast "Copied email". */
+  copy?: { text: string; label: string } | undefined
 }) {
+  const { common: t } = useStrings()
+  const { copy: write, copied } = useCopy()
   const content = (
     <>
       <span
@@ -141,19 +149,22 @@ export function HoverCardRow({
           align === 'start' && 'mt-0.5',
         )}
       >
-        {icon}
+        {copied ? <CheckIcon className="text-(--theme-success)" /> : icon}
       </span>
       <span className={cx('min-w-0', truncate && 'truncate')}>{children}</span>
+      {/* The name starts with what it shows, then says what pressing does. */}
+      {copy && <span className="sr-only">. {t.copyThing(copy.label)}</span>}
     </>
   )
   const alignClass = align === 'start' ? 'items-start' : 'items-center'
+  const press = copy ? () => void write(copy.text, { label: copy.label }) : onClick
 
-  if (onClick) {
+  if (press) {
     return (
       <button
         type="button"
-        title={title}
-        onClick={onClick}
+        title={title ?? (copy ? t.copyThing(copy.label) : undefined)}
+        onClick={press}
         className={cx(
           rowClasses,
           alignClass,

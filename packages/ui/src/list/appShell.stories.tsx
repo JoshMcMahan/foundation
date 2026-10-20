@@ -661,13 +661,16 @@ const PANEL_RIGHT: ToolbarItem[] = [
   },
 ]
 
-function PanelToolbar({ width }: { width: number }) {
+function PanelToolbar({ width, refreshing = false }: { width: number; refreshing?: boolean }) {
+  const right = PANEL_RIGHT.map((item) =>
+    item.key === 'refresh' ? { ...item, loading: refreshing } : item,
+  )
   return (
     <MockHost>
       {() => (
         // Inline: the package's stylesheet doesn't scan stories.
         <div className="p-4" style={{ maxWidth: width + 32 }}>
-          <ActionToolbar label="Cluster controls" groups={PANEL_GROUPS} right={PANEL_RIGHT} />
+          <ActionToolbar label="Cluster controls" groups={PANEL_GROUPS} right={right} />
         </div>
       )}
     </MockHost>
@@ -679,15 +682,19 @@ function PanelToolbar({ width }: { width: number }) {
  *  in the error color. It is one tab stop: the arrow keys move between its
  *  items, the disabled Delete included, whose reason is part of its name. Drag
  *  the width to see it fold. */
-export const Toolbar: StoryObj<{ width: number }> = {
-  args: { width: 1000 },
+export const Toolbar: StoryObj<{ width: number; refreshing: boolean }> = {
+  args: { width: 1000, refreshing: false },
   argTypes: {
     width: {
       control: { type: 'range', min: 240, max: 1100, step: 10 },
       description: "The toolbar's width, in pixels.",
     },
+    refreshing: {
+      control: 'boolean',
+      description: 'Refresh is `loading`: a spinner takes its icon and a press does nothing more.',
+    },
   },
-  render: ({ width }) => <PanelToolbar width={width} />,
+  render: ({ width, refreshing }) => <PanelToolbar width={width} refreshing={refreshing} />,
   play: async ({ canvasElement }) => {
     const toolbar = within(canvasElement).getByRole('toolbar', { name: 'Cluster controls' })
     const run = within(toolbar).getByRole('button', { name: 'Run' })
@@ -710,9 +717,9 @@ export const Toolbar: StoryObj<{ width: number }> = {
  *  from the end, the right-hand ones first, until the row fits, so it keeps
  *  every label it has room for. A folded button keeps its label as its name and
  *  shows it in a tooltip. */
-export const ToolbarFolded: StoryObj<{ width: number }> = {
+export const ToolbarFolded: StoryObj<{ width: number; refreshing: boolean }> = {
   ...Toolbar,
-  args: { width: 640 },
+  args: { width: 640, refreshing: false },
   play: async ({ canvasElement }) => {
     const toolbar = within(canvasElement).getByRole('toolbar', { name: 'Cluster controls' })
     await expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth)
@@ -729,9 +736,9 @@ export const ToolbarFolded: StoryObj<{ width: number }> = {
  *  end, the right-hand ones first and the primary Run never. The menu keeps a
  *  toggle a checkbox, a link a link, and Delete in the error color with its
  *  reason, and the arrow keys reach its button as one of the toolbar's items. */
-export const ToolbarNarrow: StoryObj<{ width: number }> = {
+export const ToolbarNarrow: StoryObj<{ width: number; refreshing: boolean }> = {
   ...Toolbar,
-  args: { width: 320 },
+  args: { width: 320, refreshing: false },
   play: async ({ canvasElement }) => {
     const toolbar = within(canvasElement).getByRole('toolbar', { name: 'Cluster controls' })
     await expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth)
@@ -748,5 +755,19 @@ export const ToolbarNarrow: StoryObj<{ width: number }> = {
       }),
     ).toHaveAttribute('aria-disabled', 'true')
     await userEvent.keyboard('{Escape}')
+  },
+}
+
+/** A loading action, here Refresh while it fetches: a spinner takes its icon, it keeps its
+ *  focus and says it is busy, and a second press starts nothing. */
+export const ToolbarBusyAction: StoryObj<{ width: number; refreshing: boolean }> = {
+  ...Toolbar,
+  args: { width: 1000, refreshing: true },
+  play: async ({ canvasElement }) => {
+    const toolbar = within(canvasElement).getByRole('toolbar', { name: 'Cluster controls' })
+    await expect(within(toolbar).getByRole('button', { name: 'Refresh' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
   },
 }

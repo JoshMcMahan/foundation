@@ -1,5 +1,4 @@
 import type { ComponentPropsWithRef } from 'react'
-import { cx } from '../cx'
 import { ExternalLinkIcon } from '../icons'
 import { safeUrl } from '../safeUrl'
 import { useStrings } from './Provider'
@@ -7,6 +6,9 @@ import { useStrings } from './Provider'
 export type ExternalLinkProps = Omit<ComponentPropsWithRef<'a'>, 'target' | 'rel'> & {
   /** Marks the link as leaving the page with an arrow after its text. */
   icon?: boolean
+  /** Says "opens in a new tab" to screen readers after the text, unless false: for a link
+   *  whose own words already say so, or whose `aria-label` replaces its text. */
+  announce?: boolean
 }
 
 /** A link that opens in a new tab, says so to screen readers, and gives the
@@ -16,6 +18,7 @@ export function ExternalLink({
   href,
   children,
   icon = false,
+  announce = true,
   className,
   ...props
 }: ExternalLinkProps) {
@@ -28,11 +31,12 @@ export function ExternalLink({
       href={safeUrl(href)}
       target="_blank"
       rel="noopener noreferrer"
-      className={cx(icon && 'inline-flex items-center gap-1', className)}
+      className={className}
     >
       {children}
-      <span className="sr-only"> {common.opensInNewTab}</span>
-      {icon && <ExternalLinkIcon className="h-3 w-3 shrink-0" aria-hidden />}
+      {announce && <span className="sr-only"> {common.opensInNewTab}</span>}
+      {/* Inline after the last word, so a wrapped link ends with it rather than centering it. */}
+      {icon && <ExternalLinkIcon className="ml-1 inline-block h-3 w-3 align-[-1px]" aria-hidden />}
     </a>
   )
 }

@@ -54,7 +54,11 @@ function Rows() {
         Online
       </HoverCardRow>
       <HoverCardRow icon={<LicenseIcon className="text-emerald-500" />}>Licensed</HoverCardRow>
-      <HoverCardRow icon={<MailIcon />} title="Copy email" truncate onClick={() => {}}>
+      <HoverCardRow
+        icon={<MailIcon />}
+        truncate
+        copy={{ text: 'ada.lovelace@example.com', label: 'email' }}
+      >
         ada.lovelace@example.com
       </HoverCardRow>
       <HoverCardRow icon={<UsersIcon />} align="start">

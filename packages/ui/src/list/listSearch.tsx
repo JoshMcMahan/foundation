@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { buttonClasses } from '../components/buttonClasses'
+import { ariaKeyShortcuts } from '../components/Kbd'
 import { useLocale, usePersistedState, useStrings } from '../components/Provider'
 import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
@@ -171,6 +172,7 @@ export function ListSearchControl({
         type="button"
         onClick={search.openSearch}
         aria-label={label}
+        aria-keyshortcuts={`/ ${ariaKeyShortcuts('Mod+F')}`}
         className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
       >
         <SearchIcon />

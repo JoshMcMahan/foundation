@@ -114,9 +114,13 @@ Each need has one component. Reach for it before styling markup by hand.
 | A grouped page of settings | `SettingsCard` with `SettingRow`s |
 | A person or an agent | `Avatar`, colored by name without a picture, or by kind; `AvatarGroup` for an overlapping stack with a "+N" chip |
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
+| A thing's tags or labels | `Tag`; `TagList` for several, wrapped or on one line ending in "+N" |
+| Keys to press | `Kbd`, with `Mod` for Command or Control; `ariaKeyShortcuts` for the control the keys press |
+| A chart's colors, legend and tooltip | `seriesColors`, `ChartLegendList`, `ChartTooltipContent` and `useSeriesHighlight`, around a chart drawn by hand or by a library |
 | A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
-| A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet; `useCopy` for a menu row or a control of your own |
+| A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet, with `secret` for a value shown once; `SelectionCopy` to copy part of a block by selecting it; `useCopy` for a menu row or a control of your own |
 | A live relative time or duration | `RelativeTime` (with a `fallback`, an `exact` style for its tooltip, or `show="absolute"`), `Elapsed` |
+| Fetching again on demand | `RefreshButton`; `variant="inline"` in a line of details; `loading` on an `ActionToolbar` action |
 | Rendered Markdown | `Markdown` |
 | Code or YAML to read or edit | `Editor` from `./editor`; `EditorField` as a form field, `FormCodePanel` for a form's values as JSON |
 | A run's jobs, steps, logs, annotations and warnings | `DependencyGraph` from `./graph`, as a graph or a list |

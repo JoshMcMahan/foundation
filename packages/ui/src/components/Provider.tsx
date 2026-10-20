@@ -123,6 +123,10 @@ export interface UIStrings {
     updated: (ago: string) => string
     /** Read with a "+3" chip that stands for the items a list leaves out. */
     moreCount: (count: number) => string
+    /** Names the button that copies the text selected in a block. */
+    copySelection: string
+    /** Read in place of a masked secret's dots. */
+    hiddenValue: string
   }
   dropdown: {
     select: (type: string) => string
@@ -563,6 +567,24 @@ export interface UIStrings {
      *  it isn't this year. `locale` is UIProvider's, when the host gives one. */
     date: (date: Date, locale?: string) => string
   }
+  /** Key names in a shortcut, as keycaps carry them off an Apple keyboard, such as
+   *  "Strg" for Control in German. An Apple keyboard shows its symbols: ⌘ ⌥ ⇧ ⌃. */
+  keys: {
+    ctrl: string
+    alt: string
+    shift: string
+    meta: string
+    enter: string
+    escape: string
+    space: string
+    tab: string
+    backspace: string
+    delete: string
+  }
+  chart: {
+    /** The row under a chart's tooltip that sums its series. */
+    total: string
+  }
   list: {
     moreActions: string
     /** A toolbar toggle's name in the overflow menu, where a row can't be pressed. */
@@ -992,6 +1014,8 @@ const DEFAULTS: UIProviderValue = {
       refreshing: 'Refreshing',
       updated: (ago) => `Updated ${ago}`,
       moreCount: (count) => `${count} more`,
+      copySelection: 'Copy selection',
+      hiddenValue: 'Hidden value',
     },
     dropdown: {
       select: (type) => `Select ${type}`,
@@ -1416,6 +1440,21 @@ const DEFAULTS: UIProviderValue = {
         dayFormat(locale)[
           date.getFullYear() === new Date().getFullYear() ? 'short' : 'medium'
         ].format(date),
+    },
+    keys: {
+      ctrl: 'Ctrl',
+      alt: 'Alt',
+      shift: 'Shift',
+      meta: 'Meta',
+      enter: 'Enter',
+      escape: 'Esc',
+      space: 'Space',
+      tab: 'Tab',
+      backspace: 'Backspace',
+      delete: 'Delete',
+    },
+    chart: {
+      total: 'Total',
     },
     list: {
       moreActions: 'More actions',

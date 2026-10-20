@@ -22,6 +22,15 @@ describe('ExternalLink', () => {
     expect(screen.getByRole('link')).toHaveTextContent('(nueva pestaña)')
   })
 
+  it('omits the announcement when its text already says so', () => {
+    render(
+      <ExternalLink href="https://example.com" announce={false}>
+        Open in a new tab
+      </ExternalLink>,
+    )
+    expect(screen.getByRole('link')).toHaveAccessibleName('Open in a new tab')
+  })
+
   it('shows an arrow when asked, hidden from screen readers', () => {
     const { container } = render(
       <ExternalLink href="https://example.com" icon>
