@@ -1,6 +1,6 @@
 module github.com/parallelworks/foundation
 
-go 1.27.2
+go 1.27.3
 
 // Enforce FIPS 140-3 mode everywhere, including `go test`: non-approved
 // algorithms fail at runtime.

@@ -1,6 +1,6 @@
 module github.com/parallelworks/foundation/dev
 
-go 1.27.2
+go 1.27.3
 
 // A separate module, outside the root module's `godebug fips140=only`: the S3
 // emulator computes MD5 ETags, which FIPS mode rejects at runtime. Nothing
