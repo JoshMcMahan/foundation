@@ -212,6 +212,7 @@ interface ChatContextValue {
   updateConversationTitle: (id: string, title: string) => Promise<boolean>
   navigateToBranch: (messageId: string) => void
   clearCurrentConversation: () => void
+  consumeInputFocus: (conversationId?: string) => boolean
 }
 
 /** The reply being written, which changes with every streamed token. It has
@@ -319,6 +320,15 @@ export function ChatProvider({
   // Updated explicitly in: clearCurrentConversation (null), loadConversation (id), sendMessage (new id)
   // Do NOT auto-sync with state - that causes race conditions
   const currentConversationIdRef = useRef<string | null>(null)
+
+  const inputFocusPendingRef = useRef<string | null>(null)
+  const consumeInputFocus = useCallback((conversationId?: string) => {
+    if (!conversationId || inputFocusPendingRef.current !== conversationId) {
+      return false
+    }
+    inputFocusPendingRef.current = null
+    return true
+  }, [])
 
   // The model last chosen, offered again once the models load.
   const [storedModel, storeModel] = usePersistedState<string | null>('aiChat.model', null)
@@ -885,6 +895,7 @@ export function ChatProvider({
           },
         })
 
+        inputFocusPendingRef.current = newId
         navigation.toConversation(newId)
 
         if (generatedTitle) {
@@ -1411,6 +1422,7 @@ export function ChatProvider({
 
     pendingQueueRef.current = []
     isSendingRef.current = false
+    inputFocusPendingRef.current = null
 
     dispatch({ type: 'SET_CURRENT_CONVERSATION', conversation: null })
   }, [resetAnimationRefs, streamingConversationIdRef])
@@ -1465,6 +1477,7 @@ export function ChatProvider({
       updateConversationTitle,
       navigateToBranch,
       clearCurrentConversation,
+      consumeInputFocus,
     }),
     [
       adapter,
@@ -1514,6 +1527,7 @@ export function ChatProvider({
       updateConversationTitle,
       navigateToBranch,
       clearCurrentConversation,
+      consumeInputFocus,
     ],
   )
 

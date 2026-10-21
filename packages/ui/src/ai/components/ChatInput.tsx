@@ -216,7 +216,7 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const attachmentUploadRef = useRef<AttachmentUploadHandle>(null)
   const chat = useChat()
-  const { adapter, flushQueuedMessages, isSelectedModelAvailable, tools } = chat
+  const { adapter, flushQueuedMessages, isSelectedModelAvailable, tools, consumeInputFocus } = chat
   const { isStreaming, stopStreaming, queuedCount } = streamControls(chat, turn)
   const t = useChatConfig().strings.input
   const effectivePlaceholder = placeholder ?? t.placeholder
@@ -238,6 +238,12 @@ export default function ChatInput({
     }),
     [],
   )
+
+  useEffect(() => {
+    if (!disabled && consumeInputFocus(conversationId)) {
+      textareaRef.current?.focus()
+    }
+  }, [disabled, conversationId, consumeInputFocus])
 
   // The box grows with its text. Measured before paint so a new line never
   // flashes a scrollbar.

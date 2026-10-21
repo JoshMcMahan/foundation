@@ -258,6 +258,26 @@ describe('starting a new chat', () => {
 
     expect(navigation.toConversation).toHaveBeenCalledWith('conv-new')
   })
+
+  it('hands the focus to the input the first send navigates to, once', async () => {
+    const adapter = makeAdapter()
+    await renderProvider(adapter)
+
+    await act(async () => {
+      await chat.sendMessage('first message')
+    })
+
+    expect(chat.consumeInputFocus()).toBe(false)
+    expect(chat.consumeInputFocus('conv-other')).toBe(false)
+    expect(chat.consumeInputFocus('conv-new')).toBe(true)
+    expect(chat.consumeInputFocus('conv-new')).toBe(false)
+
+    await act(async () => {
+      await chat.sendMessage('second message')
+    })
+
+    expect(chat.consumeInputFocus('conv-new')).toBe(false)
+  })
 })
 
 type StreamControl = {

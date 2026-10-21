@@ -35,6 +35,7 @@ const chatState = {
   tools: [] as unknown[],
   enabledToolIds: [] as string[],
   setToolEnabled: vi.fn(),
+  consumeInputFocus: vi.fn((_conversationId?: string) => false),
 }
 
 vi.mock('../core/ChatProvider', () => ({
@@ -64,6 +65,7 @@ beforeEach(() => {
   addFilesMock.mockClear()
   chatState.adapter.attachments = {}
   chatState.isSelectedModelAvailable = true
+  chatState.consumeInputFocus = vi.fn((_conversationId?: string) => false)
 })
 
 const pasteFiles = (files: File[]) => fireEvent.paste(textarea(), { clipboardData: { files } })
@@ -134,6 +136,22 @@ describe('ChatInput drafts', () => {
     render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
     fireEvent.change(textarea(), { target: { value: 'x'.repeat(10_001) } })
     expect(storage.has('aiChatDraft:c1')).toBe(false)
+  })
+})
+
+describe('ChatInput focus handoff', () => {
+  it('leaves focus alone when no send handed it over', () => {
+    render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+    expect(textarea()).not.toHaveFocus()
+  })
+
+  it('takes the focus a send handed over once it is enabled', () => {
+    chatState.consumeInputFocus = vi.fn((id?: string) => id === 'c1')
+    const { rerender } = render(<ChatInput onSend={vi.fn()} conversationId="c1" disabled />)
+    expect(chatState.consumeInputFocus).not.toHaveBeenCalled()
+
+    rerender(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+    expect(textarea()).toHaveFocus()
   })
 })
 
