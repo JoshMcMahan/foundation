@@ -168,6 +168,13 @@ export interface ListViewChrome {
    * row's `⋯` then keeps a lane of its own after it rather than floating over
    * it on hover. */
   lastColumnLocked?: boolean | undefined
+  /** Whether the row's `⋯` keeps a lane of its own after the last column
+   * rather than floating over its end on hover: the last column is locked, or
+   * it is end-aligned, such as a runtime or a count, whose value sits right
+   * where the `⋯` would and would be hidden while the row is hovered. A text
+   * column's end is usually blank, so the `⋯` floats there and the list keeps
+   * its width. */
+  reservesActionLane?: boolean | undefined
   /** The list's filters, which `ListPage` shows as a row of chips under its toolbar. */
   filterState?: ListFilters | undefined
 }
@@ -366,6 +373,8 @@ export function useListView<T>({
   const last = visibleColumns.at(-1)
   const lastColumnLocked =
     visibleColumns.length > 1 && last !== undefined && !last.alwaysVisible && isLocked(last)
+  const reservesActionLane =
+    lastColumnLocked || (visibleColumns.length > 1 && last?.align === 'end')
 
   const toggleColumn = useCallback(
     (key: string) =>
@@ -491,6 +500,7 @@ export function useListView<T>({
     columnClasses,
     columnStacks,
     lastColumnLocked,
+    reservesActionLane,
     isVisible,
     pinnedCount,
     actionsWidth,

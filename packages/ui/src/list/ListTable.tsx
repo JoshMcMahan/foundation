@@ -45,10 +45,12 @@ export const listTableFixedProps = {
  *  clicks: it navigates, and no selection claims plain clicks. */
 export const StretchRowLinkContext = createContext(false)
 
-// The link's box covers the row (the `ListRow`'s `<tr>` is its containing
-// block), so the whole row is the link: it opens in a new tab, shows its URL
-// and reads as a link, where a row click handler could do none of these. Its
-// focus ring follows, drawn around the row. Mark the link `data-row-link`.
+/** Makes a link cover its `ListRow` (the row's `<tr>` is its containing block),
+ *  so the whole row is the link: it opens in a new tab, shows its URL and
+ *  reads as a link, where a row click handler could do none of these. Its
+ *  focus ring follows, drawn around the row. A `NameCell` with an `href` does
+ *  this itself; a row whose link is elsewhere, such as a run's number before
+ *  its workflow's name, gives its own link this class and `data-row-link`. */
 export const STRETCHED_LINK =
   "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-link)"
 
@@ -240,7 +242,8 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
   )
 }
 
-/** Prevents the name column from being crushed under table-auto layout during horizontal overflow. */
+/** Prevents the name column from being crushed under table-auto layout during horizontal
+ *  overflow. In a list under 400px wide, the floor is half the list instead. */
 export const NAME_MIN_WIDTH_PX = 200
 
 /** Trailing cell geometry: icon-button size + gap + padding, sized to fit exactly its pinned buttons. */
@@ -333,6 +336,7 @@ export function ListActionsHeader({
     actionsWidth: number
     alwaysShowActions?: boolean
     lastColumnLocked?: boolean | undefined
+    reservesActionLane?: boolean | undefined
   }
   actionCount?: number
   className?: string
@@ -346,7 +350,7 @@ export function ListActionsHeader({
   const floating =
     !!view &&
     !view.alwaysShowActions &&
-    !view.lastColumnLocked &&
+    !(view.reservesActionLane ?? view.lastColumnLocked) &&
     view.actionsWidth === actionsColumnWidth(0)
   return (
     <Table.Header

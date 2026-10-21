@@ -45,8 +45,8 @@ const RowActionsContext = createContext<{
   always: boolean
   columnClasses: string[]
   columnStacks: boolean[]
-  lastLocked: boolean
-}>({ show: true, always: false, columnClasses: [], columnStacks: [], lastLocked: false })
+  reservesLane: boolean
+}>({ show: true, always: false, columnClasses: [], columnStacks: [], reservesLane: false })
 
 function useRowActions(view?: ListViewChrome) {
   return useMemo(
@@ -55,7 +55,7 @@ function useRowActions(view?: ListViewChrome) {
       always: view?.alwaysShowActions ?? false,
       columnClasses: view?.columnClasses ?? [],
       columnStacks: view?.columnStacks ?? [],
-      lastLocked: view?.lastColumnLocked ?? false,
+      reservesLane: view?.reservesActionLane ?? view?.lastColumnLocked ?? false,
     }),
     [
       view?.showActions,
@@ -63,6 +63,7 @@ function useRowActions(view?: ListViewChrome) {
       view?.columnClasses,
       view?.columnStacks,
       view?.lastColumnLocked,
+      view?.reservesActionLane,
     ],
   )
 }
@@ -239,7 +240,7 @@ export function ListRow({
     always: alwaysShowActions,
     columnClasses,
     columnStacks,
-    lastLocked,
+    reservesLane,
   } = useContext(RowActionsContext)
 
   // Apply each column's responsive class to its cell by position. toArray drops
@@ -319,9 +320,10 @@ export function ListRow({
 
   // A row whose only action is a `⋯` shown on hover floats it over its end
   // instead of keeping a lane for it (see ListActionsHeader).
-  // Not over a locked column, such as a delete button's, which it would cover: there it keeps
-  // its lane after the column.
-  const floating = !alwaysShowActions && !(pinnedActions && pinnedActions.length > 0) && !lastLocked
+  // Not over a locked column, such as a delete button's, or an end-aligned one, such as a
+  // runtime, whose value it would cover: there it keeps its lane after the column.
+  const floating =
+    !alwaysShowActions && !(pinnedActions && pinnedActions.length > 0) && !reservesLane
 
   // While selecting, a plain click on the row selects it, so the link stays in its cell.
   const stretch = !!href && !selectionActive
@@ -661,7 +663,9 @@ function shareWidths(columns: ColumnDef[], stacks: boolean[]): (Tiers | undefine
 function headerStyle(col: ColumnDef, tiers: Tiers | undefined): CSSProperties | undefined {
   const style: Record<string, string | number> = {}
   if (col.alwaysVisible) {
-    style['minWidth'] = NAME_MIN_WIDTH_PX
+    // Half a phone-narrow list at most, so the columns that stay beside the
+    // name and the `⋯`'s lane still fit beside it there.
+    style['minWidth'] = `min(${NAME_MIN_WIDTH_PX}px, 50cqw)`
   }
   if (tiers) {
     style['--share-wide'] = `${tiers.wide}%`

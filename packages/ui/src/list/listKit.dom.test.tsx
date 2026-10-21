@@ -453,7 +453,7 @@ describe('column widths', () => {
     const del = header('Delete')
     expect(del.style.width).toBe('40px')
     expect(del.style.minWidth).toBe('')
-    expect(header('Name').style.minWidth).toBe(`${NAME_MIN_WIDTH_PX}px`)
+    expect(header('Name').style.minWidth).toBe(`min(${NAME_MIN_WIDTH_PX}px, 50cqw)`)
     fireEvent.click(screen.getByRole('button', { name: 'Display options' }))
     const picker = screen.getByRole('dialog')
     expect(within(picker).getByText('Type')).toBeInTheDocument()
@@ -523,5 +523,50 @@ describe('trailing controls with a locked last column', () => {
     expect(cells.at(-2)).toHaveClass('@max-[36rem]:align-top', '@max-[36rem]:pt-2.5')
     const menu = screen.getByRole('button', { name: /more actions/i }).parentElement
     expect(menu).toHaveClass('@max-[36rem]:items-start', '@max-[36rem]:pt-2')
+  })
+})
+
+describe('trailing controls by the last column’s alignment', () => {
+  function LastColumn({ align }: { align?: 'end' }) {
+    const view = useListView<unknown>({
+      storageKey: `last-${align ?? 'start'}`,
+      columns: [
+        { key: 'run', label: 'Run', alwaysVisible: true },
+        { key: 'submitted', label: 'Submitted', stack: false },
+        { key: 'runtime', label: 'Runtime', stack: false, ...(align ? { align } : {}) },
+      ],
+    })
+    return (
+      <ListRowActionsProvider view={view}>
+        <Table {...listTableProps}>
+          <ListColumns view={view} />
+          <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+            <NameCell icon={null} name="#44" href={null} />
+            <Table.Item>2 min ago</Table.Item>
+            <Table.Item>1m 52s</Table.Item>
+          </ListRow>
+        </Table>
+      </ListRowActionsProvider>
+    )
+  }
+
+  it('keeps the ⋯ in a lane of its own after an end-aligned column, whose value it would cover', () => {
+    render(
+      <UIProvider>
+        <LastColumn align="end" />
+      </UIProvider>,
+    )
+    expect(screen.getAllByRole('cell').at(-1)).not.toHaveClass('pointer-fine:w-0!')
+    expect(screen.getAllByRole('columnheader').at(-1)).not.toHaveClass('pointer-fine:w-0!')
+  })
+
+  it('floats the ⋯ over a text column’s blank end', () => {
+    render(
+      <UIProvider>
+        <LastColumn />
+      </UIProvider>,
+    )
+    expect(screen.getAllByRole('cell').at(-1)).toHaveClass('pointer-fine:w-0!')
+    expect(screen.getAllByRole('columnheader').at(-1)).toHaveClass('pointer-fine:w-0!')
   })
 })

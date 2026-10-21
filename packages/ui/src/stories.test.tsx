@@ -49,6 +49,7 @@ import * as runViews from './graph/runViews.stories'
 import * as stepSummary from './graph/StepSummary.stories'
 import * as settingsDialog from './graph/WorkflowSettingsDialog.stories'
 import * as icons from './icons.stories'
+import * as actionLane from './list/actionLane.stories'
 import * as appShell from './list/appShell.stories'
 import * as filterBar from './list/filterBar.stories'
 import * as list from './list/ListTable.stories'
@@ -104,6 +105,7 @@ const SUITES = {
   pageHeader,
   logviewer,
   list,
+  actionLane,
   listControls,
   filterBar,
   listPage,

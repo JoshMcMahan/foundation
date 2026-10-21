@@ -51,6 +51,7 @@ export {
   NAME_MIN_WIDTH_PX,
   NameCell,
   RowSelectCheckbox,
+  STRETCHED_LINK,
 } from './ListTable'
 export { ListToolbar, type ListToolbarProps } from './ListToolbar'
 export { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
