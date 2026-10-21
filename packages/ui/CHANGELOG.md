@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.88.2](https://github.com/parallelworks/foundation/compare/ui-v0.88.1...ui-v0.88.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** a chart reading lists series in the legend's order with zeros kept, and its readout measures every line again once fonts load ([#495](https://github.com/parallelworks/foundation/issues/495)) ([209e2e1](https://github.com/parallelworks/foundation/commit/209e2e1bd2f1c5adab7506384e098a1819577c6c))
+* **ui:** a long picker list jumps while it scrolls ([#449](https://github.com/parallelworks/foundation/issues/449)) ([a689f8c](https://github.com/parallelworks/foundation/commit/a689f8cd1b62a06af981f07001dba9804c9365a2))
+* **ui:** password managers offer to fill the chat input ([#496](https://github.com/parallelworks/foundation/issues/496)) ([c899219](https://github.com/parallelworks/foundation/commit/c899219e33667d3ead03886ece27e5dbf899be0a))
+
 ## [0.88.1](https://github.com/parallelworks/foundation/compare/ui-v0.88.0...ui-v0.88.1) (2026-10-21)
 
 
