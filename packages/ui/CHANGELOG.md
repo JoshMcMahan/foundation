@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.84.2](https://github.com/parallelworks/foundation/compare/ui-v0.84.1...ui-v0.84.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** a list's group rows hide with its columns and hold a group's icon, badges and totals ([#468](https://github.com/parallelworks/foundation/issues/468)) ([29d799a](https://github.com/parallelworks/foundation/commit/29d799a759aaa1f2dfe117ad8133095707d8c875))
+
 ## [0.84.1](https://github.com/parallelworks/foundation/compare/ui-v0.84.0...ui-v0.84.1) (2026-10-21)
 
 
