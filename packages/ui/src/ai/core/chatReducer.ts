@@ -7,6 +7,7 @@ import type {
   MessagePart,
   ProviderInfo,
   ProviderIssue,
+  TokenUsage,
   UnreachableSession,
 } from '../types'
 import { applyPartDelta } from './parts'
@@ -30,6 +31,7 @@ export interface ChatState {
   streamingContent: string
   streamingReasoning: string // Accumulated reasoning content during streaming
   streamingParts: MessagePart[] // Tool calls etc. accumulated from onPart deltas
+  streamingUsage: TokenUsage | null // Tokens the streaming reply has used so far, when reported
   thinkingStartTime: number | null // When thinking started (for duration tracking)
   queuedMessages: ChatMessage[] // Messages queued while AI is responding
 }
@@ -66,6 +68,7 @@ export type ChatAction =
       conversationId: string
     }
   | { type: 'CLEAR_STREAMING_CONTENT'; conversationId?: string }
+  | { type: 'SET_STREAMING_USAGE'; usage: TokenUsage; conversationId: string }
   | { type: 'ADD_MESSAGE'; message: ChatMessage; conversationId: string }
   | {
       type: 'UPDATE_MESSAGE'
@@ -109,6 +112,7 @@ export const initialState: ChatState = {
   streamingContent: '',
   streamingReasoning: '',
   streamingParts: [],
+  streamingUsage: null,
   thinkingStartTime: null,
   queuedMessages: [],
 }
@@ -153,6 +157,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
             streamingContent: '',
             streamingReasoning: '',
             streamingParts: [],
+            streamingUsage: null,
             isStreaming: false,
             isThinking: false,
             thinkingStartTime: null,
@@ -168,6 +173,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         streamingContent: '',
         streamingReasoning: '',
         streamingParts: [],
+        streamingUsage: null,
         isStreaming: false,
         isThinking: false,
         thinkingStartTime: null,
@@ -242,6 +248,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           action.delta,
         ),
       }
+    case 'SET_STREAMING_USAGE':
+      if (state.currentConversation?.id !== action.conversationId) {
+        return state
+      }
+      return { ...state, streamingUsage: action.usage }
     case 'CLEAR_STREAMING_CONTENT':
       // Only clear if conversation matches or no conversationId specified
       if (action.conversationId && state.currentConversation?.id !== action.conversationId) {
@@ -252,6 +263,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         streamingContent: '',
         streamingReasoning: '',
         streamingParts: [],
+        streamingUsage: null,
         isThinking: false,
         thinkingStartTime: null,
       }

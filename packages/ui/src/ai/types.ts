@@ -98,6 +98,21 @@ export interface ToolDecision {
   edited?: boolean
 }
 
+/** How a host names one of its own tool calls in a transcript, in place of
+ *  the raw call: words a person reads, with the arguments behind the row. */
+export interface ToolPresentation {
+  /** The row's label, such as "Checked costs for misc-dev". */
+  label: string
+  /** One line under a finished row, such as "3 resources, $67.50". */
+  summary?: string
+  /** A run of this tool's calls folded into one row, such as "Checked costs for 12 allocations". */
+  group?: (count: number) => string
+  /** This tool's clause in a row that folds different tools, such as "checked costs for 12 allocations". */
+  rollup?: (count: number) => string
+  /** Keeps the host's drawing open under the row, as for a card that asks or shows live progress. Otherwise it opens with the row. */
+  open?: boolean
+}
+
 export interface ToolCallPart {
   kind: 'tool_call'
   id: string

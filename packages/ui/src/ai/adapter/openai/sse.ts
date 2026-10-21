@@ -1,4 +1,4 @@
-import type { ToolCall, ToolCallDelta } from '../../types'
+import type { TokenUsage, ToolCall, ToolCallDelta } from '../../types'
 import type { PartDelta } from '../types'
 import type { CompletionChunk, ToolApprovalChunk, ToolResultChunk } from './wire'
 
@@ -14,6 +14,7 @@ export type ParsedSSELine = {
   model?: string | undefined
   error?: string | undefined
   responsesOutput?: unknown[] | undefined
+  usage?: TokenUsage | undefined
 } | null
 
 export type SSELineParser = (line: string) => ParsedSSELine
@@ -43,6 +44,7 @@ export function parseSSELine(line: string): ParsedSSELine {
       toolApproval: chunk.toolApproval,
       finishReason: choice?.finish_reason,
       model: chunk.model,
+      usage: chunk.usage,
     }
   } catch {
     return null
@@ -62,6 +64,8 @@ export async function processSSEStream(
   onMessageId?: (messageId: string) => void,
   parseLine: SSELineParser = parseSSELine,
   onPart?: (delta: PartDelta) => void,
+  // Tokens the reply has used so far, when the stream reports them.
+  onUsage?: (usage: TokenUsage) => void,
 ): Promise<{
   content: string
   messageId: string
@@ -131,6 +135,9 @@ export async function processSSEStream(
         }
         if (parsed.finishReason) {
           finishReason = parsed.finishReason
+        }
+        if (parsed.usage) {
+          onUsage?.(parsed.usage)
         }
         if (parsed.responsesOutput?.length) {
           responsesOutput = parsed.responsesOutput

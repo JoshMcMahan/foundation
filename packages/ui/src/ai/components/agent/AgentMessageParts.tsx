@@ -25,7 +25,7 @@ import {
   bashExitCode,
   fullToolArgs,
   isGroupableTool,
-  rollupSentence,
+  rollupClauses,
   summarizeToolArgs,
   toolHeaderFor,
   toolSummary,
@@ -297,13 +297,25 @@ function ToolStatusDot({ part }: { part: ToolCallPart }) {
 /** A part's toggle row: its status mark and name, across the transcript's width. */
 const rowSummaryClasses = 'min-h-6 w-full'
 
-/** A call's row: its status and signature, opening to its full arguments and
- *  result. `children` is a host's drawing of the call, in place of the
- *  one-line summary. */
+function RowSummary({ text }: { text: string | undefined }) {
+  return text ? (
+    <div className="ml-5 mt-0.5 truncate text-[13px] theme-muted-text">{text}</div>
+  ) : null
+}
+
+/** A call's row: its status and signature, or the host's words for it, opening
+ *  to its full arguments and result. `children` is a host's drawing of the
+ *  call, shown under the row in place of the one-line summary, or inside it
+ *  when the host names the call. */
 function ToolCallBlock({ part, children }: { part: ToolCallPart; children?: ReactNode }) {
-  const { strings } = useChatConfig()
+  const { strings, slots } = useChatConfig()
   const t = strings.agentTranscript
   const [expanded, setExpanded] = useState(false)
+  const presentation = slots.toolPresentation?.(part)
+  // A named call keeps its drawing behind the row unless the host keeps it
+  // open; a call waiting on an answer always shows what it asks.
+  const drawingInPanel =
+    !!children && !!presentation && !presentation.open && part.status !== 'waiting'
   const header = toolHeaderFor(part.name)
   const argSummary = summarizeToolArgs(header.arg, part.args)
   const isDiff = isEditDiffTool(part.name)
@@ -329,33 +341,47 @@ function ToolCallBlock({ part, children }: { part: ToolCallPart; children?: Reac
         summary={
           <>
             <ToolStatusDot part={part} />
-            <span className="font-mono text-[13px] leading-5 min-w-0 truncate">
-              <span className="font-semibold">{header.label}</span>
-              {argSummary && <span className="theme-muted-text">({argSummary})</span>}
-            </span>
+            {presentation ? (
+              <span className="text-[13px] leading-5 min-w-0 truncate theme-text">
+                {presentation.label}
+              </span>
+            ) : (
+              <span className="font-mono text-[13px] leading-5 min-w-0 truncate">
+                <span className="font-semibold">{header.label}</span>
+                {argSummary && <span className="theme-muted-text">({argSummary})</span>}
+              </span>
+            )}
           </>
         }
         panelClassName="ml-5 mt-1 space-y-1.5"
       >
         {fullToolArgs(header.arg, part.args) && (
           <pre className="overflow-x-auto rounded-md bg-(--theme-muted-panel-bg) p-2 font-mono text-xs whitespace-pre-wrap">
+            {presentation && <span className="font-semibold">{header.label} </span>}
             {fullToolArgs(header.arg, part.args)}
           </pre>
         )}
-        <ResultBody part={part} />
+        {drawingInPanel ? <div className="min-w-0">{children}</div> : <ResultBody part={part} />}
       </Disclosure>
       {part.status === 'error' && !expanded && (
         <div className="ml-5 mt-0.5 truncate text-[13px] text-(--theme-error-text)">
           {t.failedWith(summary)}
         </div>
       )}
-      {children && <div className="mt-1.5 min-w-0 sm:ml-5">{children}</div>}
-      {!children &&
-        !isDiff &&
+      {children && !drawingInPanel && <div className="mt-1.5 min-w-0 sm:ml-5">{children}</div>}
+      {!isDiff &&
         !expanded &&
         part.status !== 'waiting' &&
-        part.status !== 'error' && (
-          <div className="ml-5 mt-0.5 truncate text-[13px] theme-muted-text">{summary}</div>
+        part.status !== 'error' &&
+        (!children || drawingInPanel) && (
+          // A drawn call's raw result is not a line to read; its host's summary is.
+          <RowSummary
+            text={
+              part.status === 'running'
+                ? summary
+                : (presentation?.summary ?? (drawingInPanel ? undefined : summary))
+            }
+          />
         )}
       {isDiff && (
         <div className="ml-5">
@@ -1010,6 +1036,8 @@ function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
 export function buildRenderItems(
   parts: MessagePart[],
   hostDrawn: (toolName: string) => boolean = () => false,
+  // A drawn call the host names a rollup clause for can fold with other tools.
+  joinsRollup: (part: ToolCallPart) => boolean = () => false,
 ): RenderItem[] {
   const items: RenderItem[] = []
   let run: RunMember[] = []
@@ -1055,7 +1083,9 @@ export function buildRenderItems(
     parts.flatMap((p) => (p.kind === 'tool_call' && p.decision ? [p.id] : [])),
   )
   const drawnByHost = new Set(
-    parts.flatMap((p) => (p.kind === 'tool_call' && hostDrawn(p.name) ? [p.id] : [])),
+    parts.flatMap((p) =>
+      p.kind === 'tool_call' && hostDrawn(p.name) && !joinsRollup(p) ? [p.id] : [],
+    ),
   )
   parts.forEach((part, index) => {
     // An answered approval for a call that records its decision says nothing the call's own line doesn't.
@@ -1128,11 +1158,31 @@ function RollupGroup({
   members: RunMember[]
   message: PartRendererProps['message']
 }) {
-  const { strings } = useChatConfig()
-  const sentence = rollupSentence(
-    members.flatMap((m) => (m.part.kind === 'tool_call' ? [m.part.name] : [])),
-    strings.tools,
-  )
+  const { strings, slots } = useChatConfig()
+  const { sentence, allNamed } = useMemo(() => {
+    const builtin: string[] = []
+    const named = new Map<string, { count: number; rollup: (count: number) => string }>()
+    for (const m of members) {
+      if (m.part.kind !== 'tool_call') {
+        continue
+      }
+      const rollup = slots.toolPresentation?.(m.part)?.rollup
+      if (!rollup) {
+        builtin.push(m.part.name)
+        continue
+      }
+      const entry = named.get(m.part.name) ?? { count: 0, rollup }
+      named.set(m.part.name, { ...entry, count: entry.count + 1 })
+    }
+    const clauses = [
+      ...[...named.values()].map((n) => n.rollup(n.count)),
+      ...rollupClauses(builtin, strings.tools),
+    ]
+    return {
+      sentence: clauses.length ? strings.tools.rollup.sentence(clauses) : '',
+      allNamed: named.size > 0 && builtin.length === 0,
+    }
+  }, [members, slots.toolPresentation, strings.tools])
   return (
     <div className="py-1.5 text-sm" data-testid="tool-rollup">
       <Disclosure
@@ -1144,7 +1194,12 @@ function RollupGroup({
             <span className="text-(--theme-success) leading-none" aria-hidden="true">
               ●
             </span>
-            <span className="font-mono text-[13px] theme-muted-text min-w-0 truncate">
+            <span
+              className={cx(
+                'text-[13px] min-w-0 truncate',
+                allNamed ? 'theme-text' : 'font-mono theme-muted-text',
+              )}
+            >
               {sentence}
             </span>
           </>
@@ -1175,6 +1230,10 @@ function CallGroup({
   const name = members[0]?.part.name ?? ''
   const Tool = slots.toolRenderers?.[name]
   const header = toolHeaderFor(name)
+  const first = members[0]?.part
+  const presentation = first ? slots.toolPresentation?.(first) : undefined
+  // Named calls fold to their labels and summaries; their drawings open with the row.
+  const drawFolded = Tool && !(presentation && !presentation.open)
   const failed = members.filter((m) => m.part.status === 'error').length
   const status = failed === members.length ? 'error' : 'ok'
   return (
@@ -1187,8 +1246,13 @@ function CallGroup({
         summary={
           <>
             <ToolStatusDot part={{ ...(members[0]?.part as ToolCallPart), status }} />
-            <span className="font-mono text-[13px] leading-5 min-w-0 truncate">
-              {t.callGroup(header.label, members.length)}
+            <span
+              className={cx(
+                'text-[13px] leading-5 min-w-0 truncate',
+                presentation?.group ? 'theme-text' : 'font-mono',
+              )}
+            >
+              {presentation?.group?.(members.length) ?? t.callGroup(header.label, members.length)}
               {failed > 0 && (
                 <span className="text-(--theme-error-text)">
                   {' · '}
@@ -1205,7 +1269,7 @@ function CallGroup({
         ))}
       </Disclosure>
       {!open &&
-        Tool &&
+        drawFolded &&
         members.map(({ part, index }) => {
           const args = summarizeToolArgs(header.arg, part.args)
           return (
@@ -1234,9 +1298,18 @@ export default function AgentMessageParts({
   const parts = message.parts ?? []
   const { slots } = useChatConfig()
   const toolRenderers = slots.toolRenderers
+  const toolPresentation = slots.toolPresentation
   const items = useMemo(
-    () => buildRenderItems(parts, (name) => !!toolRenderers?.[name]),
-    [parts, toolRenderers],
+    () =>
+      buildRenderItems(
+        parts,
+        (name) => !!toolRenderers?.[name],
+        (part) => {
+          const p = toolPresentation?.(part)
+          return !!p?.rollup && !p.open
+        },
+      ),
+    [parts, toolRenderers, toolPresentation],
   )
   const lastIndex = parts.length - 1
   return (

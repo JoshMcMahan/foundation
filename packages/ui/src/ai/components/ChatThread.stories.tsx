@@ -15,6 +15,7 @@ import {
   sendFromComposer,
   storyTeammate,
 } from '../stories/harness'
+import type { ToolCallPart, ToolPresentation } from '../types'
 import ChatEmptyState from './ChatEmptyState'
 import ChatLayout from './ChatLayout'
 import ChatThread from './ChatThread'
@@ -441,6 +442,83 @@ export const RepeatedToolCalls: StoryObj = {
       >
         <StoryViewport>
           <ChatThread conversationId="conv-costs" />
+        </StoryViewport>
+      </StoryChat>
+    )
+  },
+}
+
+// The host names its calls in words: the narration, then "Checked costs for 3
+// allocations" folding the calls, each opening to its table and arguments,
+// then the answer.
+function costPresentation(part: ToolCallPart): ToolPresentation | undefined {
+  if (part.name !== 'cost_summary') {
+    return undefined
+  }
+  const { allocation } = JSON.parse(part.args || '{}') as { allocation?: string }
+  const rows = part.status === 'ok' ? (JSON.parse(part.result || '[]') as string[][]) : []
+  return {
+    label:
+      part.status === 'running'
+        ? `Checking costs for ${allocation}`
+        : `Checked costs for ${allocation}`,
+    summary: rows.length
+      ? `${rows.length} ${rows.length === 1 ? 'resource' : 'resources'}`
+      : 'No spend this period',
+    group: (n) => `Checked costs for ${n} allocations`,
+    rollup: (n) => `checked costs for ${n} allocations`,
+  }
+}
+
+export const NamedToolCalls: StoryObj = {
+  render: () => {
+    const adapter = makeStaticAdapter({
+      conversations: [
+        makeConversation({
+          id: 'conv-named',
+          title: 'What is billing me',
+          messages: [
+            {
+              id: 'u-named',
+              role: 'user',
+              content: 'whats billing me?',
+              conversationId: 'conv-named',
+            },
+            {
+              id: 'a-named',
+              role: 'assistant',
+              conversationId: 'conv-named',
+              model: 'mock:story/streaming',
+              timestamp: '2026-08-16T11:00:00Z',
+              content: 'Most of it is two test clusters in research, about $1.50 a day each.',
+              parts: [
+                { kind: 'text', text: 'Checking what each allocation spent this month.' },
+                costCall(
+                  'research',
+                  'ok',
+                  JSON.stringify([
+                    ['slurm-a', '$45.22'],
+                    ['snapshots', '$0.40'],
+                  ]),
+                ),
+                costCall('platform', 'ok', JSON.stringify([['gpu-train', '$12.07']])),
+                costCall('teaching', 'ok', '[]'),
+              ],
+            },
+          ],
+        }),
+      ],
+    })
+    return (
+      <StoryChat
+        adapter={adapter}
+        config={{
+          slots: { toolRenderers: { cost_summary: CostRows }, toolPresentation: costPresentation },
+        }}
+        conversationId="conv-named"
+      >
+        <StoryViewport>
+          <ChatThread conversationId="conv-named" />
         </StoryViewport>
       </StoryChat>
     )

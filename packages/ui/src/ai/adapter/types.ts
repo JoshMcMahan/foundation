@@ -11,6 +11,7 @@ import type {
   SharePermission,
   SharePermissionLevel,
   TodoItem,
+  TokenUsage,
   ToolCall,
   ToolDecision,
   UnreachableSession,
@@ -76,6 +77,8 @@ export interface StreamHandlers {
   // Transcript parts, streamed progressively: an agent adapter's whole
   // timeline, or the tool calls an OpenAI-compatible gateway runs itself.
   onPart?: (delta: PartDelta) => void
+  // Tokens the reply has used so far, each report replacing the last.
+  onUsage?: (usage: TokenUsage) => void
 }
 
 // Progressive events an agent adapter maps onto MessagePart timelines.

@@ -59,6 +59,23 @@ describe('createOpenAICompatibleStream', () => {
     expect(body.messages).toEqual([{ role: 'user', content: 'hi' }])
   })
 
+  it('reports the tokens a reply has used whenever a chunk carries them', async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
+      sseResponse([
+        'data: {"id":"c","choices":[{"delta":{"content":"Hi"}}],"usage":{"prompt_tokens":120,"completion_tokens":4,"total_tokens":124}}',
+        'data: {"id":"c","choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":250,"completion_tokens":30,"total_tokens":280}}',
+        'data: [DONE]',
+      ]),
+    )
+    const stream = createOpenAICompatibleStream({ completionsUrl: '/v1', fetch: fetchMock })
+    const usage: unknown[] = []
+    await stream(baseRequest(), { onContent: () => {}, onUsage: (u) => usage.push(u) })
+    expect(usage).toEqual([
+      { prompt_tokens: 120, completion_tokens: 4, total_tokens: 124 },
+      { prompt_tokens: 250, completion_tokens: 30, total_tokens: 280 },
+    ])
+  })
+
   it('streams tool calls the gateway runs as parts and keeps them off the result', async () => {
     const fetchMock = vi.fn<typeof globalThis.fetch>(async () =>
       sseResponse([

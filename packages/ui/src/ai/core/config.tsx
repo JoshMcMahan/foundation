@@ -17,6 +17,7 @@ import type {
   MessagePart,
   MessagePartKind,
   ToolCallPart,
+  ToolPresentation,
 } from '../types'
 
 // What a part renderer receives; host overrides via slots.partRenderers get
@@ -91,6 +92,9 @@ export interface ChatUIConfig {
     // Per-tool drawings, by tool name, such as a live card for a host's own
     // platform tools.
     toolRenderers?: Record<string, ComponentType<ToolRendererProps>>
+    // Words for a host's own tool calls in place of the raw call; a call it
+    // returns nothing for is shown as the call itself.
+    toolPresentation?: (part: ToolCallPart) => ToolPresentation | undefined
   }
   strings?: {
     [S in keyof ChatStrings]?: Partial<ChatStrings[S]>

@@ -85,6 +85,7 @@ export function createOpenAICompatibleStream(config: OpenAIStreamConfig): Stream
       handlers.onMessageId,
       useResponses ? parseResponsesSSELine : undefined,
       handlers.onPart,
+      handlers.onUsage,
     )
   }
 }

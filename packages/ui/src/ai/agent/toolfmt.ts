@@ -440,6 +440,12 @@ export function isGroupableTool(name: string): boolean {
 
 // "Searched for 7 patterns, read 6 files"
 export function rollupSentence(names: string[], t: ToolStrings = defaultToolStrings): string {
+  const parts = rollupClauses(names, t)
+  return parts.length === 0 ? '' : t.rollup.sentence(parts)
+}
+
+// ["searched for 7 patterns", "read 6 files"]: the clauses rollupSentence joins.
+export function rollupClauses(names: string[], t: ToolStrings = defaultToolStrings): string[] {
   const counts = ROLLUP_CATEGORIES.map(() => 0)
   for (const name of names) {
     for (let i = 0; i < ROLLUP_CATEGORIES.length; i++) {
@@ -460,7 +466,7 @@ export function rollupSentence(names: string[], t: ToolStrings = defaultToolStri
       }
     }
   }
-  return parts.length === 0 ? '' : t.rollup.sentence(parts)
+  return parts
 }
 
 // Renderable agent colors, ordered for auto-assignment (red last so it keeps

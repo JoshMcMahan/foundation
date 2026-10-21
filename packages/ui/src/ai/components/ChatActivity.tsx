@@ -8,8 +8,8 @@ import ActivityLine from './agent/ActivityLine'
 /** An agent session's working line for the provider's reply, naming its current step. */
 export default function ChatActivity() {
   const { isStreaming, tools } = useChat()
-  const { streamingParts } = useChatStream()
-  const { strings } = useChatConfig()
+  const { streamingParts, streamingUsage } = useChatStream()
+  const { strings, slots } = useChatConfig()
   const [startedAt, setStartedAt] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,7 +25,18 @@ export default function ChatActivity() {
   if (waiting) {
     word = strings.activity.waitingForAnswer
   } else if (running?.kind === 'tool_call') {
-    word = tools.find((t) => t.id === running.name)?.label ?? toolHeaderFor(running.name).label
+    word =
+      slots.toolPresentation?.(running)?.label ??
+      tools.find((t) => t.id === running.name)?.label ??
+      toolHeaderFor(running.name).label
   }
-  return <ActivityLine testId="chat-activity" startedAt={startedAt} word={word} />
+  return (
+    <ActivityLine
+      testId="chat-activity"
+      startedAt={startedAt}
+      word={word}
+      inputTokens={streamingUsage?.prompt_tokens}
+      outputTokens={streamingUsage?.completion_tokens}
+    />
+  )
 }

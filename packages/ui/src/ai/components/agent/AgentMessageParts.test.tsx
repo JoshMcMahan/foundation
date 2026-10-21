@@ -794,3 +794,84 @@ describe('failed calls', () => {
     expect(screen.getByText(/^Failed: StartDate is required/)).toBeVisible()
   })
 })
+
+describe('host tool presentation', () => {
+  const call = (
+    id: string,
+    allocation: string,
+    status: ToolCallPart['status'] = 'ok',
+  ): ToolCallPart => ({
+    kind: 'tool_call',
+    id,
+    name: 'cost_summary',
+    args: JSON.stringify({ allocation }),
+    status,
+    result: status === 'ok' ? 'drawn' : '',
+  })
+  const slots = (open = false) => ({
+    toolRenderers: {
+      cost_summary: ({ part }: { part: ToolCallPart }) => (
+        <div data-testid="cost-table">{part.result}</div>
+      ),
+    },
+    toolPresentation: (part: ToolCallPart) =>
+      part.name === 'cost_summary'
+        ? {
+            label: `Checked costs for ${JSON.parse(part.args).allocation}`,
+            summary: '3 resources, $67.50',
+            group: (n: number) => `Checked costs for ${n} allocations`,
+            rollup: (n: number) => `checked costs for ${n} allocations`,
+            open,
+          }
+        : undefined,
+  })
+
+  it('names the call in words, with its arguments and drawing behind the row', () => {
+    renderParts([call('a', 'misc-dev')], {}, { slots: slots() })
+    expect(screen.getByText('Checked costs for misc-dev')).toBeInTheDocument()
+    expect(screen.getByText('3 resources, $67.50')).toBeInTheDocument()
+    expect(screen.queryByTestId('cost-table')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Checked costs for misc-dev/ }))
+    expect(screen.getByTestId('cost-table')).toBeVisible()
+    expect(screen.getByText(/"allocation": "misc-dev"|misc-dev/, { selector: 'pre' })).toBeVisible()
+  })
+
+  it('keeps the drawing open when the host asks', () => {
+    renderParts([call('a', 'misc-dev')], {}, { slots: slots(true) })
+    expect(screen.getByTestId('cost-table')).toBeVisible()
+  })
+
+  it('always shows what a call waiting on an answer asks', () => {
+    renderParts([call('a', 'misc-dev', 'waiting')], {}, { slots: slots() })
+    expect(screen.getByTestId('cost-table')).toBeVisible()
+  })
+
+  it("folds a run of the tool's calls under the host's words", () => {
+    renderParts(
+      [call('a', 'misc-dev'), call('b', 'grey'), call('c', 'aws')],
+      {},
+      { slots: slots() },
+    )
+    expect(screen.getByText('Checked costs for 3 allocations')).toBeInTheDocument()
+    expect(screen.queryAllByTestId('cost-table')).toHaveLength(0)
+  })
+
+  it('joins a rollup with other tools in its own clause', () => {
+    const read: ToolCallPart = {
+      kind: 'tool_call',
+      id: 'r',
+      name: 'ReadFile',
+      args: '{"path":"a.go"}',
+      status: 'ok',
+      result: 'x',
+    }
+    const items = buildRenderItems(
+      [call('a', 'misc-dev'), read],
+      (name) => name === 'cost_summary',
+      () => true,
+    )
+    expect(items.map((i) => i.kind)).toEqual(['rollup'])
+    renderParts([call('a', 'misc-dev'), read], {}, { slots: slots() })
+    expect(screen.getByText('Checked costs for 1 allocations, read 1 file')).toBeInTheDocument()
+  })
+})

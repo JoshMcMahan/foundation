@@ -27,6 +27,7 @@ import type {
   MessagePart,
   ProviderInfo,
   ProviderIssue,
+  TokenUsage,
   ToolCallPart,
   UnreachableSession,
 } from '../types'
@@ -222,6 +223,8 @@ export interface ChatStream {
   streamingContent: string
   streamingReasoning: string
   streamingParts: MessagePart[]
+  /** Tokens the streaming reply has used so far, when the stream reports them. */
+  streamingUsage: TokenUsage | null
   thinkingStartTime: number | null
 }
 
@@ -667,6 +670,13 @@ export function ChatProvider({
               if (bgStream) {
                 bgStream.reasoning += reasoning
               }
+            },
+            onUsage: (usage) => {
+              dispatch({
+                type: 'SET_STREAMING_USAGE',
+                usage,
+                conversationId: targetConversationId,
+              })
             },
             onMessageId: (messageId: string) => {
               markStreamStart()
@@ -1496,6 +1506,7 @@ export function ChatProvider({
       streamingContent: state.streamingContent,
       streamingReasoning: state.streamingReasoning,
       streamingParts: state.streamingParts,
+      streamingUsage: state.streamingUsage,
       thinkingStartTime: state.thinkingStartTime,
     }),
     [
@@ -1503,6 +1514,7 @@ export function ChatProvider({
       state.streamingContent,
       state.streamingReasoning,
       state.streamingParts,
+      state.streamingUsage,
       state.thinkingStartTime,
     ],
   )

@@ -36,6 +36,7 @@ export {
   fullToolArgs,
   isGroupableTool,
   resultFailed,
+  rollupClauses,
   rollupSentence,
   sanitizeLabel,
   sanitizePanelText,

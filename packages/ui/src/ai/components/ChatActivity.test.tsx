@@ -2,11 +2,14 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { ChatConfigProvider, resolveChatConfig } from '../core/config'
-import type { MessagePart } from '../types'
+import type { MessagePart, TokenUsage } from '../types'
 import ChatActivity from './ChatActivity'
 
 const chat = { isStreaming: true, tools: [{ id: 'stop_cluster', label: 'Stop a cluster' }] }
-const stream: { streamingParts: MessagePart[] } = { streamingParts: [] }
+const stream: { streamingParts: MessagePart[]; streamingUsage: TokenUsage | null } = {
+  streamingParts: [],
+  streamingUsage: null,
+}
 
 vi.mock('../core/ChatProvider', () => ({
   useChat: () => chat,
@@ -24,6 +27,7 @@ function renderActivity() {
 beforeEach(() => {
   chat.isStreaming = true
   stream.streamingParts = []
+  stream.streamingUsage = null
 })
 
 describe('ChatActivity', () => {
@@ -52,5 +56,13 @@ describe('ChatActivity', () => {
     const { container } = renderActivity()
 
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('counts the tokens the reply has used, once the stream reports them', () => {
+    stream.streamingUsage = { prompt_tokens: 48_200, completion_tokens: 3_400 }
+    renderActivity()
+
+    expect(screen.getByTestId('chat-activity')).toHaveTextContent('48.2K')
+    expect(screen.getByTestId('chat-activity')).toHaveTextContent('3.4K')
   })
 })
