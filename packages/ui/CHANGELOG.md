@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.87.0](https://github.com/parallelworks/foundation/compare/ui-v0.86.1...ui-v0.87.0) (2026-10-21)
+
+
+### Features
+
+* **ui:** a status dot is the legacy lit lamp, vivid at the top and pale below, in themeable lamp colors ([#483](https://github.com/parallelworks/foundation/issues/483)) ([b320a5c](https://github.com/parallelworks/foundation/commit/b320a5cabb40a173ddcd126cf5e6467fdcd52b4b))
+
+
+### Bug Fixes
+
+* **ui:** an off status badge shows the hollow ring the lamp uses ([#487](https://github.com/parallelworks/foundation/issues/487)) ([d7a789d](https://github.com/parallelworks/foundation/commit/d7a789d8b8e328bd7d92aaa08495974e5d5b4798))
+* **ui:** the chat input loses focus after the first message in a new conversation ([#484](https://github.com/parallelworks/foundation/issues/484)) ([ed88feb](https://github.com/parallelworks/foundation/commit/ed88feb66a15d0e4f80633cb761e1ca8a68ec1dd))
+
 ## [0.86.1](https://github.com/parallelworks/foundation/compare/ui-v0.86.0...ui-v0.86.1) (2026-10-21)
 
 
