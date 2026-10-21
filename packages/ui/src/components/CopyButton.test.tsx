@@ -87,6 +87,32 @@ describe('CopyCodeBlock', () => {
     expect(writeText).toHaveBeenCalledTimes(1)
   })
 
+  it('confirms with its check and no toast, keeping the check in view, and toasts when asked', async () => {
+    clipboard()
+    const { rerender } = render(<CopyCodeBlock text="npm install" label="install command" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy install command' }))
+    const copied = await screen.findByRole('button', { name: 'Copied install command' })
+    expect(notifySuccess).not.toHaveBeenCalled()
+    // Shown while it is a check, even once the pointer leaves the block.
+    expect(copied).toHaveAttribute('data-copied')
+    expect(copied).toHaveClass('data-copied:opacity-100')
+
+    rerender(<CopyCodeBlock text="npm install" label="install command" quiet={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /install command/ }))
+    await waitFor(() => expect(notifySuccess).toHaveBeenCalledWith('Copied install command'))
+  })
+
+  it('still says so in a toast when the copy fails', async () => {
+    const notifyError = vi.spyOn(toast, 'error')
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+    render(<CopyCodeBlock text="npm install" label="install command" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy install command' }))
+    await waitFor(() => expect(notifyError).toHaveBeenCalled())
+    notifyError.mockRestore()
+  })
+
   it('offers a secret toggle that reports its state', () => {
     clipboard()
     const onRevealedChange = vi.fn()

@@ -127,6 +127,23 @@ export const CodeBlockFocused: StoryObj = {
   },
 }
 
+/** Copied: the block confirms with its button's check, which stays in view until it turns
+ *  back, even with the pointer gone; no toast, as the check is where the reader pressed. */
+export const CodeBlockCopied: StoryObj = {
+  ...CodeBlock,
+  play: async ({ canvasElement }) => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    })
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Copy install command' }))
+    await userEvent.unhover(canvas.getByText('npm install @scope/ui'))
+    const copied = await canvas.findByRole('button', { name: 'Copied install command' })
+    await expect(copied).toBeVisible()
+  },
+}
+
 /** A glyph of its own, such as a branch for a branch name, and a toast that names the value.
  *  The check still shows once it has copied. */
 export const OwnIconAndToast: StoryObj<CopyArgs> = {

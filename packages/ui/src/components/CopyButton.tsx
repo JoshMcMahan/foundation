@@ -70,6 +70,7 @@ export function CopyButton({
       <button
         type="button"
         {...props}
+        data-copied={copied || undefined}
         aria-label={props['aria-label'] ?? name}
         onClick={onClick}
         className={cx(buttonClasses({ variant, size }), props.className)}
@@ -82,6 +83,8 @@ export function CopyButton({
   return (
     <IconButton
       {...props}
+      // A host can keep the button shown while its check does.
+      data-copied={copied || undefined}
       variant={variant}
       size={size}
       label={name}
@@ -114,6 +117,10 @@ export interface CopyCodeBlockProps {
    *  surface reads on a panel and a tinted callout alike, and the buttons stay right after the
    *  value, always shown. The copy confirms with its check alone, as the change shows there. */
   inline?: boolean | undefined
+  /** False also says "Copied" in a toast. By default the copy confirms with the button's
+   *  check alone, which stays in view until it turns back, as the button is where the reader
+   *  pressed; a failure toasts either way. */
+  quiet?: boolean | undefined
   className?: string | undefined
 }
 
@@ -172,7 +179,8 @@ const MASK = '•'.repeat(24)
 
 /** A block of code, such as a command to run, with a button that copies it. The
  *  buttons show while the pointer is over the block or focus is in it, and always
- *  where there is no hover to reveal them. With `inline` it is a compact value in the line
+ *  where there is no hover to reveal them. A copy confirms with the button's check,
+ *  not a toast; a failure still toasts. With `inline` it is a compact value in the line
  *  instead, such as a token shown once, its buttons always beside it. With `secret` it
  *  masks the value until the eye shows it, and copies it either way. */
 export function CopyCodeBlock({
@@ -185,6 +193,7 @@ export function CopyCodeBlock({
   onRevealedChange,
   inline = false,
   wrap = false,
+  quiet = true,
   className,
 }: CopyCodeBlockProps) {
   const { common: t } = useStrings()
@@ -196,6 +205,9 @@ export function CopyCodeBlock({
   }
   const reveal =
     'opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 pointer-coarse:opacity-100'
+  // The copy's check is its confirmation, so it stays in view while it shows, even once the
+  // pointer has left the block.
+  const revealCopy = `${reveal} data-copied:opacity-100`
   let shown: ReactNode = children ?? text
   if (secret && !revealed && children === undefined) {
     shown = (
@@ -254,7 +266,7 @@ export function CopyCodeBlock({
           {shown}
         </code>
         <span className="flex shrink-0 items-center">
-          <CopyButton text={text} label={label} size="xs" quiet />
+          <CopyButton text={text} label={label} size="xs" quiet={quiet} />
           {revealButton}
         </span>
       </span>
@@ -276,7 +288,8 @@ export function CopyCodeBlock({
         <CopyButton
           text={text}
           label={label}
-          className={cx('bg-(--theme-muted-panel-bg)', reveal)}
+          quiet={quiet}
+          className={cx('bg-(--theme-muted-panel-bg)', revealCopy)}
         />
       </div>
     </div>
