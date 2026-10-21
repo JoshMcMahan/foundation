@@ -965,6 +965,14 @@ export default function FileExplorer({
     if (!href) {
       return
     }
+    if (new URL(href, window.location.href).origin !== window.location.origin) {
+      const frame = document.createElement('iframe')
+      frame.hidden = true
+      frame.src = href
+      document.body.appendChild(frame)
+      setTimeout(() => frame.remove(), 60_000)
+      return
+    }
     const a = document.createElement('a')
     a.href = href
     a.download = filename
