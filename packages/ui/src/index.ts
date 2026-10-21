@@ -79,8 +79,11 @@ export { categoryClasses, categoryOf } from './components/category'
 export {
   type ChartLegendItem,
   ChartLegendList,
+  type ChartReading,
+  ChartReadout,
   ChartTooltipBeside,
   ChartTooltipContent,
+  ChartTooltipFrame,
   type ChartTooltipItem,
   type ChartTooltipPlacement,
   chartTooltipPlacement,

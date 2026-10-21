@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { cx } from '../cx'
 import { CATEGORY_CLASSES } from './category'
+import { surfaceClassName } from './floating'
 import { useLocale, useStrings } from './Provider'
 
 /** How many series a chart colors: a series past the eighth folds into "Other" (`foldSeries`)
@@ -247,7 +248,8 @@ export function ChartTooltipContent({
   return (
     <div
       className={cx(
-        'min-w-[var(--chart-tooltip-min,10rem)] rounded-lg border border-(--theme-border) bg-(--theme-panel-bg) p-3 text-xs text-(--theme-app) shadow-(--theme-shadow-lg)',
+        'relative isolate z-10 min-w-[var(--chart-tooltip-min,10rem)] p-(--chart-tooltip-pad,0.75rem) text-xs',
+        surfaceClassName,
         className,
       )}
       style={style}
@@ -283,52 +285,69 @@ export function ChartTooltipContent({
 export interface ChartTooltipPlacement {
   /** The tooltip's left edge. */
   left: number
-  side: 'left' | 'right'
-  /** A width to hold it to when neither side has room for all of it, its names truncating. */
+  /** The tooltip's top edge: `top` beside the crosshair, or above the plot when it goes there. */
+  top: number
+  /** Beside the crosshair to its left or right, or above the plot when neither side has room. */
+  side: 'left' | 'right' | 'above'
+  /** A width to hold it to, its names truncating, when its side has room for less than all of
+   *  it. */
   maxWidth: number | null
 }
 
-/** Where a chart's tooltip goes beside a crosshair at `x`, so it never covers the column under
- *  the pointer: `gap` to the `prefer` side, or the other when it doesn't fit between `x` and
- *  that edge, or held to the wider side when neither fits. `start` and `end` bound it, in the
- *  same coordinates as `x`, such as the chart's box or the viewport. A charting library's
- *  tooltip takes `left` as its position. */
+/** Where a chart's tooltip goes so it never covers the point being read: `gap` beside the
+ *  crosshair at `x`, on the side with more room, so it flips sides as the crosshair passes the
+ *  middle, and held narrower when that side is short, its names truncating.
+ *  Only when that side is narrower still does it go above the plot, clear of every point,
+ *  where the chart must leave it room. `start` and `end`
+ *  bound it in the same coordinates as `x`, such as the chart's own box, so it stays inside
+ *  the card, and `top` is the plot's top. A charting library's tooltip takes `left` and `top`
+ *  as its position. */
 export function chartTooltipPlacement({
   x,
   width,
+  height = 0,
   start,
   end,
+  top = 0,
   gap = 12,
+  minWidth = 96,
   prefer = 'right',
 }: {
   x: number
   width: number
+  /** The tooltip's height, for placing it above the plot. */
+  height?: number | undefined
   start: number
   end: number
+  top?: number | undefined
   gap?: number | undefined
+  /** The narrowest it is held to beside the crosshair before it goes above instead. */
+  minWidth?: number | undefined
+  /** The side it takes when both have the same room, such as the left in a right-to-left
+   *  layout. */
   prefer?: 'left' | 'right' | undefined
 }): ChartTooltipPlacement {
   const room = { left: x - gap - start, right: end - x - gap }
-  const order = prefer === 'right' ? (['right', 'left'] as const) : (['left', 'right'] as const)
-  let side: 'left' | 'right' | undefined = order.find((s) => width <= room[s])
-  let maxWidth: number | null = null
-  if (side === undefined) {
-    side = room.right >= room.left ? 'right' : 'left'
-    maxWidth = Math.max(0, room[side])
+  const side: 'left' | 'right' =
+    room.left === room.right ? prefer : room.right > room.left ? 'right' : 'left'
+  if (room[side] >= Math.min(width, minWidth)) {
+    const maxWidth = width <= room[side] ? null : room[side]
+    const shown = maxWidth ?? width
+    return { left: side === 'right' ? x + gap : x - gap - shown, top, side, maxWidth }
   }
-  const shown = maxWidth ?? width
-  return { left: side === 'right' ? x + gap : x - gap - shown, side, maxWidth }
+  const span = Math.max(0, end - start)
+  const shown = Math.min(width, span)
+  const left = Math.min(Math.max(x - shown / 2, start), end - shown)
+  return { left, top: top - height - gap, side: 'above', maxWidth: width > span ? span : null }
 }
 
-/** Keeps a tooltip clear of the viewport's edge by this much. */
-const VIEWPORT_MARGIN = 8
-
 /** Holds a chart's tooltip beside its crosshair, inside a positioned box around the plot: `x`
- *  is the crosshair in that box, and the tooltip sits `top` from its top, to the crosshair's
- *  inline end, or its start where the box has no room. When neither side of the box has room,
- *  as on a phone, it may reach past the box to the viewport's edge, and is held narrower when
- *  even that is too small. It never covers the hovered column or the pointer on it. Nothing
- *  shows while `x` is null. */
+ *  is the crosshair in that box, and the tooltip sits `top` from its top on the side with more
+ *  room, flipping as the crosshair passes the middle, held narrower and tighter when that side
+ *  is short, and above the plot only when it is shorter still. It stays inside the box's width
+ *  and never covers the point being read or the pointer on it. Nothing shows while `x` is null.
+ *  On a narrow chart, such as on a phone, `ChartTooltipFrame` docks the reading in a readout
+ *  above the plot instead. */
 export function ChartTooltipBeside({
   x,
   top = 0,
@@ -351,40 +370,146 @@ export function ChartTooltipBeside({
     // Measure the tooltip at its own width, then place it.
     el.style.maxWidth = ''
     el.style.removeProperty('--chart-tooltip-min')
+    el.style.removeProperty('--chart-tooltip-pad')
     const width = el.offsetWidth
     const box = el.offsetParent as HTMLElement | null
-    const origin = box ? box.getBoundingClientRect().left + box.clientLeft : 0
-    const view = document.documentElement.clientWidth || window.innerWidth
-    const place = (start: number, end: number) =>
-      chartTooltipPlacement({
-        x,
-        width,
-        start,
-        end,
-        gap,
-        prefer: getComputedStyle(el).direction === 'rtl' ? 'left' : 'right',
-      })
-    // Inside the chart's box when it fits beside the crosshair, else out to the viewport's edge.
-    let placement = box ? place(0, box.clientWidth) : null
-    if (placement === null || placement.maxWidth !== null) {
-      placement = place(VIEWPORT_MARGIN - origin, view - VIEWPORT_MARGIN - origin)
-    }
+    const end = box?.clientWidth || document.documentElement.clientWidth || window.innerWidth
+    const placement = chartTooltipPlacement({
+      x,
+      width,
+      height: el.offsetHeight,
+      start: 0,
+      end,
+      top,
+      gap,
+      prefer: getComputedStyle(el).direction === 'rtl' ? 'left' : 'right',
+    })
     el.style.left = `${placement.left}px`
+    el.style.top = `${placement.top}px`
+    el.dataset['side'] = placement.side
     if (placement.maxWidth !== null) {
       el.style.maxWidth = `${placement.maxWidth}px`
       el.style.setProperty('--chart-tooltip-min', '0px')
+      // Held narrow, it gives its names the room its padding took.
+      el.style.setProperty('--chart-tooltip-pad', '0.5rem')
     }
   })
   if (x === null) {
     return null
   }
   return (
-    <div
-      ref={ref}
-      className={cx('pointer-events-none absolute z-10 w-max', className)}
-      style={{ top }}
-    >
+    <div ref={ref} className={cx('pointer-events-none absolute z-10 w-max', className)}>
       {children}
+    </div>
+  )
+}
+
+/** A point's reading: what a chart's tooltip or readout shows for it. */
+export interface ChartReading {
+  label?: ReactNode
+  items: readonly ChartTooltipItem[]
+  /** Formats each value and the total; numbers in the host's locale by default. */
+  formatValue?: ((n: number) => string) | undefined
+  /** Adds the total; on by default when there is more than one series. */
+  total?: boolean | undefined
+  highlighted?: string | null | undefined
+}
+
+/** A point's reading docked above a chart's plot, for a chart too narrow for a tooltip beside
+ *  its crosshair: the label and total on one line, then each series' swatch, name and value
+ *  in two columns. Every series keeps its place and its row, zero or not, so the readout keeps
+ *  its height and order as the reading changes. */
+export function ChartReadout({
+  label,
+  items,
+  formatValue,
+  total,
+  highlighted,
+  className,
+}: ChartReading & { className?: string | undefined }) {
+  const { chart: t } = useStrings()
+  const locale = useLocale()
+  const number = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }),
+    [locale],
+  )
+  const format = formatValue ?? ((n: number) => number.format(n))
+  const sum = items.reduce((acc, item) => acc + item.value, 0)
+  const showTotal = total ?? items.length > 1
+  return (
+    <div
+      data-chart-readout=""
+      className={cx(
+        'rounded-lg border border-(--theme-border) bg-(--theme-muted-panel-bg)/50 px-2 py-1.5 text-xs text-(--theme-app)',
+        className,
+      )}
+    >
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate font-semibold">{label}</span>
+        {showTotal && (
+          <span className="shrink-0 tabular-nums">
+            <span className="text-(--theme-muted-text-color)">{t.total}</span>{' '}
+            <span className="font-semibold">{format(sum)}</span>
+          </span>
+        )}
+      </div>
+      <ul className="m-0 grid list-none grid-cols-2 gap-x-2.5 gap-y-0.5 p-0">
+        {items.map((item) => (
+          <li
+            key={item.key}
+            className={cx(
+              'flex min-w-0 items-center gap-1',
+              highlighted === item.key
+                ? 'font-semibold'
+                : highlighted != null && 'text-(--theme-muted-text-color)',
+            )}
+          >
+            <SeriesSwatch color={item.color} />
+            <span className="min-w-0 flex-1 truncate">{item.name}</span>
+            <span className="tabular-nums">{format(item.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** A chart's plot with its reading, placed for its width: on a wide chart a tooltip beside the
+ *  crosshair at `x` while a point is hovered, and under 28rem, as on a phone, a readout docked
+ *  above the plot that never covers it or its legend, showing `rest`, such as the latest point,
+ *  while none is. `children` is the plot, and `x` the crosshair in it, or null. The app positions
+ *  nothing: the frame measures itself through a container query. */
+export function ChartTooltipFrame({
+  x,
+  reading,
+  rest,
+  top = 0,
+  gap = 12,
+  className,
+  children,
+}: {
+  x: number | null
+  /** The hovered point's reading, or null while none is. */
+  reading: ChartReading | null
+  /** What the readout shows while no point is hovered, so it keeps its place. */
+  rest: ChartReading
+  top?: number | undefined
+  gap?: number | undefined
+  className?: string | undefined
+  children: ReactNode
+}) {
+  const shown = x !== null && reading ? reading : null
+  return (
+    <div className={cx('@container/chart', className)}>
+      <ChartReadout {...(shown ?? rest)} className="mb-2 @min-[28rem]/chart:hidden" />
+      <div className="relative">
+        {children}
+        {shown && (
+          <ChartTooltipBeside x={x} top={top} gap={gap} className="hidden @min-[28rem]/chart:block">
+            <ChartTooltipContent {...shown} />
+          </ChartTooltipBeside>
+        )}
+      </div>
     </div>
   )
 }

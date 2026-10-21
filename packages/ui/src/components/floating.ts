@@ -7,8 +7,13 @@ export const positionerClassName = 'z-(--layer-popover) outline-none data-anchor
 const enterExit =
   'origin-(--transform-origin) transition-[transform,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:data-starting-style:scale-100 motion-reduce:data-ending-style:scale-100'
 
+/** The opaque surface a popover stands on, and its shadow: what is under it never shows
+ *  through, such as a chart's marks under its tooltip. */
+export const surfaceClassName =
+  'rounded-lg border border-(--theme-border) bg-(--theme-app-bg) text-(--theme-app) shadow-(--theme-shadow-lg)'
+
 /** A panel of choices: a menu, a select's list, a combobox's list. */
-export const panelClassName = `rounded-lg border border-(--theme-border) bg-(--theme-app-bg) text-sm text-(--theme-app) shadow-(--theme-shadow-lg) outline-none ${enterExit}`
+export const panelClassName = `${surfaceClassName} text-sm outline-none ${enterExit}`
 
 /** A panel's rows inset by the same gutter on every side, so a highlighted first or last row
  *  keeps the margin it has at its sides rather than leaving a strip against the border. */

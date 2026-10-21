@@ -3,8 +3,7 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react'
 import { expect, within } from 'storybook/test'
 import {
   ChartLegendList,
-  ChartTooltipBeside,
-  ChartTooltipContent,
+  ChartTooltipFrame,
   foldSeries,
   OTHER_SERIES_COLOR,
   OTHER_SERIES_KEY,
@@ -103,82 +102,88 @@ function StackedBars({ pinned }: { pinned?: number }) {
   const bar = slot * 0.56
   // The tooltip clears the hovered bar, not only its center.
   const barHalf = (boxWidth / DAYS.length) * 0.28
+  const readingAt = (i: number) => ({
+    label: DAYS[i],
+    highlighted,
+    formatValue: (n: number) => currency.format(n),
+    items: SERIES.map((s) => ({
+      key: s,
+      name: s,
+      value: VALUES[s]?.[i] ?? 0,
+      color: colors[s] ?? '',
+    })),
+  })
   return (
     <div
       className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
       style={{ width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
     >
-      <div ref={box} style={{ position: 'relative' }}>
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-          style={{ display: 'block', width: '100%', height: 208 }}
-          role="img"
-          aria-label={`Daily cost by ${SERIES.join(', ')}`}
-          onPointerMove={(e) => setColumn(columnAt(e, DAYS.length))}
-          onPointerLeave={() => setColumn(pinned ?? null)}
-        >
-          <line
-            x1={0}
-            x2={width}
-            y1={height - 0.5}
-            y2={height - 0.5}
-            stroke="var(--theme-border)"
-          />
-          {column !== null && (
-            <rect
-              x={column * slot}
-              y={0}
-              width={slot}
-              height={height}
-              fill="var(--theme-muted-panel-bg)"
-            />
-          )}
-          {DAYS.map((day, i) => {
-            let y = height
-            return (
-              <g key={day}>
-                {SERIES.map((s) => {
-                  const h = ((VALUES[s]?.[i] ?? 0) / top) * (height - 8)
-                  y -= h
-                  return (
-                    <rect
-                      key={s}
-                      x={i * slot + (slot - bar) / 2}
-                      y={y}
-                      width={bar}
-                      height={Math.max(0, h - 2)}
-                      fill={colors[s]}
-                      fillOpacity={opacity(s)}
-                      onPointerEnter={() => highlight(s)}
-                      onPointerLeave={() => highlight(null)}
-                    />
-                  )
-                })}
-              </g>
-            )
-          })}
-        </svg>
-        <ChartTooltipBeside
-          x={column === null ? null : ((column + 0.5) / DAYS.length) * boxWidth}
-          gap={barHalf + 8}
-          top={8}
-        >
-          {column !== null && (
-            <ChartTooltipContent
-              label={DAYS[column]}
-              highlighted={highlighted}
-              formatValue={(n) => currency.format(n)}
-              items={SERIES.map((s) => ({
-                key: s,
-                name: s,
-                value: VALUES[s]?.[column] ?? 0,
-                color: colors[s] ?? '',
-              }))}
-            />
-          )}
-        </ChartTooltipBeside>
+      <div
+        className="text-(--theme-app)"
+        style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}
+      >
+        Daily cost
       </div>
+      <ChartTooltipFrame
+        x={column === null ? null : ((column + 0.5) / DAYS.length) * boxWidth}
+        gap={barHalf + 8}
+        top={8}
+        reading={column === null ? null : readingAt(column)}
+        rest={readingAt(DAYS.length - 1)}
+      >
+        <div ref={box} style={{ position: 'relative' }}>
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            style={{ display: 'block', width: '100%', height: 208 }}
+            role="img"
+            aria-label={`Daily cost by ${SERIES.join(', ')}`}
+            onPointerMove={(e) => setColumn(columnAt(e, DAYS.length))}
+            onPointerLeave={() => setColumn(pinned ?? null)}
+          >
+            <line
+              x1={0}
+              x2={width}
+              y1={height - 0.5}
+              y2={height - 0.5}
+              stroke="var(--theme-border)"
+            />
+            {column !== null && (
+              <rect
+                x={column * slot}
+                y={0}
+                width={slot}
+                height={height}
+                fill="var(--theme-muted-panel-bg)"
+              />
+            )}
+            {DAYS.map((day, i) => {
+              let y = height
+              return (
+                <g key={day}>
+                  {SERIES.map((s) => {
+                    const h = ((VALUES[s]?.[i] ?? 0) / top) * (height - 8)
+                    y -= h
+                    return (
+                      <rect
+                        key={s}
+                        x={i * slot + (slot - bar) / 2}
+                        y={y}
+                        width={bar}
+                        height={Math.max(0, h - 2)}
+                        fill={colors[s]}
+                        fillOpacity={opacity(s)}
+                        onPointerEnter={() => highlight(s)}
+                        onPointerLeave={() => highlight(null)}
+                      />
+                    )
+                  })}
+                </g>
+              )
+            })}
+          </svg>
+        </div>
+      </ChartTooltipFrame>
       <div
         className="text-(--theme-muted-text-color)"
         style={{ display: 'flex', fontSize: 11, marginTop: 4 }}
@@ -201,12 +206,13 @@ function StackedBars({ pinned }: { pinned?: number }) {
 
 /** A stacked bar chart drawn by hand in SVG with the kit: colors from `seriesColors` by each
  *  series' place, a legend that puts a series in focus as it is hovered, focused or pressed,
- *  the other series fading, and a tooltip beside the hovered day, clear of its bar, listing its
- *  values largest first with a total. */
+ *  and its reading through `ChartTooltipFrame`: on a wide chart a tooltip beside the hovered
+ *  day, clear of its bar, and under 28rem a readout docked above the plot, showing the latest
+ *  day while none is hovered. */
 export const StackedBarChart: StoryObj = {
   render: () => (
     <div style={{ padding: 24 }}>
-      <StackedBars pinned={3} />
+      <StackedBars />
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -223,7 +229,14 @@ const LATENCY: Record<string, number[]> = {
   'p99 latency': [320, 360, 340, 410, 450, 380, 350, 330],
 }
 
-function Lines({ hidden = [] }: { hidden?: readonly string[] }) {
+function Lines({
+  hidden = [],
+  reference,
+}: {
+  hidden?: readonly string[]
+  /** An hour marked with a dashed line and a label, such as where reprocessed data begins. */
+  reference?: number
+}) {
   // Every series the chart can show, so hiding one leaves the rest their colors.
   const all = Object.keys(LATENCY)
   const colors = seriesColors(all)
@@ -241,78 +254,114 @@ function Lines({ hidden = [] }: { hidden?: readonly string[] }) {
     return Math.round(((e.clientX - r.left) / r.width) * last)
   }
   const ms = (n: number) => `${n} ms`
+  const readingAt = (i: number) => ({
+    label: HOURS[i],
+    total: false,
+    highlighted,
+    formatValue: ms,
+    items: keys.map((k) => ({
+      key: k,
+      name: k,
+      value: LATENCY[k]?.[i] ?? 0,
+      color: colors[k] ?? '',
+    })),
+  })
   return (
     <div
       className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
       style={{ width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
     >
-      <div ref={box} style={{ position: 'relative' }}>
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-          style={{ display: 'block', width: '100%', height: 160, overflow: 'visible' }}
-          role="img"
-          aria-label="Latency"
-          onPointerMove={(e) => setIndex(nearest(e))}
-          onPointerLeave={() => setIndex(null)}
+      <div
+        className="text-(--theme-app)"
+        style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}
+      >
+        Latency
+      </div>
+      <ChartTooltipFrame
+        x={index === null ? null : (index / last) * boxWidth}
+        reading={index === null ? null : readingAt(index)}
+        rest={readingAt(last)}
+      >
+        <div
+          ref={box}
+          style={{ position: 'relative', marginTop: reference === undefined ? 0 : 20 }}
         >
-          {index !== null && (
-            <line
-              x1={x(index)}
-              x2={x(index)}
-              y1={0}
-              y2={height}
-              stroke="var(--theme-border)"
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-          {keys.map((k) => (
-            <polyline
-              key={k}
-              fill="none"
-              stroke={colors[k]}
-              strokeOpacity={opacity(k)}
-              strokeWidth={2}
-              vectorEffect="non-scaling-stroke"
-              points={(LATENCY[k] ?? []).map((v, i) => `${x(i)},${y(v)}`).join(' ')}
-            />
-          ))}
-        </svg>
-        {index !== null &&
-          keys.map((k) => (
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            style={{ display: 'block', width: '100%', height: 160, overflow: 'visible' }}
+            role="img"
+            aria-label="Latency"
+            onPointerMove={(e) => setIndex(nearest(e))}
+            onPointerLeave={() => setIndex(null)}
+          >
+            {reference !== undefined && (
+              <line
+                x1={x(reference)}
+                x2={x(reference)}
+                y1={0}
+                y2={height}
+                stroke="var(--theme-muted-text-color)"
+                strokeDasharray="4 3"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            {index !== null && (
+              <line
+                x1={x(index)}
+                x2={x(index)}
+                y1={0}
+                y2={height}
+                stroke="var(--theme-border)"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            {keys.map((k) => (
+              <polyline
+                key={k}
+                fill="none"
+                stroke={colors[k]}
+                strokeOpacity={opacity(k)}
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                points={(LATENCY[k] ?? []).map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+              />
+            ))}
+          </svg>
+          {index !== null &&
+            keys.map((k) => (
+              <span
+                key={k}
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: (index / last) * boxWidth - 4,
+                  top: y(LATENCY[k]?.[index] ?? 0) - 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 9999,
+                  background: colors[k],
+                  boxShadow: '0 0 0 2px var(--theme-panel-bg)',
+                  pointerEvents: 'none',
+                }}
+              />
+            ))}
+          {reference !== undefined && (
             <span
-              key={k}
-              aria-hidden="true"
+              className="text-(--theme-muted-text-color)"
               style={{
                 position: 'absolute',
-                left: (index / last) * boxWidth - 4,
-                top: y(LATENCY[k]?.[index] ?? 0) - 4,
-                width: 8,
-                height: 8,
-                borderRadius: 9999,
-                background: colors[k],
-                boxShadow: '0 0 0 2px var(--theme-panel-bg)',
-                pointerEvents: 'none',
+                top: -18,
+                right: `calc(${100 - (reference / last) * 100}% + 4px)`,
+                fontSize: 11,
+                whiteSpace: 'nowrap',
               }}
-            />
-          ))}
-        <ChartTooltipBeside x={index === null ? null : (index / last) * boxWidth}>
-          {index !== null && (
-            <ChartTooltipContent
-              label={HOURS[index]}
-              total={false}
-              highlighted={highlighted}
-              formatValue={ms}
-              items={keys.map((k) => ({
-                key: k,
-                name: k,
-                value: LATENCY[k]?.[index] ?? 0,
-                color: colors[k] ?? '',
-              }))}
-            />
+            >
+              Reprocessed before this
+            </span>
           )}
-        </ChartTooltipBeside>
-      </div>
+        </div>
+      </ChartTooltipFrame>
       <div
         className="text-(--theme-muted-text-color)"
         style={{ position: 'relative', height: 16, fontSize: 11, marginTop: 4 }}
@@ -344,8 +393,8 @@ function Lines({ hidden = [] }: { hidden?: readonly string[] }) {
 }
 
 /** Lines take the same colors, with a line swatch in the legend. Hovering puts a crosshair on
- *  the nearest hour and the tooltip beside it, on the side with room: it flips near the right
- *  edge and never covers the hour or the pointer. */
+ *  the nearest hour; a wide chart shows the tooltip beside it, flipping as it passes the
+ *  middle, and a narrow one the readout above the plot. */
 export const LineChart: StoryObj = {
   render: () => (
     <div style={{ padding: 24 }}>
@@ -360,6 +409,16 @@ export const LineChartFiltered: StoryObj = {
   render: () => (
     <div style={{ padding: 24 }}>
       <Lines hidden={['p50 latency']} />
+    </div>
+  ),
+}
+
+/** A dashed reference line with its label above the plot, in the lane the plot leaves for it,
+ *  so the tooltip beside the crosshair never covers the label or the point being read. */
+export const LineChartWithReference: StoryObj = {
+  render: () => (
+    <div style={{ padding: 24 }}>
+      <Lines reference={6} />
     </div>
   ),
 }

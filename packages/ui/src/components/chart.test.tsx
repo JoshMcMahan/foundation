@@ -3,8 +3,10 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import {
   ChartLegendList,
+  ChartReadout,
   ChartTooltipBeside,
   ChartTooltipContent,
+  ChartTooltipFrame,
   chartTooltipPlacement,
   foldSeries,
   OTHER_SERIES_COLOR,
@@ -112,34 +114,45 @@ describe('ChartTooltipContent locale', () => {
 describe('chartTooltipPlacement', () => {
   const bounds = { start: 0, end: 400, gap: 12 }
 
-  it('goes to the right of the crosshair when it fits', () => {
+  it('goes beside the crosshair on the side with more room, flipping at the middle', () => {
     expect(chartTooltipPlacement({ ...bounds, x: 100, width: 160 })).toEqual({
       left: 112,
+      top: 0,
       side: 'right',
       maxWidth: null,
     })
-  })
-
-  it('flips to the left at the right edge, still clear of the crosshair', () => {
     const p = chartTooltipPlacement({ ...bounds, x: 300, width: 160 })
-    expect(p).toEqual({ left: 128, side: 'left', maxWidth: null })
+    expect(p).toEqual({ left: 128, top: 0, side: 'left', maxWidth: null })
     expect(p.left + 160).toBeLessThan(300)
   })
 
-  it('starts on the left when asked, flipping at the left edge', () => {
-    expect(chartTooltipPlacement({ ...bounds, x: 300, width: 160, prefer: 'left' }).side).toBe(
+  it('takes the side it prefers when both have the same room', () => {
+    expect(chartTooltipPlacement({ ...bounds, x: 200, width: 160 }).side).toBe('right')
+    expect(chartTooltipPlacement({ ...bounds, x: 200, width: 160, prefer: 'left' }).side).toBe(
       'left',
-    )
-    expect(chartTooltipPlacement({ ...bounds, x: 100, width: 160, prefer: 'left' }).side).toBe(
-      'right',
     )
   })
 
-  it('holds itself to the wider side when neither fits, never across the crosshair', () => {
+  it('holds itself narrower when its side is a little short, never across the crosshair', () => {
     const p = chartTooltipPlacement({ start: 0, end: 300, x: 140, width: 180 })
-    expect(p).toEqual({ left: 152, side: 'right', maxWidth: 148 })
-    const q = chartTooltipPlacement({ start: 0, end: 300, x: 170, width: 180 })
-    expect(q).toEqual({ left: 0, side: 'left', maxWidth: 158 })
+    expect(p).toEqual({ left: 152, top: 0, side: 'right', maxWidth: 148 })
+  })
+
+  it('goes above the plot, inside the box, when neither side has room for it', () => {
+    // A phone: a 300px chart with the crosshair near the middle and a wide tooltip.
+    const p = chartTooltipPlacement({
+      start: 0,
+      end: 300,
+      x: 150,
+      width: 200,
+      height: 90,
+      top: 0,
+      minWidth: 140,
+    })
+    expect(p).toEqual({ left: 50, top: -102, side: 'above', maxWidth: null })
+    // Near an edge it stays inside the box.
+    const q = chartTooltipPlacement({ start: 0, end: 300, x: 20, width: 290, minWidth: 280 })
+    expect(q.left).toBe(0)
   })
 })
 
@@ -158,5 +171,56 @@ describe('ChartTooltipBeside', () => {
     const tip = screen.getByText('tip').parentElement as HTMLElement
     expect(tip.style.left).toBe('52px')
     expect(tip).toHaveClass('pointer-events-none')
+  })
+})
+
+describe('ChartTooltipContent surface', () => {
+  it('stands on the opaque popover surface, so marks never show through it', () => {
+    const { container } = render(<ChartTooltipContent items={[]} />)
+    expect(container.firstElementChild).toHaveClass(
+      'bg-(--theme-app-bg)',
+      'shadow-(--theme-shadow-lg)',
+    )
+  })
+})
+
+describe('ChartReadout and ChartTooltipFrame', () => {
+  const at = (label: string, a: number, b: number) => ({
+    label,
+    items: [
+      { key: 'a', name: 'Compute', value: a, color: 'red' },
+      { key: 'b', name: 'Storage', value: b, color: 'blue' },
+    ],
+  })
+
+  it('keeps every series in its place, zero or not, with the total beside the label', () => {
+    render(<ChartReadout {...at('Oct 9', 0, 5)} />)
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'Compute0',
+      'Storage5',
+    ])
+    expect(screen.getByText('Total').parentElement).toHaveTextContent('Total 5')
+  })
+
+  it('reads the rest point while none is hovered, and the hovered one while one is', () => {
+    const { rerender, container } = render(
+      <ChartTooltipFrame x={null} reading={null} rest={at('Oct 12', 1, 2)}>
+        <svg />
+      </ChartTooltipFrame>,
+    )
+    const readout = () => container.querySelector('[data-chart-readout]')
+    expect(readout()).toHaveTextContent('Oct 12')
+    rerender(
+      <ChartTooltipFrame x={40} reading={at('Oct 9', 3, 4)} rest={at('Oct 12', 1, 2)}>
+        <svg />
+      </ChartTooltipFrame>,
+    )
+    expect(readout()).toHaveTextContent('Oct 9')
+    // The floating tooltip is there for a wide chart; the container query picks one.
+    expect(readout()).toHaveClass('@min-[28rem]/chart:hidden')
+    expect(container.querySelector('.pointer-events-none')).toHaveClass(
+      'hidden',
+      '@min-[28rem]/chart:block',
+    )
   })
 })
