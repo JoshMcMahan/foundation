@@ -1097,10 +1097,20 @@ function VirtualList<Value>({
     return toRows(filtered, shown)
   }, [filtered, statusGroups, query, match])
   const scroller = useRef<HTMLDivElement | null>(null)
+  // Once the person scrolls the list themselves, only the keyboard moves it until they type
+  // again: autoHighlight re-highlights the first row whenever the highlighted one scrolls out
+  // of the rendered window, and following that would throw the list back to the top.
+  const scrolledByHand = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: typing starts the list over
+  useEffect(() => {
+    scrolledByHand.current = false
+  }, [query])
   const virtualizer: Virtualizer<HTMLDivElement, Element> = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,
-    estimateSize: (i) => (rows[i]?.kind === 'group' ? 28 : 36),
+    // A row is panelItemClassName's py-1.5 around a text-sm line: 32px. An estimate off by even
+    // a few pixels moves the list under the pointer as each row is measured on the way past.
+    estimateSize: (i) => (rows[i]?.kind === 'group' ? 28 : 32),
     overscan: 10,
     paddingStart: 4,
     paddingEnd: 4,
@@ -1115,6 +1125,9 @@ function VirtualList<Value>({
       reveal(index, reason) {
         const row = index === undefined ? undefined : rowOfItem[index]
         if (row === undefined || reason === 'pointer') {
+          return
+        }
+        if (reason !== 'keyboard' && scrolledByHand.current) {
           return
         }
         queueMicrotask(() => virtualizer.scrollToIndex(row, { align: 'auto' }))
@@ -1141,6 +1154,16 @@ function VirtualList<Value>({
     <div
       role="presentation"
       ref={scrollerRef}
+      onWheel={() => {
+        scrolledByHand.current = true
+      }}
+      onTouchMove={() => {
+        scrolledByHand.current = true
+      }}
+      onPointerDown={(e) => {
+        // The scrollbar: a press on the list itself rather than on one of its rows.
+        if (e.target === e.currentTarget) scrolledByHand.current = true
+      }}
       className={cx(
         // The panel's gutter: the virtualizer pads the ends, so the list takes only the sides.
         'overflow-auto overscroll-contain px-1',
