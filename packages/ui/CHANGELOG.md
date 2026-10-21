@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.88.0](https://github.com/parallelworks/foundation/compare/ui-v0.87.1...ui-v0.88.0) (2026-10-21)
+
+
+### Features
+
+* **ui:** a list's ⋯ keeps its own lane after an end-aligned last column, the stretched row link is shared, and the name's floor fits a phone-narrow list ([#490](https://github.com/parallelworks/foundation/issues/490)) ([597d104](https://github.com/parallelworks/foundation/commit/597d1045896e54210e4d6735c9c2128ca30c605c))
+
+
+### Bug Fixes
+
+* **ui:** a chart's tooltip is opaque, sits beside the point on a wide chart, and docks as a readout above the plot on a narrow one ([#485](https://github.com/parallelworks/foundation/issues/485)) ([a69975f](https://github.com/parallelworks/foundation/commit/a69975f838c66f933268f6354e0b8c4cd017b0f0))
+
 ## [0.87.1](https://github.com/parallelworks/foundation/compare/ui-v0.87.0...ui-v0.87.1) (2026-10-21)
 
 
