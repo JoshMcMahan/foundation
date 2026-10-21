@@ -1,6 +1,8 @@
+import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { RunningIcon } from '../icons'
 import { useStrings } from './Provider'
+import { pinnedAbove, scrollContainer } from './stickyTop'
 
 const RIPPLE_STAGGER_S = 0.22
 
@@ -27,10 +29,12 @@ export interface LoaderProps {
    *  label: hidden from assistive technology, and in the text's color. */
   decorative?: boolean
   /** Centers it in the room it stands for, so the page needs no box of its
-   *  own: `screen` the whole window, such as while the app starts; `page` the
-   *  page's scrolling region, such as while a route loads; `section` a pane
-   *  or a card with no height of its own. */
-  fill?: 'screen' | 'page' | 'section' | undefined
+   *  own: `screen` the whole window, such as while the app starts; `content`
+   *  the app's content area beside its sidebar and under its top bar, however
+   *  the page around it is laid out; `page` the page's scrolling region, such
+   *  as while a route loads; `section` a pane or a card with no height of its
+   *  own. */
+  fill?: 'screen' | 'content' | 'page' | 'section' | undefined
 }
 
 // Full literal strings, so Tailwind's scanner emits them.
@@ -46,6 +50,13 @@ const fillClasses = {
 export function Loader({ fill, ...props }: LoaderProps) {
   if (!fill) {
     return <LoaderMark {...props} />
+  }
+  if (fill === 'content') {
+    return (
+      <ContentArea>
+        <LoaderMark {...props} size={props.size ?? 48} />
+      </ContentArea>
+    )
   }
   return (
     <div className={fillClasses[fill]}>
@@ -122,5 +133,58 @@ function LoaderMark({
       </span>
       {label && <span className="text-center text-sm theme-muted-text">{label}</span>}
     </span>
+  )
+}
+
+/** Centers its content in the box of the scrolling region it sits in, which in an app with a
+ *  sidebar is its content area, below what that region pins at its top and held to what of it
+ *  the window shows; the window, where the document itself scrolls. It lays nothing out around
+ *  it and takes no pointer. */
+function ContentArea({ children }: { children: ReactNode }) {
+  const anchor = useRef<HTMLSpanElement>(null)
+  const [box, setBox] = useState<CSSProperties | null>(null)
+  useLayoutEffect(() => {
+    const el = anchor.current
+    if (!el) {
+      return
+    }
+    const area = scrollContainer(el)
+    if (area === el.ownerDocument.documentElement) {
+      return
+    }
+    const view = el.ownerDocument.defaultView ?? window
+    // Under what the page pins at the area's top, such as its header, which is chrome, not room.
+    const pinned = pinnedAbove(el)
+    const place = () => {
+      const rect = area.getBoundingClientRect()
+      const chrome = Math.max(0, ...pinned.chrome.map((c) => c.getBoundingClientRect().bottom))
+      const top = Math.max(rect.top, chrome, 0)
+      const bottom = Math.min(rect.bottom, view.innerHeight)
+      setBox({ top, left: rect.left, width: rect.width, height: Math.max(bottom - top, 0) })
+    }
+    place()
+    view.addEventListener('resize', place)
+    // A sidebar opening or closing resizes the area beside it.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place)
+    observer?.observe(area)
+    for (const chrome of pinned.chrome) {
+      observer?.observe(chrome)
+    }
+    return () => {
+      view.removeEventListener('resize', place)
+      observer?.disconnect()
+    }
+  }, [])
+  return (
+    <>
+      <span ref={anchor} hidden />
+      <div
+        data-loader-area=""
+        className="pointer-events-none fixed inset-0 flex items-center justify-center"
+        style={box ?? undefined}
+      >
+        {children}
+      </div>
+    </>
   )
 }

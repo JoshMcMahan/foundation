@@ -21,10 +21,19 @@ export interface RefreshButtonProps {
   /** A button's look, `ghost` by default; `inline` is text-sized muted text with no box, for
    *  a line of details such as a header's "Updated 2 minutes ago". */
   variant?: ButtonVariant | 'inline' | undefined
-  /** Only the icon shows, with "Refresh" as its name and tooltip. */
-  iconOnly?: boolean | undefined
+  /** Only the icon shows, with "Refresh" as its name and tooltip. `phone` shows the label on a
+   *  wider screen and only the icon on a phone, the label still its name for a screen reader. */
+  iconOnly?: boolean | 'phone' | undefined
   className?: string | undefined
 }
+
+// On a phone, the square an icon-only button of each size is.
+const phoneSquares = {
+  xs: 'max-sm:w-6 max-sm:px-0',
+  sm: 'max-sm:w-7 max-sm:px-0',
+  md: 'max-sm:w-8 max-sm:px-0',
+  lg: 'max-sm:w-10 max-sm:px-0',
+} as const
 
 // Takes the size of the text around it, so it sits in a line of details.
 const inlineClasses =
@@ -44,6 +53,8 @@ export function RefreshButton({
   const [pending, setPending] = useState(false)
   const busy = refreshing || pending
   const ago = useRelativeTime(updatedAt)
+  const phone = iconOnly === 'phone'
+  const square = iconOnly === true
 
   const refresh = () => {
     if (busy) {
@@ -64,9 +75,10 @@ export function RefreshButton({
       type="button"
       onClick={refresh}
       aria-busy={busy}
-      aria-label={iconOnly ? t.refresh : undefined}
+      aria-label={square ? t.refresh : undefined}
       className={cx(
-        variant === 'inline' ? inlineClasses : buttonClasses({ variant, size, iconOnly }),
+        variant === 'inline' ? inlineClasses : buttonClasses({ variant, size, iconOnly: square }),
+        phone && variant !== 'inline' && phoneSquares[size],
         'group aria-busy:cursor-progress',
         className,
       )}
@@ -78,27 +90,31 @@ export function RefreshButton({
           busy ? 'animate-spin' : 'transition-transform duration-300 group-hover:rotate-180',
         )}
       />
-      {!iconOnly &&
-        (ago ? (
-          <>
-            {/* Its name says what it does as well as what it shows. */}
-            <span className="sr-only">{t.refresh}. </span>
-            {t.updated(ago)}
-          </>
-        ) : busy ? (
-          // Its name stays "Refresh"; aria-busy and the status say it is under way.
-          <>
-            <span className="sr-only">{t.refresh}</span>
-            <span aria-hidden="true">{t.refreshing}</span>
-          </>
-        ) : (
-          t.refresh
-        ))}
+      {!square && (
+        // On a phone the label is only the button's name, and the icon is all that shows.
+        <span className={phone ? 'max-sm:sr-only' : undefined}>
+          {ago ? (
+            <>
+              {/* Its name says what it does as well as what it shows. */}
+              <span className="sr-only">{t.refresh}. </span>
+              {t.updated(ago)}
+            </>
+          ) : busy ? (
+            // Its name stays "Refresh"; aria-busy and the status say it is under way.
+            <>
+              <span className="sr-only">{t.refresh}</span>
+              <span aria-hidden="true">{t.refreshing}</span>
+            </>
+          ) : (
+            t.refresh
+          )}
+        </span>
+      )}
     </button>
   )
   return (
     <>
-      {iconOnly ? <Tooltip content={t.refresh}>{button}</Tooltip> : button}
+      {square ? <Tooltip content={t.refresh}>{button}</Tooltip> : button}
       <span role="status" className="sr-only">
         {busy ? t.refreshing : ''}
       </span>

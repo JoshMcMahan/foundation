@@ -12,7 +12,7 @@ import {
   warnIfInert,
 } from '../components/MenuEntries'
 import { useNavigation } from '../components/Provider'
-import { type SortDirection, Table } from '../components/Table'
+import { CellPlacementContext, type SortDirection, Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ListFilterBar } from './ListFilterBar'
@@ -168,6 +168,12 @@ export function ListPage({
   )
 }
 
+// How a list row shows a cell under its first: as a line, in place of a cell.
+const STACKED = { stacked: true }
+
+// A cell given straight to a row, whose content is there to see, rather than through a component.
+const isCellElement = (child: ReactElement) => child.type === Table.Item || child.type === 'td'
+
 export function ListRow({
   href,
   onActivate,
@@ -214,17 +220,43 @@ export function ListRow({
 
   // Apply each column's responsive class to its cell by position. toArray drops
   // the falsy `{isVisible && ...}` entries, so cells line up with columnClasses.
+  // A cell is a `Table.Item`, as a child or rendered by a component of the host's,
+  // which takes its column's classes from the placement set around it.
   const cells = Children.toArray(children)
   // A stacked column's content also rides under the first cell, shown only
-  // where its own cell has given way, so it never leaves the row.
-  // A cell with nothing in it (a status only some rows have) adds nothing.
+  // where its own cell has given way, so it never leaves the row. A cell given
+  // straight with nothing in it (a status only some rows have) adds nothing.
   const stacked = cells.flatMap((child, i) => {
     if (i === 0 || !columnStacks[i] || !isValidElement(child)) {
       return []
     }
-    const content = (child as ReactElement<{ children?: ReactNode }>).props.children
-    return Children.toArray(content).length > 0 ? [content] : []
+    if (isCellElement(child)) {
+      const content = (child as ReactElement<{ children?: ReactNode }>).props.children
+      return Children.toArray(content).length > 0 ? [child] : []
+    }
+    return [child]
   })
+  const under =
+    stacked.length > 0
+      ? stacked.map((child, j) =>
+          // A bare `<td>` can't show as a line, so its content does.
+          isValidElement(child) && child.type === 'td' ? (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
+              key={j}
+              className="mt-1 flex min-w-0 items-center @[36rem]:hidden"
+              data-stacked
+            >
+              {(child as ReactElement<{ children?: ReactNode }>).props.children}
+            </div>
+          ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
+            <CellPlacementContext key={j} value={STACKED}>
+              {child}
+            </CellPlacementContext>
+          ),
+        )
+      : undefined
   const styledCells = cells.map((child, i) => {
     // Where columns stack under the name, a column that stays a column, such as
     // a total, sits on the name's line rather than floating mid-row.
@@ -232,34 +264,32 @@ export function ListRow({
       columnClasses[i],
       i > 0 && stacked.length > 0 && !columnStacks[i] && STAYS_BESIDE_STACK,
     )
-    if (!isValidElement(child) || (!cls && !(i === 0 && stacked.length > 0))) {
+    const after = i === 0 ? under : undefined
+    if (!isValidElement(child) || (!cls && !after)) {
       return child
     }
-    const el = child as ReactElement<{ className?: string; children?: ReactNode }>
-    if (i === 0 && stacked.length > 0) {
+    // A bare `<td>` reads no placement, so it takes its classes and what follows its own.
+    if (child.type === 'td') {
+      const el = child as ReactElement<{ className?: string; children?: ReactNode }>
       return cloneElement(el, {
         className: cx(el.props.className, cls),
-        children: (
-          <>
-            {el.props.children}
-            {stacked.map((content, j) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
-                key={j}
-                // A flex box, so its line is the value's own height, not the cell's
-                // 24px: it follows the subtitle by a 4px step and leaves the row
-                // the same padding below as above.
-                className="mt-1 flex min-w-0 items-center @[36rem]:hidden"
-                data-stacked
-              >
-                {content}
-              </div>
-            ))}
-          </>
-        ),
+        ...(after
+          ? {
+              children: (
+                <>
+                  {el.props.children}
+                  {after}
+                </>
+              ),
+            }
+          : {}),
       })
     }
-    return cloneElement(el, { className: cx(el.props.className, cls) })
+    return (
+      <CellPlacementContext key={child.key} value={{ className: cls || undefined, after }}>
+        {child}
+      </CellPlacementContext>
+    )
   })
 
   // A row whose only action is a `⋯` shown on hover floats it over its end

@@ -4,7 +4,7 @@ import { Checkbox } from '../components/Checkbox'
 import { positionKeys } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { LoadingRegion, Skeleton } from '../components/Skeleton'
-import { Table } from '../components/Table'
+import { CellPlacementContext, Table } from '../components/Table'
 import { cx } from '../cx'
 import { ErrorIcon } from '../icons'
 
@@ -86,6 +86,9 @@ export function NameCell({
   children?: ReactNode
 }) {
   const stretch = useContext(StretchRowLinkContext)
+  // What a row stacks under its first cell goes under the name, past the icon, with `children`.
+  const placed = useContext(CellPlacementContext)
+  const under = placed?.after
   const hasIcon = icon !== null && icon !== undefined && icon !== false
   // The cell is a grid of the icon's column and the name's, so what stacks
   // under the name lines up with it past an icon of any width.
@@ -118,7 +121,7 @@ export function NameCell({
       </div>
     </>
   )
-  return (
+  const cell = (
     <Table.Item className="py-2.5">
       <div
         className={cx(
@@ -141,11 +144,20 @@ export function NameCell({
         ) : (
           <div className={cx('min-w-0', columns)}>{inner}</div>
         )}
-        {!!children && (
-          <div className={hasIcon ? 'col-start-2 min-w-0' : 'min-w-0'}>{children}</div>
+        {(!!children || !!under) && (
+          <div className={hasIcon ? 'col-start-2 min-w-0' : 'min-w-0'}>
+            {children}
+            {under}
+          </div>
         )}
       </div>
     </Table.Item>
+  )
+  // The cell keeps the column's classes; what follows its own is shown here instead.
+  return placed?.after ? (
+    <CellPlacementContext value={{ ...placed, after: undefined }}>{cell}</CellPlacementContext>
+  ) : (
+    cell
   )
 }
 

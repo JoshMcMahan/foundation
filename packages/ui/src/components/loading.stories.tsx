@@ -61,6 +61,85 @@ export const PageLoader: StoryObj<Pick<LoaderProps, 'fill'>> = {
   },
 }
 
+/** A route loading in an app with a sidebar and a top bar: `fill="content"` centers the logo in
+ *  the content area beside the sidebar and under the header the page pins, as the eye expects.
+ *  `window` shows a loader laid over the whole window instead, off to the sidebar's side. The
+ *  area is found from the page around it, so the host passes no sizes; on a phone, with the
+ *  sidebar away, it is the window under the header. */
+export const LoaderInAShell: StoryObj<{ fill: 'content' | 'window' }> = {
+  name: 'Loader in a shell',
+  args: { fill: 'content' },
+  argTypes: { fill: { control: 'inline-radio', options: ['content', 'window'] } },
+  parameters: { layout: 'fullscreen' },
+  render: ({ fill }) => (
+    // Sizes are inline: the package's stylesheet doesn't scan stories.
+    <div className="flex h-dvh">
+      <nav
+        className="flex shrink-0 flex-col gap-1 border-r border-(--theme-border) bg-(--theme-panel-bg) p-3 text-sm max-sm:hidden"
+        style={{ width: 240 }}
+      >
+        <span className="font-semibold">Workspace</span>
+        <span className="theme-muted-text">Clusters</span>
+        <span className="theme-muted-text">Storage</span>
+        <span className="theme-muted-text">Runs</span>
+      </nav>
+      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
+        <div className="sticky top-0 flex h-12 shrink-0 items-center border-b border-(--theme-border) bg-(--theme-app-bg) px-4 text-sm font-semibold">
+          Resources
+        </div>
+        {fill === 'content' ? (
+          <Loader variant="logo" fill="content" label="Loading resources" />
+        ) : (
+          <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
+            <Loader variant="logo" label="Loading resources" />
+          </div>
+        )}
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('status', { name: 'Loading resources' }),
+    ).toBeVisible()
+  },
+}
+
+/** In a page's toolbar: `iconOnly="phone"` shows when the data was updated beside the icon on a
+ *  wider screen, and only the icon on a phone, where the toolbar has no room, still named
+ *  "Refresh". Below it, each look on its own. */
+export const RefreshIconOnlyOnAPhone: StoryObj = {
+  name: 'Refresh, icon only on a phone',
+  parameters: { layout: 'padded' },
+  render: () => (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-2 rounded-md border border-(--theme-border) px-4 py-2 text-sm">
+        <span className="font-semibold">AI usage</span>
+        <RefreshButton iconOnly="phone" onRefresh={() => {}} updatedAt={Date.now() - 2 * 60_000} />
+      </div>
+      {/* Sizes are inline: the package's stylesheet doesn't scan stories. */}
+      <div className="flex flex-col gap-2 text-xs">
+        <div className="flex items-center gap-4">
+          <span className="theme-muted-text" style={{ width: 56 }}>
+            Ghost
+          </span>
+          <RefreshButton iconOnly="phone" onRefresh={() => {}} />
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="theme-muted-text" style={{ width: 56 }}>
+            Outline
+          </span>
+          <RefreshButton iconOnly="phone" variant="outline" onRefresh={() => {}} />
+        </div>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /^Refresh\.\s?Updated/ })).toBeVisible()
+    await expect(canvas.getAllByRole('button', { name: 'Refresh' })).toHaveLength(2)
+  },
+}
+
 // Pending until the refresh it started settles, which the play holds open.
 const neverSettles = () => new Promise(() => {})
 

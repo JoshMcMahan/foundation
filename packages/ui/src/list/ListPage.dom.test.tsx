@@ -166,6 +166,72 @@ describe('ListRow stacked columns', () => {
     expect(first?.querySelector('[data-stacked]')).toHaveTextContent('Running')
   })
 
+  it('styles and stacks cells a component of the host’s renders, as it does cells given straight', () => {
+    // Cells as a host wraps them: each its own component, rendering a Table.Item.
+    const NameText = ({ name }: { name: string }) => (
+      <Table.Item className="py-2.5">{name}</Table.Item>
+    )
+    const TextCell = ({ value }: { value?: string }) => (
+      <Table.Item className="py-2.5">{value ? <span>{value}</span> : null}</Table.Item>
+    )
+    render(
+      <ListRowActionsProvider view={view}>
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameText name="gpu-trainer" />
+              <TextCell value="us-east-1" />
+              <TextCell value="Running" />
+            </ListRow>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameText name="scratch" />
+              <TextCell value="us-west-2" />
+              <TextCell />
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const [first, other] = screen.getAllByRole('row')
+    const cells = within(first as HTMLElement).getAllByRole('cell')
+    expect(cells[0]?.querySelector('[data-stacked]')).toHaveTextContent('Running')
+    expect(cells[0]?.querySelector('[data-stacked]')).toHaveClass('@[36rem]:hidden')
+    // Each keeps its own classes and takes its column's.
+    expect(cells[1]).toHaveClass('py-2.5', 'hidden', '@[36rem]:table-cell')
+    expect(cells[2]).toHaveClass('hidden', '@[36rem]:table-cell')
+    // A stacked cell is a line, not a cell inside a cell.
+    expect(cells[0]?.querySelector('td')).toBeNull()
+    // A wrapped cell with nothing in it adds no line.
+    const second = within(other as HTMLElement).getAllByRole('cell')
+    expect(second[0]?.querySelector('[data-stacked]')).toBeNull()
+  })
+
+  it('stacks a wrapped cell under a NameCell, past its icon', () => {
+    const TextCell = ({ value }: { value: string }) => <Table.Item>{value}</Table.Item>
+    render(
+      <ListRowActionsProvider
+        view={{
+          ...view,
+          columnClasses: ['', 'hidden @[36rem]:table-cell'],
+          columnStacks: [false, true],
+        }}
+      >
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameCell icon={<span />} name="gpu-trainer" subtitle="2 nodes" href={null} />
+              <TextCell value="Running" />
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const stacked = screen.getAllByRole('cell')[0]?.querySelector('[data-stacked]')
+    expect(stacked).toHaveTextContent('Running')
+    // Under the name's column of the grid, not after it.
+    expect(stacked?.parentElement).toHaveClass('col-start-2')
+  })
+
   it('adds nothing for a stacked cell with nothing in it', () => {
     render(
       <ListRowActionsProvider view={view}>

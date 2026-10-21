@@ -11,7 +11,7 @@ const scrolls = (style: CSSStyleDeclaration) =>
 
 /** The box a sticky element sticks to: its nearest ancestor that scrolls, or
  *  the document's when none does. */
-function scrollContainer(el: Element): Element {
+export function scrollContainer(el: Element): Element {
   const root = el.ownerDocument.documentElement
   for (let node = el.parentElement; node && node !== root; node = node.parentElement) {
     if (scrolls(getComputedStyle(node))) {
@@ -76,6 +76,13 @@ function chromeAbove(el: Element, scroller: Element): Above {
 function pinnedBottom(chrome: HTMLElement): number {
   const height = chrome.getBoundingClientRect().height
   return height > 0 ? (Number.parseFloat(getComputedStyle(chrome).top) || 0) + height : 0
+}
+
+/** What a page pins at the top of `el`'s scroller over it, such as a page header and a toolbar:
+ *  those elements, and how far below the scroller's top their bottom edge sits. */
+export function pinnedAbove(el: Element): { chrome: HTMLElement[]; bottom: number } {
+  const { chrome } = chromeAbove(el, scrollContainer(el))
+  return { chrome, bottom: Math.max(0, ...chrome.map(pinnedBottom)) }
 }
 
 /**

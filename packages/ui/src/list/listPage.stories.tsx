@@ -4,8 +4,9 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { useContextMenu } from '../components/ContextMenu'
 import { PageHeader, PageHeaderBar, PageHeaderProvider } from '../components/PageHeader'
 import { PageHeaderAddButton } from '../components/PageHeaderAction'
+import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
-import { KeyIcon, RefreshIcon, StorageIcon } from '../icons'
+import { ComputeIcon, KeyIcon, RefreshIcon, StorageIcon } from '../icons'
 import { ActionToolbar } from './ActionToolbar'
 import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
 import { ListCellText, listTableProps, NameCell } from './ListTable'
@@ -214,5 +215,141 @@ export const BusyToolbarAction: StoryObj<{ loading: boolean; onRefresh: () => vo
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Refresh' }))
     await waitFor(() => expect(args.onRefresh).toHaveBeenCalledTimes(args.loading ? 0 : 1))
+  },
+}
+
+interface Resource {
+  name: string
+  id: string
+  state: 'running' | 'stopped'
+  region: string
+  type: string
+  machine: string
+  started: string
+}
+
+const RESOURCES: Resource[] = [
+  {
+    name: 'gpu-east-head',
+    id: 'i-0a91f3c2',
+    state: 'running',
+    region: 'us-east-1',
+    type: 'Instance',
+    machine: 'p4d.24xlarge',
+    started: '3 hours ago',
+  },
+  {
+    name: 'gpu-east-worker-1',
+    id: 'i-07b2d9e4',
+    state: 'running',
+    region: 'us-east-1',
+    type: 'Instance',
+    machine: 'p4d.24xlarge',
+    started: '3 hours ago',
+  },
+  {
+    name: 'gpu-east-scratch',
+    id: 'vol-0c55e1a8',
+    state: 'stopped',
+    region: 'us-east-1',
+    type: 'Disk',
+    machine: 'gp3',
+    started: '2 days ago',
+  },
+]
+
+// Cells as a host writes them: each column its own component, rendering a Table.Item.
+function ResourceName({ resource }: { resource: Resource }) {
+  return (
+    <Table.Item className="max-w-[22rem] py-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <ComputeIcon className="size-5 shrink-0 text-(--theme-muted-text-color)" />
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-medium">{resource.name}</div>
+          <div className="truncate font-mono text-xs text-(--theme-muted-text-color)">
+            {resource.id}
+          </div>
+        </div>
+      </div>
+    </Table.Item>
+  )
+}
+
+function StateCell({ state }: { state: Resource['state'] }) {
+  return (
+    <Table.Item className="py-2.5">
+      <StatusBadge variant={state === 'running' ? 'success' : 'muted'} dot>
+        {state === 'running' ? 'Running' : 'Stopped'}
+      </StatusBadge>
+    </Table.Item>
+  )
+}
+
+function TextCell({ value, mono = false }: { value: string; mono?: boolean }) {
+  return (
+    <Table.Item className="max-w-[16rem] truncate py-2.5">
+      <ListCellText mono={mono}>{value}</ListCellText>
+    </Table.Item>
+  )
+}
+
+function ResourcesList() {
+  const view = useListView<Resource>({
+    storageKey: 'story-resources',
+    columns: [
+      { key: 'name', label: 'Name', alwaysVisible: true },
+      { key: 'state', label: 'State' },
+      { key: 'region', label: 'Region' },
+      { key: 'type', label: 'Type', priority: 'medium' },
+      { key: 'machine', label: 'Machine type', priority: 'low' },
+      { key: 'started', label: 'Started', priority: 'low' },
+    ],
+  })
+  const { openMenu, contextMenu } = useContextMenu()
+  const goTo = useListNavigate()
+  return (
+    <PageHeaderProvider>
+      <div className="flex flex-col overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-app-bg)">
+        <PageHeader breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Resources' }]} />
+        <ListPage view={view} total={RESOURCES.length} matches={RESOURCES.length}>
+          <Table {...listTableProps} tbodyClassName="divide-y divide-(--theme-border)">
+            <ListColumns view={view} />
+            {RESOURCES.map((resource) => (
+              <ListRow
+                key={resource.id}
+                href={null}
+                onActivate={() => {}}
+                items={[{ label: 'Details', onClick: () => {} }]}
+                goTo={goTo}
+                openMenu={openMenu}
+              >
+                <ResourceName resource={resource} />
+                <StateCell state={resource.state} />
+                <TextCell value={resource.region} />
+                <TextCell value={resource.type} />
+                <TextCell value={resource.machine} mono />
+                <TextCell value={resource.started} />
+              </ListRow>
+            ))}
+          </Table>
+        </ListPage>
+      </div>
+      {contextMenu}
+    </PageHeaderProvider>
+  )
+}
+
+/** Rows whose cells are the host's own components, each rendering a `Table.Item`, as a
+ *  resources list writes them. They take their columns' classes as cells given straight do: on a
+ *  phone the state and region stack under the name and the rest give way, rather than every
+ *  column squeezing to a letter. */
+export const CellsInHostComponents: StoryObj = {
+  render: () => <ResourcesList />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const row = canvas.getByText('gpu-east-head').closest('tr') as HTMLElement
+    const [name, state] = within(row).getAllByRole('cell')
+    await expect(name?.querySelector('[data-stacked]')).toHaveTextContent('Running')
+    await expect(state).toHaveClass('@[36rem]:table-cell')
   },
 }

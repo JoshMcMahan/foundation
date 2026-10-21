@@ -43,6 +43,18 @@ const headerY: Record<TableDensity, string> = {
 // title lines up with its values.
 const cellX = 'px-3'
 
+/** What a list row asks of the cell in a place, through whatever component of the host's renders
+ *  it: its column's classes, content to show after its own, or that it shows stacked, under the
+ *  first cell's, as a line in place of a cell. */
+export interface CellPlacement {
+  className?: string | undefined
+  after?: React.ReactNode
+  stacked?: boolean | undefined
+}
+
+/** Set by a list row around each of its cells; a `Table.Item` takes what it asks. */
+export const CellPlacementContext = createContext<CellPlacement | null>(null)
+
 interface ItemProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   /** Lets the text wrap; by default a cell keeps to one line. */
   wrap?: boolean
@@ -50,12 +62,33 @@ interface ItemProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 
 function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
   const density = useContext(DensityContext)
+  const placed = useContext(CellPlacementContext)
+  if (placed?.stacked) {
+    // A line under the name, only where the column's own cell has given way; a cell with nothing
+    // in it, such as a status only some rows have, adds none. A flex box, so its line is the
+    // value's own height, not a cell's: it follows the subtitle by a 4px step.
+    return React.Children.toArray(children).length > 0 ? (
+      <div className="mt-1 flex min-w-0 items-center @[36rem]:hidden" data-stacked>
+        {children}
+      </div>
+    ) : null
+  }
   return (
     <td
       {...tdProps}
-      className={cx(cellX, cellY[density], wrap ? wrapY[density] : 'whitespace-nowrap', className)}
+      className={cx(
+        cellX,
+        cellY[density],
+        wrap ? wrapY[density] : 'whitespace-nowrap',
+        className,
+        placed?.className,
+      )}
     >
-      {children}
+      {/* What the cell holds is its own, even another table's cells. */}
+      <CellPlacementContext value={null}>
+        {children}
+        {placed?.after}
+      </CellPlacementContext>
     </td>
   )
 }
