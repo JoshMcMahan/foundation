@@ -415,9 +415,14 @@ export interface ChartReading {
   highlighted?: string | null | undefined
 }
 
+// Swatch, name and value tracks: two sets side by side, or one whose names give way.
+const TWO_COLUMNS = 'repeat(2, auto minmax(0, max-content) auto)'
+const MEASURE_TWO = 'repeat(2, max-content max-content max-content)'
+const ONE_COLUMN = 'auto minmax(0, max-content) auto'
+
 /** A point's reading docked above a chart's plot, for a chart too narrow for a tooltip beside
- *  its crosshair: the label and total on one line, then each series' swatch, name and value
- *  in two columns. Every series keeps its place and its row, zero or not, so the readout keeps
+ *  its crosshair: the label and total on one line, then each series' swatch, name and value,
+ *  in two columns as wide as their content when they fit, else one. Every series keeps its place and its row, zero or not, so the readout keeps
  *  its height and order as the reading changes. */
 export function ChartReadout({
   label,
@@ -436,6 +441,27 @@ export function ChartReadout({
   const format = formatValue ?? ((n: number) => number.format(n))
   const sum = items.reduce((acc, item) => acc + item.value, 0)
   const showTotal = total ?? items.length > 1
+  // Two columns, each only as wide as its names and values, when both fit at full length;
+  // else one, whose names truncate only when even it is too narrow.
+  const list = useRef<HTMLUListElement>(null)
+  const [columns, setColumns] = useState<1 | 2>(2)
+  useLayoutEffect(() => {
+    const ul = list.current
+    if (!ul) {
+      return
+    }
+    const choose = () => {
+      const shown = ul.style.gridTemplateColumns
+      ul.style.gridTemplateColumns = MEASURE_TWO
+      const two = items.length > 1 && ul.scrollWidth <= ul.clientWidth
+      ul.style.gridTemplateColumns = shown
+      setColumns(two ? 2 : 1)
+    }
+    choose()
+    const observer = new ResizeObserver(choose)
+    observer.observe(ul)
+    return () => observer.disconnect()
+  })
   return (
     <div
       data-chart-readout=""
@@ -453,20 +479,32 @@ export function ChartReadout({
           </span>
         )}
       </div>
-      <ul className="m-0 grid list-none grid-cols-2 gap-x-2.5 gap-y-0.5 p-0">
-        {items.map((item) => (
+      <ul
+        ref={list}
+        className="m-0 grid list-none items-center justify-start gap-x-1.5 gap-y-0.5 p-0"
+        style={{ gridTemplateColumns: columns === 2 ? TWO_COLUMNS : ONE_COLUMN }}
+      >
+        {items.map((item, i) => (
           <li
             key={item.key}
             className={cx(
-              'flex min-w-0 items-center gap-1',
+              'contents',
               highlighted === item.key
                 ? 'font-semibold'
                 : highlighted != null && 'text-(--theme-muted-text-color)',
             )}
           >
             <SeriesSwatch color={item.color} />
-            <span className="min-w-0 flex-1 truncate">{item.name}</span>
-            <span className="tabular-nums">{format(item.value)}</span>
+            <span className="min-w-0 truncate">{item.name}</span>
+            <span
+              className={cx(
+                'text-end tabular-nums',
+                // The space between the two columns.
+                columns === 2 && i % 2 === 0 && 'me-2',
+              )}
+            >
+              {format(item.value)}
+            </span>
           </li>
         ))}
       </ul>

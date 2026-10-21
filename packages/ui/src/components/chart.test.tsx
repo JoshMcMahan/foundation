@@ -224,3 +224,20 @@ describe('ChartReadout and ChartTooltipFrame', () => {
     )
   })
 })
+
+describe('ChartReadout columns', () => {
+  it('sizes its columns to their names and values, not to halves of the readout', () => {
+    const { container } = render(
+      <ChartReadout
+        items={[
+          { key: 'a', name: 'p50 latency', value: 130, color: 'red' },
+          { key: 'b', name: 'p95 latency', value: 260, color: 'blue' },
+        ]}
+      />,
+    )
+    const list = container.querySelector('ul') as HTMLElement
+    expect(list.style.gridTemplateColumns).toContain('max-content')
+    expect(list).toHaveClass('justify-start')
+    expect(screen.getByText('p50 latency').closest('li')).toHaveClass('contents')
+  })
+})
