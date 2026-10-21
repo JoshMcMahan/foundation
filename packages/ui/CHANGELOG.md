@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.86.1](https://github.com/parallelworks/foundation/compare/ui-v0.86.0...ui-v0.86.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** the chat's allocation picker starts on an allocation that can't be charged, and its list shows no spend or reason ([#480](https://github.com/parallelworks/foundation/issues/480)) ([99137d2](https://github.com/parallelworks/foundation/commit/99137d238219008493e22d0c6ee2a63c5b9f49f5))
+
 ## [0.86.0](https://github.com/parallelworks/foundation/compare/ui-v0.85.0...ui-v0.86.0) (2026-10-21)
 
 
