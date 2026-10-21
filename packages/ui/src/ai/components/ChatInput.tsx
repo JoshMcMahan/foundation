@@ -475,6 +475,8 @@ export default function ChatInput({
                     placeholder={effectivePlaceholder}
                     aria-label={inputLabel ?? effectivePlaceholder}
                     disabled={disabled}
+                    autoComplete="off"
+                    data-1p-ignore
                     rows={1}
                     className={cx(
                       'theme-text block w-full resize-none overflow-hidden',
