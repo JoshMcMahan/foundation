@@ -305,6 +305,16 @@ describe('the context menu', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument()
   })
 
+  it('stays open when focus leaves an element on the page, closing on blur only when the window loses it', async () => {
+    render(<Menu items={[action('Copy')]} options={{ closeOn: ['blur'] }} />)
+    const opener = open()
+    await menu()
+    act(() => {
+      fireEvent.blur(opener)
+    })
+    expect(screen.getByRole('menu')).toHaveAttribute('data-open')
+  })
+
   it('closes the shared menu when its host says', async () => {
     function Host() {
       const openMenu = useOpenMenu()

@@ -110,12 +110,18 @@ export function useContextMenu() {
         closeMenu()
       }
     }
+    // Capture sees every element's blur too, such as the one focus leaves for the menu.
+    const onBlur = (event: Event) => {
+      if (!(event.target instanceof Node)) {
+        closeMenu()
+      }
+    }
     const listeners: [keyof WindowEventMap, EventListener][] = []
     if (closeOn.includes('wheel')) {
       listeners.push(['wheel', onWheel as EventListener])
     }
     if (closeOn.includes('blur')) {
-      listeners.push(['blur', closeMenu])
+      listeners.push(['blur', onBlur])
     }
     if (closeOn.includes('resize')) {
       listeners.push(['resize', closeMenu])
