@@ -309,6 +309,16 @@ describe('toolTurnMessages', () => {
     expect(toolTurnMessages(parts, { role: 'assistant', content: 'Stopping it.' })).toHaveLength(2)
   })
 
+  it('keeps an answer the host moved from the parts into the content', () => {
+    const parts: MessagePart[] = [
+      { kind: 'text', text: 'Checking costs.' },
+      { ...runningTool('t1'), status: 'ok', result: '[]' },
+    ]
+    const messages = toolTurnMessages(parts, { role: 'assistant', content: 'Nothing is billing.' })
+    expect(messages.at(-1)).toEqual({ role: 'assistant', content: 'Nothing is billing.' })
+    expect(messages).toHaveLength(3)
+  })
+
   it('leaves out an empty answer after the tool results', () => {
     const parts: MessagePart[] = [{ ...runningTool(), status: 'ok', result: 'done' }]
     expect(toolTurnMessages(parts, { role: 'assistant', content: null })).toHaveLength(2)

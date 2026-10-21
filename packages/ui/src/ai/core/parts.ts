@@ -127,6 +127,25 @@ function isStreamedText(part: MessagePart | undefined): boolean {
  *  each round's calls, with the text that came before them, and each result,
  *  then the answer. A turn with no finished tool calls comes back as the
  *  answer alone. */
+// Text after the last call is the answer. A host may instead move that text
+// into the message's content, leaving the parts to end on a call; content that
+// only repeats the text parts, joined, is not an answer of its own.
+function answerAfterCalls(
+  parts: MessagePart[],
+  trailing: string,
+  answer: CompletionMessage,
+): string | null {
+  if (parts.at(-1)?.kind === 'text') {
+    return trailing || null
+  }
+  const texts = parts.flatMap((p) => (p.kind === 'text' ? [p.text] : []))
+  const content = typeof answer.content === 'string' ? answer.content : null
+  if (!content || content === texts.join('\n\n') || content === texts.join('')) {
+    return null
+  }
+  return content
+}
+
 export function toolTurnMessages(
   parts: MessagePart[] | null | undefined,
   answer: CompletionMessage,
@@ -156,8 +175,9 @@ export function toolTurnMessages(
     // A reply that paused on a call waiting for approval may hold nothing yet.
     return answer.content || answer.tool_calls?.length ? [answer] : []
   }
-  // Stored text parts already hold the answer; its content joins every round.
-  const final = hasText ? { ...answer, content: text || null } : answer
+  const final = hasText
+    ? { ...answer, content: answerAfterCalls(parts ?? [], text, answer) }
+    : answer
   return [
     ...rounds.flatMap((round) => [
       {
