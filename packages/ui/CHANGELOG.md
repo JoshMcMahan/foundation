@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.88.1](https://github.com/parallelworks/foundation/compare/ui-v0.88.0...ui-v0.88.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** a chart readout shows series names in full when they fit ([#492](https://github.com/parallelworks/foundation/issues/492)) ([bba39b3](https://github.com/parallelworks/foundation/commit/bba39b3db7c41f801acadaaf4735656c401979cb))
+
 ## [0.88.0](https://github.com/parallelworks/foundation/compare/ui-v0.87.1...ui-v0.88.0) (2026-10-21)
 
 
