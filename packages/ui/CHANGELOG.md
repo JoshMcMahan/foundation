@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.86.0](https://github.com/parallelworks/foundation/compare/ui-v0.85.0...ui-v0.86.0) (2026-10-21)
+
+
+### Features
+
+* **ui:** an ended status is a solid shape with its mark cut out, an open one a ring, and status dots carry a soft halo ([#477](https://github.com/parallelworks/foundation/issues/477)) ([bc3a51e](https://github.com/parallelworks/foundation/commit/bc3a51e6830b5f7de6de9137a7d9833798a0d593))
+
+
+### Bug Fixes
+
+* **ui:** a held call whose answer the server refuses shows its choices again, with the error ([#478](https://github.com/parallelworks/foundation/issues/478)) ([2ae81e4](https://github.com/parallelworks/foundation/commit/2ae81e403667b726e00896492893b0e2d75d45f5))
+
 ## [0.85.0](https://github.com/parallelworks/foundation/compare/ui-v0.84.2...ui-v0.85.0) (2026-10-21)
 
 
