@@ -57,6 +57,21 @@ func noErrorInProblem(m dsl.Matcher) {
 		Report(leak)
 }
 
+// noHumaError forbids huma's error constructors: once humaproblem is
+// installed, their message and errors are only logged, so a reader is shown
+// the status's message and never the words given to them.
+//
+// Bad:  huma.Error404NotFound("no such team")
+// Good: problem.Status(http.StatusNotFound, "no such team")
+func noHumaError(m dsl.Matcher) {
+	m.Import("github.com/danielgtaylor/huma/v2")
+
+	m.Match(`huma.$f($*_)`).
+		Where(m["f"].Text.Matches(`^(Error\d{3}[A-Za-z]*|NewError|NewErrorWithContext)$`)).
+		Report(`huma's error message is never sent, only logged: return a problem instead, ` +
+			`problem.Status(status, detail) or a type from your registry, with .WithCause(err) for an error`)
+}
+
 // noSprintfInProblem forbids New(fmt.Sprintf(...)): Newf formats.
 //
 // Bad:  NotInWorkspace.New(fmt.Sprintf("%s is not a member", name))

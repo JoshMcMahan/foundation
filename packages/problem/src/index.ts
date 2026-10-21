@@ -169,13 +169,20 @@ function fieldErrors(v: unknown): FieldError[] {
  * Builds an ApiError from a response body and status. It reads a problem
  * details object, and also the older `{ error, message, code }` envelope and
  * bodies from outside the API, such as a proxy's, which carry no code.
+ *
+ * Only a problem, a body with a `type`, can say which language it is in, so
+ * only a problem's own detail is ever shown: an envelope's or a proxy's text
+ * is kept as `message` for logs, and its code's message is shown instead.
  */
 export function fromResponseBody(body: unknown, status: number): ApiError {
   const b = isObject(body) ? body : {}
   const s = typeof b['status'] === 'number' ? b['status'] : status
   const type = str(b['type'])
-  const message = str(b['detail']) ?? str(b['message']) ?? str(b['title'])
-  const language = str(b['language'])
+  const problem = type !== undefined
+  const message = problem
+    ? (str(b['detail']) ?? str(b['title']))
+    : (str(b['detail']) ?? str(b['message']) ?? str(b['title']))
+  const language = problem ? str(b['language']) : undefined
   return new ApiError({
     status: s,
     code: str(b['code']) ?? codeForStatus(s),

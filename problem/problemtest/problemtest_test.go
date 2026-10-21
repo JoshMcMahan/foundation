@@ -195,3 +195,35 @@ func TestCheckGoCatalog(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckGoCatalogComplete(t *testing.T) {
+	r := problem.NewRegistry("gocomplete")
+	r.Define(problem.Type{Code: "name_taken", Status: 409, Title: "Name taken", Doc: "x", Params: []string{"name"}})
+	partial := problem.MustCatalog(fstest.MapFS{
+		"en.json": {Data: []byte(`{"name_taken": "{name} is taken."}`)},
+		"ja.json": {Data: []byte(`{}`)},
+	})
+	// English alone is enough for CheckGoCatalog: ja readers get English.
+	problemtest.CheckGoCatalog(t, partial, r)
+
+	rec := &recorder{TB: t}
+	problemtest.CheckGoCatalogComplete(rec, partial, r)
+	if len(rec.errs) != 1 || !strings.Contains(rec.errs[0], "ja catalog has no apiErrors.name_taken message") {
+		t.Errorf("CheckGoCatalogComplete reported %q", rec.errs)
+	}
+
+	complete := problem.MustCatalog(fstest.MapFS{
+		"en.json": {Data: []byte(`{"name_taken": "{name} is taken."}`)},
+		"ja.json": {Data: []byte(`{"name_taken": "{name}は使われています。"}`)},
+	})
+	problemtest.CheckGoCatalogComplete(t, complete, r)
+
+	rec = &recorder{TB: t}
+	problemtest.CheckGoCatalogComplete(rec, problem.MustCatalog(fstest.MapFS{
+		"en.json": {Data: []byte(`{"name_taken": "{name} is taken."}`)},
+		"ja.json": {Data: []byte(`{"name_taken": "{who}"}`)},
+	}), r)
+	if len(rec.errs) != 1 || !strings.Contains(rec.errs[0], "{who}") {
+		t.Errorf("CheckGoCatalogComplete reported %q", rec.errs)
+	}
+}

@@ -117,6 +117,21 @@ describe('useErrorMessage with a server that localizes', () => {
     )
   })
 
+  it("never shows text from a body that isn't a problem, whatever language it claims", () => {
+    const envelope = {
+      status: 400,
+      error: 'Bad Request',
+      message: 'invalid character } looking for beginning of value',
+      language: 'en',
+    }
+    expect(render(envelope, 'en')).toBe(sharedMessages.en.apiErrors.invalid_request)
+  })
+
+  it("shows only a problem's detail, never another member", () => {
+    const body = { type: 'about:blank', status: 400, message: 'pq: syntax error', language: 'en' }
+    expect(render(body, 'en')).toBe(sharedMessages.en.apiErrors.invalid_request)
+  })
+
   it("shows a single invalid field's localized detail", () => {
     const body = {
       type: '/problems/validation',

@@ -59,16 +59,31 @@ func CheckMessages(tb testing.TB, messages map[string]string, registries ...*pro
 
 // CheckGoCatalog fails tb unless c, a catalog a server localizes problems
 // with, has an English message for every type in registries, and every
-// language's message for a type uses only the type's Params.
+// language's message for a type uses only the type's Params. A language
+// missing a type's message falls back to English; CheckGoCatalogComplete
+// fails on that too.
 func CheckGoCatalog(tb testing.TB, c *problem.Catalog, registries ...*problem.Registry) {
+	tb.Helper()
+	checkGo(tb, c, false, registries)
+}
+
+// CheckGoCatalogComplete is CheckGoCatalog that also fails unless every
+// language c has, not only English, has a message for every type in
+// registries, so no reader in a language the server offers is shown English.
+func CheckGoCatalogComplete(tb testing.TB, c *problem.Catalog, registries ...*problem.Registry) {
+	tb.Helper()
+	checkGo(tb, c, true, registries)
+}
+
+func checkGo(tb testing.TB, c *problem.Catalog, everyLanguage bool, registries []*problem.Registry) {
 	tb.Helper()
 	for _, lang := range c.Languages() {
 		msgs := map[string]string{}
 		for code, msg := range c.Messages(lang) {
 			msgs[string(code)] = msg
 		}
-		if lang == "en" {
-			check(tb, "en catalog", msgs, registries, goKeys)
+		if lang == "en" || everyLanguage {
+			check(tb, lang+" catalog", msgs, registries, goKeys)
 			continue
 		}
 		for _, r := range registries {

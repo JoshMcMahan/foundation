@@ -89,7 +89,10 @@ function useTranslate(): (target: ApiError | FieldError, language: string | unde
   return useCallback(
     (target: ApiError | FieldError, language: string | undefined) => {
       const fromServer = target instanceof ApiError ? target.message : target.detail
-      if (fromServer && sameLanguage(language, locale)) return fromServer
+      // An ApiError with no message has its code as one, which is no message.
+      if (fromServer && fromServer !== target.code && sameLanguage(language, locale)) {
+        return fromServer
+      }
       return message(target.code, target.params, target.type) ?? shared('unknown')
     },
     [message, shared, locale],

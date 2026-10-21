@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -62,6 +63,14 @@ func newAPIWith(t *testing.T, opts humaproblem.Options, transformers ...huma.Tra
 				return nil, errors.New("dial tcp 10.0.0.5:5432: connection refused")
 			case "gone":
 				return nil, fmt.Errorf("load item: %w", errNoItem)
+			case "lost":
+				return nil, problem.Status(http.StatusNotFound, "instance old-login not found")
+			case "odd":
+				// As a handler that hands huma a dependency's error might.
+				_, err := strconv.Atoi("x7")
+				return nil, huma.Error422UnprocessableEntity(err.Error())
+			case "clash":
+				return nil, huma.Error409Conflict("insert item", fmt.Errorf("pq: duplicate key value violates unique constraint %q", "items_name_key"))
 			}
 			return nil, nil
 		})
@@ -335,5 +344,89 @@ func TestLocalizeWritesTheReadersLanguage(t *testing.T) {
 	p := decode(t, resp.Body.String())
 	if len(p.Errors) != 1 || p.Errors[0].Detail == "" || strings.Contains(p.Errors[0].Detail, "minimum") {
 		t.Errorf("es validation: %s", resp.Body)
+	}
+}
+
+// Only words a host wrote reach a person: nothing huma, a dependency or a Go
+// error writes is sent, in any language, while a detail the host wrote still
+// is to an English reader.
+func TestOnlyHandWrittenTextIsSent(t *testing.T) {
+	leaks := []string{
+		"invalid character", "looking for beginning", // encoding/json
+		"expected", "length", // huma's validator
+		"10.0.0.5", "connection refused", "no such item", "load item", // a Go error
+		"strconv", "invalid syntax", "pq:", "duplicate key", "insert item", "unexpected error occurred",
+	}
+	cases := []struct {
+		name   string
+		body   any
+		status int
+	}{
+		{"malformed JSON", strings.NewReader(`{"name": "ab", "count": 1,,}`), http.StatusBadRequest},
+		{"validation", map[string]any{"name": 5, "count": "x", "tags": []string{"a", "b"}}, http.StatusUnprocessableEntity},
+		{"wrapped Go error", map[string]any{"name": "gone", "count": 1}, http.StatusInternalServerError},
+		{"dependency text given to huma", map[string]any{"name": "odd", "count": 1}, http.StatusUnprocessableEntity},
+		{"Go error given to huma", map[string]any{"name": "clash", "count": 1}, http.StatusConflict},
+	}
+	l := &problem.Localizer{}
+	apis := map[string]humatest.TestAPI{
+		"unlocalized": newAPIWith(t, humaproblem.Options{}),
+		"localized":   newAPIWith(t, humaproblem.Options{}, humaproblem.Localize(l)),
+	}
+	for apiName, api := range apis {
+		for _, lang := range []string{"en", "ja", "es"} {
+			for _, c := range cases {
+				t.Run(apiName+"/"+lang+"/"+c.name, func(t *testing.T) {
+					body := c.body
+					if r, ok := body.(*strings.Reader); ok {
+						r.Seek(0, 0) //nolint:errcheck // a strings.Reader always seeks
+					}
+					resp := api.Post("/items?mode=x", "Accept-Language: "+lang, body)
+					if resp.Code != c.status {
+						t.Fatalf("status = %d: %s", resp.Code, resp.Body)
+					}
+					for _, leak := range leaks {
+						if strings.Contains(resp.Body.String(), leak) {
+							t.Errorf("response has %q: %s", leak, resp.Body)
+						}
+					}
+				})
+			}
+		}
+	}
+
+	// A field error keeps its field and rule.
+	resp := apis["unlocalized"].Post("/items?mode=x", map[string]any{"name": 5, "count": 1})
+	p := decode(t, resp.Body.String())
+	if len(p.Errors) != 1 || p.Errors[0].Pointer != "#/name" || p.Errors[0].Code != "invalid_type" || p.Errors[0].Detail == "" {
+		t.Errorf("field error: %s", resp.Body)
+	}
+
+	// A detail the host wrote reaches an English reader, and a Japanese one
+	// gets the status's message rather than English.
+	for apiName, api := range apis {
+		resp := api.Post("/items?mode=x", "Accept-Language: en", map[string]any{"name": "lost", "count": 1})
+		if p := decode(t, resp.Body.String()); resp.Code != http.StatusNotFound || p.Detail != "instance old-login not found" {
+			t.Errorf("%s en: %d %s", apiName, resp.Code, resp.Body)
+		}
+	}
+	resp = apis["localized"].Post("/items?mode=x", "Accept-Language: ja", map[string]any{"name": "lost", "count": 1})
+	want, _ := l.Message("ja", problem.NotFound, nil)
+	if p := decode(t, resp.Body.String()); p.Detail != want {
+		t.Errorf("ja: detail %q, want %q", p.Detail, want)
+	}
+}
+
+// What huma reported is still logged, as the problem's cause.
+func TestHumaTextIsTheCause(t *testing.T) {
+	humaproblem.Install(humaproblem.Options{})
+	_, jsonErr := strconv.Atoi("x7")
+	se := humaproblem.NewError(http.StatusBadRequest, "validation failed", &huma.ErrorDetail{Location: "body", Message: jsonErr.Error()})
+	p, ok := se.(*problem.Problem)
+	if !ok {
+		t.Fatalf("NewError returned %T", se)
+	}
+	if p.Detail != "" || p.Unwrap() == nil || !strings.Contains(p.Unwrap().Error(), "invalid syntax") {
+		t.Errorf("detail %q, cause %v", p.Detail, p.Unwrap())
 	}
 }

@@ -47,9 +47,9 @@ Content-Type: application/problem+json
   "code": "validation",
   "errors": [
     {"type": "/problems/too_long", "code": "too_long", "pointer": "#/name",
-     "params": {"max": 64}, "detail": "expected length <= 64"},
+     "params": {"max": 64}, "detail": "Must be at most 64 characters."},
     {"type": "/problems/required", "code": "required", "parameter": "team", "in": "query",
-     "detail": "required query parameter is missing"}
+     "detail": "This field is required."}
   ]
 }
 ```
@@ -124,7 +124,15 @@ Each page is also data: asked with `Accept: application/json` (and not
 so a CLI can print how to fix a problem without a browser.
 
 huma's request validation then becomes a validation problem whose entries name
-the rule each field failed (`required`, `too_long`, `below_minimum`, ...).
+the rule each field failed (`required`, `too_long`, `below_minimum`, ...), each
+with that rule's message as its detail.
+
+Nothing huma writes is sent. Its messages, and the errors it reports, such as
+encoding/json's text for a malformed body, become the problem's cause, which is
+only logged, so a reader sees the status's message. That includes the message
+given to huma's own constructors: `huma.Error404NotFound("no such team")` is
+sent as a plain 404. To send words of your own, return a problem:
+`problem.Status(http.StatusNotFound, "no such team")`.
 
 ### Messages in the reader's language
 
@@ -144,7 +152,9 @@ l.Write(w, r, p) // in a raw handler
 
 An `about:blank` problem keeps the detail the server wrote for English readers,
 so specific text still reaches them; other languages get the status's message.
-`problemtest.CheckGoCatalog` checks that a catalog covers a registry.
+`problemtest.CheckGoCatalog` checks that a catalog covers a registry in
+English, and `problemtest.CheckGoCatalogComplete` in every language the catalog
+has, so no reader is shown English in its place.
 
 ### Internal errors never reach the client
 
@@ -158,9 +168,12 @@ may see. Everything else stays on the server:
 - `AsDenial()` marks a problem as a refusal to authorize, and `problem.Denied(err)`
   finds it, so a caller never mistakes an unreachable database for "you may not".
   The marker is not sent either.
+- Nothing huma writes is sent (see above): huma's messages and the errors it
+  reports, such as a malformed body's parse error, are the cause.
 - [`problemrules`](problem/problemrules) fails lint on an error, or its
   `Error()` text, passed to `New`, `Newf`, `At`, `AtParameter`, `Status` or
-  `With`. Import it into your go-ruleguard rules file:
+  `With`, and on a call to huma's error constructors, whose message is never
+  sent. Import it into your go-ruleguard rules file:
 
 ```go
 //go:build ruleguard

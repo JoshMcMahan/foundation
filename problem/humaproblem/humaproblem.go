@@ -29,6 +29,9 @@ type Options struct {
 	Debug bool
 }
 
+// english writes a field error's detail from the shared catalog.
+var english = &problem.Localizer{}
+
 var (
 	options   atomic.Pointer[Options]
 	installed sync.Once
@@ -58,9 +61,14 @@ func current() Options {
 // NewError converts an error huma reports into a problem. A problem among errs
 // is returned as is, and so is one Options.Map returns for them. A 422 with
 // field details becomes a problem.Validation listing them, each typed with the
-// rule it failed. Anything else is an about:blank problem; for a 5xx its
-// message and errs can hold internals, so they become the cause, for logs,
-// rather than the detail.
+// rule it failed. Anything else is an about:blank problem with no detail, so a
+// client shows its status's message.
+//
+// Nothing huma writes is sent: msg and errs, such as encoding/json's text for
+// a malformed body or a validator's English for a field, become the problem's
+// cause, for logs. That includes the message given to huma's own constructors,
+// such as huma.Error404NotFound("..."): to send words of your own, return a
+// problem, such as problem.Status(http.StatusNotFound, "no such team").
 func NewError(status int, msg string, errs ...error) huma.StatusError {
 	for _, err := range errs {
 		if p, ok := errors.AsType[*problem.Problem](err); ok {
@@ -81,28 +89,35 @@ func NewError(status int, msg string, errs ...error) huma.StatusError {
 			}
 		}
 	}
-	if status >= http.StatusInternalServerError {
-		p := problem.Status(status, "")
-		cause := errors.Join(errs...)
-		if cause == nil && msg != "" {
-			cause = errors.New(msg)
-		}
-		if cause == nil {
-			return p
-		}
-		if opts.Debug {
-			p.Detail = cause.Error()
-		}
-		return p.WithCause(cause)
-	}
+	var p *problem.Problem
 	if fields := FieldErrors(errs); status == http.StatusUnprocessableEntity && len(fields) > 0 {
-		p := problem.ValidationFailed(fields...)
-		if msg != "" {
-			p.Detail = msg
-		}
+		p = problem.ValidationFailed(fields...)
+	} else {
+		p = problem.Status(status, "")
+	}
+	c := cause(msg, errs)
+	if c == nil {
 		return p
 	}
-	return problem.Status(status, detail(msg, errs))
+	if opts.Debug && status >= http.StatusInternalServerError {
+		p.Detail = c.Error()
+	}
+	return p.WithCause(c)
+}
+
+// cause is what huma reported, for logs: msg followed by each error, with a
+// field detail's location and message.
+func cause(msg string, errs []error) error {
+	parts := make([]error, 0, len(errs)+1)
+	if msg != "" {
+		parts = append(parts, errors.New(msg))
+	}
+	for _, err := range errs {
+		if err != nil {
+			parts = append(parts, err)
+		}
+	}
+	return errors.Join(parts...)
 }
 
 // Report returns a huma Transformer that calls fn with every problem the API
@@ -134,29 +149,10 @@ func Localize(l *problem.Localizer) huma.Transformer {
 	}
 }
 
-func detail(msg string, errs []error) string {
-	parts := make([]string, 0, len(errs)+1)
-	if msg != "" {
-		parts = append(parts, msg)
-	}
-	for _, err := range errs {
-		var d huma.ErrorDetailer
-		if errors.As(err, &d) {
-			if ed := d.ErrorDetail(); ed != nil {
-				parts = append(parts, ed.Message)
-				continue
-			}
-		}
-		if err != nil {
-			parts = append(parts, err.Error())
-		}
-	}
-	return strings.Join(parts, ": ")
-}
-
-// FieldErrors converts huma's error details into field errors. A
-// *problem.FieldError among errs, such as one a Resolver returns, is kept as
-// is; an error that locates no field is skipped.
+// FieldErrors converts huma's error details into field errors, each with the
+// rule it failed and that rule's English message as its detail, never huma's
+// text. A *problem.FieldError among errs, such as one a Resolver returns, is
+// kept as is; an error that locates no field is skipped.
 func FieldErrors(errs []error) []*problem.FieldError {
 	var out []*problem.FieldError
 	for _, err := range errs {
@@ -187,11 +183,14 @@ func fieldError(d *huma.ErrorDetail) *problem.FieldError {
 		for i, s := range path {
 			segs[i] = s
 		}
-		fe = c.rule.At(problem.Pointer(segs...), d.Message)
+		fe = c.rule.At(problem.Pointer(segs...), "")
 	} else {
-		fe = c.rule.AtParameter(in, strings.Join(path, "."), d.Message)
+		fe = c.rule.AtParameter(in, strings.Join(path, "."), "")
 	}
 	fe.Params = c.params
+	// huma's message can quote a dependency, such as encoding/json, so the
+	// detail is the rule's own English message instead.
+	fe.Detail, _ = english.Message("en", fe.Code, fe.Params)
 	return fe
 }
 

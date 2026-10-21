@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/parallelworks/foundation/problem"
 )
 
@@ -24,9 +26,13 @@ func bad(err error, name string) {
 	_ = nameTaken.New("taken").With("reason", err)          // want `internal error leaks`
 	_ = nameTaken.At("#/name", "bad").With("why", err)      // want `internal error leaks`
 	_ = nameTaken.New(fmt.Sprintf("%s is taken", name))     // want `use Newf`
+	_ = huma.Error422UnprocessableEntity(err.Error())       // want `huma's error message is never sent`
+	_ = huma.Error404NotFound("no team " + name)            // want `huma's error message is never sent`
+	_ = huma.NewError(409, "taken", err)                    // want `huma's error message is never sent`
 }
 
 func good(err error, name string) {
+	huma.NewError = func(int, string, ...error) huma.StatusError { return nil }
 	_ = nameTaken.New("a team with this name exists").WithCause(err)
 	_ = nameTaken.Newf("%s is taken", name).With("name", name)
 	_ = problem.Status(404, "no team "+name)
