@@ -125,7 +125,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |
 | A thing's tags or labels | `Tag`; `TagList` for several, wrapped or on one line ending in "+N" |
 | Keys to press | `Kbd`, with `Mod` for Command or Control; `ariaKeyShortcuts` for the control the keys press |
-| A chart's colors, legend and tooltip | `seriesColors`, `ChartLegendList`, `ChartTooltipContent` and `useSeriesHighlight`, around a chart drawn by hand or by a library |
+| A chart's colors, legend and tooltip | `seriesColors` (by each series' place in a stable key list, eight at most) and `foldSeries` (the rest into "Other"), `ChartLegendList`, `ChartTooltipContent` placed beside the crosshair with `ChartTooltipBeside` or `chartTooltipPlacement`, and `useSeriesHighlight`, around a chart drawn by hand or by a library |
 | A run's, job's or step's status beside its name | `RunStatusIcon`; `StatusBadge` with `runStatusTone` to say it in words |
 | A copy action | `CopyButton`; `CopyCodeBlock` for a command or snippet, with `secret` for a value shown once; `SelectionCopy` to copy part of a block by selecting it; `useCopy` for a menu row or a control of your own |
 | A live relative time or duration | `RelativeTime` (with a `fallback`, an `exact` style for its tooltip, or `show="absolute"`), `Elapsed` |

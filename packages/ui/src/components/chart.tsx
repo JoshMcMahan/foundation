@@ -1,46 +1,78 @@
 // The pieces of a chart that don't depend on how it is drawn: a color for each series, its
 // swatch, a legend, a tooltip's content and the dimming of the series not in focus. A chart
 // drawn in SVG by hand and one from a charting library use them alike.
-import { type CSSProperties, type ReactNode, useCallback, useMemo, useState } from 'react'
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { cx } from '../cx'
-import { CATEGORY_CLASSES, categoryOf } from './category'
+import { CATEGORY_CLASSES } from './category'
 import { useLocale, useStrings } from './Provider'
 
-const SLOTS = CATEGORY_CLASSES.length
+/** How many series a chart colors: a series past the eighth folds into "Other" (`foldSeries`)
+ *  rather than taking a hue made up for it. */
+export const SERIES_LIMIT = CATEGORY_CLASSES.length
 
-/** A series' mark color for palette slot 1–8: the theme's category hue, between the slot's
- *  soft fill and its text and twice as saturated, so a bar or a line stands out from the page
- *  in light and dark alike and keeps the hue the slot has everywhere else. */
-export function seriesSlotColor(slot: number): string {
-  const n = ((((slot - 1) % SLOTS) + SLOTS) % SLOTS) + 1
+/** The theme's category slots in the order series take them. Each run from the first — three,
+ *  four or all eight — keeps neighbors apart in hue and lightness, for color-blind readers too,
+ *  in light and dark, where the theme's own order steps through neighboring hues. */
+const SERIES_ORDER = [5, 2, 8, 3, 6, 4, 7, 1] as const
+
+/** The key `foldSeries` gives the series that sums those past the limit. */
+export const OTHER_SERIES_KEY = '__other__'
+
+/** The mark color of the "Other" series: a neutral gray, so it never reads as one more series. */
+export const OTHER_SERIES_COLOR =
+  'color-mix(in oklch, var(--theme-muted-text-color) 75%, var(--theme-panel-bg))'
+
+/** The color of a chart's nth series, 1–8: the theme's category hue, between the slot's soft
+ *  fill and its text and twice as saturated, so a bar or a line stands out from the page in
+ *  light and dark alike. Past the eighth it is the "Other" gray; a hue is never repeated. */
+export function seriesSlotColor(position: number): string {
+  const n = SERIES_ORDER[position - 1]
+  if (n === undefined) {
+    return OTHER_SERIES_COLOR
+  }
   return `oklch(from color-mix(in oklch, var(--theme-category-${n}), var(--theme-category-${n}-text)) l calc(c * 2) h)`
 }
 
-/** A series' color by its key, any CSS color for a fill, a stroke or a style: the same key
- *  gets the same color on every chart, as `categoryOf` gives a name its avatar color. */
-export function seriesColor(key: string): string {
-  return seriesSlotColor(categoryOf(key))
-}
-
-/** Colors for a chart's series, each key its `seriesColor` unless another key took that slot
- *  first, when it moves to the next free one: up to eight series never share a color. */
+/** Colors for a chart's series by their place in `keys`: the first takes the first color, the
+ *  second the next, so the first few are always the most distinct. Pass every key the chart can
+ *  show, in an order that doesn't depend on the data shown, such as by name or as configured:
+ *  a filter that hides a series then leaves the others their colors. `OTHER_SERIES_KEY`, and any
+ *  key past the eighth, is the "Other" gray; fold them first with `foldSeries`. */
 export function seriesColors(keys: readonly string[]): Record<string, string> {
-  const taken = new Set<number>()
   const colors: Record<string, string> = {}
+  let position = 0
   for (const key of keys) {
     if (key in colors) {
       continue
     }
-    let slot = categoryOf(key)
-    if (taken.size < SLOTS) {
-      while (taken.has(slot)) {
-        slot = (slot % SLOTS) + 1
-      }
-    }
-    taken.add(slot)
-    colors[key] = seriesSlotColor(slot)
+    colors[key] = key === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : seriesSlotColor(++position)
   }
   return colors
+}
+
+/** Splits a chart's series at the limit: up to eight show as they are, and more keep the first
+ *  seven and fold the rest into one "Other" series, `OTHER_SERIES_KEY`, whose value at a point
+ *  is the sum of `folded`. Name it with the `chart.other` string. */
+export function foldSeries(
+  keys: readonly string[],
+  limit: number = SERIES_LIMIT,
+): { keys: string[]; folded: string[] } {
+  const unique = [...new Set(keys)]
+  if (unique.length <= limit) {
+    return { keys: unique, folded: [] }
+  }
+  return {
+    keys: [...unique.slice(0, limit - 1), OTHER_SERIES_KEY],
+    folded: unique.slice(limit - 1),
+  }
 }
 
 export type SeriesSwatchShape = 'square' | 'dot' | 'line'
@@ -196,7 +228,7 @@ export function ChartTooltipContent({
   /** Lists the largest value first; on by default. */
   sort?: boolean | undefined
   className?: string | undefined
-  /** Places it, such as beside the point it describes. */
+  /** Places it; `ChartTooltipBeside` places it beside a crosshair. */
   style?: CSSProperties | undefined
 }) {
   const { chart: t } = useStrings()
@@ -215,7 +247,7 @@ export function ChartTooltipContent({
   return (
     <div
       className={cx(
-        'min-w-40 rounded-lg border border-(--theme-border) bg-(--theme-panel-bg) p-3 text-xs text-(--theme-app) shadow-(--theme-shadow-lg)',
+        'min-w-[var(--chart-tooltip-min,10rem)] rounded-lg border border-(--theme-border) bg-(--theme-panel-bg) p-3 text-xs text-(--theme-app) shadow-(--theme-shadow-lg)',
         className,
       )}
       style={style}
@@ -244,6 +276,115 @@ export function ChartTooltipContent({
           <span className="tabular-nums">{format(sum)}</span>
         </div>
       )}
+    </div>
+  )
+}
+
+export interface ChartTooltipPlacement {
+  /** The tooltip's left edge. */
+  left: number
+  side: 'left' | 'right'
+  /** A width to hold it to when neither side has room for all of it, its names truncating. */
+  maxWidth: number | null
+}
+
+/** Where a chart's tooltip goes beside a crosshair at `x`, so it never covers the column under
+ *  the pointer: `gap` to the `prefer` side, or the other when it doesn't fit between `x` and
+ *  that edge, or held to the wider side when neither fits. `start` and `end` bound it, in the
+ *  same coordinates as `x`, such as the chart's box or the viewport. A charting library's
+ *  tooltip takes `left` as its position. */
+export function chartTooltipPlacement({
+  x,
+  width,
+  start,
+  end,
+  gap = 12,
+  prefer = 'right',
+}: {
+  x: number
+  width: number
+  start: number
+  end: number
+  gap?: number | undefined
+  prefer?: 'left' | 'right' | undefined
+}): ChartTooltipPlacement {
+  const room = { left: x - gap - start, right: end - x - gap }
+  const order = prefer === 'right' ? (['right', 'left'] as const) : (['left', 'right'] as const)
+  let side: 'left' | 'right' | undefined = order.find((s) => width <= room[s])
+  let maxWidth: number | null = null
+  if (side === undefined) {
+    side = room.right >= room.left ? 'right' : 'left'
+    maxWidth = Math.max(0, room[side])
+  }
+  const shown = maxWidth ?? width
+  return { left: side === 'right' ? x + gap : x - gap - shown, side, maxWidth }
+}
+
+/** Keeps a tooltip clear of the viewport's edge by this much. */
+const VIEWPORT_MARGIN = 8
+
+/** Holds a chart's tooltip beside its crosshair, inside a positioned box around the plot: `x`
+ *  is the crosshair in that box, and the tooltip sits `top` from its top, to the crosshair's
+ *  inline end, or its start where the box has no room. When neither side of the box has room,
+ *  as on a phone, it may reach past the box to the viewport's edge, and is held narrower when
+ *  even that is too small. It never covers the hovered column or the pointer on it. Nothing
+ *  shows while `x` is null. */
+export function ChartTooltipBeside({
+  x,
+  top = 0,
+  gap = 12,
+  className,
+  children,
+}: {
+  x: number | null
+  top?: number | undefined
+  gap?: number | undefined
+  className?: string | undefined
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || x === null) {
+      return
+    }
+    // Measure the tooltip at its own width, then place it.
+    el.style.maxWidth = ''
+    el.style.removeProperty('--chart-tooltip-min')
+    const width = el.offsetWidth
+    const box = el.offsetParent as HTMLElement | null
+    const origin = box ? box.getBoundingClientRect().left + box.clientLeft : 0
+    const view = document.documentElement.clientWidth || window.innerWidth
+    const place = (start: number, end: number) =>
+      chartTooltipPlacement({
+        x,
+        width,
+        start,
+        end,
+        gap,
+        prefer: getComputedStyle(el).direction === 'rtl' ? 'left' : 'right',
+      })
+    // Inside the chart's box when it fits beside the crosshair, else out to the viewport's edge.
+    let placement = box ? place(0, box.clientWidth) : null
+    if (placement === null || placement.maxWidth !== null) {
+      placement = place(VIEWPORT_MARGIN - origin, view - VIEWPORT_MARGIN - origin)
+    }
+    el.style.left = `${placement.left}px`
+    if (placement.maxWidth !== null) {
+      el.style.maxWidth = `${placement.maxWidth}px`
+      el.style.setProperty('--chart-tooltip-min', '0px')
+    }
+  })
+  if (x === null) {
+    return null
+  }
+  return (
+    <div
+      ref={ref}
+      className={cx('pointer-events-none absolute z-10 w-max', className)}
+      style={{ top }}
+    >
+      {children}
     </div>
   )
 }

@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { categoryOf } from './category'
 import {
   ChartLegendList,
+  ChartTooltipBeside,
   ChartTooltipContent,
-  seriesColor,
+  chartTooltipPlacement,
+  foldSeries,
+  OTHER_SERIES_COLOR,
+  OTHER_SERIES_KEY,
   seriesColors,
   seriesOpacity,
   seriesSlotColor,
@@ -13,18 +16,39 @@ import {
 import { UIProvider } from './Provider'
 
 describe('series colors', () => {
-  it('gives a key its category slot, built on the theme’s category colors', () => {
-    expect(seriesColor('compute')).toBe(seriesSlotColor(categoryOf('compute')))
-    expect(seriesSlotColor(3)).toContain('var(--theme-category-3)')
-    expect(seriesSlotColor(9)).toContain('var(--theme-category-1)')
+  it('colors series by position, from the theme’s category colors in a checked order', () => {
+    expect(seriesSlotColor(1)).toContain('var(--theme-category-5)')
+    expect(seriesSlotColor(2)).toContain('var(--theme-category-2)')
+    expect(seriesSlotColor(8)).toContain('var(--theme-category-1)')
+    const colors = seriesColors(['Storage', 'Compute', 'Storage', 'GPU'])
+    expect(colors).toEqual({
+      Storage: seriesSlotColor(1),
+      Compute: seriesSlotColor(2),
+      GPU: seriesSlotColor(3),
+    })
   })
 
-  it('never shares a color among eight series', () => {
+  it('never shares a color among eight series, and never makes up a ninth', () => {
     const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-    const colors = seriesColors(keys)
-    expect(new Set(Object.values(colors)).size).toBe(8)
-    // A key keeps its own slot when nothing took it first.
-    expect(seriesColors(['compute'])['compute']).toBe(seriesColor('compute'))
+    expect(new Set(Object.values(seriesColors(keys))).size).toBe(8)
+    expect(seriesSlotColor(9)).toBe(OTHER_SERIES_COLOR)
+    expect(seriesColors([...keys, 'i'])['i']).toBe(OTHER_SERIES_COLOR)
+  })
+
+  it('leaves a series its color when a filter hides another, given every key', () => {
+    const all = ['Compute', 'Storage', 'Network']
+    const colors = seriesColors(all)
+    const shown = all.filter((k) => k !== 'Compute')
+    expect(shown.map((k) => colors[k])).toEqual([seriesSlotColor(2), seriesSlotColor(3)])
+  })
+
+  it('folds series past the eighth into Other', () => {
+    const eight = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    expect(foldSeries(eight)).toEqual({ keys: eight, folded: [] })
+    const { keys, folded } = foldSeries([...eight, 'i'])
+    expect(keys).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', OTHER_SERIES_KEY])
+    expect(folded).toEqual(['h', 'i'])
+    expect(seriesColors(keys)[OTHER_SERIES_KEY]).toBe(OTHER_SERIES_COLOR)
   })
 
   it('fades every series but the one in focus', () => {
@@ -82,5 +106,57 @@ describe('ChartTooltipContent locale', () => {
       </UIProvider>,
     )
     expect(screen.getByText('1.234,5')).toBeInTheDocument()
+  })
+})
+
+describe('chartTooltipPlacement', () => {
+  const bounds = { start: 0, end: 400, gap: 12 }
+
+  it('goes to the right of the crosshair when it fits', () => {
+    expect(chartTooltipPlacement({ ...bounds, x: 100, width: 160 })).toEqual({
+      left: 112,
+      side: 'right',
+      maxWidth: null,
+    })
+  })
+
+  it('flips to the left at the right edge, still clear of the crosshair', () => {
+    const p = chartTooltipPlacement({ ...bounds, x: 300, width: 160 })
+    expect(p).toEqual({ left: 128, side: 'left', maxWidth: null })
+    expect(p.left + 160).toBeLessThan(300)
+  })
+
+  it('starts on the left when asked, flipping at the left edge', () => {
+    expect(chartTooltipPlacement({ ...bounds, x: 300, width: 160, prefer: 'left' }).side).toBe(
+      'left',
+    )
+    expect(chartTooltipPlacement({ ...bounds, x: 100, width: 160, prefer: 'left' }).side).toBe(
+      'right',
+    )
+  })
+
+  it('holds itself to the wider side when neither fits, never across the crosshair', () => {
+    const p = chartTooltipPlacement({ start: 0, end: 300, x: 140, width: 180 })
+    expect(p).toEqual({ left: 152, side: 'right', maxWidth: 148 })
+    const q = chartTooltipPlacement({ start: 0, end: 300, x: 170, width: 180 })
+    expect(q).toEqual({ left: 0, side: 'left', maxWidth: 158 })
+  })
+})
+
+describe('ChartTooltipBeside', () => {
+  it('shows nothing without a crosshair', () => {
+    const { container } = render(<ChartTooltipBeside x={null}>tip</ChartTooltipBeside>)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('places its tooltip beside the crosshair, out of the pointer’s way', () => {
+    render(
+      <ChartTooltipBeside x={40}>
+        <span>tip</span>
+      </ChartTooltipBeside>,
+    )
+    const tip = screen.getByText('tip').parentElement as HTMLElement
+    expect(tip.style.left).toBe('52px')
+    expect(tip).toHaveClass('pointer-events-none')
   })
 })

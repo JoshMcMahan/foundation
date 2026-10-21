@@ -589,6 +589,8 @@ export interface UIStrings {
   chart: {
     /** The row under a chart's tooltip that sums its series. */
     total: string
+    /** The series that sums a chart's series past the eighth. */
+    other: string
   }
   list: {
     moreActions: string
@@ -1495,6 +1497,7 @@ const DEFAULTS: UIProviderValue = {
     },
     chart: {
       total: 'Total',
+      other: 'Other',
     },
     list: {
       moreActions: 'More actions',

@@ -1,15 +1,42 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { type PointerEvent, useEffect, useRef, useState } from 'react'
 import { expect, within } from 'storybook/test'
-import { categoryOf } from './category'
 import {
   ChartLegendList,
+  ChartTooltipBeside,
   ChartTooltipContent,
+  foldSeries,
+  OTHER_SERIES_COLOR,
+  OTHER_SERIES_KEY,
   SeriesSwatch,
   seriesColors,
   seriesSlotColor,
   useSeriesHighlight,
 } from './chart'
+
+/** A box's width as it lays out, so a tooltip can sit beside a column drawn in a scaled SVG. */
+function useWidth() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) {
+      return
+    }
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth))
+    observer.observe(el)
+    setWidth(el.clientWidth)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, width] as const
+}
+
+/** The index of the column under the pointer across an element split into `n` columns. */
+function columnAt(event: PointerEvent<Element>, n: number) {
+  const box = event.currentTarget.getBoundingClientRect()
+  const i = Math.floor(((event.clientX - box.left) / box.width) * n)
+  return Math.min(n - 1, Math.max(0, i))
+}
 
 const meta: Meta = {
   title: 'UI/Charts',
@@ -27,29 +54,36 @@ const VALUES: Record<string, number[]> = {
 }
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
-/** The palette a chart draws from: the theme's eight category hues, as marks strong enough to
- *  stand out from the page in light and dark. A series keeps its color across charts. */
+/** The colors a chart's series take, in order: the first series the first, and so on, from
+ *  the theme's eight category hues in an order whose every run from the start keeps neighbors
+ *  apart for color-blind readers too. A series past the eighth folds into a gray "Other". */
 export const Palette: StoryObj = {
   render: () => (
-    <div className="flex flex-wrap gap-4 p-8 text-xs text-(--theme-app)">
-      {[1, 2, 3, 4, 5, 6, 7, 8].map((slot) => (
-        <div key={slot} className="flex flex-col items-center gap-1.5">
+    <div
+      className="text-xs text-(--theme-app)"
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 16, padding: 24 }}
+    >
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((position) => (
+        <div
+          key={position}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+        >
           <span
             className="rounded-md"
-            style={{ width: 56, height: 40, background: seriesSlotColor(slot) }}
+            style={{ width: 56, height: 40, background: seriesSlotColor(position) }}
           />
-          <span className="theme-muted-text">{slot}</span>
+          <span className="theme-muted-text">{position === 9 ? 'Other' : position}</span>
         </div>
       ))}
-      <div className="flex w-full items-center gap-4 pt-2">
+      <div style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 16 }}>
         <span className="flex items-center gap-1.5">
-          <SeriesSwatch color={seriesSlotColor(categoryOf('Compute'))} /> square
+          <SeriesSwatch color={seriesSlotColor(1)} /> square
         </span>
         <span className="flex items-center gap-1.5">
-          <SeriesSwatch color={seriesSlotColor(categoryOf('Compute'))} shape="dot" /> dot
+          <SeriesSwatch color={seriesSlotColor(1)} shape="dot" /> dot
         </span>
         <span className="flex items-center gap-1.5">
-          <SeriesSwatch color={seriesSlotColor(categoryOf('Compute'))} shape="line" /> line
+          <SeriesSwatch color={seriesSlotColor(1)} shape="line" /> line
         </span>
       </div>
     </div>
@@ -60,24 +94,28 @@ function StackedBars({ pinned }: { pinned?: number }) {
   const colors = seriesColors(SERIES)
   const { highlighted, highlight, opacity } = useSeriesHighlight()
   const [column, setColumn] = useState<number | null>(pinned ?? null)
+  const [box, boxWidth] = useWidth()
   const totals = DAYS.map((_, i) => SERIES.reduce((sum, s) => sum + (VALUES[s]?.[i] ?? 0), 0))
   const top = Math.max(...totals)
   const width = 560
   const height = 200
   const slot = width / DAYS.length
   const bar = slot * 0.56
+  // The tooltip clears the hovered bar, not only its center.
+  const barHalf = (boxWidth / DAYS.length) * 0.28
   return (
     <div
-      className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) p-4"
-      style={{ width: '100%', maxWidth: 600 }}
+      className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
+      style={{ width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
     >
-      <div className="relative">
+      <div ref={box} style={{ position: 'relative' }}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full"
-          style={{ height: 208 }}
+          preserveAspectRatio="none"
+          style={{ display: 'block', width: '100%', height: 208 }}
           role="img"
           aria-label={`Daily cost by ${SERIES.join(', ')}`}
+          onPointerMove={(e) => setColumn(columnAt(e, DAYS.length))}
           onPointerLeave={() => setColumn(pinned ?? null)}
         >
           <line
@@ -87,10 +125,19 @@ function StackedBars({ pinned }: { pinned?: number }) {
             y2={height - 0.5}
             stroke="var(--theme-border)"
           />
+          {column !== null && (
+            <rect
+              x={column * slot}
+              y={0}
+              width={slot}
+              height={height}
+              fill="var(--theme-muted-panel-bg)"
+            />
+          )}
           {DAYS.map((day, i) => {
             let y = height
             return (
-              <g key={day} onPointerEnter={() => setColumn(i)}>
+              <g key={day}>
                 {SERIES.map((s) => {
                   const h = ((VALUES[s]?.[i] ?? 0) / top) * (height - 8)
                   y -= h
@@ -100,7 +147,7 @@ function StackedBars({ pinned }: { pinned?: number }) {
                       x={i * slot + (slot - bar) / 2}
                       y={y}
                       width={bar}
-                      height={h}
+                      height={Math.max(0, h - 2)}
                       fill={colors[s]}
                       fillOpacity={opacity(s)}
                       onPointerEnter={() => highlight(s)}
@@ -112,30 +159,32 @@ function StackedBars({ pinned }: { pinned?: number }) {
             )
           })}
         </svg>
-        {column !== null && (
-          <ChartTooltipContent
-            // Beside the column, on the side with room.
-            className="pointer-events-none absolute top-2"
-            style={
-              column < DAYS.length / 2
-                ? { left: `${((column + 1) / DAYS.length) * 100}%` }
-                : { right: `${((DAYS.length - column) / DAYS.length) * 100}%` }
-            }
-            label={DAYS[column]}
-            highlighted={highlighted}
-            formatValue={(n) => currency.format(n)}
-            items={SERIES.map((s) => ({
-              key: s,
-              name: s,
-              value: VALUES[s]?.[column] ?? 0,
-              color: colors[s] ?? '',
-            }))}
-          />
-        )}
+        <ChartTooltipBeside
+          x={column === null ? null : ((column + 0.5) / DAYS.length) * boxWidth}
+          gap={barHalf + 8}
+          top={8}
+        >
+          {column !== null && (
+            <ChartTooltipContent
+              label={DAYS[column]}
+              highlighted={highlighted}
+              formatValue={(n) => currency.format(n)}
+              items={SERIES.map((s) => ({
+                key: s,
+                name: s,
+                value: VALUES[s]?.[column] ?? 0,
+                color: colors[s] ?? '',
+              }))}
+            />
+          )}
+        </ChartTooltipBeside>
       </div>
-      <div className="mt-1 flex text-[11px] text-(--theme-muted-text-color)">
+      <div
+        className="text-(--theme-muted-text-color)"
+        style={{ display: 'flex', fontSize: 11, marginTop: 4 }}
+      >
         {DAYS.map((day) => (
-          <span key={day} className="flex-1 text-center">
+          <span key={day} style={{ flex: 1, textAlign: 'center' }}>
             {day}
           </span>
         ))}
@@ -150,12 +199,13 @@ function StackedBars({ pinned }: { pinned?: number }) {
   )
 }
 
-/** A stacked bar chart drawn by hand in SVG with the kit: colors from `seriesColors`, a
- *  legend that puts a series in focus as it is hovered, focused or pressed, the other series
- *  fading, and a tooltip's content listing a day's values largest first with a total. */
+/** A stacked bar chart drawn by hand in SVG with the kit: colors from `seriesColors` by each
+ *  series' place, a legend that puts a series in focus as it is hovered, focused or pressed,
+ *  the other series fading, and a tooltip beside the hovered day, clear of its bar, listing its
+ *  values largest first with a total. */
 export const StackedBarChart: StoryObj = {
   render: () => (
-    <div className="p-8">
+    <div style={{ padding: 24 }}>
       <StackedBars pinned={3} />
     </div>
   ),
@@ -166,41 +216,122 @@ export const StackedBarChart: StoryObj = {
   },
 }
 
-function Lines() {
-  const keys = ['p50 latency', 'p95 latency', 'p99 latency']
-  const colors = seriesColors(keys)
+const HOURS = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00']
+const LATENCY: Record<string, number[]> = {
+  'p50 latency': [120, 118, 125, 122, 130, 128, 126, 124],
+  'p95 latency': [210, 220, 205, 240, 260, 230, 225, 215],
+  'p99 latency': [320, 360, 340, 410, 450, 380, 350, 330],
+}
+
+function Lines({ hidden = [] }: { hidden?: readonly string[] }) {
+  // Every series the chart can show, so hiding one leaves the rest their colors.
+  const all = Object.keys(LATENCY)
+  const colors = seriesColors(all)
+  const keys = all.filter((k) => !hidden.includes(k))
   const { highlighted, highlight, opacity } = useSeriesHighlight()
-  const data: Record<string, number[]> = {
-    'p50 latency': [120, 118, 125, 122, 130, 128, 126, 124],
-    'p95 latency': [210, 220, 205, 240, 260, 230, 225, 215],
-    'p99 latency': [320, 360, 340, 410, 450, 380, 350, 330],
-  }
+  const [index, setIndex] = useState<number | null>(null)
+  const [box, boxWidth] = useWidth()
   const width = 560
   const height = 160
-  const x = (i: number) => (i / 7) * width
-  const y = (v: number) => height - (v / 480) * height
+  const last = HOURS.length - 1
+  const x = (i: number) => (i / last) * width
+  const y = (v: number) => height - 4 - (v / 480) * (height - 8)
+  const nearest = (e: PointerEvent<Element>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    return Math.round(((e.clientX - r.left) / r.width) * last)
+  }
+  const ms = (n: number) => `${n} ms`
   return (
     <div
-      className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg) p-4"
-      style={{ width: '100%', maxWidth: 600 }}
+      className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
+      style={{ width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
     >
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-40 w-full"
-        role="img"
-        aria-label="Latency"
+      <div ref={box} style={{ position: 'relative' }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+          style={{ display: 'block', width: '100%', height: 160, overflow: 'visible' }}
+          role="img"
+          aria-label="Latency"
+          onPointerMove={(e) => setIndex(nearest(e))}
+          onPointerLeave={() => setIndex(null)}
+        >
+          {index !== null && (
+            <line
+              x1={x(index)}
+              x2={x(index)}
+              y1={0}
+              y2={height}
+              stroke="var(--theme-border)"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {keys.map((k) => (
+            <polyline
+              key={k}
+              fill="none"
+              stroke={colors[k]}
+              strokeOpacity={opacity(k)}
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+              points={(LATENCY[k] ?? []).map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+            />
+          ))}
+        </svg>
+        {index !== null &&
+          keys.map((k) => (
+            <span
+              key={k}
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: (index / last) * boxWidth - 4,
+                top: y(LATENCY[k]?.[index] ?? 0) - 4,
+                width: 8,
+                height: 8,
+                borderRadius: 9999,
+                background: colors[k],
+                boxShadow: '0 0 0 2px var(--theme-panel-bg)',
+                pointerEvents: 'none',
+              }}
+            />
+          ))}
+        <ChartTooltipBeside x={index === null ? null : (index / last) * boxWidth}>
+          {index !== null && (
+            <ChartTooltipContent
+              label={HOURS[index]}
+              total={false}
+              highlighted={highlighted}
+              formatValue={ms}
+              items={keys.map((k) => ({
+                key: k,
+                name: k,
+                value: LATENCY[k]?.[index] ?? 0,
+                color: colors[k] ?? '',
+              }))}
+            />
+          )}
+        </ChartTooltipBeside>
+      </div>
+      <div
+        className="text-(--theme-muted-text-color)"
+        style={{ position: 'relative', height: 16, fontSize: 11, marginTop: 4 }}
       >
-        {keys.map((k) => (
-          <polyline
-            key={k}
-            fill="none"
-            stroke={colors[k]}
-            strokeOpacity={opacity(k)}
-            strokeWidth={2}
-            points={(data[k] ?? []).map((v, i) => `${x(i)},${y(v)}`).join(' ')}
-          />
-        ))}
-      </svg>
+        {HOURS.map((h, i) =>
+          i % 2 === 0 ? (
+            <span
+              key={h}
+              style={{
+                position: 'absolute',
+                left: `${(i / last) * 100}%`,
+                transform: i === 0 ? undefined : 'translateX(-50%)',
+              }}
+            >
+              {h}
+            </span>
+          ) : null,
+        )}
+      </div>
       <ChartLegendList
         className="mt-3"
         shape="line"
@@ -212,11 +343,83 @@ function Lines() {
   )
 }
 
-/** Lines take the same colors, with a line swatch in the legend. */
+/** Lines take the same colors, with a line swatch in the legend. Hovering puts a crosshair on
+ *  the nearest hour and the tooltip beside it, on the side with room: it flips near the right
+ *  edge and never covers the hour or the pointer. */
 export const LineChart: StoryObj = {
   render: () => (
-    <div className="p-8">
+    <div style={{ padding: 24 }}>
       <Lines />
     </div>
   ),
+}
+
+/** With p50 filtered out, p95 and p99 keep the colors they had: the chart passes every key it
+ *  can show to `seriesColors`, not only the ones shown. */
+export const LineChartFiltered: StoryObj = {
+  render: () => (
+    <div style={{ padding: 24 }}>
+      <Lines hidden={['p50 latency']} />
+    </div>
+  ),
+}
+
+const REGIONS = [
+  'us-east-1',
+  'us-west-2',
+  'eu-west-1',
+  'eu-central-1',
+  'ap-south-1',
+  'ap-northeast-1',
+  'sa-east-1',
+  'ca-central-1',
+  'af-south-1',
+  'me-south-1',
+]
+const SPEND = [420, 380, 260, 210, 160, 120, 90, 60, 30, 20]
+
+/** Ten regions in a chart that colors eight: the first seven keep their own colors, and the
+ *  last three fold into one gray "Other" series, its value their sum. */
+export const NineOrMoreSeries: StoryObj = {
+  render: () => {
+    const { keys, folded } = foldSeries(REGIONS)
+    const colors = seriesColors(keys)
+    const value = (k: string) =>
+      k === OTHER_SERIES_KEY
+        ? folded.reduce((sum, r) => sum + (SPEND[REGIONS.indexOf(r)] ?? 0), 0)
+        : (SPEND[REGIONS.indexOf(k)] ?? 0)
+    const total = keys.reduce((sum, k) => sum + value(k), 0)
+    const label = (k: string) => (k === OTHER_SERIES_KEY ? `Other (${folded.length})` : k)
+    return (
+      <div style={{ padding: 24 }}>
+        <div
+          className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
+          style={{ width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
+        >
+          <div style={{ display: 'flex', gap: 2, height: 24 }}>
+            {keys.map((k, i) => (
+              <span
+                key={k}
+                title={label(k)}
+                style={{
+                  flex: value(k) / total,
+                  background: colors[k],
+                  borderRadius: i === 0 ? '4px 0 0 4px' : i === keys.length - 1 ? '0 4px 4px 0' : 0,
+                }}
+              />
+            ))}
+          </div>
+          <ChartLegendList
+            className="mt-3"
+            items={keys.map((k) => ({ key: k, label: label(k), color: colors[k] ?? '' }))}
+          />
+        </div>
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Other (3)')).toBeInTheDocument()
+    await expect(OTHER_SERIES_COLOR).toContain('--theme-muted-text-color')
+  },
 }
