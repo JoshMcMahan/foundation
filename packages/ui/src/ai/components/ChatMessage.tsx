@@ -109,8 +109,14 @@ function ChatMessage({
   const hasReasoning = !!message.reasoning
   const toolCallCount = message.parts?.filter((p) => p.kind === 'tool_call').length ?? 0
   const showReasoningButton = !isUser && !isStreaming && hasReasoning
+  // A reply that narrated its calls already reads as a sequence of steps; a
+  // bare count above it adds nothing and would appear only once it finished.
+  const narrated = !!message.parts?.some((p) => p.kind === 'text')
   const showTurnDurationLabel =
-    !isUser && !isStreaming && !hasReasoning && (!!message.reasoningDuration || toolCallCount > 0)
+    !isUser &&
+    !isStreaming &&
+    !hasReasoning &&
+    (!!message.reasoningDuration || (toolCallCount > 0 && (!narrated || !!askerName)))
 
   const { messageMeta: t, thinking: tThinking } = useChatConfig().strings
   const { common } = useStrings()

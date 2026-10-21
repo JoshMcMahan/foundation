@@ -487,6 +487,43 @@ describe('streamed parts', () => {
     ])
   })
 
+  it('keeps the text written before and after a tool call in order, live and once finished', async () => {
+    let handlers!: import('../adapter/types').StreamHandlers
+    const done = deferred<StreamResult>()
+    const adapter = makeAdapter({
+      streamCompletion: vi.fn((_req, h) => {
+        handlers = h
+        return done.promise
+      }),
+    })
+    await renderProvider(adapter)
+    await act(async () => {
+      void chat.sendMessage('whats billing me')
+      await flush()
+    })
+
+    await act(async () => {
+      handlers.onContent('Checking costs.')
+      handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'cost_summary', args: '{}' })
+      handlers.onPart?.({ type: 'tool_end', id: 't1', result: '[]' })
+      handlers.onContent('Nothing is billing.')
+    })
+    await waitFor(() =>
+      expect(chat.streamingParts.map((p) => p.kind)).toEqual(['text', 'tool_call', 'text']),
+    )
+
+    await act(async () => {
+      done.resolve({ ...emptyStreamResult(), content: 'Checking costs.Nothing is billing.' })
+      await flush()
+    })
+    await waitFor(() =>
+      expect(chat.currentConversation?.messages.find((m) => m.role === 'assistant')).toBeDefined(),
+    )
+    const assistant = chat.currentConversation?.messages.find((m) => m.role === 'assistant')
+    expect(assistant?.parts?.map((p) => p.kind)).toEqual(['text', 'tool_call'])
+    expect(assistant?.content).toBe('Nothing is billing.')
+  })
+
   it('times the thinking to its last reasoning chunk, not to the end of the answer', async () => {
     let handlers!: import('../adapter/types').StreamHandlers
     const done = deferred<StreamResult>()

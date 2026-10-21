@@ -205,3 +205,19 @@ export function finalizeParts(parts: MessagePart[]): MessagePart[] {
       : p,
   )
 }
+
+/** A finished reply whose text was streamed among its parts: the text after
+ *  the last part is the answer, shown below them as the message's content,
+ *  the shape a stored conversation is read back in. */
+export function splitAnswer(parts: MessagePart[]): {
+  parts: MessagePart[]
+  content?: string | null
+} {
+  if (!parts.some((p) => p.kind === 'text')) {
+    return { parts }
+  }
+  const last = parts.at(-1)
+  return last?.kind === 'text'
+    ? { parts: parts.slice(0, -1), content: last.text }
+    : { parts, content: null }
+}

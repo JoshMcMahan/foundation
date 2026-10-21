@@ -182,6 +182,9 @@ export interface StreamingKnobs {
   toolCalls?: number
   toolMs?: number
   failLastTool?: boolean
+  // A sentence streamed before the tool calls, as a model says what it will
+  // check before it checks.
+  narration?: string
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -357,11 +360,20 @@ export function makeStaticAdapter(options?: {
           await sleep(reasoningMs / steps, signal)
         }
       }
+      let content = ''
+      if (knobs.narration) {
+        for (const word of knobs.narration.split(' ')) {
+          content += (content ? ' ' : '') + word
+          handlers.onContent(`${word} `)
+          await sleep(wordDelayMs, signal)
+        }
+        content += '\n\n'
+        handlers.onContent('\n\n')
+      }
       await streamToolCalls(knobs, handlers, signal)
       const reply = words(replyWords)
-      let content = ''
       for (const word of reply.split(' ')) {
-        content += (content ? ' ' : '') + word
+        content += (content && !content.endsWith('\n') ? ' ' : '') + word
         handlers.onContent(`${word} `)
         await sleep(wordDelayMs, signal)
       }

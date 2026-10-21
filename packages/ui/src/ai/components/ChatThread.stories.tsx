@@ -593,6 +593,41 @@ export const StreamingToolCalls: StoryObj<{
   },
 }
 
+// A reply that says what it will check, checks, then answers: the sentence
+// stays above the calls it led into while the reply streams, as it does once
+// the reply is saved.
+export const NarratedToolCalls: StoryObj = {
+  render: () => {
+    const Adapterized = () => {
+      const adapter = useMemo(
+        () =>
+          makeStaticAdapter({
+            streaming: {
+              narration: 'Checking the server tests and the partition config first.',
+              toolCalls: 2,
+              toolMs: 700,
+              reasoningMs: 0,
+              replyWords: 60,
+              wordDelayMs: 40,
+            },
+          }),
+        [],
+      )
+      return (
+        <StoryChat adapter={adapter}>
+          <StoryViewport>
+            <ChatThread conversationId="conv-1" />
+          </StoryViewport>
+        </StoryChat>
+      )
+    }
+    return <Adapterized />
+  },
+  play: async ({ canvasElement }) => {
+    sendFromComposer(canvasElement, 'Check the server tests before answering.')
+  },
+}
+
 // Stateful navigation like the host app's: empty state until a conversation
 // exists, then the thread. Full host wiring lives in packages/ai-chat-app.
 function Playground() {

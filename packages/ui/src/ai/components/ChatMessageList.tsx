@@ -107,9 +107,12 @@ export default function ChatMessageList({
   const conversationId = messages[0]?.conversationId
   // One object per token rather than per render, so the streaming row's memo
   // holds while something else re-renders the list.
+  // Once tool calls have started, the reply's text streams among them in the
+  // parts, in the order it came, rather than as one block below them.
+  const textInParts = streamingParts.some((part) => part.kind === 'text')
   const providerStreamingMessage = useMemo<Message | null>(
     () =>
-      providerStreaming && streamingContent
+      providerStreaming && streamingContent && !textInParts
         ? {
             id: 'streaming',
             role: 'assistant',
@@ -118,7 +121,7 @@ export default function ChatMessageList({
             ...(conversationId ? { conversationId } : {}),
           }
         : null,
-    [providerStreaming, streamingContent, conversationId],
+    [providerStreaming, streamingContent, textInParts, conversationId],
   )
   const streamingMessage =
     streamingMessageProp === undefined ? providerStreamingMessage : streamingMessageProp
@@ -226,7 +229,12 @@ export default function ChatMessageList({
   const hasContent = messages.length > 0 || !!streamingMessage
   const awaitingApproval = streamingParts.some((part) => part.kind === 'approval' && !part.resolved)
   const showWorkingIndicator =
-    workingIndicator && isStreaming && !streamingReasoning && !streamingMessage && !awaitingApproval
+    workingIndicator &&
+    isStreaming &&
+    !streamingReasoning &&
+    !streamingMessage &&
+    !textInParts &&
+    !awaitingApproval
   // biome-ignore lint/correctness/useExhaustiveDependencies: hasContent re-attaches once the container mounts; it is absent in the empty state.
   useEffect(() => {
     const container = containerRef.current

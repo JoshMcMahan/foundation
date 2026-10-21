@@ -500,6 +500,19 @@ describe('ChatMessageList while a reply streams', () => {
     expect(messageRenders).toEqual(['streaming'])
   })
 
+  it('streams the reply inside the parts once they carry its text', () => {
+    mockChat.streamingContent = 'Checking costs.'
+    mockChat.streamingParts = [
+      { kind: 'text', text: 'Checking costs.' },
+      { kind: 'tool_call', id: 't1', name: 'cost_summary', args: '{}', status: 'running' },
+    ]
+    messageRenders.length = 0
+    render(<ChatMessageList messages={[createMockMessage({ id: 'm1' })]} allMessages={[]} />)
+    expect(messageRenders).not.toContain('streaming')
+    mockChat.streamingContent = ''
+    mockChat.streamingParts = []
+  })
+
   it("takes the host's reply over the provider's, null included", () => {
     const messages = [createMockMessage({ id: 'q', role: 'user' })]
     mockChat.streamingContent = 'provider text'

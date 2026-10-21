@@ -19,6 +19,8 @@ interface UseSSEStreamResult {
   stopAnimationLoop: () => { unrevealed: string }
   /** Resolves once the buffered text has been revealed, or after maxMs */
   drainReveal: (maxMs?: number) => Promise<void>
+  /** Runs fn once the text received so far has been revealed */
+  afterReveal: (fn: () => void) => void
   /** Reset all animation refs (used when navigating away) */
   resetAnimationRefs: () => void
   /** Ref to the target content buffer */
@@ -78,6 +80,9 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
   const streamActiveRef = useRef(false)
   const lastRevealTimeRef = useRef(0)
   const drainWaitersRef = useRef<Array<() => void>>([])
+  // Work that has to wait for the text before it to show, such as a tool call
+  // the model started after a sentence still being revealed.
+  const pendingRef = useRef<Array<{ at: number; fn: () => void }>>([])
   // Track which conversation the streaming content is for (prevents cross-conversation pollution)
   const streamingConversationIdRef = useRef<string | null>(null)
 
@@ -85,6 +90,12 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
   const backgroundStreamsRef = useRef<Map<string, BackgroundStream>>(new Map())
 
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  const runPending = useCallback((revealed: number) => {
+    while (pendingRef.current.length && (pendingRef.current[0]?.at ?? 0) <= revealed) {
+      pendingRef.current.shift()?.fn()
+    }
+  }, [])
 
   const settleDrain = useCallback(() => {
     const waiters = drainWaitersRef.current
@@ -115,6 +126,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
           conversationId,
         })
         lastRevealTimeRef.current = now
+        runPending(newRevealed)
       }
     }
 
@@ -130,7 +142,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     } else {
       streamRafRef.current = null
     }
-  }, [dispatch, settleDrain])
+  }, [dispatch, settleDrain, runPending])
 
   const onStreamingChunk = useCallback(
     (chunk: string) => {
@@ -170,11 +182,12 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
       cancelAnimationFrame(streamRafRef.current)
       streamRafRef.current = null
     }
+    runPending(Number.POSITIVE_INFINITY)
     targetStreamContentRef.current = ''
     revealedLengthRef.current = 0
     lastRevealTimeRef.current = 0
     settleDrain()
-  }, [settleDrain])
+  }, [settleDrain, runPending])
 
   const drainReveal = useCallback((maxMs = 1500) => {
     if (
@@ -190,6 +203,18 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
         resolve()
       })
     })
+  }, [])
+
+  const afterReveal = useCallback((fn: () => void) => {
+    const at = targetStreamContentRef.current.length
+    if (
+      !streamActiveRef.current ||
+      (revealedLengthRef.current >= at && pendingRef.current.length === 0)
+    ) {
+      fn()
+      return
+    }
+    pendingRef.current.push({ at, fn })
   }, [])
 
   const stopAnimationLoop = useCallback(() => {
@@ -212,6 +237,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     startStreaming,
     stopAnimationLoop,
     drainReveal,
+    afterReveal,
     resetAnimationRefs,
     targetStreamContentRef,
     streamActiveRef,

@@ -616,6 +616,21 @@ describe('turn duration row', () => {
     expect(label.closest('button')).toBeNull()
   })
 
+  it('leaves the bare call count off a reply that narrated its calls', () => {
+    const message = createMockMessage({
+      role: 'assistant',
+      content: 'Nothing is billing.',
+      parts: [
+        { kind: 'text', text: 'Checking costs.' },
+        { kind: 'tool_call', id: 'c1', name: 'cost_summary', args: '{}', status: 'ok' },
+      ],
+    })
+
+    render(<ChatMessage {...defaultProps} message={message} />)
+
+    expect(screen.queryByText('Ran 1 tool call')).not.toBeInTheDocument()
+  })
+
   it('keeps the reasoning row clickable when reasoning text exists', () => {
     const onOpenReasoning = vi.fn()
     const message = createMockMessage({

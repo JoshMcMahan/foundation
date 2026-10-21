@@ -398,6 +398,39 @@ describe('chatReducer', () => {
       expect(result.streamingContent).toBe('Hello World')
     })
 
+    it('streams text among the parts once a part has arrived, after the text before it', () => {
+      const convId = 'test-conv'
+      let state: ChatState = {
+        ...initialState,
+        streamingContent: 'Checking costs.',
+        currentConversation: createMockConversation({ id: convId }),
+      }
+      state = chatReducer(state, {
+        type: 'APPLY_STREAMING_PART',
+        delta: { type: 'tool_start', id: 't1', name: 'cost_summary', args: '{}' },
+        conversationId: convId,
+      })
+      state = chatReducer(state, {
+        type: 'APPEND_STREAMING_CONTENT',
+        content: 'Nothing is billing.',
+        conversationId: convId,
+      })
+
+      expect(state.streamingParts.map((p) => p.kind)).toEqual(['text', 'tool_call', 'text'])
+      expect(state.streamingParts[0]).toEqual({ kind: 'text', text: 'Checking costs.' })
+      expect(state.streamingParts[2]).toEqual({ kind: 'text', text: 'Nothing is billing.' })
+      expect(state.streamingContent).toBe('Checking costs.Nothing is billing.')
+    })
+
+    it('keeps text out of the parts while there are none', () => {
+      const convId = 'test-conv'
+      const state = chatReducer(
+        { ...initialState, currentConversation: createMockConversation({ id: convId }) },
+        { type: 'APPEND_STREAMING_CONTENT', content: 'Hello', conversationId: convId },
+      )
+      expect(state.streamingParts).toEqual([])
+    })
+
     it('should not append streaming content for wrong conversation', () => {
       const state: ChatState = {
         ...initialState,

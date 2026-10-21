@@ -208,6 +208,10 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         streamingContent: state.streamingContent + action.content,
+        // Once parts have started, text continues among them in order.
+        streamingParts: state.streamingParts.length
+          ? applyPartDelta(state.streamingParts, { type: 'text', text: action.content })
+          : state.streamingParts,
         // Once we start getting content, we're no longer just thinking
         isThinking: false,
       }
@@ -230,7 +234,13 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return {
         ...state,
-        streamingParts: applyPartDelta(state.streamingParts, action.delta),
+        // The text written before the first part leads the timeline.
+        streamingParts: applyPartDelta(
+          state.streamingParts.length || !state.streamingContent || action.delta.type === 'text'
+            ? state.streamingParts
+            : [{ kind: 'text', text: state.streamingContent }],
+          action.delta,
+        ),
       }
     case 'CLEAR_STREAMING_CONTENT':
       // Only clear if conversation matches or no conversationId specified

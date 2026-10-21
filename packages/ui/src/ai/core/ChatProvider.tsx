@@ -32,7 +32,7 @@ import type {
 } from '../types'
 import { chatReducer, initialState } from './chatReducer'
 import { ChatConfigProvider, type ChatUIConfig, resolveChatConfig } from './config'
-import { applyPartDelta, finalizeParts, toolTurnMessages } from './parts'
+import { applyPartDelta, finalizeParts, splitAnswer, toolTurnMessages } from './parts'
 import { providerIssueFor } from './providerIssues'
 import {
   ReportSidebarPresentationContext,
@@ -303,6 +303,7 @@ export function ChatProvider({
     startStreaming,
     stopAnimationLoop,
     drainReveal,
+    afterReveal,
     resetAnimationRefs,
     targetStreamContentRef,
     streamActiveRef,
@@ -632,6 +633,9 @@ export function ChatProvider({
         // Kept locally as well as in the background stream so the final
         // message can attach it after the stream's map entry is deleted.
         let liveParts: MessagePart[] = []
+        // The reply's text so far, which leads the timeline once a part
+        // arrives, so text and tool calls keep the order they came in.
+        let liveText = ''
 
         const {
           content: assistantContent,
@@ -645,6 +649,10 @@ export function ChatProvider({
           {
             onContent: (chunk: string) => {
               markStreamStart()
+              liveText += chunk
+              if (liveParts.length) {
+                liveParts = applyPartDelta(liveParts, { type: 'text', text: chunk })
+              }
               onStreamingChunk(chunk)
             },
             onReasoning: (reasoning: string) => {
@@ -672,12 +680,18 @@ export function ChatProvider({
               if (routePart?.(delta)) {
                 return
               }
-              liveParts = applyPartDelta(liveParts, delta)
-              dispatch({
-                type: 'APPLY_STREAMING_PART',
+              liveParts = applyPartDelta(
+                liveParts.length || !liveText ? liveParts : [{ kind: 'text', text: liveText }],
                 delta,
-                conversationId: targetConversationId,
-              })
+              )
+              // A part shows once the text the model wrote before it has.
+              afterReveal(() =>
+                dispatch({
+                  type: 'APPLY_STREAMING_PART',
+                  delta,
+                  conversationId: targetConversationId,
+                }),
+              )
               const bgStream = backgroundStreamsRef.current.get(targetConversationId)
               if (bgStream) {
                 bgStream.parts = liveParts
@@ -710,7 +724,7 @@ export function ChatProvider({
           reasoning: assistantReasoning || undefined,
           reasoningDuration: thinkingDuration ?? undefined,
           responsesOutput: responsesOutput.length ? responsesOutput : undefined,
-          ...(liveParts.length ? { parts: finalizeParts(liveParts) } : {}),
+          ...(liveParts.length ? splitAnswer(finalizeParts(liveParts)) : {}),
         }
         dispatch({
           type: 'ADD_MESSAGE',
@@ -762,6 +776,7 @@ export function ChatProvider({
       onStreamingChunk,
       stopAnimationLoop,
       drainReveal,
+      afterReveal,
       streamingConversationIdRef,
       backgroundStreamsRef,
       abortControllerRef,
