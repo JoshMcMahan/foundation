@@ -121,6 +121,26 @@
 }
 /* generated:end */
 
+/* A status lamp's light: a vivid top fading to a pale bottom, so it looks lit from inside.
+   The same in light and dark; a theme may set its own. The status's words beside it carry its
+   meaning in the text tones, so the lamp needn't hold a contrast of its own. */
+:root {
+  --lamp-success-from: #13fb04;
+  --lamp-success-to: #aded99;
+  --lamp-error-from: #fb131b;
+  --lamp-error-to: #edad99;
+  --lamp-warning-from: #f9a004;
+  --lamp-warning-to: #ead698;
+  --lamp-info-from: #045ef9;
+  --lamp-info-to: #036efb;
+  --lamp-muted-from: #8a939e;
+  --lamp-muted-to: #d3d8de;
+  --lamp-accent-from: var(--theme-accent);
+  --lamp-accent-to: color-mix(in oklch, var(--theme-accent), white 55%);
+  --lamp-default-from: var(--theme-app);
+  --lamp-default-to: color-mix(in oklch, var(--theme-app), white 55%);
+}
+
 @utility theme-accent {
   background-color: var(--theme-accent, #06354f);
   color: var(--theme-accent-text, #ffffff);

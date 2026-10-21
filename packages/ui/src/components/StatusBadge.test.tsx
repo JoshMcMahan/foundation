@@ -81,14 +81,23 @@ describe('CountBadge', () => {
 })
 
 describe('StatusDot', () => {
-  it('rings the dot with a soft halo of its tone', () => {
+  it('is a lamp lit in its tone, 10px beside words', () => {
     const { container } = render(<StatusDot variant="success" />)
-    const dot = container.querySelector('.rounded-full')
-    expect(dot).toHaveClass('bg-(--theme-success)', 'ring-2', 'ring-(--theme-success)/22')
-    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true')
+    const box = container.firstElementChild as HTMLElement
+    expect(box.style.getPropertyValue('--lamp-from')).toBe('var(--lamp-success-from)')
+    expect(box.style.getPropertyValue('--lamp-to')).toBe('var(--lamp-success-to)')
+    expect(box.style.width).toBe('10px')
+    expect(box).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('[data-lamp]')).toHaveAttribute('data-lamp', 'lit')
   })
 
-  it('is the badge’s own dot, with no halo on a solid fill', () => {
+  it('is a hollow ring when off, with no ping', () => {
+    const { container } = render(<StatusDot off pulse />)
+    expect(container.querySelector('[data-lamp]')).toHaveAttribute('data-lamp', 'off')
+    expect(container.querySelector('.animate-ping')).toBeNull()
+  })
+
+  it('is the badge’s own dot, smaller, and flat on a solid fill', () => {
     const { container } = render(
       <>
         <StatusBadge variant="error" dot>
@@ -99,14 +108,15 @@ describe('StatusDot', () => {
         </StatusBadge>
       </>,
     )
-    const [soft, solid] = [...container.querySelectorAll('.relative.inline-flex.rounded-full')]
-    expect(soft).toHaveClass('ring-(--theme-error)/22')
+    const [soft, solid] = [...container.querySelectorAll('[data-lamp]')] as HTMLElement[]
+    expect(soft).toHaveAttribute('data-lamp', 'lit')
+    expect(soft?.style.width).toBe('7px')
+    expect(solid).toHaveAttribute('data-lamp', 'flat')
     expect(solid).toHaveClass('bg-current')
-    expect(solid).not.toHaveClass('ring-2')
   })
 
   it('keeps its ping when it pulses', () => {
     const { container } = render(<StatusDot variant="info" pulse />)
-    expect(container.querySelector('.animate-ping')).toBeInTheDocument()
+    expect(container.querySelector('.animate-ping')).toHaveClass('bg-(--lamp-from)')
   })
 })
