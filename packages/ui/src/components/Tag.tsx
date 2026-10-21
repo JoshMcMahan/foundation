@@ -19,10 +19,11 @@ export interface TagStyle {
 }
 
 /** The one tag look: a pill with a hairline border and 11px text. Another component's chip,
- *  such as a picker's chosen value, uses it to look the same. */
+ *  such as a picker's chosen value, uses it to look the same. It has the panel's fill, so its
+ *  edge shows on a hovered or selected row too, whose fill can match the border. */
 export function tagClasses({ mono = false, caps = false }: TagStyle = {}): string {
   return cx(
-    'inline-flex h-5 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-full border border-(--theme-border) px-2 text-[11px] leading-none whitespace-nowrap text-(--theme-app)',
+    'inline-flex h-5 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-full border border-(--theme-border) bg-(--theme-panel-bg) px-2 text-[11px] leading-none whitespace-nowrap text-(--theme-app)',
     mono ? 'font-mono' : 'font-sans',
     caps && 'text-[10px] font-medium tracking-wide uppercase',
   )
@@ -75,7 +76,8 @@ export function Tag({
     </>
   )
   const classes = cx(tagClasses({ mono, caps }), className)
-  const hover = 'transition-colors hover:bg-(--theme-hover)'
+  // The muted panel, not the hover fill: a hovered row has that, and the tag would melt into it.
+  const hover = 'transition-colors hover:bg-(--theme-muted-panel-bg)'
   if (!onRemove) {
     return href ? (
       <AppLink
@@ -277,7 +279,7 @@ function MoreTags({ tags, ...style }: { tags: NormalTag[] } & TagStyle) {
           aria-label={`${common.moreCount(tags.length)}: ${names.join(', ')}`}
           className={cx(
             tagClasses(style),
-            'cursor-pointer text-(--theme-muted-text-color) tabular-nums hover:bg-(--theme-hover) hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) data-popup-open:bg-(--theme-hover)',
+            'cursor-pointer text-(--theme-muted-text-color) tabular-nums hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) data-popup-open:bg-(--theme-muted-panel-bg)',
           )}
         >
           +{count}

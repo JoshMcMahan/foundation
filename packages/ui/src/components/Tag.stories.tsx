@@ -136,3 +136,47 @@ export const RemovableTags: StoryObj = {
     await expect(canvas.queryByText('spot')).toBeNull()
   },
 }
+
+const ROWS: { name: string; state: string; tags: TagItem[] }[] = [
+  {
+    name: 'genomics',
+    state: 'rest',
+    tags: ['slurm', 'gpu', { key: 'us-east-1', label: 'us-east-1', color: '#3b97dc' }],
+  },
+  { name: 'climate-model', state: 'hover', tags: ['pbs', 'cpu', 'spot'] },
+  {
+    name: 'render-farm',
+    state: 'selected',
+    tags: ['k8s', { key: 'eu-west-1', label: 'eu-west-1', color: '#3ba76a' }],
+  },
+]
+
+/** Tags on a list's rows at rest, hovered and selected: the pill keeps the panel's fill, so its
+ *  edge shows on every row, in light and dark, where a hovered row's fill can match the border. */
+export const OnListRows: StoryObj = {
+  render: () => (
+    <div style={{ padding: 24 }}>
+      <table
+        className="bg-(--theme-panel-bg) text-(--theme-app)"
+        style={{ width: '100%', maxWidth: 520, borderCollapse: 'collapse', fontSize: 13 }}
+      >
+        <tbody>
+          {ROWS.map((row) => (
+            <tr
+              key={row.name}
+              className={
+                row.state === 'selected' ? 'bg-(--theme-accent-subtle)/60' : 'hover:theme-hover'
+              }
+              style={{ borderBottom: '1px solid var(--theme-border)' }}
+            >
+              <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{row.name}</td>
+              <td style={{ padding: '10px 12px', width: '100%' }}>
+                <TagList tags={row.tags} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ),
+}

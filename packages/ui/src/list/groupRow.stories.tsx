@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { useContextMenu } from '../components/ContextMenu'
+import { IconButton } from '../components/IconButton'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
-import { CloudIcon, DiskIcon, InstanceIcon, NetworkInterfaceIcon } from '../icons'
+import { CloudIcon, DiskIcon, InstanceIcon, NetworkInterfaceIcon, TrashIcon } from '../icons'
 import { GroupRow, ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
 import { ListCellText, listTableFixedProps, NameCell } from './ListTable'
 import { type ColumnDef, useListView } from './listView'
@@ -33,6 +34,8 @@ interface Cluster {
   name: string
   owner: string
   orphaned?: boolean
+  /** The deployment that made it, shown where there is room. */
+  deployment?: string
   deleting?: boolean
   resources: Resource[]
 }
@@ -73,6 +76,7 @@ const CLUSTERS: Cluster[] = [
     owner: 'akhan',
     orphaned: true,
     deleting: true,
+    deployment: 'dep-7f3a91c2e4b8d605',
     resources: [
       resource('4', 'cfd-burst-scratch', 'Disk', 'running', 'us-east-1c'),
       resource('5', 'cfd-burst-eni', 'Network interface', 'pending', 'us-east-1c'),
@@ -99,29 +103,32 @@ function columns(priorities: boolean): ColumnDef[] {
   // Widths only with priorities: without, every column shows down to 36rem, and
   // their widths together would leave the name none.
   const width = (w: string) => (priorities ? { width: w } : {})
-  // Each column but the name is as wide as its values need, so the name takes
-  // what they leave; without widths, every column takes an equal share.
+  // Each column but the name takes a share of the list, and the name what they
+  // leave; as columns drop, their shares go to the ones left. Without widths,
+  // every column takes an equal share.
   return [
     { key: 'name', label: 'Name', alwaysVisible: true, headerClassName: 'truncate' },
-    { key: 'type', label: 'Type', headerClassName: 'truncate', ...width('9rem') },
-    { key: 'state', label: 'State', headerClassName: 'truncate', ...width('6.5rem') },
+    { key: 'type', label: 'Type', headerClassName: 'truncate', ...width('11%') },
+    { key: 'state', label: 'State', headerClassName: 'truncate', ...width('10%') },
     {
       key: 'account',
       label: 'Cloud account',
       headerClassName: 'truncate',
-      ...width('9rem'),
+      ...width('12%'),
       ...low,
     },
-    { key: 'region', label: 'Region', headerClassName: 'truncate', ...width('7rem') },
-    { key: 'zone', label: 'Zone', headerClassName: 'truncate', ...width('7.5rem'), ...low },
-    { key: 'started', label: 'Started', headerClassName: 'truncate', ...width('8rem'), ...low },
+    { key: 'region', label: 'Region', headerClassName: 'truncate', ...width('10%') },
+    { key: 'zone', label: 'Zone', headerClassName: 'truncate', ...width('9%'), ...low },
+    { key: 'started', label: 'Started', headerClassName: 'truncate', ...width('10%'), ...low },
     {
       key: 'lastSeen',
       label: 'Last seen',
       headerClassName: 'truncate',
-      ...width('6.5rem'),
+      ...width('9%'),
       ...medium,
     },
+    // A delete button's column: always shown, never in the picker, at its own 40px.
+    { key: 'delete', label: '', locked: true, stack: false, width: 40 },
   ]
 }
 
@@ -144,6 +151,13 @@ function ClusterGroup({ cluster }: { cluster: Cluster }) {
           {cluster.orphaned && <StatusBadge variant="warning">Orphan</StatusBadge>}
           {cluster.deleting && <StatusBadge variant="error">Deleting</StatusBadge>}
         </>
+      }
+      detail={
+        cluster.deployment && (
+          <Tooltip content={cluster.deployment}>
+            <span className="font-mono text-[11px] font-normal">{cluster.deployment}</span>
+          </Tooltip>
+        )
       }
       trailing={`${running}/${cluster.resources.length} running`}
     />
@@ -172,6 +186,15 @@ function ClusterTab({ priorities }: { priorities: boolean }) {
         return <ListCellText mono>{r.zone}</ListCellText>
       case 'started':
         return <ListCellText>{r.started}</ListCellText>
+      case 'delete':
+        return (
+          <IconButton
+            label={`Delete ${r.name}`}
+            icon={<TrashIcon />}
+            size="xs"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )
       default:
         return <ListCellText>{r.lastSeen}</ListCellText>
     }
@@ -201,7 +224,11 @@ function ClusterTab({ priorities }: { priorities: boolean }) {
                   href={null}
                 />
                 {view.visibleColumns.slice(1).map((col) => (
-                  <Table.Item key={col.key} className="py-2.5">
+                  <Table.Item
+                    key={col.key}
+                    // The button's own 24px, and 8px either side, fill the delete column's 40px.
+                    className={col.key === 'delete' ? 'px-2 py-2.5' : 'py-2.5'}
+                  >
                     {cell(col.key, r)}
                   </Table.Item>
                 ))}
@@ -216,8 +243,10 @@ function ClusterTab({ priorities }: { priorities: boolean }) {
 }
 
 /** An inventory's Cluster tab: each cluster's header row holds its provider's
- *  icon, its name with a tooltip, its owner, its badges and, against the far
- *  end, how many of its resources run. The header has a cell per column, so
+ *  icon, its name with a tooltip, its owner, its badges, the deployment that made
+ *  it where there is room and, against the far end, how many of its resources
+ *  run. The columns take shares of the list, which the ones left share out as
+ *  others drop, and a delete button's column keeps its own 40px. The header has a cell per column, so
  *  as columns drop, the group rows' cells drop with them. On a phone the type,
  *  state and region share one line under each name. */
 export const ClusterTabGroups: StoryObj = {

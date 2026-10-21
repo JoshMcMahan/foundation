@@ -11,8 +11,13 @@ export interface ColumnDef {
   key: string
   label: string
   headerClassName?: string
-  /** Pinned on — never offered in the column picker (e.g. the Name column). */
+  /** Pinned on — never offered in the column picker — and the list's name
+   * column, which keeps a minimum width so it can't be crushed. */
   alwaysVisible?: boolean
+  /** Always shown and never offered in the column picker, at its own width:
+   * for a column such as a delete button's, which `alwaysVisible` would widen
+   * to a name's minimum. */
+  locked?: boolean
   /** Hidden until the user turns it on in the Display menu. */
   defaultHidden?: boolean
   /** NOT a table column (no header) — appears in picker and isVisible, but excluded from visibleColumns. */
@@ -32,8 +37,9 @@ export interface ColumnDef {
   /** The column's width, such as `'12%'` or `128`, set on its header. In a
    * fixed-layout list (`listTableFixedProps`), where every column without one
    * takes an equal share, give the other columns a width each and leave the
-   * name without one, so it takes what they leave. A percentage is of the
-   * list's width, and a hidden column's no longer counts. */
+   * name without one, so it takes what they leave. A percentage is a share of
+   * the list: when narrower widths drop columns, the shares they held go to
+   * the columns left, each in proportion to its own, the name's among them. */
   width?: string | number
   /** `end` sets the header and the cells against the column's far edge, for
    * figures, sizes and times that compare best lined up on their last digit. */
@@ -53,6 +59,11 @@ const PRIORITY_SHOW_CLASS: Record<ColumnPriority, string> = {
 /** Whether the column at index `i` of the visible ones stacks on a narrow container. */
 function stacks(col: ColumnDef, i: number): boolean {
   return i > 0 && !col.priority && col.stack !== false
+}
+
+/** Whether a column is always shown and kept out of the column picker. */
+export function isLocked(col: ColumnDef): boolean {
+  return Boolean(col.alwaysVisible || col.locked)
 }
 
 function columnResponsiveClass(col: ColumnDef, i: number): string {
@@ -153,6 +164,10 @@ export interface ListViewChrome {
   /** Per visible column, whether it stacks under the first on a narrow
    * container ({@link ColumnDef.stack}); `ListRow` reads entry `i`. */
   columnStacks: boolean[]
+  /** Whether the last column is a locked one, such as a delete button's: the
+   * row's `⋯` then keeps a lane of its own after it rather than floating over
+   * it on hover. */
+  lastColumnLocked?: boolean | undefined
   /** The list's filters, which `ListPage` shows as a row of chips under its toolbar. */
   filterState?: ListFilters | undefined
 }
@@ -267,7 +282,7 @@ export function useListView<T>({
     ? DEFAULT_ORDER
     : (defaultOrderBy ?? orderBys[0]?.value ?? '')
   const defaultHiddenKeys = useMemo(
-    () => columns.filter((c) => c.defaultHidden && !c.alwaysVisible).map((c) => c.key),
+    () => columns.filter((c) => c.defaultHidden && !isLocked(c)).map((c) => c.key),
     [columns],
   )
   const defaultPinnedKeys = useMemo(
@@ -336,18 +351,21 @@ export function useListView<T>({
   const isVisible = useCallback(
     (key: string) => {
       const col = columns.find((c) => c.key === key)
-      return Boolean(col?.alwaysVisible) || !hiddenKeys.includes(key)
+      return (col !== undefined && isLocked(col)) || !hiddenKeys.includes(key)
     },
     [columns, hiddenKeys],
   )
 
   const visibleColumns = useMemo(
-    () => columns.filter((c) => !c.inline && (c.alwaysVisible || !hiddenKeys.includes(c.key))),
+    () => columns.filter((c) => !c.inline && (isLocked(c) || !hiddenKeys.includes(c.key))),
     [columns, hiddenKeys],
   )
 
   const columnClasses = useMemo(() => visibleColumns.map(columnClass), [visibleColumns])
   const columnStacks = useMemo(() => visibleColumns.map(stacks), [visibleColumns])
+  const last = visibleColumns.at(-1)
+  const lastColumnLocked =
+    visibleColumns.length > 1 && last !== undefined && !last.alwaysVisible && isLocked(last)
 
   const toggleColumn = useCallback(
     (key: string) =>
@@ -472,6 +490,7 @@ export function useListView<T>({
     visibleColumns,
     columnClasses,
     columnStacks,
+    lastColumnLocked,
     isVisible,
     pinnedCount,
     actionsWidth,

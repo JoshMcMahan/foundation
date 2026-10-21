@@ -328,7 +328,12 @@ export function ListActionsHeader({
   actionCount = 0,
   className,
 }: {
-  view?: { showActions: boolean; actionsWidth: number; alwaysShowActions?: boolean }
+  view?: {
+    showActions: boolean
+    actionsWidth: number
+    alwaysShowActions?: boolean
+    lastColumnLocked?: boolean | undefined
+  }
   actionCount?: number
   className?: string
 }) {
@@ -338,7 +343,11 @@ export function ListActionsHeader({
     return null
   }
   const width = view ? view.actionsWidth : actionsColumnWidth(actionCount)
-  const floating = !!view && !view.alwaysShowActions && view.actionsWidth === actionsColumnWidth(0)
+  const floating =
+    !!view &&
+    !view.alwaysShowActions &&
+    !view.lastColumnLocked &&
+    view.actionsWidth === actionsColumnWidth(0)
   return (
     <Table.Header
       caps={false}

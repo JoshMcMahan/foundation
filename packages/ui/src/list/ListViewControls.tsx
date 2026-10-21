@@ -13,7 +13,7 @@ import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ChevronDownIcon, ChevronUpIcon, DisplayIcon, FilterIcon } from '../icons'
 import { AddFilterMenu } from './ListFilterBar'
-import type { FilterFacet, ListView } from './listView'
+import { type FilterFacet, isLocked, type ListView } from './listView'
 import type { ListFilters } from './useListFilters'
 
 /** A toggle pill, for the Display panel's column and pinned-action pickers. */
@@ -25,7 +25,7 @@ const SECTION_LABEL =
 
 export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?: string }) {
   const { common, list: t } = useStrings()
-  const toggleable = view.columns.filter((c) => !c.alwaysVisible)
+  const toggleable = view.columns.filter((c) => !isLocked(c))
   const hasGrouping = view.groupBys.length > 0
   const orderDirLabel = view.orderDir === 'asc' ? t.ascending : t.descending
   return (
