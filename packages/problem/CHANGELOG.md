@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/parallelworks/foundation/compare/problem-v0.5.0...problem-v0.6.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **problem:** only words a host wrote reach a reader, never a dependency's or huma's error text ([#464](https://github.com/parallelworks/foundation/issues/464))
+
+### Bug Fixes
+
+* **problem:** only words a host wrote reach a reader, never a dependency's or huma's error text ([#464](https://github.com/parallelworks/foundation/issues/464)) ([af65701](https://github.com/parallelworks/foundation/commit/af65701200d099bd93d2c69fbc6ccf1512301348))
+
 ## [0.5.0](https://github.com/parallelworks/foundation/compare/problem-v0.4.0...problem-v0.5.0) (2026-10-20)
 
 
