@@ -159,7 +159,7 @@ export {
   shortcutText,
   useShortcutFormat,
 } from './components/Kbd'
-export { LetterBadge } from './components/LetterBadge'
+export { LetterBadge, type LetterBadgeProps } from './components/LetterBadge'
 export {
   ListboxGroup,
   type ListboxNavigation,
@@ -283,6 +283,7 @@ export {
 } from './components/RunStatusIcon'
 export {
   Elapsed,
+  type ElapsedProps,
   RelativeTime,
   type RelativeTimeFormat,
   type RelativeTimeProps,
@@ -323,6 +324,7 @@ export {
   StatusBadge,
   type StatusBadgeProps,
   StatusDot,
+  type StatusDotProps,
   statusTextClass,
 } from './components/StatusBadge'
 export { StickyBar, type StickyBarProps } from './components/StickyBar'

@@ -20,7 +20,9 @@ export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away'
 export type AvatarKind = 'person' | 'agent'
 export type AvatarShape = 'circle' | 'square'
 
-export interface AvatarProps {
+/** Any other span attribute and the ref reach the avatar's outer element, so it can be a Tooltip's
+ *  or a popover's direct child. */
+export interface AvatarProps extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   /** Image URL. Until it loads, or when it fails, the initials of `name` show. */
   src?: string | null | undefined
   name?: string | undefined
@@ -174,6 +176,7 @@ export function Avatar({
   decorative = false,
   tooltip = false,
   className,
+  ...rest
 }: AvatarProps) {
   const { common } = useStrings()
   const byKind = useAvatarColoring() === 'kind'
@@ -195,6 +198,7 @@ export function Avatar({
         : 'bg-gradient-to-br from-[var(--gradient-start,var(--theme-accent))] to-[var(--gradient-mid,var(--theme-link))] text-(--theme-accent-text)')
   const avatar = (
     <span
+      {...rest}
       {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': named })}
       data-shape={shape}
       // Exactly the shape's box, rounded as it is, so a ring here traces it; the status dot

@@ -1,5 +1,6 @@
+import { mergeProps } from '@base-ui/react/merge-props'
 import { useRender } from '@base-ui/react/use-render'
-import type { ReactElement, ReactNode } from 'react'
+import type { ComponentPropsWithRef, ReactElement, ReactNode } from 'react'
 import { cx } from '../cx'
 import { useStrings } from './Provider'
 import { type Tone, toneFill, toneSurface, toneText } from './tone'
@@ -70,7 +71,10 @@ const shapeClasses: Record<BadgeShape, string> = {
   tag: 'rounded-[4px]',
 }
 
-export interface StatusBadgeProps {
+/** Any other span attribute and the ref reach its element, so it can be a Tooltip's or a popover's
+ *  direct child. */
+export interface StatusBadgeProps
+  extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   /** Badge content */
   children: ReactNode
   /** Visual variant */
@@ -114,12 +118,15 @@ export function StatusBadge({
   size = 'sm',
   render,
   className,
+  ref,
+  ...rest
 }: StatusBadgeProps) {
   // On a solid fill the dot takes the text's color, or it would vanish into the fill.
   const indicator = emphasis === 'solid' ? 'bg-current' : dotFill[variant]
   return useRender({
     render: render ?? <span />,
-    props: {
+    ref,
+    props: mergeProps<'span'>(rest, {
       className: cx(
         'inline-flex items-center border font-medium no-underline',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
@@ -150,11 +157,14 @@ export function StatusBadge({
           {truncate ? <span className="min-w-0 truncate">{children}</span> : children}
         </>
       ),
-    },
+    }),
   })
 }
 
-export interface CountBadgeProps {
+/** Any other span attribute and the ref reach its element, so it can be a Tooltip's or a popover's
+ *  direct child. */
+export interface CountBadgeProps
+  extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   count: number
   /** Above it, the count reads as `max` and a plus, such as "99+". */
   max?: number | undefined
@@ -192,6 +202,7 @@ export function CountBadge({
   showZero = false,
   locale,
   className,
+  ...rest
 }: CountBadgeProps) {
   const { common } = useStrings()
   if (count <= 0 && !showZero) {
@@ -201,6 +212,7 @@ export function CountBadge({
   const text = count > max ? common.countOverflow(number.format(max)) : number.format(count)
   return (
     <span
+      {...rest}
       data-count={count}
       className={cx(
         'inline-flex shrink-0 items-center justify-center rounded-full font-semibold tabular-nums',
@@ -215,11 +227,14 @@ export function CountBadge({
   )
 }
 
-interface StatusDotProps {
-  variant?: BadgeVariant
-  pulse?: boolean
-  size?: number
-  className?: string
+/** Any other span attribute and the ref reach its element, so it can be a Tooltip's or a popover's
+ *  direct child. */
+export interface StatusDotProps
+  extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
+  variant?: BadgeVariant | undefined
+  pulse?: boolean | undefined
+  size?: number | undefined
+  className?: string | undefined
 }
 
 export function StatusDot({
@@ -227,9 +242,15 @@ export function StatusDot({
   pulse = false,
   size = 8,
   className,
+  style,
+  ...rest
 }: StatusDotProps) {
   return (
-    <span className={cx('relative inline-flex', className)} style={{ width: size, height: size }}>
+    <span
+      {...rest}
+      className={cx('relative inline-flex', className)}
+      style={{ ...style, width: size, height: size }}
+    >
       {pulse && (
         <span
           className={cx(

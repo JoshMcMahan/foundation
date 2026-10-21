@@ -1,3 +1,4 @@
+import type { ComponentPropsWithRef } from 'react'
 import { cx } from '../cx'
 import type { RunStatus } from '../engine'
 import {
@@ -49,7 +50,10 @@ export function runStatusTone(status: RunStatusIconStatus): Tone {
   return looks[status ?? ''].tone
 }
 
-export interface RunStatusIconProps {
+/** Any other span attribute and the ref reach the icon's element, so it can be a Tooltip's or a
+ *  popover's direct child. */
+export interface RunStatusIconProps
+  extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   status: RunStatusIconStatus
   /** Names the icon in place of `strings.dag.statusLabel`, for a host's own status
    *  shown in a run's look, such as "Provisioning" as running. */
@@ -67,6 +71,7 @@ export function RunStatusIcon({
   label: ownLabel,
   tooltip = false,
   className,
+  ...rest
 }: RunStatusIconProps) {
   const { dag } = useStrings()
   const look = looks[status ?? '']
@@ -74,6 +79,7 @@ export function RunStatusIcon({
   const label = ownLabel ?? dag.statusLabel(status ?? '')
   const icon = (
     <span
+      {...rest}
       {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       data-status={status || 'not-run'}
       className={cx('flex h-2 items-center', toneIcon[look.tone], className)}

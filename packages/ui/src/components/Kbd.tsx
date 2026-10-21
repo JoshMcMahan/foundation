@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { type ComponentPropsWithRef, Fragment } from 'react'
 import { cx } from '../cx'
 import { type UIStrings, useStrings } from './Provider'
 
@@ -178,7 +178,9 @@ export function useShortcutFormat(platform?: KeyPlatform): {
 export type KbdVariant = 'keycap' | 'plain'
 export type KbdSize = 'xs' | 'sm'
 
-export interface KbdProps {
+/** Any other attribute and the ref reach the outer `<kbd>`, so it can be a Tooltip's or a popover's
+ *  direct child. */
+export interface KbdProps extends Omit<ComponentPropsWithRef<'kbd'>, 'children' | 'className'> {
   /** A combination joined by `+`, such as `Mod+K` (Command on an Apple keyboard, Control
    *  elsewhere) or `Shift+Enter`; or keys side by side, as given: `['↑', '↓']`, `['1–9']`. */
   keys: string | readonly string[]
@@ -199,7 +201,14 @@ const keycap: Record<KbdSize, string> = {
 /** Keys to press, as keycaps: a muted fill, a hairline border and monospace text. Off an
  *  Apple keyboard the keys of a combination are joined with a plus, as the platform writes
  *  them. Renders `<kbd>`, with a `<kbd>` for each key of a combination. */
-export function Kbd({ keys, variant = 'keycap', size = 'sm', platform, className }: KbdProps) {
+export function Kbd({
+  keys,
+  variant = 'keycap',
+  size = 'sm',
+  platform,
+  className,
+  ...rest
+}: KbdProps) {
   const { keys: names } = useStrings()
   const on = platform ?? currentPlatform()
   const parts = formatShortcut(keys, names, on)
@@ -207,6 +216,7 @@ export function Kbd({ keys, variant = 'keycap', size = 'sm', platform, className
   if (variant === 'plain') {
     return (
       <kbd
+        {...rest}
         className={cx(
           'font-sans text-(--theme-muted-text-color) tabular-nums tracking-wide',
           size === 'xs' ? 'text-[10px]' : 'text-[11px]',
@@ -222,11 +232,18 @@ export function Kbd({ keys, variant = 'keycap', size = 'sm', platform, className
     keycap[size],
   )
   if (parts.length === 1) {
-    return <kbd className={cx(cap, className)}>{parts[0]}</kbd>
+    return (
+      <kbd {...rest} className={cx(cap, className)}>
+        {parts[0]}
+      </kbd>
+    )
   }
   const plus = chord && on !== 'apple'
   return (
-    <kbd className={cx('inline-flex flex-wrap items-center gap-0.5 align-middle', className)}>
+    <kbd
+      {...rest}
+      className={cx('inline-flex flex-wrap items-center gap-0.5 align-middle', className)}
+    >
       {parts.map((part, i) => (
         // Keys repeat in a sequence, such as G G, so each keeps its place.
         // biome-ignore lint/suspicious/noArrayIndexKey: a shortcut's keys are fixed

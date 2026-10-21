@@ -59,6 +59,7 @@ import {
 } from './StatusBadge'
 import { Switch } from './Switch'
 import { type SortDirection, Table, type TableDensity } from './Table'
+import { Tag } from './Tag'
 import { ToggleGroup } from './ToggleGroup'
 import { Tooltip } from './Tooltip'
 
@@ -251,6 +252,50 @@ export const BadgeUses: StoryObj = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('link', { name: 'v2.4.0' })).toBeVisible()
+  },
+}
+
+/** Badges, a count, a tag, a key and a status icon as a tooltip's direct child, each taking the
+ *  trigger's props and ref itself, with no wrapper. A focusable one, given `tabIndex`, shows its
+ *  tooltip on focus too. */
+export const BadgesWithTooltips: StoryObj = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3 p-8 text-sm">
+      <Tooltip content="2 of 3 nodes answering; jobs may queue longer than usual">
+        <StatusBadge variant="warning" dot tabIndex={0}>
+          Degraded
+        </StatusBadge>
+      </Tooltip>
+      <Tooltip content="Started 4 minutes ago on gpu-east">
+        <StatusBadge variant="info" pulse tabIndex={0}>
+          Running
+        </StatusBadge>
+      </Tooltip>
+      <Tooltip content="4 decisions waiting for your review">
+        <CountBadge count={4} label="waiting" tabIndex={0} />
+      </Tooltip>
+      <Tooltip content="Runs only on machines with a GPU">
+        <Tag color="var(--theme-category-3)" tabIndex={0}>
+          gpu
+        </Tag>
+      </Tooltip>
+      <Tooltip content="Search everything">
+        <Kbd keys="Mod+K" tabIndex={0} />
+      </Tooltip>
+      <Tooltip content="Failed after 2m 13s">
+        <RunStatusIcon status="failed" tabIndex={0} />
+      </Tooltip>
+      <Tooltip content="Ada Lovelace, owner">
+        <Avatar name="Ada Lovelace" size="sm" tabIndex={0} />
+      </Tooltip>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.hover(canvas.getByText('Degraded'))
+    await expect(
+      await screen.findByText('2 of 3 nodes answering; jobs may queue longer than usual'),
+    ).toBeInTheDocument()
   },
 }
 

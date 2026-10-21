@@ -1,5 +1,11 @@
 import { DateTime, Duration } from 'luxon'
-import { type ReactNode, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  type ComponentPropsWithRef,
+  type ReactNode,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import {
   type DateTimeStyle,
   formatDateTime,
@@ -142,7 +148,9 @@ export function useRelativeTime(value: TimeValue, format: RelativeTimeFormat = '
   }, at !== null)
 }
 
-export interface RelativeTimeProps {
+/** Any other attribute and the ref reach the `<time>`, so it can be a popover's direct child. */
+export interface RelativeTimeProps
+  extends Omit<ComponentPropsWithRef<'time'>, 'children' | 'className' | 'dateTime'> {
   value: TimeValue
   format?: RelativeTimeFormat | undefined
   /** Shown in place of a missing or invalid time, such as "Never" or "—". Default nothing. */
@@ -166,6 +174,7 @@ export function RelativeTime({
   exact = 'seconds',
   show = 'relative',
   className,
+  ...rest
 }: RelativeTimeProps) {
   const label = useRelativeTime(value, format)
   const locale = useLocale()
@@ -176,7 +185,7 @@ export function RelativeTime({
   const absolute = formatDateTime(time, exact || 'seconds', locale)
   const [text, tip] = show === 'absolute' ? [absolute, label] : [label, exact ? absolute : null]
   const element = (
-    <time dateTime={time.toISO() ?? undefined} className={className}>
+    <time {...rest} dateTime={time.toISO() ?? undefined} className={className}>
       {text}
     </time>
   )
@@ -207,26 +216,29 @@ export function useElapsed(
   )
 }
 
-/** How long something took, or has taken so far while it runs: 45s, 2m 13s.
- *  Renders nothing without a start. */
-export function Elapsed({
-  start,
-  end,
-  running,
-  className,
-}: {
+/** Any other attribute and the ref reach the `<time>`, so it can be a Tooltip's direct child. */
+export interface ElapsedProps
+  extends Omit<ComponentPropsWithRef<'time'>, 'children' | 'className' | 'dateTime'> {
   start: TimeValue
   end?: TimeValue
-  running?: boolean
-  className?: string
-}) {
+  running?: boolean | undefined
+  className?: string | undefined
+}
+
+/** How long something took, or has taken so far while it runs: 45s, 2m 13s.
+ *  Renders nothing without a start. */
+export function Elapsed({ start, end, running, className, ...rest }: ElapsedProps) {
   const elapsed = useElapsed(start, end, running)
   const locale = useLocale()
   if (elapsed === null) {
     return null
   }
   return (
-    <time dateTime={Duration.fromMillis(elapsed).toISO() ?? undefined} className={className}>
+    <time
+      {...rest}
+      dateTime={Duration.fromMillis(elapsed).toISO() ?? undefined}
+      className={className}
+    >
       {formatDuration(elapsed, locale)}
     </time>
   )

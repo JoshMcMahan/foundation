@@ -1,4 +1,10 @@
-import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
+import {
+  type ComponentPropsWithRef,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { cx } from '../cx'
 import { RemoveIcon } from '../icons'
 import { AppLink } from './AppLink'
@@ -22,7 +28,11 @@ export function tagClasses({ mono = false, caps = false }: TagStyle = {}): strin
   )
 }
 
-export interface TagProps extends TagStyle {
+/** Any other attribute and the ref reach the tag's element, its link with `href` and no `onRemove`,
+ *  so it can be a Tooltip's or a popover's direct child. */
+export interface TagProps
+  extends TagStyle,
+    Omit<ComponentPropsWithRef<'span'>, 'children' | 'className' | 'color' | 'title'> {
   children: ReactNode
   /** A dot before the text in this color, any CSS color, such as a label's own. */
   color?: string | undefined
@@ -48,6 +58,8 @@ export function Tag({
   mono,
   caps,
   className,
+  ref,
+  ...rest
 }: TagProps) {
   const { dropdown } = useStrings()
   const content = (
@@ -66,18 +78,24 @@ export function Tag({
   const hover = 'transition-colors hover:bg-(--theme-hover)'
   if (!onRemove) {
     return href ? (
-      <AppLink href={href} title={title} className={cx(classes, hover, 'no-underline')}>
+      <AppLink
+        {...(rest as ComponentPropsWithRef<'a'>)}
+        ref={ref as ComponentPropsWithRef<'a'>['ref']}
+        href={href}
+        title={title}
+        className={cx(classes, hover, 'no-underline')}
+      >
         {content}
       </AppLink>
     ) : (
-      <span title={title} className={classes}>
+      <span {...rest} ref={ref} title={title} className={classes}>
         {content}
       </span>
     )
   }
   const name = removeLabel ?? dropdown.removeValue(typeof children === 'string' ? children : '')
   return (
-    <span title={title} className={cx(classes, 'pr-0.5')}>
+    <span {...rest} ref={ref} title={title} className={cx(classes, 'pr-0.5')}>
       {href ? (
         <AppLink
           href={href}
