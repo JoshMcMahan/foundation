@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.83.3](https://github.com/parallelworks/foundation/compare/ui-v0.83.2...ui-v0.83.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ui:** chat history drops what the model said between tool calls, and the composer shows the thread through it under translucent themes ([#454](https://github.com/parallelworks/foundation/issues/454)) ([b54ffc9](https://github.com/parallelworks/foundation/commit/b54ffc90048ad290c07d7473bf34864cd5e2d95e))
+
 ## [0.83.2](https://github.com/parallelworks/foundation/compare/ui-v0.83.1...ui-v0.83.2) (2026-10-20)
 
 
