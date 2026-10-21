@@ -95,6 +95,8 @@ export interface StatusBadgeProps
   pulse?: boolean | undefined
   /** Show a still indicator in the variant's color */
   dot?: boolean | undefined
+  /** Shows the dot unlit, as a hollow ring, for something off or not known. */
+  off?: boolean | undefined
   /** Size */
   size?: BadgeSize | undefined
   /** Renders the badge as this element, such as a link to what it names. */
@@ -119,6 +121,7 @@ export function StatusBadge({
   truncate = false,
   pulse = false,
   dot = false,
+  off = false,
   size = 'sm',
   render,
   className,
@@ -146,6 +149,7 @@ export function StatusBadge({
             <StatusDot
               variant={variant}
               pulse={pulse}
+              off={off}
               size={7}
               current={emphasis === 'solid'}
               className="shrink-0"

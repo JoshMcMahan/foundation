@@ -119,4 +119,13 @@ describe('StatusDot', () => {
     const { container } = render(<StatusDot variant="info" pulse />)
     expect(container.querySelector('.animate-ping')).toHaveClass('bg-(--lamp-from)')
   })
+
+  it('draws an off badge’s dot as the hollow ring', () => {
+    const { container } = render(
+      <StatusBadge variant="muted" dot off>
+        Off
+      </StatusBadge>,
+    )
+    expect(container.querySelector('[data-lamp]')).toHaveAttribute('data-lamp', 'off')
+  })
 })

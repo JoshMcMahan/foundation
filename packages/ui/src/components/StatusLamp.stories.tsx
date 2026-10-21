@@ -161,7 +161,13 @@ function Panel({ look, children }: { look: Look; children?: ReactNode }) {
         {ROWS.map((row) => {
           const variant = row.variant === 'off' ? 'muted' : row.variant
           return look === 'lamp' ? (
-            <StatusBadge key={row.name} variant={variant} dot={!row.pulse} pulse={row.pulse}>
+            <StatusBadge
+              key={row.name}
+              variant={variant}
+              dot={!row.pulse}
+              pulse={row.pulse}
+              off={row.variant === 'off'}
+            >
               {row.status}
             </StatusBadge>
           ) : (
