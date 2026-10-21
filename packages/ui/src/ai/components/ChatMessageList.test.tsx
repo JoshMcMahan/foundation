@@ -256,6 +256,44 @@ describe('ChatMessageList after a reply', () => {
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
+  it('lets a reply that finished streaming take its row without entering again', () => {
+    const user = createMockMessage({ id: 'm1' })
+    const result = render(
+      <ChatMessageList
+        messages={[user]}
+        allMessages={[]}
+        isStreaming
+        streamingMessage={createMockMessage({ id: 'stream', role: 'assistant', content: 'Done.' })}
+      />,
+    )
+    const container = result.container.firstElementChild as HTMLElement
+    const scrollTo = vi.fn()
+    container.scrollTo = scrollTo as typeof container.scrollTo
+    armAtBottom(container)
+
+    result.rerender(
+      <ChatMessageList
+        messages={[user, createMockMessage({ id: 'm2', role: 'assistant', content: 'Done.' })]}
+        allMessages={[]}
+        isStreaming={false}
+        streamingMessage={null}
+      />,
+    )
+
+    const rows = result.getAllByTestId('chat-message')
+    expect(rows).toHaveLength(2)
+    expect(rows[1]?.parentElement).not.toHaveClass('animate-chat-enter')
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('still lets a new question enter', () => {
+    const { container, addMessage } = renderDone()
+    armAtBottom(container)
+    addMessage()
+    const rows = container.querySelectorAll('[data-testid="chat-message"]')
+    expect(rows[1]?.parentElement).toHaveClass('animate-chat-enter')
+  })
+
   it('follows a card that keeps growing while the reader sits at the bottom', () => {
     const { container } = renderDone()
     armAtBottom(container)

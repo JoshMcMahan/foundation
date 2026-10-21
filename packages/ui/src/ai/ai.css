@@ -444,6 +444,20 @@
   color: var(--chat-accent);
 }
 
+/* A list's caret follows its last item's text rather than sitting on a line
+   of its own under the list. */
+.markdown-streaming > :is(ul, ol):last-child:not([data-sd-caret-hidden])::after {
+  content: none;
+}
+.markdown-streaming > :is(ul, ol):last-child > li:last-child::after {
+  display: inline;
+  vertical-align: baseline;
+  content: var(--streamdown-caret);
+}
+.chat-thread .markdown-streaming > :is(ul, ol):last-child > li:last-child::after {
+  color: var(--chat-accent);
+}
+
 /* Selected text inside the chat takes the accent too. */
 .chat-thread ::selection,
 .chat-composer ::selection {

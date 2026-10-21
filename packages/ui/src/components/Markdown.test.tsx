@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import Markdown from './Markdown'
+import { withoutUnfinishedTable } from './MarkdownImpl'
 
 // jsdom lacks it; streamdown's mermaid block waits for it before drawing.
 global.IntersectionObserver = class {
@@ -115,5 +116,26 @@ describe('Markdown tildes', () => {
     expect(container).toHaveTextContent(
       'Test clusters (~$1.50/day each), plus snapshots (~$0.40/day).',
     )
+  })
+})
+
+describe('withoutUnfinishedTable', () => {
+  it('holds back a table until its delimiter row arrives', () => {
+    expect(withoutUnfinishedTable('Spend:\n\n| Allocation | Spen')).toBe('Spend:\n')
+    expect(withoutUnfinishedTable('Spend:\n\n| Allocation | Spend |\n| --')).toBe('Spend:\n')
+  })
+
+  it('shows a table once its delimiter row is in', () => {
+    const text = 'Spend:\n\n| Allocation | Spend |\n| --- | --- |\n| AWS | $1'
+    expect(withoutUnfinishedTable(text)).toBe(text)
+  })
+
+  it('leaves pipes inside an open code block alone', () => {
+    const text = '```sh\nls | grep x'
+    expect(withoutUnfinishedTable(text)).toBe(text)
+  })
+
+  it('leaves text without a trailing table alone', () => {
+    expect(withoutUnfinishedTable('a | b in a sentence')).toBe('a | b in a sentence')
   })
 })

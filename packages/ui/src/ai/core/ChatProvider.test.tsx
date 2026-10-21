@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { act } from 'react'
 import type { ChatAdapter, StreamResult } from '../adapter/types'
 import ChatMessageList from '../components/ChatMessageList'
@@ -519,8 +519,12 @@ describe('streamed parts', () => {
     })
     now.mockRestore()
 
-    const assistant = chat.currentConversation?.messages.find((m) => m.role === 'assistant')
-    expect(assistant?.reasoningDuration).toBe(3_000)
+    // The reply joins the conversation once its text has finished revealing.
+    await waitFor(() =>
+      expect(
+        chat.currentConversation?.messages.find((m) => m.role === 'assistant')?.reasoningDuration,
+      ).toBe(3_000),
+    )
   })
 
   it('replays the tool calls of a turn and results to the model on the next send', async () => {

@@ -17,6 +17,8 @@ interface UseSSEStreamResult {
   startStreaming: (conversationId: string) => void
   /** Stop the animation loop, flush remaining content */
   stopAnimationLoop: () => { unrevealed: string }
+  /** Resolves once the buffered text has been revealed, or after maxMs */
+  drainReveal: (maxMs?: number) => Promise<void>
   /** Reset all animation refs (used when navigating away) */
   resetAnimationRefs: () => void
   /** Ref to the target content buffer */
@@ -31,17 +33,51 @@ interface UseSSEStreamResult {
   abortControllerRef: React.MutableRefObject<AbortController | null>
 }
 
+// Tokens arrive in bursts, so text is buffered and revealed a little every
+// frame. The rate follows the backlog: it never falls below MIN_CHARS_PER_MS,
+// and otherwise reveals what is waiting over about CATCH_UP_MS, so a fast
+// model is tracked closely and the end of a reply never lands in one frame.
+const MIN_CHARS_PER_MS = 0.12
+const CATCH_UP_MS = 300
+// At most one dispatch per ~60Hz frame; a 120Hz display reveals on every
+// other frame, with the elapsed time measured from the last reveal.
+const MIN_DISPATCH_MS = 15
+
+// How far a reveal may run on to finish the word it stopped in. A word shown
+// half-way wraps to the next line once it grows past the edge; revealed
+// whole, it lands where it stays.
+const WORD_RUN_ON = 16
+
+/** Moves a reveal boundary to the end of the word it falls in, when that end is near. */
+export function toWordEnd(text: string, end: number): number {
+  if (end >= text.length || /\s/.test(text[end - 1] ?? ' ')) {
+    return end
+  }
+  const limit = Math.min(text.length, end + WORD_RUN_ON)
+  for (let i = end; i < limit; i++) {
+    if (/\s/.test(text[i] ?? '')) {
+      return i
+    }
+  }
+  return end
+}
+
+/** Characters to reveal after dt ms with remaining characters buffered. */
+export function revealCount(remaining: number, dt: number): number {
+  if (remaining <= 0) {
+    return 0
+  }
+  const rate = Math.max(MIN_CHARS_PER_MS, remaining / CATCH_UP_MS)
+  return Math.min(remaining, Math.max(1, Math.round(rate * dt)))
+}
+
 export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStreamResult {
-  // Smooth streaming text reveal. LLM APIs send tokens in bursts, so we
-  // buffer incoming text and reveal it at a constant linear rate (~240
-  // chars/sec). This fills gaps between bursts and creates a steady flow.
-  // Dispatches are throttled to ~30fps to avoid excessive React re-renders.
   const targetStreamContentRef = useRef('')
   const revealedLengthRef = useRef(0)
   const streamRafRef = useRef<number | null>(null)
   const streamActiveRef = useRef(false)
-  const lastFrameTimeRef = useRef(0)
-  const lastDispatchTimeRef = useRef(0)
+  const lastRevealTimeRef = useRef(0)
+  const drainWaitersRef = useRef<Array<() => void>>([])
   // Track which conversation the streaming content is for (prevents cross-conversation pollution)
   const streamingConversationIdRef = useRef<string | null>(null)
 
@@ -50,6 +86,14 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const settleDrain = useCallback(() => {
+    const waiters = drainWaitersRef.current
+    drainWaitersRef.current = []
+    for (const resolve of waiters) {
+      resolve()
+    }
+  }, [])
+
   const animateStreamContent = useCallback(() => {
     const now = performance.now()
     const target = targetStreamContentRef.current
@@ -57,41 +101,36 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     const remaining = target.length - revealed
     const conversationId = streamingConversationIdRef.current
 
-    // Throttle React dispatches to ~30fps (every 32ms) to avoid
-    // excessive re-renders while still looking smooth
-    const timeSinceDispatch = now - lastDispatchTimeRef.current
-    if (remaining > 0 && timeSinceDispatch >= 32 && conversationId) {
-      // Time-based reveal for frame-rate independence
-      const dt = lastFrameTimeRef.current ? now - lastFrameTimeRef.current : 32
-      // Base rate: 0.24 chars/ms (~240 chars/sec). Enough to keep up with
-      // most models while building a small buffer that smooths out pauses.
-      // When buffer grows large (model is very fast), increase rate to
-      // prevent falling too far behind.
-      const charsPerMs = remaining > 360 ? 0.48 : 0.24
-      const charsToReveal = Math.min(remaining, Math.max(1, Math.round(charsPerMs * dt)))
-      const newRevealed = revealed + charsToReveal
-      revealedLengthRef.current = newRevealed
-      dispatch({
-        type: 'APPEND_STREAMING_CONTENT',
-        content: target.slice(revealed, newRevealed),
-        conversationId,
-      })
-      lastDispatchTimeRef.current = now
+    if (remaining > 0 && conversationId) {
+      if (!lastRevealTimeRef.current) {
+        lastRevealTimeRef.current = now - MIN_DISPATCH_MS
+      }
+      const dt = now - lastRevealTimeRef.current
+      if (dt >= MIN_DISPATCH_MS) {
+        const newRevealed = toWordEnd(target, revealed + revealCount(remaining, dt))
+        revealedLengthRef.current = newRevealed
+        dispatch({
+          type: 'APPEND_STREAMING_CONTENT',
+          content: target.slice(revealed, newRevealed),
+          conversationId,
+        })
+        lastRevealTimeRef.current = now
+      }
     }
 
-    lastFrameTimeRef.current = now
-
-    // Keep loop alive while streaming or there's still content to reveal
-    if (
-      streamActiveRef.current ||
-      revealedLengthRef.current < targetStreamContentRef.current.length
-    ) {
+    const caughtUp = revealedLengthRef.current >= targetStreamContentRef.current.length
+    if (caughtUp) {
+      settleDrain()
+      // A pause in the stream restarts the clock, so the next burst does
+      // not arrive as if it had been waiting all along.
+      lastRevealTimeRef.current = 0
+    }
+    if (streamActiveRef.current || !caughtUp) {
       streamRafRef.current = requestAnimationFrame(animateStreamContent)
     } else {
       streamRafRef.current = null
-      lastFrameTimeRef.current = 0
     }
-  }, [dispatch])
+  }, [dispatch, settleDrain])
 
   const onStreamingChunk = useCallback(
     (chunk: string) => {
@@ -133,8 +172,24 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     }
     targetStreamContentRef.current = ''
     revealedLengthRef.current = 0
-    lastFrameTimeRef.current = 0
-    lastDispatchTimeRef.current = 0
+    lastRevealTimeRef.current = 0
+    settleDrain()
+  }, [settleDrain])
+
+  const drainReveal = useCallback((maxMs = 1500) => {
+    if (
+      streamRafRef.current === null ||
+      revealedLengthRef.current >= targetStreamContentRef.current.length
+    ) {
+      return Promise.resolve()
+    }
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, maxMs)
+      drainWaitersRef.current.push(() => {
+        clearTimeout(timer)
+        resolve()
+      })
+    })
   }, [])
 
   const stopAnimationLoop = useCallback(() => {
@@ -156,6 +211,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     onStreamingChunk,
     startStreaming,
     stopAnimationLoop,
+    drainReveal,
     resetAnimationRefs,
     targetStreamContentRef,
     streamActiveRef,

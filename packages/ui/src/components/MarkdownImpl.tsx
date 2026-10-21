@@ -179,6 +179,30 @@ function makeCode(controls: CodeControls, diagrams: boolean) {
   }
 }
 
+const TABLE_ROW = /^\s*\|/
+const TABLE_DELIMITER = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/
+
+/** While a reply streams, a table's opening rows read as stray pipes until its
+ *  delimiter row arrives; they are held back until then. */
+export function withoutUnfinishedTable(text: string): string {
+  if ((text.match(/^\s*(```|~~~)/gm)?.length ?? 0) % 2 === 1) {
+    return text
+  }
+  const lines = text.split('\n')
+  let start = lines.length
+  while (start > 0 && TABLE_ROW.test(lines[start - 1] ?? '')) {
+    start--
+  }
+  if (start === lines.length) {
+    return text
+  }
+  const rows = lines.slice(start)
+  if (rows.length >= 2 && TABLE_DELIMITER.test(rows[1] ?? '')) {
+    return text
+  }
+  return lines.slice(0, start).join('\n')
+}
+
 export default function MarkdownImpl({
   children,
   isStreaming,
@@ -231,7 +255,7 @@ export default function MarkdownImpl({
           ...components,
         }}
       >
-        {children || ''}
+        {(isStreaming ? withoutUnfinishedTable(children || '') : children) || ''}
       </Streamdown>
     </div>
   )

@@ -291,13 +291,19 @@ export default function ChatMessageList({
     hasQueuedMessages,
   ])
 
-  // Auto-scroll on new messages (non-streaming) — smooth scroll after paint
+  // Auto-scroll on new messages (non-streaming) — smooth scroll after paint.
+  // A reply that just finished streaming is already in view and followed by
+  // the resize observer; a smooth scroll on top of it would fight that.
+  const wasStreamingRef = useRef(isStreaming)
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message count change
   useEffect(() => {
+    const streamFinished = wasStreamingRef.current && !isStreaming
+    wasStreamingRef.current = isStreaming
     if (
       !containerRef.current ||
       !isNearBottomRef.current ||
       isStreaming ||
+      streamFinished ||
       !hadMessagesRef.current
     ) {
       return
@@ -398,7 +404,7 @@ export default function ChatMessageList({
         {/* Thinking / "Thought for" section — visible during and after thinking */}
         {isStreaming && streamingReasoning && (
           <div key="thinking" className="animate-chat-enter">
-            <div className={cx('pt-3', !flush && 'px-4')}>
+            <div className={cx('pt-3', !flush && 'sm:px-4')}>
               <Reasoning
                 label={
                   <ThinkingLabel
@@ -433,14 +439,14 @@ export default function ChatMessageList({
               thinking header and the answer — mirrors the stored-message
               layout where parts precede content. */}
         {isStreaming && streamingParts.length > 0 && (
-          <div key="streaming-parts" className={cx('animate-chat-enter py-1', !flush && 'px-4')}>
+          <div key="streaming-parts" className={cx('animate-chat-enter py-1', !flush && 'sm:px-4')}>
             <AgentMessageParts message={streamingPartsMessage} isStreaming={isStreaming} />
           </div>
         )}
         {/* Working indicator — until the answer starts streaming */}
         {showWorkingIndicator && (
           <div key="waiting" className="animate-chat-enter">
-            <div className={cx('py-3', !flush && 'px-4')}>
+            <div className={cx('py-3', !flush && 'sm:px-4')}>
               <div className="animate-shimmer text-shimmer text-sm">{tThinking.ellipsis}</div>
             </div>
           </div>
@@ -482,7 +488,7 @@ export default function ChatMessageList({
                 data-testid="queued-status"
                 className={cx(
                   '-mt-4 mb-2 flex items-center justify-end gap-2 text-xs theme-muted-text',
-                  !flush && 'px-4',
+                  !flush && 'sm:px-4',
                 )}
               >
                 {removable ? <ClockIcon className="h-3 w-3" /> : <CheckIcon className="h-3 w-3" />}
@@ -618,11 +624,16 @@ const MessageRows = memo(function MessageRows({
   // once. The ids shown at the last commit decide it, read here and written
   // after commit, so a render React repeats or discards changes nothing.
   const shownRef = useRef<ReadonlySet<string>>(new Set())
+  const wasStreamingRef = useRef(streaming)
   const shown = shownRef.current
   const appended = shown.size > 0 && messages.some((m) => shown.has(m.id))
+  // The reply that just finished streaming was already on screen as the
+  // streaming row; it takes that row's place without entering again.
+  const streamFinished = wasStreamingRef.current && !streaming
   useLayoutEffect(() => {
     shownRef.current = new Set(messages.map((m) => m.id))
-  }, [messages])
+    wasStreamingRef.current = streaming
+  }, [messages, streaming])
 
   // Pseudo messages render nothing, so the latest is the last one that shows.
   const lastIndex = messages.findLastIndex((m) => !m.pseudo)
@@ -632,7 +643,8 @@ const MessageRows = memo(function MessageRows({
     if (message.pseudo) {
       return null
     }
-    const isNew = appended && !shown.has(message.id)
+    const isNew =
+      appended && !shown.has(message.id) && !(streamFinished && message.role === 'assistant')
     return (
       <div key={message.id} className={isNew ? 'animate-chat-enter' : undefined}>
         <ChatMessage

@@ -229,6 +229,7 @@ function ChatMessage({
           isStreaming={isStreaming}
           onApprovalAnswer={approvalAnswer}
         />
+        {isStreaming && !isUser && <div aria-hidden className="mt-2 h-7" />}
         {!isUser && !isStreaming && (said || onRegenerate || meta) && (
           <div className="chat-actions -ml-1.5 mt-2 flex items-center gap-0.5">
             {said && (
@@ -457,6 +458,9 @@ function ChatMessage({
                 className={isRightAligned ? 'justify-end' : undefined}
               />
             )}
+
+            {/* Holds the actions' room while the reply streams, so they appear without moving it */}
+            {isStreaming && !isUser && <div aria-hidden className="mt-2 h-7" />}
 
             {/* Actions */}
             {!isStreaming && !isEditing && (

@@ -302,6 +302,7 @@ export function ChatProvider({
     onStreamingChunk,
     startStreaming,
     stopAnimationLoop,
+    drainReveal,
     resetAnimationRefs,
     targetStreamContentRef,
     streamActiveRef,
@@ -686,6 +687,9 @@ export function ChatProvider({
           controller.signal,
         )
 
+        // Let the reveal catch up so the reply's end is not dropped in at once.
+        await drainReveal()
+
         const thinkingDuration =
           assistantReasoning && thinkingStart !== null
             ? (thinkingEnd ?? Date.now()) - thinkingStart
@@ -757,6 +761,7 @@ export function ChatProvider({
       state.selectedProvider,
       onStreamingChunk,
       stopAnimationLoop,
+      drainReveal,
       streamingConversationIdRef,
       backgroundStreamsRef,
       abortControllerRef,
