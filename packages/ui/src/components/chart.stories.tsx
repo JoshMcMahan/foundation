@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { type PointerEvent, useEffect, useRef, useState } from 'react'
+import { type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { expect, within } from 'storybook/test'
 import {
   ChartLegendList,
+  type ChartReadingOrder,
   ChartTooltipFrame,
   foldSeries,
   OTHER_SERIES_COLOR,
@@ -481,4 +482,205 @@ export const NineOrMoreSeries: StoryObj = {
     await expect(canvas.getByText('Other (3)')).toBeInTheDocument()
     await expect(OTHER_SERIES_COLOR).toContain('--theme-muted-text-color')
   },
+}
+
+interface ReadingSeries {
+  key: string
+  /** The series' name in the legend. */
+  label: string
+  /** A line of detail under its name in a reading. */
+  detail?: (i: number) => ReactNode
+  values: number[]
+}
+
+/** A small multi-line chart read through `ChartTooltipFrame`, for the reading stories. */
+function ReadingLines({
+  title,
+  series,
+  steps,
+  format,
+  total = false,
+  order,
+}: {
+  title: string
+  series: ReadingSeries[]
+  steps: string[]
+  format: (n: number) => string
+  total?: boolean
+  order?: ChartReadingOrder
+}) {
+  const colors = seriesColors(series.map((s) => s.key))
+  const [index, setIndex] = useState<number | null>(null)
+  const [box, boxWidth] = useWidth()
+  const width = 560
+  const height = 140
+  const last = steps.length - 1
+  const top = Math.max(...series.flatMap((s) => s.values)) || 1
+  const x = (i: number) => (i / last) * width
+  const y = (v: number) => height - 4 - (v / top) * (height - 8)
+  const readingAt = (i: number) => ({
+    label: steps[i],
+    total,
+    order,
+    formatValue: format,
+    items: series.map((s) => ({
+      key: s.key,
+      name: s.label,
+      detail: s.detail?.(i),
+      value: s.values[i] ?? 0,
+      color: colors[s.key] ?? '',
+    })),
+  })
+  return (
+    <div
+      className="rounded-xl border border-(--theme-border) bg-(--theme-panel-bg)"
+      style={{ flex: 1, width: '100%', maxWidth: 600, padding: 16, boxSizing: 'border-box' }}
+    >
+      <div
+        className="text-(--theme-app)"
+        style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}
+      >
+        {title}
+      </div>
+      <ChartTooltipFrame
+        x={index === null ? null : (index / last) * boxWidth}
+        reading={index === null ? null : readingAt(index)}
+        rest={readingAt(last)}
+      >
+        <div ref={box} style={{ position: 'relative' }}>
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            style={{ display: 'block', width: '100%', height }}
+            role="img"
+            aria-label={title}
+            onPointerMove={(e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              setIndex(Math.round(((e.clientX - r.left) / r.width) * last))
+            }}
+            onPointerLeave={() => setIndex(null)}
+          >
+            {index !== null && (
+              <line
+                x1={x(index)}
+                x2={x(index)}
+                y1={0}
+                y2={height}
+                stroke="var(--theme-border)"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            {series.map((s) => (
+              <polyline
+                key={s.key}
+                fill="none"
+                stroke={colors[s.key]}
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+              />
+            ))}
+          </svg>
+        </div>
+      </ChartTooltipFrame>
+      <ChartLegendList
+        className="mt-3"
+        shape="line"
+        items={series.map((s) => ({ key: s.key, label: s.label, color: colors[s.key] ?? '' }))}
+      />
+    </div>
+  )
+}
+
+const DAYS5 = ['Oct 14', 'Oct 15', 'Oct 16', 'Oct 17', 'Oct 18']
+const tokens = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
+
+/** Model names just too long for two columns on a phone: the readout takes one, so every name
+ *  shows in full. It measures again once its font loads, so a narrower fallback font seen
+ *  first can't leave it in two columns that cut the names off. */
+export const ReadingLongNames: StoryObj = {
+  render: () => (
+    // In a dashboard's row, whose cards grow to what they hold unless held.
+    <div style={{ display: 'flex', padding: 24 }}>
+      <ReadingLines
+        title="Tokens by model"
+        steps={DAYS5}
+        format={(n) => tokens.format(n)}
+        total
+        series={[
+          { key: 'r', label: 'reasoning-large', values: [820e3, 910e3, 760e3, 1.2e6, 990e3] },
+          {
+            key: 'e',
+            label: 'text-embed-large',
+            values: [310e3, 280e3, 350e3, 400e3, 380e3],
+          },
+          { key: 'v', label: 'vision-preview', values: [90e3, 120e3, 60e3, 150e3, 110e3] },
+        ]}
+      />
+    </div>
+  ),
+}
+
+const ratio = new Intl.NumberFormat('en-US', { style: 'percent' })
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const RATIO_DETAIL: Record<string, [number, number, number][]> = {
+  north: [
+    [606.31, 606.04, 39],
+    [598.2, 611.5, 39],
+    [612.75, 603.1, 40],
+    [604.4, 609.9, 39],
+    [667.87, 648.11, 50],
+  ],
+  south: [
+    [270.69, 271.66, 35],
+    [265.1, 270.2, 35],
+    [281.3, 268.4, 36],
+    [219.12, 208.88, 32],
+    [219.12, 208.88, 32],
+  ],
+}
+
+/** A reading whose series carry a line of detail, such as what a ratio was estimated and
+ *  invoiced at: muted under the name, it wraps onto as many lines as it needs, in the readout
+ *  and in the tooltip, and is never cut. The value stays on the name's line. */
+export const ReadingSecondLine: StoryObj = {
+  render: () => (
+    // In a dashboard's row, whose cards grow to what they hold unless held.
+    <div style={{ display: 'flex', padding: 24 }}>
+      <ReadingLines
+        title="Daily ratio"
+        steps={DAYS5}
+        format={(n) => ratio.format(n)}
+        series={(['north', 'south'] as const).map((region) => ({
+          key: region,
+          label: region === 'north' ? 'North region' : 'South region',
+          detail: (i: number) => {
+            const [estimated, invoiced, days] = RATIO_DETAIL[region]?.[i] ?? [0, 0, 0]
+            return `${usd.format(estimated)} / ${usd.format(invoiced)} · ${days} deployment-days`
+          },
+          values: (RATIO_DETAIL[region] ?? []).map(([e, inv]) => e / inv),
+        }))}
+      />
+    </div>
+  ),
+}
+
+/** Nodes listed in the legend's order, node01 to node03, and a node at exactly 0% kept, both
+ *  in the tooltip and in the readout: a zero is a reading too. */
+export const ReadingLegendOrderAndZero: StoryObj = {
+  render: () => (
+    // In a dashboard's row, whose cards grow to what they hold unless held.
+    <div style={{ display: 'flex', padding: 24 }}>
+      <ReadingLines
+        title="CPU by node"
+        steps={DAYS5}
+        format={(n) => `${n}%`}
+        series={[
+          { key: 'n1', label: 'node01', values: [34, 41, 38, 52, 47] },
+          { key: 'n2', label: 'node02', values: [62, 70, 66, 81, 74] },
+          { key: 'n3', label: 'node03', values: [12, 8, 0, 0, 0] },
+        ]}
+      />
+    </div>
+  ),
 }

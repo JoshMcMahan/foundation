@@ -198,21 +198,60 @@ export function ChartLegendList({
 export interface ChartTooltipItem {
   key: string
   name: ReactNode
+  /** Detail under the name and value, such as what a ratio was measured from, in muted text.
+   *  It wraps onto as many lines as it needs and is never cut. */
+  detail?: ReactNode
   value: number
   color: string
 }
 
+// A 10px swatch centered on a 16px line of extra-small text.
+const SWATCH_ON_LINE = 'mt-[3px]'
+
+/** A series' detail, on the lines under its name and value, in muted text: it wraps onto as
+ *  many lines as it needs and is never cut. */
+function SeriesDetail({ item, className }: { item: ChartTooltipItem; className?: string }) {
+  if (item.detail == null || item.detail === '') {
+    return null
+  }
+  return (
+    <span
+      className={cx(
+        'col-start-2 col-end-[-1] font-normal break-words text-(--theme-muted-text-color)',
+        className,
+      )}
+    >
+      {item.detail}
+    </span>
+  )
+}
+
+/** A reading's rows: zeros left out when asked, and largest first when asked. */
+function readingRows(
+  items: readonly ChartTooltipItem[],
+  order: ChartReadingOrder,
+  hideZero: boolean,
+): ChartTooltipItem[] {
+  const rows = hideZero ? items.filter((item) => item.value !== 0) : [...items]
+  return order === 'value' ? rows.sort((a, b) => b.value - a.value) : rows
+}
+
+/** How a reading lists its series: in the order given, which is the legend's, or largest
+ *  first. */
+export type ChartReadingOrder = 'series' | 'value'
+
 /** What a chart's tooltip shows for a point: its label, then each series' swatch, name and
- *  value, largest first, the series in focus in bold, and a total when there is more than one.
- *  A charting library's tooltip renders it as its content. */
+ *  value in the legend's order, zeros too, the series in focus in bold, and a total when there
+ *  is more than one. A charting library's tooltip renders it as its content. */
 export function ChartTooltipContent({
   label,
   items,
   formatValue,
   total,
   highlighted,
-  hideZero = true,
-  sort = true,
+  hideZero = false,
+  order,
+  sort,
   className,
   style,
 }: {
@@ -224,9 +263,12 @@ export function ChartTooltipContent({
   /** Adds a total row; on by default when more than one series shows. */
   total?: boolean | undefined
   highlighted?: string | null | undefined
-  /** Leaves out series whose value is zero; on by default. */
+  /** Leaves out series whose value is zero; off by default, since a zero is a reading too. */
   hideZero?: boolean | undefined
-  /** Lists the largest value first; on by default. */
+  /** `series` (the default) keeps the order of `items`, which is the legend's; `value` lists
+   *  the largest first. */
+  order?: ChartReadingOrder | undefined
+  /** @deprecated Use `order="value"`. */
   sort?: boolean | undefined
   className?: string | undefined
   /** Places it; `ChartTooltipBeside` places it beside a crosshair. */
@@ -239,10 +281,7 @@ export function ChartTooltipContent({
     [locale],
   )
   const format = formatValue ?? ((n: number) => number.format(n))
-  let rows = hideZero ? items.filter((item) => item.value !== 0) : [...items]
-  if (sort) {
-    rows = [...rows].sort((a, b) => b.value - a.value)
-  }
+  const rows = readingRows(items, order ?? (sort ? 'value' : 'series'), hideZero)
   const sum = rows.reduce((acc, item) => acc + item.value, 0)
   const showTotal = total ?? rows.length > 1
   return (
@@ -260,15 +299,18 @@ export function ChartTooltipContent({
           <li
             key={item.key}
             className={cx(
-              'flex items-center gap-2',
+              // The swatch and value line up with the name's line, above any detail.
+              'grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2',
               highlighted === item.key
                 ? 'font-semibold'
                 : highlighted != null && 'text-(--theme-muted-text-color)',
             )}
           >
-            <SeriesSwatch color={item.color} />
-            <span className="min-w-0 flex-1 truncate">{item.name}</span>
+            <SeriesSwatch color={item.color} className={SWATCH_ON_LINE} />
+            <span className="truncate">{item.name}</span>
             <span className="ml-2 tabular-nums">{format(item.value)}</span>
+            {/* Up to 16rem wide, so a long detail widens the tooltip a little, then wraps. */}
+            <SeriesDetail item={item} className="max-w-64" />
           </li>
         ))}
       </ul>
@@ -413,23 +455,47 @@ export interface ChartReading {
   /** Adds the total; on by default when there is more than one series. */
   total?: boolean | undefined
   highlighted?: string | null | undefined
+  /** `series` (the default) lists the series in the order of `items`, the legend's; `value`
+   *  lists the largest first. The tooltip and the readout both follow it. */
+  order?: ChartReadingOrder | undefined
+  /** Leaves out series whose value is zero; off by default, since a zero is a reading too. */
+  hideZero?: boolean | undefined
 }
 
 // Swatch, name and value tracks: two sets side by side, or one whose names give way.
 const TWO_COLUMNS = 'repeat(2, auto minmax(0, max-content) auto)'
-const MEASURE_TWO = 'repeat(2, max-content max-content max-content)'
-const ONE_COLUMN = 'auto minmax(0, max-content) auto'
+
+/** The width an element's content needs, every line of it at full length: the widest of its
+ *  own and its descendants' scroll widths, since a truncated line hides what overflows it. */
+function fullWidth(el: HTMLElement | undefined): number {
+  if (!el) {
+    return 0
+  }
+  let widest = el.scrollWidth
+  for (const child of el.querySelectorAll<HTMLElement>('*')) {
+    widest = Math.max(widest, child.scrollWidth)
+  }
+  return widest
+}
+// The space between two columns, drawn as the first column's values' end margin (`me-2`).
+const COLUMN_SPACE = 8
+// The last track takes what is left, so a detail can run the readout's whole width; the value
+// stays beside its name.
+const ONE_COLUMN = 'auto minmax(0, max-content) auto 1fr'
 
 /** A point's reading docked above a chart's plot, for a chart too narrow for a tooltip beside
  *  its crosshair: the label and total on one line, then each series' swatch, name and value,
- *  in two columns as wide as their content when they fit, else one. Every series keeps its place and its row, zero or not, so the readout keeps
- *  its height and order as the reading changes. */
+ *  in two columns as wide as their content when everything fits at full length, else one.
+ *  By default every series keeps its place and its row, zero or not, so the readout keeps its
+ *  height and order as the reading changes. */
 export function ChartReadout({
   label,
   items,
   formatValue,
   total,
   highlighted,
+  order = 'series',
+  hideZero = false,
   className,
 }: ChartReading & { className?: string | undefined }) {
   const { chart: t } = useStrings()
@@ -439,8 +505,9 @@ export function ChartReadout({
     [locale],
   )
   const format = formatValue ?? ((n: number) => number.format(n))
-  const sum = items.reduce((acc, item) => acc + item.value, 0)
-  const showTotal = total ?? items.length > 1
+  const rows = readingRows(items, order, hideZero)
+  const sum = rows.reduce((acc, item) => acc + item.value, 0)
+  const showTotal = total ?? rows.length > 1
   // Two columns, each only as wide as its names and values, when both fit at full length;
   // else one, whose names truncate only when even it is too narrow.
   const list = useRef<HTMLUListElement>(null)
@@ -450,17 +517,38 @@ export function ChartReadout({
     if (!ul) {
       return
     }
+    // Measured from each name's and value's own full width, every line of it, without changing
+    // the layout: widening the list to measure it could widen whatever holds it too, and then
+    // two columns would always seem to fit.
     const choose = () => {
-      const shown = ul.style.gridTemplateColumns
-      ul.style.gridTemplateColumns = MEASURE_TWO
-      const two = items.length > 1 && ul.scrollWidth <= ul.clientWidth
-      ul.style.gridTemplateColumns = shown
-      setColumns(two ? 2 : 1)
+      const cols = [0, 1].map(() => ({ swatch: 0, name: 0, value: 0 }))
+      ;[...ul.children].forEach((li, i) => {
+        const [swatch, name, value] = [...li.children] as HTMLElement[]
+        const col = cols[i % 2] as { swatch: number; name: number; value: number }
+        col.swatch = Math.max(col.swatch, swatch?.offsetWidth ?? 0)
+        col.name = Math.max(col.name, fullWidth(name))
+        col.value = Math.max(col.value, fullWidth(value))
+      })
+      const gap = Number.parseFloat(getComputedStyle(ul).columnGap) || 0
+      const need =
+        cols.reduce((sum, c) => sum + c.swatch + c.name + c.value, 0) + 5 * gap + COLUMN_SPACE
+      // A series with a detail takes a row of its own, its detail across the readout under it.
+      const detailed = rows.some((item) => item.detail != null && item.detail !== '')
+      setColumns(rows.length > 1 && !detailed && need <= ul.clientWidth ? 2 : 1)
     }
     choose()
+    // Again once its fonts load, which can widen every name, and whenever it resizes.
+    let live = true
+    const fonts = typeof document === 'undefined' ? undefined : document.fonts
+    fonts?.ready.then(() => live && choose())
+    fonts?.addEventListener?.('loadingdone', choose)
     const observer = new ResizeObserver(choose)
     observer.observe(ul)
-    return () => observer.disconnect()
+    return () => {
+      live = false
+      fonts?.removeEventListener?.('loadingdone', choose)
+      observer.disconnect()
+    }
   })
   return (
     <div
@@ -481,10 +569,10 @@ export function ChartReadout({
       </div>
       <ul
         ref={list}
-        className="m-0 grid list-none items-center justify-start gap-x-1.5 gap-y-0.5 p-0"
+        className="m-0 grid list-none items-start justify-start gap-x-1.5 gap-y-0.5 p-0"
         style={{ gridTemplateColumns: columns === 2 ? TWO_COLUMNS : ONE_COLUMN }}
       >
-        {items.map((item, i) => (
+        {rows.map((item, i) => (
           <li
             key={item.key}
             className={cx(
@@ -494,8 +582,12 @@ export function ChartReadout({
                 : highlighted != null && 'text-(--theme-muted-text-color)',
             )}
           >
-            <SeriesSwatch color={item.color} />
-            <span className="min-w-0 truncate">{item.name}</span>
+            <SeriesSwatch
+              color={item.color}
+              // In one column, each row starts again at the first track, past the empty last one.
+              className={cx(SWATCH_ON_LINE, columns === 1 && 'col-start-1')}
+            />
+            <span className="truncate">{item.name}</span>
             <span
               className={cx(
                 'text-end tabular-nums',
@@ -505,6 +597,8 @@ export function ChartReadout({
             >
               {format(item.value)}
             </span>
+            {/* Across the rest of the readout, taking no width of its own. */}
+            <SeriesDetail item={item} className="[contain:inline-size]" />
           </li>
         ))}
       </ul>

@@ -80,6 +80,7 @@ export {
   type ChartLegendItem,
   ChartLegendList,
   type ChartReading,
+  type ChartReadingOrder,
   ChartReadout,
   ChartTooltipBeside,
   ChartTooltipContent,
