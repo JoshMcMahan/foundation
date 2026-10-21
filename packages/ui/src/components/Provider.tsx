@@ -636,6 +636,8 @@ export interface UIStrings {
     pagination: string
     /** A numbered page's name in `Pagination`, counting from 1. */
     page: (page: number) => string
+    /** Where the page sits, for `Pagination` too narrow for page numbers: it shows "5 / 12". */
+    pageOfTotal: (page: number, total: number) => string
     removeSearchTerm: (term: string) => string
   }
   /** The chip row of a list's active filters, its Filter menu and its pickers. Field and option
@@ -1533,6 +1535,7 @@ const DEFAULTS: UIProviderValue = {
       paginationNext: 'Next',
       pagination: 'Pagination',
       page: (page) => `Page ${page}`,
+      pageOfTotal: (page, total) => `Page ${page} of ${total}`,
       removeSearchTerm: (term) => `Remove filter ${term}`,
     },
     filters: {

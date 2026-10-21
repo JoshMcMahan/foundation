@@ -1,7 +1,8 @@
 import { Tabs as BaseTabs } from '@base-ui/react/tabs'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, type Ref, useLayoutEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import { AppLink } from './AppLink'
+import { fadeMask, useHiddenEnds } from './scrollFade'
 import {
   SegmentContent,
   type SegmentLayout,
@@ -86,6 +87,35 @@ export function Tabs<Value extends string>({
   const showRow = items.length > 1 || !!end
   const [row, setRow] = useState<HTMLDivElement | null>(null)
   useStickyTop(row, !!sticky)
+  // A line row that runs past its width scrolls sideways: it fades at the end that hides tabs,
+  // and keeps the current tab in view.
+  const scroller = useHiddenEnds(!segmented && showRow)
+  const scrolled = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs again when the current tab changes, to find it
+  useLayoutEffect(() => {
+    const list = scroller.ref.current
+    const tab = list?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!list || !tab || segmented) {
+      return
+    }
+    // In view with room to see the tab beside it, as the fade covers the edge.
+    const margin = 24
+    const left = tab.offsetLeft
+    const right = left + tab.offsetWidth
+    let to: number | undefined
+    if (left - margin < list.scrollLeft) {
+      to = Math.max(0, left - margin)
+    } else if (right + margin > list.scrollLeft + list.clientWidth) {
+      to = right + margin - list.clientWidth
+    }
+    if (to !== undefined) {
+      const smooth =
+        scrolled.current && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      // Moved at once when the row first shows; after, it glides to the tab picked.
+      list.scrollTo?.({ left: to, behavior: smooth ? 'smooth' : 'instant' })
+    }
+    scrolled.current = true
+  }, [current, segmented, scroller.ref])
 
   const tabs = items.map((item) => {
     const tab = (
@@ -145,8 +175,13 @@ export function Tabs<Value extends string>({
         >
           <BaseTabs.List
             aria-label={label}
+            ref={segmented ? undefined : (scroller.ref as Ref<HTMLDivElement>)}
+            onScroll={segmented ? undefined : scroller.onScroll}
+            style={segmented ? undefined : fadeMask(scroller.ends)}
             className={cx(
-              segmented ? segmentGroupClassName(layout) : 'relative flex min-w-0 overflow-x-auto',
+              segmented
+                ? segmentGroupClassName(layout)
+                : 'relative flex min-w-0 overflow-x-auto rtl:[--fade-end:left]',
             )}
           >
             {tabs}

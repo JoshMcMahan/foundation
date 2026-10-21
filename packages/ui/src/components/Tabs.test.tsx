@@ -151,3 +151,39 @@ it('sets segmented tabs small', () => {
   )
   expect(screen.getByRole('tab', { name: 'List' })).toHaveClass('h-6', 'text-xs')
 })
+
+describe('a line row too wide for its space', () => {
+  it('scrolls the current tab into view and fades the end that hides tabs', () => {
+    const items = Array.from({ length: 11 }, (_, i) => ({ value: `t${i}`, label: `Tab ${i}` }))
+    // Each tab 100px wide in a 300px row, as jsdom lays nothing out.
+    const geometry = {
+      offsetLeft(this: HTMLElement) {
+        const index = Number(this.textContent?.replace('Tab ', ''))
+        return Number.isNaN(index) ? 0 : index * 100
+      },
+      offsetWidth: () => 100,
+      clientWidth: () => 300,
+      scrollWidth: () => 1100,
+    }
+    const restore = Object.entries(geometry).map(([key, get]) => {
+      const was = Object.getOwnPropertyDescriptor(HTMLElement.prototype, key)
+      Object.defineProperty(HTMLElement.prototype, key, { configurable: true, get })
+      return () => was && Object.defineProperty(HTMLElement.prototype, key, was)
+    })
+    const scrollTo = vi.fn(function (this: HTMLElement, { left }: { left: number }) {
+      this.scrollLeft = left
+    })
+    HTMLElement.prototype.scrollTo = scrollTo as unknown as typeof HTMLElement.prototype.scrollTo
+    try {
+      render(<Tabs label="Inventory" items={items} defaultValue="t9" />)
+      // Tab 9 spans 900–1000: scrolled so it ends 24px inside the row's right edge.
+      expect(scrollTo).toHaveBeenCalledWith({ left: 724, behavior: 'instant' })
+      const list = screen.getByRole('tablist')
+      expect(list.style.maskImage).toContain('linear-gradient')
+    } finally {
+      for (const undo of restore) {
+        undo()
+      }
+    }
+  })
+})

@@ -247,8 +247,8 @@ interface ActionArgs {
   iconOnly: boolean
 }
 
-/** An action that removes or breaks something takes the error color, as a
- *  destructive menu entry does. */
+/** An action that removes or breaks something reads as the others do in the bar, and takes
+ *  the error color as a menu entry, where a narrow bar moves it and where it belongs. */
 export const DestructiveAction: StoryObj<ActionArgs> = {
   args: {
     label: 'Remove',
@@ -290,7 +290,7 @@ export const DestructiveAction: StoryObj<ActionArgs> = {
     const remove = canvas.getByRole('button', { name: new RegExp(`^${args.label}`) })
     const save = canvas.getByRole('button', { name: 'Save' })
     const color = (el: Element) => getComputedStyle(el.querySelector('svg') as Element).color
-    await expect(color(remove)).not.toBe(color(save))
+    await expect(color(remove)).toBe(color(save))
   },
 }
 
@@ -377,6 +377,57 @@ export const ActionKinds: Story = {
     const item = await body.findByRole('menuitem', { name: 'Desktop' })
     await waitFor(() => expect(item).toBeVisible())
     await userEvent.keyboard('{Escape}')
+  },
+}
+
+/** A cluster's commands: labeled actions are small outline buttons, as "+ Add" is, and what
+ *  removes it sits in the "…" menu, in the error color. `variant="link"` keeps the older
+ *  link-colored text, shown on the second bar. */
+export const ActionVariants: Story = {
+  render: () => (
+    <div className="space-y-4">
+      <div className="rounded-md border border-(--theme-border)">
+        <PageHeader
+          breadcrumbs={[{ label: 'Clusters', href: '/clusters' }, { label: 'gpu-training' }]}
+          titleActions={
+            <PageHeaderMenu
+              items={[
+                { label: 'Duplicate', onClick: () => {} },
+                { label: 'Delete cluster', destructive: true, onClick: () => {} },
+              ]}
+            />
+          }
+          actions={
+            <>
+              <PageHeaderAction icon={TerminalIcon} label="Terminal" onClick={() => {}} />
+              <PageHeaderAction icon={StopIcon} label="Stop" onClick={() => {}} />
+              <PageHeaderAddButton label="Add node" onClick={() => {}} />
+            </>
+          }
+        />
+      </div>
+      <div className="rounded-md border border-(--theme-border)">
+        <PageHeader
+          breadcrumbs={[{ label: 'Docs', href: '/docs' }, { label: 'Quick start' }]}
+          actions={
+            <PageHeaderAction
+              icon={ExternalLinkIcon}
+              label="Open in new tab"
+              href="https://example.com"
+              external
+              variant="link"
+            />
+          }
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const stop = canvas.getByRole('button', { name: 'Stop' })
+    const add = canvas.getByRole('button', { name: 'Add node' })
+    // The header's commands share one look.
+    await expect(getComputedStyle(stop).borderTopWidth).toBe(getComputedStyle(add).borderTopWidth)
   },
 }
 

@@ -93,3 +93,39 @@ export const SmallSegments: StoryObj<Args> = {
     </div>
   ),
 }
+
+const INVENTORY = [
+  { value: 'cluster', label: 'Cluster' },
+  { value: 'vm', label: 'VM' },
+  { value: 'lustre', label: 'Lustre' },
+  { value: 'disk', label: 'Disk', count: 3 },
+  { value: 'snapshot', label: 'Snapshot' },
+  { value: 'bucket', label: 'Bucket' },
+  { value: 'nfs', label: 'NFS' },
+  { value: 'ip', label: 'IP' },
+  { value: 'networkinterface', label: 'Network interface' },
+  { value: 'orphan', label: 'Orphan', count: 2, tone: 'warning' as const },
+  { value: 'credentials', label: 'Credentials' },
+]
+
+/** An inventory's eleven tabs, two of them counted, more than a phone's width holds: the row
+ *  fades at whichever end hides tabs, and keeps the current tab in view. */
+export const ManyTabs: StoryObj = {
+  render: () => (
+    // Inline: the package's stylesheet doesn't scan stories.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
+      <Tabs label="First tab current" items={INVENTORY} defaultValue="cluster" />
+      <Tabs label="A tab past the edge current" items={INVENTORY} defaultValue="orphan" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const orphan = canvas.getAllByRole('tab', { name: /Orphan/ })[1] as HTMLElement
+    const list = orphan.closest('[role="tablist"]') as HTMLElement
+    // Scrolled so the current tab shows whole.
+    const tab = orphan.getBoundingClientRect()
+    const row = list.getBoundingClientRect()
+    await expect(tab.left).toBeGreaterThanOrEqual(row.left)
+    await expect(tab.right).toBeLessThanOrEqual(row.right)
+  },
+}

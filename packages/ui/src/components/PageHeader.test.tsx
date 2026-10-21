@@ -398,17 +398,25 @@ describe('PageHeaderAction', () => {
     expect(out).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('colors a destructive action’s content in the error color', () => {
+  it('is a small outline button by default, link-colored text when asked, and never red in the bar', () => {
     render(
       <>
+        <PageHeaderAction icon={Icon} label="Add" onClick={() => {}} />
+        <PageHeaderAction icon={Icon} label="Open" href="/somewhere" variant="link" />
         <PageHeaderAction icon={Icon} label="Remove" destructive onClick={() => {}} />
-        <PageHeaderAction icon={Icon} label="Open" href="/somewhere" />
+        <PageHeaderAction icon={Icon} label="Edit" iconOnly onClick={() => {}} />
       </>,
     )
-    expect(screen.getByRole('button', { name: 'Remove' })).toHaveClass(
-      '*:text-(--theme-error-text)',
-    )
-    expect(screen.getByRole('link', { name: 'Open' })).toHaveClass('*:text-(--theme-link)')
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveClass('border', 'h-6')
+    const open = screen.getByRole('link', { name: 'Open' })
+    expect(open).toHaveClass('*:text-(--theme-link)')
+    expect(open).not.toHaveClass('border')
+    // Destructive reads in the error color only as a menu entry; in the bar it is like the others.
+    const remove = screen.getByRole('button', { name: 'Remove' })
+    expect(remove).toHaveClass('border')
+    expect(remove.className).not.toContain('theme-error')
+    // An icon beside the title stays bare.
+    expect(screen.getByRole('button', { name: 'Edit' })).not.toHaveClass('border')
   })
 
   it('stays focusable when disabled, says why and swallows presses', async () => {

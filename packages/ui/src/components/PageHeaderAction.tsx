@@ -124,8 +124,15 @@ export type PageHeaderActionProps = Target & {
   disabledReason?: string | undefined
   /** A hint shown on hover and focus while it can be pressed. */
   tooltip?: string | undefined
-  /** In the error color, as a destructive menu entry is, for an action that
-   *  removes or breaks something. */
+  /** How a labeled action reads in the bar: `outline`, the page's small
+   *  secondary button, as "+ Add" is; or `link`, text in the link color, for a
+   *  page that keeps the older look. On a narrow bar the label folds into the
+   *  tooltip and the outline stays, so the action is an outlined icon. An
+   *  `iconOnly` action, such as a pencil beside the title, is always bare. */
+  variant?: 'outline' | 'link' | undefined
+  /** For an action that removes or breaks something: in the error color where
+   *  it is a menu entry, in the header's "…" menu. In the bar it reads as the
+   *  others do; a page's destructive actions belong in its menu. */
   destructive?: boolean | undefined
   /** A toggle's state, such as a favorite: set, it reads as pressed. Buttons only. */
   pressed?: boolean | undefined
@@ -137,14 +144,15 @@ export type PageHeaderActionProps = Target & {
 /**
  * An action in the page header: a link (`href`, `external` for a new tab,
  * `reloadDocument` for a path the router doesn't serve), a
- * button (`onClick`) or a menu (`menu`). Labeled actions read in the link
- * color, so the page's commands stand apart from the trail.
+ * button (`onClick`) or a menu (`menu`). A labeled action is a small outline
+ * button, as "+ Add" is, so the page's commands stand apart from the trail.
  */
 export function PageHeaderAction({
   icon: Icon,
   label,
   ariaLabel,
   iconOnly = false,
+  variant = 'outline',
   disabled = false,
   disabledReason,
   tooltip,
@@ -153,13 +161,13 @@ export function PageHeaderAction({
   loading = false,
   ...target
 }: PageHeaderActionProps) {
-  // The tone colors the icon and label rather than the control, so it can't
-  // lose to the button recipe's own text color by stylesheet order.
-  const tone = destructive
-    ? '*:text-(--theme-error-text)'
-    : iconOnly
-      ? undefined
-      : '*:text-(--theme-link)'
+  const link = variant === 'link' && !iconOnly
+  const className = cx(
+    buttonClasses({ variant: link || iconOnly ? 'ghost' : 'outline', size: 'xs', iconOnly }),
+    // The link color tints the icon and label rather than the control, so it can't lose to the
+    // button recipe's own text color by stylesheet order.
+    link && '*:text-(--theme-link)',
+  )
   const icon = loading ? <Loader inline decorative size="1em" /> : <Icon />
   return (
     <Fitted
@@ -182,7 +190,7 @@ export function PageHeaderAction({
         disabledReason={disabledReason}
         loading={loading}
         pressed={pressed}
-        className={cx(buttonClasses({ variant: 'ghost', size: 'xs', iconOnly }), tone)}
+        className={className}
       >
         {icon}
         {!iconOnly && <span className="@max-md:sr-only">{label}</span>}

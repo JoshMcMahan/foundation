@@ -33,8 +33,10 @@ export interface PaginationProps {
   /** Numbers the pages between previous and next, for a list a reader jumps
    *  around in, such as a catalog: the first and last, and a window around
    *  the current one, with gaps between. `max` is how many steps show at
-   *  most, gaps included (7 by default, 5 at least). Needs a `total`; hidden
-   *  on a phone-width screen, where previous and next remain. */
+   *  most, gaps included (7 by default, 5 at least). Needs a `total`. Where
+   *  the bar is narrow, as on a phone, the window narrows to the first, the
+   *  current and the last page (5 steps), and where even those won't fit, to
+   *  the current page and the count: "5 / 12". */
   pageNumbers?: boolean | { max?: number | undefined } | undefined
   className?: string | undefined
 }
@@ -77,6 +79,7 @@ export function Pagination({
   className,
 }: PaginationProps) {
   const t = useStrings().list
+  const locale = useLocale()
   const start = page * pageSize + 1
   const pageEnd = (page + 1) * pageSize
   const known = total !== undefined
@@ -97,7 +100,11 @@ export function Pagination({
     <nav
       aria-label={t.pagination}
       // A slim line under a list, so a list in a card spends its height on rows.
-      className={cx('flex h-8 shrink-0 items-center justify-between gap-3 px-2.5', className)}
+      // Its own width picks how many page numbers show (see `pageNumbers`).
+      className={cx(
+        '@container/pager flex h-8 shrink-0 items-center justify-between gap-3 px-2.5',
+        className,
+      )}
     >
       {/* Takes the bar's free space, so the position truncates only when the bar runs out. */}
       <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-(--theme-muted-text-color)">
@@ -123,30 +130,35 @@ export function Pagination({
           pageHref={pageHref}
         />
         {pageNumbers && pageCount !== undefined && pageCount > 1 && (
-          <ol className="m-0 hidden list-none items-center gap-1 p-0 sm:flex">
-            {pageSteps(
-              page,
-              pageCount,
-              typeof pageNumbers === 'object' ? pageNumbers.max : undefined,
-            ).map((step, i) => (
-              <li key={step ?? `gap-${i}`} className="flex">
-                {step === null ? (
-                  <MoreIcon
-                    aria-hidden="true"
-                    className="size-3.5 w-5 text-(--theme-muted-text-color)"
-                  />
-                ) : (
-                  <PageNumber
-                    to={step}
-                    current={step === page}
-                    label={t.page(step + 1)}
-                    onPageChange={onPageChange}
-                    pageHref={pageHref}
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
+          <>
+            {/* One of three, by the bar's width: the full window, a narrow one, or the count. */}
+            <PageNumbers
+              steps={pageSteps(
+                page,
+                pageCount,
+                typeof pageNumbers === 'object' ? pageNumbers.max : undefined,
+              )}
+              page={page}
+              className="hidden @min-[34rem]/pager:flex"
+              onPageChange={onPageChange}
+              pageHref={pageHref}
+            />
+            <PageNumbers
+              steps={pageSteps(page, pageCount, 5)}
+              page={page}
+              className="hidden @min-[19rem]/pager:flex @min-[34rem]/pager:hidden"
+              onPageChange={onPageChange}
+              pageHref={pageHref}
+            />
+            <span className="flex items-center px-1 text-xs whitespace-nowrap text-(--theme-muted-text-color) tabular-nums @min-[19rem]/pager:hidden">
+              <span className="sr-only">{t.pageOfTotal(page + 1, pageCount)}</span>
+              <span aria-hidden="true">
+                <span className="text-(--theme-app)">{formatInteger(page + 1, locale)}</span>
+                {' / '}
+                {formatInteger(pageCount, locale)}
+              </span>
+            </span>
+          </>
         )}
         <PageStep
           to={page + 1}
@@ -158,6 +170,41 @@ export function Pagination({
         />
       </div>
     </nav>
+  )
+}
+
+function PageNumbers({
+  steps,
+  page,
+  className,
+  onPageChange,
+  pageHref,
+}: {
+  steps: (number | null)[]
+  page: number
+  className: string
+  onPageChange: ((page: number) => void) | undefined
+  pageHref: ((page: number) => string) | undefined
+}) {
+  const t = useStrings().list
+  return (
+    <ol className={cx('m-0 list-none items-center gap-1 p-0', className)}>
+      {steps.map((step, i) => (
+        <li key={step ?? `gap-${i}`} className="flex">
+          {step === null ? (
+            <MoreIcon aria-hidden="true" className="size-3.5 w-4 text-(--theme-muted-text-color)" />
+          ) : (
+            <PageNumber
+              to={step}
+              current={step === page}
+              label={t.page(step + 1)}
+              onPageChange={onPageChange}
+              pageHref={pageHref}
+            />
+          )}
+        </li>
+      ))}
+    </ol>
   )
 }
 

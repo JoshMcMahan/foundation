@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { Pagination, pageSteps } from './Pagination'
 import { UIProvider, type UIStrings } from './Provider'
 
@@ -89,8 +89,10 @@ describe('page numbers', () => {
     render(
       <Pagination page={3} pageSize={10} total={200} onPageChange={onPageChange} pageNumbers />,
     )
-    expect(screen.getByRole('button', { name: 'Page 4' })).toHaveAttribute('aria-current', 'page')
-    fireEvent.click(screen.getByRole('button', { name: 'Page 20' }))
+    // The full window: jsdom applies no container query, so the narrower ones are there too.
+    const full = within(screen.getAllByRole('list')[0] as HTMLElement)
+    expect(full.getByRole('button', { name: 'Page 4' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(full.getByRole('button', { name: 'Page 20' }))
     expect(onPageChange).toHaveBeenCalledWith(19)
   })
 
@@ -104,7 +106,7 @@ describe('page numbers', () => {
         pageNumbers={{ max: 5 }}
       />,
     )
-    expect(screen.getByRole('link', { name: 'Page 3' })).toHaveAttribute('href', '?page=3')
+    expect(screen.getAllByRole('link', { name: 'Page 3' })[0]).toHaveAttribute('href', '?page=3')
   })
 })
 
@@ -114,7 +116,7 @@ it("numbers pages in the host's locale, in full", () => {
       <Pagination page={1203} pageSize={10} total={20000} onPageChange={() => {}} pageNumbers />
     </UIProvider>,
   )
-  expect(screen.getByRole('button', { name: 'Page 1204' })).toHaveTextContent('1.204')
+  expect(screen.getAllByRole('button', { name: 'Page 1204' })[0]).toHaveTextContent('1.204')
 })
 
 it('is a slim 32px line with 24px steps that grow under a finger', () => {
@@ -124,4 +126,23 @@ it('is a slim 32px line with 24px steps that grow under a finger', () => {
     'size-6',
     'pointer-coarse:size-8',
   )
+})
+
+it('narrows its page numbers as the bar does, down to the page and the count', () => {
+  render(<Pagination page={4} pageSize={10} total={120} onPageChange={() => {}} pageNumbers />)
+  const [full, narrow] = screen.getAllByRole('list') as HTMLElement[]
+  const numbers = (list: HTMLElement | undefined) =>
+    within(list as HTMLElement)
+      .queryAllByRole('button')
+      .map((button) => button.textContent)
+  // The full window where the bar has room, a narrower one on a phone: 1 … 5 … 12.
+  expect(numbers(full)).toEqual(['1', '4', '5', '6', '12'])
+  expect(full).toHaveClass('hidden', '@min-[34rem]/pager:flex')
+  expect(numbers(narrow)).toEqual(['1', '5', '12'])
+  expect(narrow).toHaveClass('hidden', '@min-[19rem]/pager:flex', '@min-[34rem]/pager:hidden')
+  // Narrower still, the page and the count, read whole by a screen reader.
+  const count = screen.getByText('Page 5 of 12').parentElement
+  expect(count).toHaveTextContent('5 / 12')
+  expect(count).toHaveClass('@min-[19rem]/pager:hidden')
+  expect(screen.getByRole('navigation')).toHaveClass('@container/pager')
 })
