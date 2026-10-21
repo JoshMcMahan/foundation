@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.85.0](https://github.com/parallelworks/foundation/compare/ui-v0.84.2...ui-v0.85.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** chart series take colors by their place in a checked order, a ninth folds into Other, and the tooltip sits beside the crosshair ([#474](https://github.com/parallelworks/foundation/issues/474))
+
+### Features
+
+* **ui:** page numbers on a phone, tabs that show they scroll, and outline page-header actions ([#473](https://github.com/parallelworks/foundation/issues/473)) ([7eaca81](https://github.com/parallelworks/foundation/commit/7eaca813641f989b1c6dc278b06068bf9bc0f48a))
+
+
+### Bug Fixes
+
+* **ui:** a code block's copy confirms with its check, not a toast ([#471](https://github.com/parallelworks/foundation/issues/471)) ([1762d70](https://github.com/parallelworks/foundation/commit/1762d70b3f80e3624a7baab7a86e10b932c99f13))
+* **ui:** chart series take colors by their place in a checked order, a ninth folds into Other, and the tooltip sits beside the crosshair ([#474](https://github.com/parallelworks/foundation/issues/474)) ([243e491](https://github.com/parallelworks/foundation/commit/243e491a4dfd3a54de499cfe032db73f45994d01))
+* **ui:** explorer downloads only some of the selected files from the browser ([#475](https://github.com/parallelworks/foundation/issues/475)) ([cd7678a](https://github.com/parallelworks/foundation/commit/cd7678aa712d7b7d4971e150157c031717e9a5a0))
+* **ui:** list columns share out dropped widths, a locked column keeps its own, group rows take a detail that gives way first, and tags keep their edge on a hovered row ([#472](https://github.com/parallelworks/foundation/issues/472)) ([5535b89](https://github.com/parallelworks/foundation/commit/5535b89c132d8236bb71529ee589a6f07fd0f8ef))
+
 ## [0.84.2](https://github.com/parallelworks/foundation/compare/ui-v0.84.1...ui-v0.84.2) (2026-10-21)
 
 
