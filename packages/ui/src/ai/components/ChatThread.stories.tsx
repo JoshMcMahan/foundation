@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { type CSSProperties, useMemo, useState } from 'react'
+import { userEvent, within } from 'storybook/test'
 import { createMockChatAdapter } from '../adapter/mock'
 import type { ToolRendererProps } from '../core/config'
 import {
@@ -265,6 +266,55 @@ export const HeldToolCall: StoryObj = {
       </StoryViewport>
     </StoryChat>
   ),
+}
+
+// The server refuses the first answer before anything streams, as when the
+// call was answered elsewhere: the call asks again beside the error, and the
+// next answer goes through.
+export const HeldToolCallRefused: StoryObj = {
+  render: () => {
+    let refused = false
+    return (
+      <StoryChat
+        adapter={{
+          ...makeStaticAdapter({
+            conversations: [
+              makeConversation({
+                id: 'conv-held',
+                title: 'Stop gputraining',
+                messages: makeHeldCallTurn(),
+              }),
+            ],
+            tools: [
+              {
+                id: 'stop_cluster',
+                label: 'Stop a cluster',
+                description: 'Stops a cluster, keeping its disks',
+                asksFirst: true,
+              },
+            ],
+          }),
+          streamCompletion: async (req, handlers, signal) => {
+            if (!refused) {
+              refused = true
+              throw new Error("Couldn't reach the server. Check your connection and try again.")
+            }
+            return resumeHeldCall(req, handlers, signal)
+          },
+        }}
+        conversationId="conv-held"
+      >
+        <StoryViewport>
+          <ChatThread conversationId="conv-held" />
+        </StoryViewport>
+      </StoryChat>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByText('Yes, allow this call'))
+    await canvas.findByText(/Couldn't reach the server/)
+  },
 }
 
 function StopOrDestroyCard({ part, approval, onApprovalAnswer }: ToolRendererProps) {

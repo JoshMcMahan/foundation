@@ -717,6 +717,81 @@ describe('streamed parts', () => {
     })
   })
 
+  it('asks again, beside the error, when the answer is refused before anything streams', async () => {
+    let refuse = true
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'stop_cluster', args: '{}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      if (refuse) {
+        throw new Error('This call was already answered.')
+      }
+      handlers.onPart?.({ type: 'tool_end', id: 't1', result: 'stopping' })
+      return { ...emptyStreamResult(), messageId: 'resumed' }
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    const paused = () => chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    const asked = paused()?.parts
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await act(async () => {
+      await chat.answerToolApproval('t1', {
+        kind: 'confirm',
+        allowed: true,
+        instead: 'destroy_cluster',
+        args: '{"force":true}',
+      })
+    })
+    expect(paused()?.parts).toEqual(asked)
+    expect(paused()?.error).toBe('This call was already answered.')
+
+    refuse = false
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: true })
+    })
+    expect(paused()?.error).toBeNull()
+    expect(paused()?.parts?.[0]).toMatchObject({
+      name: 'stop_cluster',
+      status: 'ok',
+      decision: { status: 'approved' },
+    })
+  })
+
+  it('keeps the answer once the reply has started, even if it then fails', async () => {
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
+      if (!req.resume) {
+        handlers.onPart?.({ type: 'tool_start', id: 't1', name: 'stop_cluster', args: '{}' })
+        handlers.onPart?.({
+          type: 'approval_request',
+          approval: { kind: 'approval', id: 't1', approvalKind: 'confirm', subject: 'call' },
+        })
+        return { ...emptyStreamResult(), messageId: 'paused' }
+      }
+      handlers.onMessageId?.('resumed')
+      throw new Error('The connection dropped.')
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    await act(async () => {
+      await chat.sendMessage('stop gpu-a')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await act(async () => {
+      await chat.answerToolApproval('t1', { kind: 'confirm', allowed: true })
+    })
+
+    const paused = chat.currentConversation?.messages.find((m) => m.id === 'paused')
+    expect(paused?.parts?.[0]).toMatchObject({ decision: { status: 'approved' } })
+    expect(paused?.parts?.[1]).toMatchObject({ kind: 'approval', resolved: true })
+  })
+
   it('sends no arguments when the reader left the suggestion as it was', async () => {
     const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async (req, handlers) => {
       if (!req.resume) {

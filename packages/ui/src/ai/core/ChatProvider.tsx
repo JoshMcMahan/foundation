@@ -597,6 +597,7 @@ export function ChatProvider({
       parentId: string,
       onFailure: (message: string) => void,
       routePart?: (delta: PartDelta) => boolean,
+      onAccepted?: () => void,
     ): Promise<StreamOutcome> => {
       backgroundStreamsRef.current.set(targetConversationId, {
         content: '',
@@ -629,6 +630,7 @@ export function ChatProvider({
         const markStreamStart = () => {
           if (thinkingStart === null) {
             thinkingStart = Date.now()
+            onAccepted?.()
           }
         }
 
@@ -1057,7 +1059,8 @@ export function ChatProvider({
       isSendingRef.current = true
       const targetConversationId = conversation.id
       const t = resolvedConfig.strings.agentTranscript
-      let pausedParts = paused.parts ?? []
+      const askedParts = paused.parts ?? []
+      let pausedParts = askedParts
       const updatePaused = (updates: Partial<Message>) =>
         dispatch({
           type: 'UPDATE_MESSAGE',
@@ -1068,6 +1071,9 @@ export function ChatProvider({
       const applyToPaused = (delta: PartDelta) => {
         pausedParts = applyPartDelta(pausedParts, delta)
         updatePaused({ parts: pausedParts })
+      }
+      if (paused.error) {
+        updatePaused({ error: null })
       }
       applyToPaused({
         type: 'approval_resolved',
@@ -1105,8 +1111,9 @@ export function ChatProvider({
 
       streamingToConversationRef.current = targetConversationId
       startStreaming(targetConversationId)
+      let accepted = false
       try {
-        await streamReply(
+        const outcome = await streamReply(
           targetConversationId,
           {
             model: modelString,
@@ -1137,7 +1144,17 @@ export function ChatProvider({
             applyToPaused(delta)
             return true
           },
+          () => {
+            accepted = true
+          },
         )
+        // Refused before anything streamed (a conflict, a denied permission,
+        // arguments that don't validate, no network): the call is still held,
+        // so it asks again beside the error.
+        if (outcome === 'failed' && !accepted) {
+          pausedParts = askedParts
+          updatePaused({ parts: askedParts })
+        }
       } finally {
         isSendingRef.current = false
       }

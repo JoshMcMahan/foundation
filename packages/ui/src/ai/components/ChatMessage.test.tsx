@@ -136,6 +136,19 @@ describe('ChatMessage', () => {
       expect(screen.getByText('Failed to send message')).toBeInTheDocument()
     })
 
+    it('displays the error of a reply made only of parts, such as a held call', () => {
+      const message = createMockMessage({
+        role: 'assistant',
+        content: '',
+        parts: [{ kind: 'text', text: 'hi' }],
+        error: 'This call was already answered.',
+      })
+
+      render(<ChatMessage {...defaultProps} message={message} />)
+
+      expect(screen.getByText('This call was already answered.')).toBeInTheDocument()
+    })
+
     it('shows retry button when onRetry is provided', () => {
       const message = createMockMessage({
         role: 'user',
