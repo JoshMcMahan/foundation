@@ -13,7 +13,7 @@ const dollars = new Intl.NumberFormat(undefined, { style: 'currency', currency: 
 const money = (amount: number) => dollars.format(amount)
 
 /** Which allocation an organization model bills, with its spend so far. Shows
- *  only for an organization model, and picks the first allocation for it. */
+ *  only for an organization model, and picks the first allocation it can charge. */
 export default function AllocationSelector({
   model,
   allocation,
@@ -39,7 +39,7 @@ export default function AllocationSelector({
     () => allocationsAdapter?.list(),
   )
 
-  const first = allocations?.[0]
+  const first = allocations?.find((a) => !a.disabled)
   // A session keeps the allocation it has; only the chat's own selection follows the model.
   useEffect(() => {
     if (bound) {
@@ -63,7 +63,12 @@ export default function AllocationSelector({
     <div className="flex min-w-0 shrink-[3] items-center gap-2">
       <Select
         aria-label={t.choose}
-        items={allocations.map((a) => ({ value: a.name, label: a.name }))}
+        items={allocations.map((a) => ({
+          value: a.name,
+          label: a.name,
+          description: a.description,
+          disabled: a.disabled,
+        }))}
         value={selectedAllocation}
         disabled={!!allocation?.disabled}
         onValueChange={(name) =>

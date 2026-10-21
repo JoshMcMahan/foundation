@@ -230,6 +230,54 @@ export const SharedProviders: StoryObj<{
   },
 }
 
+export const Allocations: StoryObj<{ pickerOpen: boolean }> = {
+  args: { pickerOpen: true },
+  render: () => {
+    const Composer = () => {
+      const adapter = useMemo(
+        () =>
+          makeStaticAdapter({
+            providers: [
+              { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
+            ],
+            allocations: [
+              {
+                name: 'archive',
+                total: 200,
+                used: 200,
+                description: 'Budget spent · 200.00 / 200.00 USD',
+                disabled: true,
+              },
+              { name: 'research', total: 500, used: 123.4, description: '123.40 / 500.00 USD' },
+              { name: 'teaching', total: 100, description: '0.00 / 100.00 USD' },
+            ],
+          }),
+        [],
+      )
+      return (
+        <StoryChat adapter={adapter}>
+          <div>
+            <ChatInput
+              onSend={send}
+              conversationId="conv-allocations"
+              settingsRight={<ComposerControls />}
+            />
+          </div>
+        </StoryChat>
+      )
+    }
+    return <Composer />
+  },
+  play: async ({ canvasElement, args }) => {
+    if (!args.pickerOpen) {
+      return
+    }
+    const trigger = await within(canvasElement).findByRole('combobox', { name: 'Allocation' })
+    await waitFor(() => expect(trigger).toHaveTextContent('research'))
+    await userEvent.click(trigger)
+  },
+}
+
 // The composer's + once the adapter lists tools of its own: Add files, and
 // Tools, whose submenu switches each tool for the requests that follow, with
 // the link to connect more at its foot. Past six tools, Tools opens a modal

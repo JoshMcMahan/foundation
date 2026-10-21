@@ -355,6 +355,8 @@ export interface Allocation {
   name: string
   total: number
   used?: number
+  description?: string | undefined
+  disabled?: boolean | undefined
 }
 
 // Host-provided routing: the package never imports a router.
