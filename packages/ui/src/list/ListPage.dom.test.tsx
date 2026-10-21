@@ -134,7 +134,7 @@ describe('ListRow stacked columns', () => {
     expect(cells[0]).toHaveTextContent('AdaRunning')
     const stacked = cells[0]?.querySelector('[data-stacked]')
     expect(stacked).toHaveTextContent('Running')
-    expect(stacked).toHaveClass('@[36rem]:hidden')
+    expect(stacked?.closest('[data-stacked-line]')).toHaveClass('@[36rem]:hidden')
     // Its own cell gives way when narrow, like a medium-priority column.
     expect(cells[2]).toHaveTextContent('Running')
     expect(cells[2]).toHaveClass('hidden', '@[36rem]:table-cell')
@@ -195,7 +195,7 @@ describe('ListRow stacked columns', () => {
     const [first, other] = screen.getAllByRole('row')
     const cells = within(first as HTMLElement).getAllByRole('cell')
     expect(cells[0]?.querySelector('[data-stacked]')).toHaveTextContent('Running')
-    expect(cells[0]?.querySelector('[data-stacked]')).toHaveClass('@[36rem]:hidden')
+    expect(cells[0]?.querySelector('[data-stacked-line]')).toHaveClass('@[36rem]:hidden')
     // Each keeps its own classes and takes its column's.
     expect(cells[1]).toHaveClass('py-2.5', 'hidden', '@[36rem]:table-cell')
     expect(cells[2]).toHaveClass('hidden', '@[36rem]:table-cell')
@@ -229,7 +229,42 @@ describe('ListRow stacked columns', () => {
     const stacked = screen.getAllByRole('cell')[0]?.querySelector('[data-stacked]')
     expect(stacked).toHaveTextContent('Running')
     // Under the name's column of the grid, not after it.
-    expect(stacked?.parentElement).toHaveClass('col-start-2')
+    expect(stacked?.closest('[data-stacked-line]')?.parentElement).toHaveClass('col-start-2')
+  })
+
+  it('flows several stacked values inline on one line that wraps between them', () => {
+    render(
+      <ListRowActionsProvider
+        view={{
+          ...view,
+          columnClasses: ['', ...Array(3).fill('hidden @[36rem]:table-cell')],
+          columnStacks: [false, true, true, true],
+        }}
+      >
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameCell icon={<span />} name="gpu-trainer" href={null} />
+              <Table.Item>Instance</Table.Item>
+              <Table.Item>
+                <span>Running</span>
+              </Table.Item>
+              <td>us-west-2</td>
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const first = screen.getAllByRole('cell')[0]
+    const lines = first?.querySelectorAll('[data-stacked-line]') ?? []
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toHaveClass('flex-wrap')
+    const items = Array.from(lines[0]?.querySelectorAll('[data-stacked]') ?? [])
+    expect(items.map((item) => item.textContent)).toEqual(['Instance', 'Running', 'us-west-2'])
+    // A value never breaks inside itself.
+    for (const item of items) {
+      expect(item).toHaveClass('whitespace-nowrap')
+    }
   })
 
   it('adds nothing for a stacked cell with nothing in it', () => {

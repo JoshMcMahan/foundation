@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { UIProvider } from '../components/Provider'
 import { Table } from '../components/Table'
 import { memoryStorage } from '../test/storage'
-import { ListColumns, ListPage, ListRow, ListRowActionsProvider } from './ListPage'
+import { GroupRow, ListColumns, ListPage, ListRow, ListRowActionsProvider } from './ListPage'
 import {
   actionsColumnWidth,
   ListActionsHeader,
@@ -269,5 +269,133 @@ describe('Counts in the host locale', () => {
       </UIProvider>,
     )
     expect(screen.getByRole('status')).toHaveTextContent('1.204 tokens')
+  })
+})
+
+function GroupedList({
+  leading = false,
+  actions = true,
+}: {
+  leading?: boolean
+  actions?: boolean
+}) {
+  const view = useListView<unknown>({
+    storageKey: `grouped${leading ? ':leading' : ''}${actions ? '' : ':no-actions'}`,
+    columns: [
+      { key: 'name', label: 'Name', alwaysVisible: true },
+      { key: 'type', label: 'Type' },
+      { key: 'zone', label: 'Zone', priority: 'low' },
+      { key: 'seen', label: 'Last seen', priority: 'medium' },
+      { key: 'total', label: 'Total', stack: false },
+    ],
+    defaultShowActions: actions,
+  })
+  return (
+    <ListRowActionsProvider view={view}>
+      <Table {...listTableProps}>
+        {leading && <Table.Header>Select</Table.Header>}
+        <ListColumns view={view} />
+        <GroupRow
+          label={<span>gpu-training</span>}
+          count={3}
+          trailing="2/3 running"
+          leading={leading ? 1 : 0}
+        />
+      </Table>
+    </ListRowActionsProvider>
+  )
+}
+
+describe('GroupRow', () => {
+  const groupCells = () =>
+    Array.from(screen.getByText('gpu-training').closest('tr')?.querySelectorAll('td') ?? [])
+
+  it('has a cell per column, each hiding with its column, and one for the actions', () => {
+    render(<GroupedList />)
+    const headers = screen.getAllByRole('columnheader')
+    const cells = groupCells()
+    expect(cells).toHaveLength(headers.length)
+    // Type stacks on a phone, Zone drops below 52rem and Last seen below 36rem.
+    expect(cells[1]).toHaveClass('hidden', '@[36rem]:table-cell')
+    expect(cells[2]).toHaveClass('hidden', '@[52rem]:table-cell')
+    expect(cells[3]).toHaveClass('hidden', '@[36rem]:table-cell')
+    // A column that stays a column, and the name and actions, never hide.
+    for (const i of [0, 4, 5]) {
+      expect(cells[i]).not.toHaveClass('hidden')
+    }
+  })
+
+  it('holds the whole header in its first cell: label, count and what sums it up', () => {
+    render(<GroupedList />)
+    const [first, ...rest] = groupCells()
+    expect(first).toHaveTextContent('gpu-training·32/3 running')
+    for (const cell of rest) {
+      expect(cell).toBeEmptyDOMElement()
+    }
+  })
+
+  it('leaves a cell for each leading column, and none for actions that are off', () => {
+    render(<GroupedList leading actions={false} />)
+    const cells = groupCells()
+    expect(cells).toHaveLength(screen.getAllByRole('columnheader').length)
+    expect(cells[0]).toHaveTextContent('gpu-training')
+    // The columns' classes start after the leading cell.
+    expect(cells[0]).not.toHaveClass('hidden')
+    expect(cells[2]).toHaveClass('@[36rem]:table-cell')
+    expect(cells[3]).toHaveClass('@[52rem]:table-cell')
+  })
+
+  it('spans colSpan columns in one cell outside a list view', () => {
+    render(
+      <table>
+        <tbody>
+          <GroupRow label="Connected resources" count={2} colSpan={3} />
+        </tbody>
+      </table>,
+    )
+    const cells = Array.from(screen.getByText('Connected resources').closest('tr')?.cells ?? [])
+    expect(cells).toHaveLength(1)
+    expect(cells[0]).toHaveAttribute('colspan', '3')
+  })
+})
+
+describe('cells keep to their column', () => {
+  it('cuts a long value off inside its own cell, and shows it whole in a tooltip', () => {
+    render(
+      <UIProvider>
+        <table style={{ tableLayout: 'fixed', width: 200 }}>
+          <tbody>
+            <tr>
+              <Table.Item style={{ width: 40 }}>
+                <ListCellText>Network interface with a very long name</ListCellText>
+              </Table.Item>
+              <Table.Item>pending</Table.Item>
+            </tr>
+          </tbody>
+        </table>
+      </UIProvider>,
+    )
+    const text = screen.getByText('Network interface with a very long name')
+    // The cell clips what it holds, and the text ends in an ellipsis rather than running on.
+    expect(text.closest('td')).toHaveClass('overflow-clip', 'text-ellipsis', 'whitespace-nowrap')
+    expect(text).toHaveClass('block', 'min-w-0', 'truncate')
+    // Its tooltip opens only while the text is cut off.
+    expect(text).toHaveAttribute('data-overflow-only')
+  })
+
+  it('lets the actions lane reach past its cell, where a floating ⋯ sits over the last column', () => {
+    render(
+      <table>
+        <tbody>
+          <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+            <Table.Item>logs</Table.Item>
+          </ListRow>
+        </tbody>
+      </table>,
+    )
+    const cells = screen.getAllByRole('cell')
+    expect(cells[0]).toHaveClass('overflow-clip')
+    expect(cells.at(-1)).toHaveClass('overflow-visible')
+    expect(cells.at(-1)).not.toHaveClass('overflow-clip')
   })
 })

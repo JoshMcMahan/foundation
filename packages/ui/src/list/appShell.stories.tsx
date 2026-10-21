@@ -27,9 +27,8 @@ import {
   TrashIcon,
 } from '../icons'
 import { ActionToolbar, type ToolbarItem } from './ActionToolbar'
-import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
+import { GroupRow, ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
 import {
-  GroupRow,
   ListError,
   ListSelectAllHeader,
   ListSkeleton,
@@ -431,11 +430,7 @@ function ClustersPage({
                           key={status}
                           label={status}
                           count={group.length}
-                          colSpan={
-                            (selectable ? 1 : 0) +
-                            view.visibleColumns.length +
-                            (view.showActions ? 1 : 0)
-                          }
+                          leading={selectable ? 1 : 0}
                         />,
                         ...group.map(renderRow),
                       ]

@@ -29,6 +29,12 @@ export interface ColumnDef {
    * then sorts the list: it shows, and sets, the same order as Display
    * options' Ordering. */
   orderBy?: string
+  /** The column's width, such as `'12%'` or `128`, set on its header. In a
+   * fixed-layout list (`listTableFixedProps`), where every column without one
+   * takes an equal share, give the other columns a width each and leave the
+   * name without one, so it takes what they leave. A percentage is of the
+   * list's width, and a hidden column's no longer counts. */
+  width?: string | number
   /** `end` sets the header and the cells against the column's far edge, for
    * figures, sizes and times that compare best lined up on their last digit. */
   align?: 'start' | 'end'

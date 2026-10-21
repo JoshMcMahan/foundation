@@ -52,6 +52,11 @@ export interface CellPlacement {
   stacked?: boolean | undefined
 }
 
+/** A stacked column's value on the line under a row's name: it flows inline with the others and
+ *  wraps between them, never inside a value, which truncates if it is wider than the line. */
+export const STACKED_ITEM =
+  'flex min-w-0 max-w-full items-center whitespace-nowrap [&>*]:min-w-0 [&>*]:truncate'
+
 /** Set by a list row around each of its cells; a `Table.Item` takes what it asks. */
 export const CellPlacementContext = createContext<CellPlacement | null>(null)
 
@@ -64,11 +69,10 @@ function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
   const density = useContext(DensityContext)
   const placed = useContext(CellPlacementContext)
   if (placed?.stacked) {
-    // A line under the name, only where the column's own cell has given way; a cell with nothing
-    // in it, such as a status only some rows have, adds none. A flex box, so its line is the
-    // value's own height, not a cell's: it follows the subtitle by a 4px step.
+    // One item of the line under the name, shown only where the column's own cell has given way
+    // (see `ListRow`); a cell with nothing in it, such as a status only some rows have, adds none.
     return React.Children.toArray(children).length > 0 ? (
-      <div className="mt-1 flex min-w-0 items-center @[36rem]:hidden" data-stacked>
+      <div className={STACKED_ITEM} data-stacked>
         {children}
       </div>
     ) : null
@@ -79,7 +83,12 @@ function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
       className={cx(
         cellX,
         cellY[density],
-        wrap ? wrapY[density] : 'whitespace-nowrap',
+        // A one-line cell keeps what it holds inside its column, cutting text off with an
+        // ellipsis, so a long value never paints over the next cell. Its 4px margin keeps a
+        // control's focus ring; a cell whose content must reach past it says overflow-visible.
+        wrap
+          ? wrapY[density]
+          : 'overflow-clip text-ellipsis whitespace-nowrap [overflow-clip-margin:4px]',
         className,
         placed?.className,
       )}

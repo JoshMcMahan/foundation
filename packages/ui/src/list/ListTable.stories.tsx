@@ -6,14 +6,8 @@ import type { MenuEntry } from '../components/MenuEntries'
 import { StatusBadge } from '../components/StatusBadge'
 import { Table } from '../components/Table'
 import { FileTextIcon, StopIcon } from '../icons'
-import { ListRow, ListRowActionsProvider } from './ListPage'
-import {
-  GroupRow,
-  ListActionsHeader,
-  listTableProps,
-  NameCell,
-  RowSelectCheckbox,
-} from './ListTable'
+import { GroupRow, ListRow, ListRowActionsProvider } from './ListPage'
+import { ListActionsHeader, listTableProps, NameCell, RowSelectCheckbox } from './ListTable'
 import { MoreButton, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
 const meta: Meta = {

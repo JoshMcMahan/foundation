@@ -30,6 +30,7 @@ export {
   type ListFilterBarProps,
 } from './ListFilterBar'
 export {
+  GroupRow,
   ListColumns,
   ListPage,
   type ListPageEmpty,
@@ -40,7 +41,6 @@ export {
 } from './ListPage'
 export {
   actionsColumnWidth,
-  GroupRow,
   ListActionsHeader,
   ListCellText,
   ListError,

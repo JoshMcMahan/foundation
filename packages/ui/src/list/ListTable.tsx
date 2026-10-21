@@ -5,6 +5,7 @@ import { positionKeys } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { LoadingRegion, Skeleton } from '../components/Skeleton'
 import { CellPlacementContext, Table } from '../components/Table'
+import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ErrorIcon } from '../icons'
 
@@ -163,7 +164,8 @@ export function NameCell({
 
 /** A row's column text: muted 13px, or monospace for an ID, a path or a
  *  hash. The style sits on the text rather than the cell, so it carries over
- *  when a narrow list stacks the column under the name. */
+ *  when a narrow list stacks the column under the name. Text wider than its
+ *  column is cut off with an ellipsis, and shows whole in a tooltip. */
 export function ListCellText({
   mono = false,
   className,
@@ -173,10 +175,10 @@ export function ListCellText({
   className?: string | undefined
   children: ReactNode
 }) {
-  return (
+  const text = (
     <span
       className={cx(
-        'text-(--theme-muted-text-color)',
+        'block min-w-0 truncate text-(--theme-muted-text-color)',
         mono ? 'font-mono text-xs' : 'text-[13px]',
         className,
       )}
@@ -184,25 +186,12 @@ export function ListCellText({
       {children}
     </span>
   )
-}
-
-export function GroupRow({
-  label,
-  count,
-  colSpan,
-}: {
-  label: string
-  count: number
-  colSpan: number
-}) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="bg-(--theme-muted-panel-bg) py-1.5 text-xs font-medium">
-        <span className="text-(--theme-app)">{label}</span>
-        <span className="mx-1.5 opacity-50">·</span>
-        <span className="text-(--theme-muted-text-color)">{count}</span>
-      </td>
-    </tr>
+  return typeof children === 'string' || typeof children === 'number' ? (
+    <Tooltip content={children} overflowOnly>
+      {text}
+    </Tooltip>
+  ) : (
+    text
   )
 }
 
