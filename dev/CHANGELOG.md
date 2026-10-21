@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/parallelworks/foundation/compare/dev/v0.18.0...dev/v0.18.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **deps:** Go 1.27.3, for the crypto/x509 certificate verification advisory ([#465](https://github.com/parallelworks/foundation/issues/465)) ([57920ce](https://github.com/parallelworks/foundation/commit/57920ce5592c99fd7f6a9c10ad87fae8361dc3b6))
+
 ## [0.18.0](https://github.com/parallelworks/foundation/compare/dev/v0.17.1...dev/v0.18.0) (2026-10-19)
 
 
