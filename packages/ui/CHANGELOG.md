@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.84.1](https://github.com/parallelworks/foundation/compare/ui-v0.84.0...ui-v0.84.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** list rows stack cells a host's own components render, a refresh button can be icon-only on a phone, and a loader can center in the content area ([#462](https://github.com/parallelworks/foundation/issues/462)) ([a685df2](https://github.com/parallelworks/foundation/commit/a685df2698094dca766072dc445feecf26773e7f))
+
 ## [0.84.0](https://github.com/parallelworks/foundation/compare/ui-v0.83.3...ui-v0.84.0) (2026-10-21)
 
 
