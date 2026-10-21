@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.84.0](https://github.com/parallelworks/foundation/compare/ui-v0.83.3...ui-v0.84.0) (2026-10-21)
+
+
+### Features
+
+* **ui:** hosts name their tool calls in words and keep results behind the row ([#460](https://github.com/parallelworks/foundation/issues/460)) ([598357b](https://github.com/parallelworks/foundation/commit/598357bf3fb84504293d2fbfa8c99b7ab141f88e))
+
+
+### Bug Fixes
+
+* **ui:** a follow-up loses the previous answer when it explained before calling tools ([#457](https://github.com/parallelworks/foundation/issues/457)) ([dc4e8f5](https://github.com/parallelworks/foundation/commit/dc4e8f5a08621c1f996286bffcb34362a597de64))
+* **ui:** badges, tags, keys, avatars, status icons and times can be a tooltip's direct child ([#458](https://github.com/parallelworks/foundation/issues/458)) ([bfd577f](https://github.com/parallelworks/foundation/commit/bfd577f7ffa9532a1a1c0456d8caf770b21ba620))
+* **ui:** streamed replies arrive in bursts, lag the model, and jump when they finish ([#456](https://github.com/parallelworks/foundation/issues/456)) ([7f3de15](https://github.com/parallelworks/foundation/commit/7f3de15ffbea239f05f3466051356a5a233d8c16))
+* **ui:** what a streaming reply says before its tool calls shows below them ([#459](https://github.com/parallelworks/foundation/issues/459)) ([99ccbc8](https://github.com/parallelworks/foundation/commit/99ccbc8b22a963a9dd5076068739c808eaa6afbd))
+
 ## [0.83.3](https://github.com/parallelworks/foundation/compare/ui-v0.83.2...ui-v0.83.3) (2026-10-20)
 
 
