@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.87.1](https://github.com/parallelworks/foundation/compare/ui-v0.87.0...ui-v0.87.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ui:** a context menu that closes on blur closes as soon as it opens ([#488](https://github.com/parallelworks/foundation/issues/488)) ([04c5bdb](https://github.com/parallelworks/foundation/commit/04c5bdb7dd130b79a921672bc826525a68622b55))
+
 ## [0.87.0](https://github.com/parallelworks/foundation/compare/ui-v0.86.1...ui-v0.87.0) (2026-10-21)
 
 
