@@ -2,15 +2,15 @@ import type { ComponentPropsWithRef } from 'react'
 import { cx } from '../cx'
 import type { RunStatus } from '../engine'
 import {
-  CancelIcon,
-  FailIcon,
+  CancelFilledIcon,
+  FailFilledIcon,
   type IconType,
   NotRunningIcon,
-  PendingIcon,
-  RunningIcon,
+  PendingRingIcon,
+  RunningRingIcon,
   SkipIcon,
-  SuccessIcon,
-  WarningIcon,
+  SuccessFilledIcon,
+  WarningFilledIcon,
 } from '../icons'
 import { useStrings } from './Provider'
 import { Tooltip } from './Tooltip'
@@ -19,29 +19,30 @@ import { type Tone, toneIcon } from './tone'
 interface Look {
   tone: Tone
   icon: IconType
-  /** Still under way, so it turns. */
-  spin?: boolean
+  /** Fainter, for what has not begun. */
+  faint?: boolean
 }
 
 /** A status the icon shows: a run's, or one a host maps onto it, such as
  *  `pending` for something queued and `warning` for something done with problems. */
 export type RunStatusIconStatus = RunStatus | 'pending' | 'warning'
 
-// Under way reads in info blue, keeping amber for warnings alone.
+// A status that has ended is a solid shape with its mark cut out; one still open is a ring,
+// whose arc turns while it runs. Under way reads in info blue, keeping amber for warnings alone.
 const looks: Record<NonNullable<RunStatusIconStatus>, Look> = {
-  pending: { tone: 'muted', icon: PendingIcon },
-  started: { tone: 'info', icon: RunningIcon, spin: true },
-  running: { tone: 'info', icon: RunningIcon, spin: true },
-  completed: { tone: 'success', icon: SuccessIcon },
-  warning: { tone: 'warning', icon: WarningIcon },
-  failed: { tone: 'error', icon: FailIcon },
-  error: { tone: 'error', icon: FailIcon },
+  pending: { tone: 'muted', icon: PendingRingIcon },
+  started: { tone: 'info', icon: RunningRingIcon },
+  running: { tone: 'info', icon: RunningRingIcon },
+  completed: { tone: 'success', icon: SuccessFilledIcon },
+  warning: { tone: 'warning', icon: WarningFilledIcon },
+  failed: { tone: 'error', icon: FailFilledIcon },
+  error: { tone: 'error', icon: FailFilledIcon },
   skipped: { tone: 'muted', icon: SkipIcon },
   'skipped-failed': { tone: 'muted', icon: SkipIcon },
-  canceled: { tone: 'info', icon: CancelIcon },
-  faulted: { tone: 'error', icon: RunningIcon, spin: true },
-  canceling: { tone: 'info', icon: RunningIcon, spin: true },
-  '': { tone: 'muted', icon: NotRunningIcon },
+  canceled: { tone: 'info', icon: CancelFilledIcon },
+  faulted: { tone: 'error', icon: RunningRingIcon },
+  canceling: { tone: 'info', icon: RunningRingIcon },
+  '': { tone: 'muted', icon: NotRunningIcon, faint: true },
 }
 
 /** The tone a run status reads in, so a badge that says the status in words matches the
@@ -84,7 +85,7 @@ export function RunStatusIcon({
       data-status={status || 'not-run'}
       className={cx('flex h-2 items-center', toneIcon[look.tone], className)}
     >
-      <Icon aria-hidden="true" className={cx(look.spin && 'animate-spin rounded-full')} />
+      <Icon aria-hidden="true" className={cx(look.faint && 'opacity-55')} />
     </span>
   )
   return tooltip && label ? <Tooltip content={label}>{icon}</Tooltip> : icon

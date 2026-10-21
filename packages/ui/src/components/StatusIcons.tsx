@@ -1,15 +1,17 @@
 import { cx } from '../cx'
-import { ErrorIcon, SuccessIcon } from '../icons'
+import { FailFilledIcon, SuccessFilledIcon } from '../icons'
 
 interface IBaseCheckmarkProps {
   className?: string
   colored?: boolean
 }
 
+/** Something done: a solid disc in the success tone with a check cut out of it. */
 export function SuccessCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <SuccessIcon className={cx(colored && 'text-(--theme-success)', className)} />
+  return <SuccessFilledIcon className={cx(colored && 'text-(--theme-success)', className)} />
 }
 
+/** Something failed: a solid disc in the error tone with an x cut out of it. */
 export function ErrorCheckmark({ className, colored = true }: IBaseCheckmarkProps) {
-  return <ErrorIcon className={cx(colored && 'text-(--theme-error)', className)} />
+  return <FailFilledIcon className={cx(colored && 'text-(--theme-error)', className)} />
 }

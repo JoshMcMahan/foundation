@@ -4,7 +4,13 @@ import { render, screen } from '@testing-library/react'
 import { GitHubIcon } from './brandIcons'
 import type { IconType } from './icons'
 import * as allIcons from './icons'
-import { PinFilledIcon, TrashIcon } from './icons'
+import {
+  PendingRingIcon,
+  PinFilledIcon,
+  RunningRingIcon,
+  SuccessFilledIcon,
+  TrashIcon,
+} from './icons'
 
 const icons = allIcons as unknown as Record<string, IconType>
 
@@ -41,16 +47,54 @@ describe('icons', () => {
     expect(container.querySelector('svg')).toHaveAttribute('fill', 'currentColor')
   })
 
-  it('are all drawn as one path on one grid at one weight', () => {
+  it('are all drawn as one path on one grid at one weight, but for status icons', () => {
     for (const [name, Icon] of Object.entries(icons)) {
       if (!name.endsWith('Icon')) continue
       const { container, unmount } = render(<Icon />)
       const svg = container.querySelector('svg')
       expect(svg, name).toHaveAttribute('viewBox', '0 0 16 16')
       expect(svg, name).toHaveAttribute('stroke-width', '1.5')
-      expect(svg?.querySelectorAll('path'), name).toHaveLength(1)
+      // A status icon is a solid shape with a mark cut out, or a ring with parts that move.
+      const status = svg?.getAttribute('data-status-icon')
+      if (status === 'filled') {
+        expect(svg?.querySelectorAll(':scope > path'), name).toHaveLength(1)
+        expect(svg?.querySelector(':scope > path'), name).toHaveAttribute('fill', 'currentColor')
+        expect(svg?.querySelector('mask path'), name).toHaveAttribute('stroke', '#000')
+      } else if (status === 'ring') {
+        expect(svg?.querySelector('circle'), name).toBeInTheDocument()
+      } else {
+        expect(svg?.querySelectorAll('path'), name).toHaveLength(1)
+      }
       unmount()
     }
+  })
+
+  it('cut a status mark out through a mask of its own, so it shows any surface behind it', () => {
+    const { container } = render(
+      <>
+        <SuccessFilledIcon />
+        <SuccessFilledIcon />
+      </>,
+    )
+    const masks = [...container.querySelectorAll('mask')].map((m) => m.id)
+    expect(new Set(masks).size).toBe(2)
+    const shapes = [...container.querySelectorAll('svg > path')]
+    expect(shapes.map((p) => p.getAttribute('mask'))).toEqual(masks.map((id) => `url(#${id})`))
+    // The mark is cut, never painted in a surface's color.
+    expect(container.querySelector('svg > path')).toHaveAttribute('stroke', 'none')
+  })
+
+  it('turn a running ring and breathe its dot, still for reduced motion', () => {
+    const { container } = render(<RunningRingIcon />)
+    expect(container.querySelector('path')?.getAttribute('class')).toContain('motion-safe:animate-')
+    expect(container.querySelector('circle[r="2.6"]')?.getAttribute('class')).toBe(
+      'motion-safe:animate-pulse',
+    )
+  })
+
+  it('dash a pending ring', () => {
+    const { container } = render(<PendingRingIcon />)
+    expect(container.querySelector('svg')).toHaveAttribute('stroke-dasharray', '2.2 2.5124')
   })
 
   it('give each meaning its own drawing', () => {
@@ -61,7 +105,7 @@ describe('icons', () => {
       if (!name.endsWith('Icon') || shared.has(name)) continue
       const { container, unmount } = render(<Icon />)
       const svg = container.querySelector('svg')
-      const key = `${svg?.getAttribute('fill')} ${svg?.querySelector('path')?.getAttribute('d')}`
+      const key = `${svg?.getAttribute('fill')} ${svg?.getAttribute('stroke-dasharray')} ${svg?.querySelector('path')?.getAttribute('d')}`
       const other = seen.get(key)
       // A deprecated name is the same icon, not a second meaning.
       if (other && icons[other] !== Icon) expect.fail(`${name} is drawn the same as ${other}`)

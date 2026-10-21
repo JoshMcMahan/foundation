@@ -52,4 +52,26 @@ describe('RunStatusIcon', () => {
     expect(runStatusTone('faulted')).toBe('error')
     expect(runStatusTone(undefined)).toBe('muted')
   })
+
+  it('shows an ended status solid and an open one as a ring', () => {
+    const { container } = render(
+      <>
+        <RunStatusIcon status="completed" />
+        <RunStatusIcon status="failed" />
+        <RunStatusIcon status="canceled" />
+        <RunStatusIcon status="warning" />
+        <RunStatusIcon status="running" />
+        <RunStatusIcon status="faulted" />
+        <RunStatusIcon status="pending" />
+        <RunStatusIcon status="" />
+      </>,
+    )
+    const looks = [...container.querySelectorAll('svg')].map((svg) =>
+      svg.getAttribute('data-status-icon'),
+    )
+    expect(looks).toEqual(['filled', 'filled', 'filled', 'filled', 'ring', 'ring', null, null])
+    // Not run is the faint ring; nothing turns the whole icon any more.
+    expect(container.querySelectorAll('svg')[7]).toHaveClass('opacity-55')
+    expect(container.querySelector('.animate-spin')).toBeNull()
+  })
 })

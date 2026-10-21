@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { UIProvider } from './Provider'
-import { CountBadge, StatusBadge } from './StatusBadge'
+import { CountBadge, StatusBadge, StatusDot } from './StatusBadge'
 
 describe('StatusBadge', () => {
   it('renders as the element it is given, such as a link', () => {
@@ -77,5 +77,36 @@ describe('CountBadge', () => {
     render(<CountBadge count={3} className="bg-[#c47f17] text-black" />)
     expect(screen.getByText('3')).toHaveClass('bg-[#c47f17]')
     expect(screen.getByText('3')).not.toHaveClass('bg-(--theme-accent)')
+  })
+})
+
+describe('StatusDot', () => {
+  it('rings the dot with a soft halo of its tone', () => {
+    const { container } = render(<StatusDot variant="success" />)
+    const dot = container.querySelector('.rounded-full')
+    expect(dot).toHaveClass('bg-(--theme-success)', 'ring-2', 'ring-(--theme-success)/22')
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('is the badge’s own dot, with no halo on a solid fill', () => {
+    const { container } = render(
+      <>
+        <StatusBadge variant="error" dot>
+          Failed
+        </StatusBadge>
+        <StatusBadge variant="error" dot emphasis="solid">
+          Down
+        </StatusBadge>
+      </>,
+    )
+    const [soft, solid] = [...container.querySelectorAll('.relative.inline-flex.rounded-full')]
+    expect(soft).toHaveClass('ring-(--theme-error)/22')
+    expect(solid).toHaveClass('bg-current')
+    expect(solid).not.toHaveClass('ring-2')
+  })
+
+  it('keeps its ping when it pulses', () => {
+    const { container } = render(<StatusDot variant="info" pulse />)
+    expect(container.querySelector('.animate-ping')).toBeInTheDocument()
   })
 })
