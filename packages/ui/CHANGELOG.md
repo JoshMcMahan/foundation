@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.89.0](https://github.com/parallelworks/foundation/compare/ui-v0.88.2...ui-v0.89.0) (2026-10-22)
+
+
+### Features
+
+* **ui:** a list's filters can show as toggles with counts above the chips, and a date filter offers the last hours, the last year, this year and all time ([#498](https://github.com/parallelworks/foundation/issues/498)) ([9c77f8f](https://github.com/parallelworks/foundation/commit/9c77f8f88a1dcd28a79cad92d44fb9e6059c1e0b))
+
 ## [0.88.2](https://github.com/parallelworks/foundation/compare/ui-v0.88.1...ui-v0.88.2) (2026-10-21)
 
 
