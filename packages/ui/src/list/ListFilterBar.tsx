@@ -1064,8 +1064,9 @@ function QuickRow({
     for (const button of el.querySelectorAll<HTMLElement>('button')) {
       tops.add(Math.round(button.getBoundingClientRect().top))
     }
+    // Down to none but the pressed ones, which always show, so "+n more" never wraps.
     const shown = limit ?? total
-    if (tops.size > 1 && shown > 1) {
+    if (tops.size > 1 && shown > 0) {
       setLimit(shown - 1)
     }
   })
@@ -1176,6 +1177,9 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   const [narrow, setNarrow] = useState(false)
   const [width, setWidth] = useState(0)
   const [limit, setLimit] = useState<number | null>(null)
+  // Clear (or Reset) left out of a narrow row rather than stranded on a line of its own; the +
+  // menu holds it too.
+  const [clearFolded, setClearFolded] = useState(false)
   const [sheet, setSheet] = useState(false)
   const [focusAt, setFocusAt] = useState<number | null>(null)
 
@@ -1209,7 +1213,10 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
 
   // A change in width or chips starts over from every chip shown.
   // biome-ignore lint/correctness/useExhaustiveDependencies: width and the chips are what restart the fit
-  useLayoutEffect(() => setLimit(null), [width, chipKeys, narrow])
+  useLayoutEffect(() => {
+    setLimit(null)
+    setClearFolded(false)
+  }, [width, chipKeys, narrow])
 
   // Drops chips into the sheet until the row fits on two lines.
   useLayoutEffect(() => {
@@ -1219,11 +1226,20 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
     }
     const tops = new Set<number>()
     for (const child of el.children) {
-      tops.add(Math.round((child as HTMLElement).offsetTop))
+      if (!(child as HTMLElement).hasAttribute('data-filter-clear')) {
+        tops.add(Math.round((child as HTMLElement).offsetTop))
+      }
     }
     const shown = limit ?? chips.length
     if (tops.size > 2 && shown > 1) {
       setLimit(shown - 1)
+      return
+    }
+    // Once the chips fit, Clear keeps to the line "+" ends, or goes into its menu.
+    const add = el.querySelector<HTMLElement>('[data-filter-add]')
+    const clear = el.querySelector<HTMLElement>('[data-filter-clear]')
+    if (add && clear && Math.round(clear.offsetTop) > Math.round(add.offsetTop)) {
+      setClearFolded(true)
     }
   })
 
@@ -1265,6 +1281,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   const clearButton = showClear && (
     <button
       type="button"
+      data-filter-clear=""
       onClick={resetting ? filters.reset : filters.clear}
       className={buttonClasses({ variant: 'ghost', size: 'sm' })}
     >
@@ -1354,7 +1371,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
         </button>
       )}
       {addButton(narrow)}
-      {clearButton}
+      {!(narrow && clearFolded) && clearButton}
       {trailing && <div className="ml-auto flex items-center gap-1.5">{trailing}</div>}
       {!hasQuick && drawer}
     </div>
