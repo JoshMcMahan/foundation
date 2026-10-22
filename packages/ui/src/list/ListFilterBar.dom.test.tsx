@@ -535,3 +535,59 @@ describe('a narrow row', () => {
     vi.restoreAllMocks()
   })
 })
+
+describe('a narrow row with required and pinned fields', () => {
+  it('never puts their chips in the sheet, only the ones after them', async () => {
+    function Fixed() {
+      const [active, setActive] = useState<ActiveFilter[]>([
+        { field: 'org', op: 'is', values: ['dev'] },
+        { field: 'time', op: 'is', values: ['-30d'] },
+        { field: 'group', op: 'is', values: ['hpc'] },
+        { field: 'user', op: 'is', values: ['maya'] },
+      ])
+      const filters = useListFilters({
+        storageKey: 'narrow-fixed',
+        fields: [
+          {
+            key: 'org',
+            label: 'Organization',
+            kind: 'enum',
+            required: true,
+            options: [{ value: 'dev', label: 'dev' }],
+          },
+          { key: 'time', label: 'Time', kind: 'date', required: true },
+          {
+            key: 'group',
+            label: 'Group',
+            kind: 'enum',
+            pinned: true,
+            options: [{ value: 'hpc', label: 'hpc' }],
+          },
+          { key: 'user', label: 'User', kind: 'enum', options: [{ value: 'maya', label: 'maya' }] },
+        ],
+        remember: false,
+        store: { value: active, onChange: setActive },
+      })
+      return <ListFilterBar filters={filters} />
+    }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 300,
+    } as DOMRect)
+    // Two items to a line.
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const items = Array.from(this.parentElement?.children ?? [])
+      return Math.floor(items.indexOf(this) / 2) * 40
+    })
+    render(<Fixed />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '+1 filter' })).toBeInTheDocument(),
+    )
+    const shown = Array.from(document.querySelectorAll('[data-filter-chip]')).map(
+      (c) => c.textContent?.split(/\s|is/)[0],
+    )
+    expect(shown).toEqual(['Organization', 'Time', 'Group'])
+    vi.restoreAllMocks()
+  })
+})

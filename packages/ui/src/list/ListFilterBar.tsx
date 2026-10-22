@@ -1192,6 +1192,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   const empty = chips.length === 0
   const hasQuick = quick.length > 0
   const chipKeys = chips.map((c) => c.filter.field).join('\u0000')
+  const fixedChips = chips.filter((c) => c.field.required || c.field.pinned).length
 
   // The bar mounts again once it has chips, so it is measured again then.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `empty` and `hasQuick` are what remount the bar
@@ -1230,8 +1231,10 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
         tops.add(Math.round((child as HTMLElement).offsetTop))
       }
     }
+    // Required and pinned chips lead the row and never go into the sheet, so the chips after
+    // them are the ones that give way.
     const shown = limit ?? chips.length
-    if (tops.size > 2 && shown > 1) {
+    if (tops.size > 2 && shown > Math.max(fixedChips, 1)) {
       setLimit(shown - 1)
       return
     }
@@ -1257,7 +1260,10 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   }, [focusAt])
 
   const visible = narrow && limit !== null ? limit : chips.length
-  const shownChips = chips.filter((c, i) => i < visible || c.filter.field === filters?.draft)
+  const shownChips = chips.filter(
+    (c, i) =>
+      i < visible || c.field.required || c.field.pinned || c.filter.field === filters?.draft,
+  )
   const overflow = chips.length - shownChips.length
 
   // A request for a chip the row has put in the sheet opens the sheet.

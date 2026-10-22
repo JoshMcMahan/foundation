@@ -968,3 +968,90 @@ export const SharedLineAtPhoneWidthDark: StoryObj = {
   ...SharedLineAtPhoneWidth,
   globals: { mode: 'dark' },
 }
+
+// --- Required chips on a narrow row -----------------------------------------
+
+const DASHBOARD_FIELDS: FilterField[] = [
+  {
+    key: 'org',
+    label: 'Organization',
+    icon: <OrganizationIcon />,
+    kind: 'enum',
+    multiple: false,
+    required: true,
+    options: ORGS,
+  },
+  {
+    key: 'time',
+    label: 'Time',
+    icon: <CalendarIcon />,
+    kind: 'date',
+    required: true,
+    presets: ['-1d', '-7d', '-30d', 'month'],
+  },
+  {
+    key: 'group',
+    label: 'Group',
+    kind: 'enum',
+    multiple: false,
+    pinned: true,
+    options: ['hpc-team', 'cfd-lab'].map((g) => ({ value: g, label: g })),
+  },
+  {
+    key: 'user',
+    label: 'User',
+    icon: <UserIcon />,
+    kind: 'enum',
+    multiple: false,
+    options: ['maya', 'jonas'].map((u) => ({ value: u, label: u })),
+  },
+  {
+    key: 'csp',
+    label: 'CSP',
+    kind: 'enum',
+    multiple: false,
+    options: ['AWS', 'GCP'].map((c) => ({ value: c, label: c })),
+  },
+]
+
+/** A cost dashboard's filters: required Organization and Time, a pinned Group, then two more. */
+function RequiredOnPhoneDemo({ width }: { width?: number }) {
+  const [active, setActive] = useState<ActiveFilter[]>([
+    { field: 'org', op: 'is', values: [ORGS[0]?.value ?? ''] },
+    { field: 'time', op: 'is', values: ['-30d'] },
+    { field: 'group', op: 'is', values: ['hpc-team'] },
+    { field: 'user', op: 'is', values: ['maya'] },
+    { field: 'csp', op: 'is', values: ['AWS'] },
+  ])
+  const filters = useListFilters({
+    storageKey: `story-required-phone-${width ?? 'wide'}`,
+    fields: DASHBOARD_FIELDS,
+    remember: false,
+    store: { value: active, onChange: setActive },
+  })
+  return (
+    <Shell width={width}>
+      <div className="flex h-12 shrink-0 items-center border-b border-(--theme-border) px-4 text-[16px] font-semibold">
+        Cost
+      </div>
+      <div className="px-4">
+        <ListFilterBar filters={filters} />
+      </div>
+    </Shell>
+  )
+}
+
+export const RequiredChipsOnARow: StoryObj = {
+  render: () => <RequiredOnPhoneDemo />,
+}
+
+/** At phone width the required and pinned chips always show; the others give way to
+ *  "+n filters". */
+export const RequiredChipsAtPhoneWidth: StoryObj = {
+  render: () => <RequiredOnPhoneDemo width={390} />,
+}
+
+export const RequiredChipsAtPhoneWidthDark: StoryObj = {
+  ...RequiredChipsAtPhoneWidth,
+  globals: { mode: 'dark' },
+}
