@@ -34,6 +34,7 @@ export {
   GroupRow,
   ListColumns,
   ListPage,
+  type ListPageCount,
   type ListPageEmpty,
   type ListPageProps,
   ListRow,

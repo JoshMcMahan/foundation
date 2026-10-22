@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { UIProvider } from '../components/Provider'
 import { Table } from '../components/Table'
 import { memoryStorage } from '../test/storage'
+import { ListFilterBar } from './ListFilterBar'
 import { GroupRow, ListColumns, ListPage, ListRow, ListRowActionsProvider } from './ListPage'
 import {
   actionsColumnWidth,
@@ -16,8 +17,9 @@ import {
 } from './ListTable'
 import { ListToolbar } from './ListToolbar'
 import { ListDisplayMenu } from './ListViewControls'
-import { useListSearch } from './listSearch'
+import { ListCount, useListSearch } from './listSearch'
 import { useListView } from './listView'
+import { useListFilters } from './useListFilters'
 
 beforeEach(() => {
   Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
@@ -136,6 +138,162 @@ describe('ListToolbar', () => {
       />,
     )
     expect(screen.getByRole('status')).toHaveTextContent('3 of 12 buckets')
+  })
+})
+
+const NOUNS = { noun: 'bucket', nounPlural: 'buckets' }
+
+describe('ListPage count', () => {
+  it('shows the count under the last row, not in the toolbar', () => {
+    render(
+      <ListPage total={7} count={NOUNS} toolbar={<div data-testid="toolbar">tools</div>}>
+        <table>
+          <tbody>
+            <tr>
+              <td>last row</td>
+            </tr>
+          </tbody>
+        </table>
+      </ListPage>,
+    )
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('7 buckets')
+    expect(screen.getByTestId('toolbar')).not.toContainElement(status)
+    const row = screen.getByText('last row')
+    expect(row.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('says how many match while a filter narrows the list', () => {
+    render(
+      <ListPage total={7} matches={2} count={NOUNS}>
+        rows
+      </ListPage>,
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('2 of 7 buckets')
+  })
+
+  it('shows no count with the empty or no-matches state, or while loading', () => {
+    const { rerender } = render(
+      <ListPage total={0} count={NOUNS} empty={{ title: 'No buckets yet' }}>
+        rows
+      </ListPage>,
+    )
+    expect(screen.getByText('No buckets yet')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    rerender(
+      <ListPage total={7} matches={0} count={NOUNS} noMatches="No buckets match">
+        rows
+      </ListPage>,
+    )
+    expect(screen.getByText('No buckets match')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    rerender(
+      <ListPage loading total={7} count={NOUNS}>
+        rows
+      </ListPage>,
+    )
+    expect(screen.queryByText('7 buckets')).toBeNull()
+  })
+
+  it('puts the count and the pager on one line', () => {
+    render(
+      <ListPage total={7} count={NOUNS} pager={<button type="button">Load more</button>}>
+        rows
+      </ListPage>,
+    )
+    const status = screen.getByRole('status')
+    expect(status.parentElement).toContainElement(screen.getByRole('button', { name: 'Load more' }))
+  })
+
+  it('leaves out the line when there is neither a count nor a pager to show', () => {
+    const { container } = render(
+      <ListPage total={7} pager={null}>
+        rows
+      </ListPage>,
+    )
+    expect(container.querySelector('.min-h-10')).toBeNull()
+  })
+
+  it("moves a ListToolbar's count under the rows, once", () => {
+    render(
+      <ListPage
+        total={12}
+        matches={3}
+        toolbar={
+          <ListToolbar
+            count={{ total: 12, matches: 3, filterActive: true, ...NOUNS }}
+            action={<button type="button">Export</button>}
+          />
+        }
+      >
+        rows
+      </ListPage>,
+    )
+    const [status, ...more] = screen.getAllByRole('status')
+    expect(more).toHaveLength(0)
+    expect(status).toHaveTextContent('3 of 12 buckets')
+    expect(status?.closest('.overflow-auto')).not.toBeNull()
+  })
+
+  it("sets the toolbar at the end of the chips' line, and on a line alone with no chips", () => {
+    function Filtered({ on }: { on: boolean }) {
+      const filters = useListFilters({
+        storageKey: 'shared-line',
+        fields: [
+          {
+            key: 'status',
+            label: 'Status',
+            kind: 'enum',
+            options: [{ value: 'running', label: 'Running' }],
+          },
+        ],
+        remember: false,
+        store: {
+          value: on ? [{ field: 'status', op: 'is', values: ['running'] }] : [],
+          onChange: () => {},
+        },
+      })
+      return (
+        <ListPage
+          total={7}
+          count={NOUNS}
+          toolbar={<ListToolbar action={<button type="button">Export</button>} />}
+          filterBar={
+            <ListFilterBar filters={filters} trailing={<button type="button">Save view</button>} />
+          }
+        >
+          rows
+        </ListPage>
+      )
+    }
+    const { rerender } = render(<Filtered on />)
+    const chip = document.querySelector('[data-filter-chip]')
+    expect(chip).not.toBeNull()
+    // One line holds the chips and, at its end, the toolbar.
+    const line = chip?.closest('.items-start')
+    expect(line).toContainElement(screen.getByRole('button', { name: 'Export' }))
+    // A trailing action joins the toolbar at the line's end.
+    expect(screen.getByRole('button', { name: 'Save view' }).parentElement).toContainElement(
+      screen.getByRole('button', { name: 'Export' }),
+    )
+    rerender(<Filtered on={false} />)
+    expect(screen.queryByRole('button', { name: 'Save view' })).toBeNull()
+    expect(document.querySelector('[data-filter-chip]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Export' })).toHaveLength(1)
+  })
+
+  it('hides a count placed by hand while the page shows its own', () => {
+    render(
+      <ListPage
+        total={7}
+        count={NOUNS}
+        toolbar={<ListCount total={7} matches={7} filterActive={false} {...NOUNS} />}
+      >
+        rows
+      </ListPage>,
+    )
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 })
 

@@ -526,12 +526,156 @@ describe('a narrow row', () => {
     vi.restoreAllMocks()
   })
 
+  it('never leaves "+" leading a line of its own: it joins the "+n filters" sheet', async () => {
+    function Two() {
+      const [active, setActive] = useState<ActiveFilter[]>([
+        { field: 'status', op: 'is', values: ['running'] },
+        { field: 'owner', op: 'is', values: ['alice'] },
+      ])
+      const filters = useListFilters({
+        storageKey: 'narrow-two',
+        fields: [
+          {
+            key: 'status',
+            label: 'Status',
+            kind: 'enum',
+            options: [{ value: 'running', label: 'Running' }],
+          },
+          {
+            key: 'owner',
+            label: 'Owner',
+            kind: 'enum',
+            options: [{ value: 'alice', label: 'alice' }],
+          },
+        ],
+        remember: false,
+        store: { value: active, onChange: setActive },
+      })
+      return <ListFilterBar filters={filters} />
+    }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 358,
+    } as DOMRect)
+    // The chips and "+n filters" fill the first line; "+" and Clear wrap below them.
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const wraps =
+        this.hasAttribute('data-filter-add') ||
+        this.hasAttribute('data-filter-clear') ||
+        this.querySelector('[data-filter-add]') !== null
+      return wraps ? 40 : 0
+    })
+    render(<Two />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '+1 filter' })).toBeInTheDocument(),
+    )
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Filter' })).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull()
+    // The sheet still offers both.
+    fireEvent.click(screen.getByRole('button', { name: '+1 filter' }))
+    const sheet = await screen.findByRole('dialog')
+    expect(within(sheet).getByRole('button', { name: 'Filter' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Clear' })).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
+
+  it('puts a lone chip in the sheet rather than leave "+" on a line under it', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 300,
+    } as DOMRect)
+    // The chip fills the first line, so "+" and Clear wrap under it while it shows.
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const control =
+        this.hasAttribute('data-filter-add') ||
+        this.hasAttribute('data-filter-clear') ||
+        this.querySelector('[data-filter-add]') !== null
+      return control && document.querySelector('[data-filter-chip]') ? 40 : 0
+    })
+    render(<Narrow />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '+1 filter' })).toBeInTheDocument(),
+    )
+    expect(document.querySelector('[data-filter-chip]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Filter' })).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
+
   it('keeps Clear on the row where it fits after +', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width: 300,
     } as DOMRect)
     render(<Narrow />)
     expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
+})
+
+describe("a row sharing its first line with the list's controls", () => {
+  function Shared() {
+    const [active, setActive] = useState<ActiveFilter[]>([
+      { field: 'status', op: 'is', values: ['started', 'review'] },
+    ])
+    const filters = useListFilters({
+      storageKey: 'shared-row',
+      fields: [
+        {
+          key: 'status',
+          label: 'Status',
+          kind: 'enum',
+          options: [
+            { value: 'started', label: 'In progress' },
+            { value: 'review', label: 'In review' },
+          ],
+        },
+      ],
+      remember: false,
+      store: { value: active, onChange: setActive },
+    })
+    return (
+      <ListFilterBar
+        filters={filters}
+        trailing={<button type="button">Save view</button>}
+        end={<button type="button">Display</button>}
+      />
+    )
+  }
+
+  function valueWidth(client: number) {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.hasAttribute('data-filter-value') ? client : 0
+    })
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.hasAttribute('data-filter-value') ? 140 : 0
+    })
+  }
+
+  it('keeps the trailing action beside the controls while the chips read in full', () => {
+    valueWidth(140)
+    render(<Shared />)
+    const save = screen.getByRole('button', { name: 'Save view' })
+    expect(save.closest('[data-filter-trailing]')).toBeNull()
+    expect(save.parentElement).toContainElement(screen.getByRole('button', { name: 'Display' }))
+    vi.restoreAllMocks()
+  })
+
+  it("moves the trailing action to the chips' last line rather than crush a chip's value", async () => {
+    // Beside Save view and Display, the value would show only "In …".
+    valueWidth(30)
+    render(<Shared />)
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Save view' }).closest('[data-filter-trailing]'),
+      ).not.toBeNull(),
+    )
+    // The controls keep the first line's end.
+    expect(screen.getByRole('button', { name: 'Display' }).closest('[role="group"]')).toBeNull()
     vi.restoreAllMocks()
   })
 })

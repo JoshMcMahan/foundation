@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { buttonClasses } from '../components/buttonClasses'
 import { ariaKeyShortcuts } from '../components/Kbd'
 import { useLocale, usePersistedState, useStrings } from '../components/Provider'
@@ -181,31 +181,53 @@ export function ListSearchControl({
   )
 }
 
-export function ListCount({
-  total,
-  matches,
-  filterActive,
-  noun,
-  nounPlural,
-}: {
+/** What a list's count needs: how many there are, how many a search or filter leaves, and the
+ *  noun in both numbers. */
+export interface ListCountProps {
   total: number
   matches: number
   filterActive: boolean
   noun: string
   nounPlural: string
-}) {
+}
+
+/** True inside a `ListPage` that shows its count under its rows, so a count placed in its toolbar
+ *  by hand gives way rather than showing twice. */
+export const ListFooterCountContext = createContext(false)
+
+/** True where a toolbar shares a line with the list's filter chips, at its end: a `ListToolbar`
+ *  there drops its own row's height and padding. */
+export const ListToolbarInlineContext = createContext(false)
+
+/** The count's words, "7 tokens" or "2 of 7 tokens", as a status so a screen reader hears the
+ *  count change as a filter narrows it. */
+export function ListCountText({ total, matches, filterActive, noun, nounPlural }: ListCountProps) {
   const { list: t } = useStrings()
   // Grouped in the host's locale: 1,204 or 1.204.
   const locale = useLocale()
   const count = (n: number) => formatInteger(n, locale)
   return (
+    <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
+      {filterActive
+        ? t.matchCount(count(matches), count(total), nounPlural)
+        : t.count(count(total), total === 1 ? noun : nounPlural)}
+    </span>
+  )
+}
+
+/** A list's count, placed by hand.
+ *  @deprecated Give `ListPage` a `count` instead (with its `total` and `matches`): it shows the
+ *  count under the last row, beside a `pager`, and hides it while the list shows its empty or
+ *  no-matches state. Inside a `ListPage` that shows its own count, this renders nothing. */
+export function ListCount(props: ListCountProps) {
+  // The page shows the count under its rows; a placeholder keeps a toolbar's
+  // `justify-between` setting its controls at the end.
+  if (useContext(ListFooterCountContext)) {
+    return <span aria-hidden="true" />
+  }
+  return (
     <div className="flex items-center h-8">
-      {/* A status, so a screen reader hears the count change as a filter narrows it. */}
-      <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
-        {filterActive
-          ? t.matchCount(count(matches), count(total), nounPlural)
-          : t.count(count(total), total === 1 ? noun : nounPlural)}
-      </span>
+      <ListCountText {...props} />
     </div>
   )
 }

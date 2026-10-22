@@ -4,7 +4,8 @@ import { expect, screen, userEvent, within } from 'storybook/test'
 import { Avatar } from '../components/Avatar'
 import { buttonClasses } from '../components/buttonClasses'
 import { UIProvider } from '../components/Provider'
-import { StatusBadge, StatusDot } from '../components/StatusBadge'
+import { StatusDot } from '../components/StatusBadge'
+import { StatusLabel } from '../components/StatusLabel'
 import { Table } from '../components/Table'
 import type { Tone } from '../components/tone'
 import {
@@ -28,8 +29,8 @@ import {
 import { ListFilterBar } from './ListFilterBar'
 import { ListPage } from './ListPage'
 import { listTableProps } from './ListTable'
-import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
-import { ListCount } from './listSearch'
+import { ListToolbar } from './ListToolbar'
+import { ListFilterMenu } from './ListViewControls'
 import { useListView } from './listView'
 import { useListFilters } from './useListFilters'
 
@@ -241,29 +242,28 @@ function IssuesDemo({ link, width }: { link: string; width?: number }) {
       <div className="flex h-12 shrink-0 items-center border-b border-(--theme-border) px-4 text-[16px] font-semibold">
         Issues
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-1.5">
-        <ListCount
-          total={ISSUES.length}
-          matches={rows.length}
-          filterActive={filters.count > 0}
-          noun="issue"
-          nounPlural="issues"
-        />
-        <ListFilterMenu filters={filters} />
-      </div>
-      <div className="shrink-0 px-4">
-        <ListFilterBar
-          filters={filters}
-          trailing={
-            filters.count > 0 && (
-              <button type="button" className={buttonClasses({ variant: 'outline', size: 'sm' })}>
-                Save view
-              </button>
-            )
-          }
-        />
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <ListPage
+        total={ISSUES.length}
+        matches={rows.length}
+        count={{ noun: 'issue', nounPlural: 'issues', filterActive: filters.count > 0 }}
+        toolbar={
+          <ListToolbar>
+            <ListFilterMenu filters={filters} />
+          </ListToolbar>
+        }
+        filterBar={
+          <ListFilterBar
+            filters={filters}
+            trailing={
+              filters.count > 0 && (
+                <button type="button" className={buttonClasses({ variant: 'outline', size: 'sm' })}>
+                  Save view
+                </button>
+              )
+            }
+          />
+        }
+      >
         <Table {...listTableProps}>
           <Table.Header caps={false}>Issue</Table.Header>
           <Table.Header caps={false} className="hidden @[36rem]:table-cell">
@@ -297,14 +297,14 @@ function IssuesDemo({ link, width }: { link: string; width?: number }) {
                 {issue.assignee ? person(issue.assignee).label : '—'}
               </Table.Item>
               <Table.Item>
-                <StatusBadge variant={STATUS[issue.status].tone}>
+                <StatusLabel variant={STATUS[issue.status].tone}>
                   {STATUS[issue.status].label}
-                </StatusBadge>
+                </StatusLabel>
               </Table.Item>
             </tr>
           ))}
         </Table>
-      </div>
+      </ListPage>
       <div
         className="shrink-0 truncate border-t border-(--theme-border) px-4 py-2 font-mono text-[11px] text-(--theme-muted-text-color)"
         style={{ fontVariantLigatures: 'none' }}
@@ -527,21 +527,10 @@ function ResourcesDemo({ width, defaults }: { width?: number; defaults: boolean 
       </div>
       <ListPage
         view={view}
-        toolbar={
-          <div className="flex items-center justify-between gap-3 py-1.5">
-            <ListCount
-              total={RESOURCES.length}
-              matches={rows.length}
-              filterActive={view.activeFilterCount > 0}
-              noun="resource"
-              nounPlural="resources"
-            />
-            <div className="ml-auto flex items-center gap-2">
-              <ListFilterMenu view={view} />
-              <ListDisplayMenu view={view} />
-            </div>
-          </div>
-        }
+        total={RESOURCES.length}
+        matches={rows.length}
+        count={{ noun: 'resource', nounPlural: 'resources' }}
+        toolbar={<ListToolbar view={view} />}
       >
         <Table {...listTableProps}>
           <Table.Header caps={false}>Name</Table.Header>
@@ -562,7 +551,9 @@ function ResourcesDemo({ width, defaults }: { width?: number; defaults: boolean 
                 {r.provider} · {r.region}
               </Table.Item>
               <Table.Item>
-                <StatusBadge variant={RES_STATUS[r.status]}>{r.status}</StatusBadge>
+                <StatusLabel variant={RES_STATUS[r.status]} off={r.status === 'stopped'}>
+                  {r.status[0]?.toUpperCase() + r.status.slice(1)}
+                </StatusLabel>
               </Table.Item>
               <Table.Item className="hidden @[36rem]:table-cell">{r.owner}</Table.Item>
             </tr>
@@ -818,21 +809,10 @@ function QuickFiltersDemo({ width }: { width?: number }) {
       </div>
       <ListPage
         view={view}
-        toolbar={
-          <div className="flex items-center justify-between gap-3 py-1.5">
-            <ListCount
-              total={JOBS.length}
-              matches={rows.length}
-              filterActive={view.activeFilterCount > 0}
-              noun="job"
-              nounPlural="jobs"
-            />
-            <div className="ml-auto flex items-center gap-2">
-              <ListFilterMenu view={view} />
-              <ListDisplayMenu view={view} />
-            </div>
-          </div>
-        }
+        total={JOBS.length}
+        matches={rows.length}
+        count={{ noun: 'job', nounPlural: 'jobs' }}
+        toolbar={<ListToolbar view={view} />}
       >
         <Table {...listTableProps}>
           <Table.Header caps={false}>Job</Table.Header>
@@ -850,9 +830,9 @@ function QuickFiltersDemo({ width }: { width?: number }) {
               </Table.Item>
               <Table.Item className="hidden @[36rem]:table-cell">{r.partition}</Table.Item>
               <Table.Item>
-                <StatusBadge variant={JOB_STATE[r.state].tone}>
+                <StatusLabel variant={JOB_STATE[r.state].tone}>
                   {JOB_STATE[r.state].label}
-                </StatusBadge>
+                </StatusLabel>
               </Table.Item>
             </tr>
           ))}

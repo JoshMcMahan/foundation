@@ -88,6 +88,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | Nothing to show yet, or nothing matches | `EmptyState` |
 | A page, card or section that couldn't show what it was asked for, such as a 404 | `ErrorPage`, its words chosen by the status |
 | A list page's toolbar and its loading, error, empty and no-match states | `ListToolbar` in `ListPage` with `total`, `matches`, `empty` and `noMatches` (from `./list`) |
+| How many rows a list has, or how many of them match ("2 of 7 tokens") | `count` on `ListPage`, with its `total` and `matches`: it shows under the last row, only while there are rows. A `ListToolbar`'s `count` moves there too, and the toolbar then sits at the end of the filter chips' first line (`ListFilterBar`'s `end`), or on a line alone while no chip shows. `ListCount` placed by hand is deprecated |
 | A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
 | A number, a date, a color | `NumberInput`, `DatePicker`, `ColorInput` |
 | A one-time code, such as a sign-in check | `OneTimeCodeInput` |
@@ -119,7 +120,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A message set into the page: guidance, a warning, an error | `Callout`; `variant="bar"` across a surface under its header |
 | A passing notice, or the progress of work in the background | `toast` |
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
-| Pages of a long list | `Pagination` |
+| Pages of a long list | `Pagination`; in a `ListPage`, as its `pager`, on the count's line under the last row, where a "Load more" button goes too |
 | A grouped page of settings | `SettingsCard` with `SettingRow`s |
 | A person or an agent | `Avatar`, colored by name without a picture, or by kind; `AvatarGroup` for an overlapping stack with a "+N" chip |
 | A status in words | `StatusBadge`, or `StatusDot` beside text that says it |

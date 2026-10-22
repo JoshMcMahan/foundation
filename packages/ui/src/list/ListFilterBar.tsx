@@ -41,6 +41,7 @@ import {
   type QuickFilter,
   toDay,
 } from './filterModel'
+import { ListToolbarInlineContext } from './listSearch'
 import type { ListFilters } from './useListFilters'
 
 // biome-ignore lint/suspicious/noExplicitAny: the chip row only reads the fields' shape
@@ -281,6 +282,7 @@ export function FilterChip({
                   </span>
                 )}
                 <span
+                  data-filter-value=""
                   className={cx(
                     'min-w-0 truncate',
                     !stretch && 'max-w-40',
@@ -1154,6 +1156,11 @@ export interface ListFilterBarProps {
   filters: ListFilters | undefined
   /** At the row's end, such as Save view or Update view. */
   trailing?: ReactNode
+  /** The list's own controls, such as its toolbar's menus and search, held at the end of the
+   *  first line while the chips wrap beside them, so they never take a line of their own. With
+   *  no chip to show, they take the row alone. `ListPage` puts its toolbar here once the count
+   *  has moved under the rows. */
+  end?: ReactNode
   /** Names the row; defaults to the provider's `filters.activeFilters`. */
   label?: string | undefined
   className?: string | undefined
@@ -1167,7 +1174,135 @@ export interface ListFilterBarProps {
  *  The list's quick filters show above the chips as toggles, always, setting the same filters
  *  the chips edit. At phone width each keeps to one line, and "+n more" opens the rest in the
  *  same sheet. */
-export function ListFilterBar({ filters, trailing, label, className }: ListFilterBarProps) {
+export function ListFilterBar({ end, trailing, ...props }: ListFilterBarProps) {
+  if (end === undefined || end === null || end === false) {
+    return <FilterRow trailing={trailing} {...props} />
+  }
+  return <SharedRow end={end} trailing={trailing} {...props} />
+}
+
+// The least a chip's value keeps on the controls' line, about "In progress" with its "+1";
+// below it, the trailing action leaves that line rather than crush the chip.
+const VALUE_MIN_PX = 88
+
+/** The chips with the list's controls at their first line's end. */
+function SharedRow({ end, trailing, ...props }: ListFilterBarProps) {
+  const box = useRef<HTMLDivElement>(null)
+  const controls = useRef<HTMLDivElement>(null)
+  const endBox = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  // Whether the trailing action, such as Save view, moved to the end of the chips' last line,
+  // and how far it reaches past the chips to end flush with the row's edge.
+  const [trailingLast, setTrailingLast] = useState(false)
+  const [reach, setReach] = useState(0)
+  // Set once the moved action lands on the controls' line, where it must not reach under them.
+  const [noReach, setNoReach] = useState(false)
+  const chipKeys = props.filters?.chips.map((c) => c.field).join('\u0000') ?? ''
+  const shows = props.filters !== undefined && rowShows(props.filters)
+
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) {
+      return
+    }
+    const measure = () => setWidth(el.getBoundingClientRect().width)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // A change in width or chips starts over with the action beside the controls.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: width and the chips are what restart the fit
+  useLayoutEffect(() => {
+    setTrailingLast(false)
+    setNoReach(false)
+  }, [width, chipKeys])
+
+  // A chip on the first line squeezed below a readable value moves the action down.
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el || !trailing || !shows) {
+      return
+    }
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('[data-filter-chip]'))
+    const firstTop = chips[0]?.offsetTop
+    if (trailingLast) {
+      // Moved down, the action reaches under the controls, as wide as they are now, only from
+      // a line below theirs.
+      const moved = el.querySelector<HTMLElement>('[data-filter-trailing]')
+      if (!noReach && moved && moved.offsetTop === firstTop) {
+        setNoReach(true)
+        return
+      }
+      const next = noReach ? 0 : (controls.current?.getBoundingClientRect().width ?? 0) + GAP_PX
+      if (Math.abs(next - reach) > 0.5) {
+        setReach(next)
+      }
+      return
+    }
+    const crushed = chips.some((chip) => {
+      const value = chip.querySelector<HTMLElement>('[data-filter-value]')
+      return (
+        chip.offsetTop === firstTop &&
+        value !== null &&
+        value.clientWidth < Math.min(value.scrollWidth, VALUE_MIN_PX)
+      )
+    })
+    if (crushed) {
+      // Without the action, the controls are as wide as the toolbar alone.
+      setReach((endBox.current?.getBoundingClientRect().width ?? 0) + GAP_PX)
+      setTrailingLast(true)
+    }
+  })
+
+  return (
+    <ListToolbarInlineContext value>
+      {/* The chips measure their own width, so they wrap and give way beside the controls. A
+          row with no chips leaves the box empty, and the controls take the line. */}
+      <div ref={box} className="flex min-h-10 items-start gap-3">
+        <div className="min-w-0 flex-1 empty:hidden">
+          <FilterRow
+            {...props}
+            trailing={trailingLast ? trailing : undefined}
+            trailingReach={trailingLast ? reach : 0}
+          />
+        </div>
+        <div ref={controls} className="ml-auto flex min-h-10 shrink-0 items-center gap-1.5">
+          {/* The action joins the controls at the first line's end, so both end flush with the
+              row's edge. */}
+          {shows && !trailingLast && trailing}
+          <div ref={endBox} className="flex items-center">
+            {end}
+          </div>
+        </div>
+      </div>
+    </ListToolbarInlineContext>
+  )
+}
+
+// The gap between the chips and the controls (gap-3).
+const GAP_PX = 12
+
+/** Whether the row has anything to show: a chip, or a quick filter's toggles. */
+function rowShows(filters: ListFilters): boolean {
+  return (
+    orderedChips(filters).length > 0 ||
+    (filters.quick ?? []).some((q) => filters.fields.some((f) => f.key === q.field))
+  )
+}
+
+function FilterRow({
+  filters,
+  trailing,
+  trailingReach = 0,
+  label,
+  className,
+}: Omit<ListFilterBarProps, 'end'> & {
+  /** How far the trailing slot reaches past the row's end, under controls beside the row's
+   *  first line, so it ends flush with the edge they end at. */
+  trailingReach?: number
+}) {
   const strings = useStrings()
   const t = strings.filters
   const registerBar = filters?.registerBar
@@ -1180,6 +1315,9 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   // Clear (or Reset) left out of a narrow row rather than stranded on a line of its own; the +
   // menu holds it too.
   const [clearFolded, setClearFolded] = useState(false)
+  // "+" left out of a narrow row rather than leading a line of its own; the "+n filters" sheet
+  // offers it, and Clear, in its footer.
+  const [addFolded, setAddFolded] = useState(false)
   const [sheet, setSheet] = useState(false)
   const [focusAt, setFocusAt] = useState<number | null>(null)
 
@@ -1217,6 +1355,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
   useLayoutEffect(() => {
     setLimit(null)
     setClearFolded(false)
+    setAddFolded(false)
   }, [width, chipKeys, narrow])
 
   // Drops chips into the sheet until the row fits on two lines.
@@ -1238,8 +1377,28 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
       setLimit(shown - 1)
       return
     }
-    // Once the chips fit, Clear keeps to the line "+" ends, or goes into its menu.
+    // Once the chips fit, "+" keeps to the line before it rather than lead a line of its own:
+    // another chip gives way to the sheet to make room, and once some are there, "+" joins them.
     const add = el.querySelector<HTMLElement>('[data-filter-add]')
+    const addItem = add ? Array.from(el.children).find((child) => child.contains(add)) : undefined
+    const before = addItem?.previousElementSibling
+    if (
+      addItem instanceof HTMLElement &&
+      before instanceof HTMLElement &&
+      Math.round(addItem.offsetTop) > Math.round(before.offsetTop)
+    ) {
+      if (chips.length > shown) {
+        setAddFolded(true)
+        return
+      }
+      // Down to the required and pinned chips, even the last other one: "+1 filter" then
+      // holds it, on the line "+" shares.
+      if (shown > fixedChips) {
+        setLimit(shown - 1)
+        return
+      }
+    }
+    // Clear keeps to the line "+" ends, or goes into its menu.
     const clear = el.querySelector<HTMLElement>('[data-filter-clear]')
     if (add && clear && Math.round(clear.offsetTop) > Math.round(add.offsetTop)) {
       setClearFolded(true)
@@ -1376,9 +1535,17 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
           {t.overflow(overflow)}
         </button>
       )}
-      {addButton(narrow)}
-      {!(narrow && clearFolded) && clearButton}
-      {trailing && <div className="ml-auto flex items-center gap-1.5">{trailing}</div>}
+      {!(narrow && addFolded) && addButton(narrow)}
+      {!(narrow && (clearFolded || addFolded)) && clearButton}
+      {trailing && (
+        <div
+          data-filter-trailing=""
+          className="ml-auto flex items-center gap-1.5"
+          style={trailingReach ? { marginRight: -trailingReach } : undefined}
+        >
+          {trailing}
+        </div>
+      )}
       {!hasQuick && drawer}
     </div>
   )

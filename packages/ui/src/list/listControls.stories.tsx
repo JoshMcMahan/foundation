@@ -4,7 +4,7 @@ import { Pagination } from '../components/Pagination'
 import { Popover } from '../components/Popover'
 import { InfoIcon } from '../icons'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
-import { ListCount, ListSearchControl, useListSearch } from './listSearch'
+import { ListSearchControl, useListSearch } from './listSearch'
 import { useListView } from './listView'
 
 const meta: Meta = {
@@ -78,13 +78,6 @@ function ControlsDemo({ searchable }: { searchable: boolean }) {
         <ListFilterMenu view={view} />
         <ListDisplayMenu view={view} />
       </div>
-      <ListCount
-        total={ROWS.length}
-        matches={rows.length}
-        filterActive={view.activeFilterCount > 0}
-        noun="cluster"
-        nounPlural="clusters"
-      />
       <ul className="text-sm">
         {rows.map((r) => (
           <li key={r.id}>

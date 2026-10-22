@@ -12,7 +12,7 @@ import {
   PageHeaderMenu,
 } from '../components/PageHeaderAction'
 import { type UILinkComponent, UIProvider, useNavigation } from '../components/Provider'
-import { StatusBadge } from '../components/StatusBadge'
+import { StatusLabel } from '../components/StatusLabel'
 import { Table } from '../components/Table'
 import {
   ChevronDoubleDownIcon,
@@ -36,8 +36,8 @@ import {
   NameCell,
   RowSelectCheckbox,
 } from './ListTable'
-import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
-import { ListCount, ListSearchControl, useListSearch } from './listSearch'
+import { ListToolbar } from './ListToolbar'
+import { useListSearch } from './listSearch'
 import { useListView } from './listView'
 import { type RowAction, useCopySubmenu } from './rowMenu'
 
@@ -352,7 +352,13 @@ function ClustersPage({
       {view.isVisible('status') && (
         <Table.Item className="py-2.5">
           {(!sparseStatus || row.status !== 'stopped') && (
-            <StatusBadge variant={STATUS_VARIANT[row.status]}>{row.status}</StatusBadge>
+            <StatusLabel
+              variant={STATUS_VARIANT[row.status]}
+              off={row.status === 'stopped'}
+              className="text-[13px]"
+            >
+              {row.status[0]?.toUpperCase() + row.status.slice(1)}
+            </StatusLabel>
           )}
         </Table.Item>
       )}
@@ -380,24 +386,14 @@ function ClustersPage({
       />
       <ListPage
         view={view}
-        toolbar={
-          <div className="flex items-center justify-between gap-3 py-1.5">
-            {state === 'ready' && (
-              <ListCount
-                total={all.length}
-                matches={rows.length}
-                filterActive={query.length > 0 || view.activeFilterCount > 0}
-                noun="cluster"
-                nounPlural="clusters"
-              />
-            )}
-            <div className="ml-auto flex items-center gap-2">
-              <ListSearchControl search={search} placeholder="Search clusters" />
-              <ListFilterMenu view={view} />
-              <ListDisplayMenu view={view} />
-            </div>
-          </div>
-        }
+        total={state === 'ready' ? all.length : undefined}
+        matches={rows.length}
+        count={{
+          noun: 'cluster',
+          nounPlural: 'clusters',
+          filterActive: query.length > 0 || view.activeFilterCount > 0,
+        }}
+        toolbar={<ListToolbar view={view} search={search} searchPlaceholder="Search clusters" />}
       >
         {state === 'loading' ? (
           <ListSkeleton />
