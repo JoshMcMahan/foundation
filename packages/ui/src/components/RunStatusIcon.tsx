@@ -45,8 +45,8 @@ const looks: Record<NonNullable<RunStatusIconStatus>, Look> = {
   '': { tone: 'muted', icon: NotRunningIcon, faint: true },
 }
 
-/** The tone a run status reads in, so a badge that says the status in words matches the
- *  icon: `<StatusBadge variant={runStatusTone(status)}>`. */
+/** The tone a run status reads in, so a host's own mark for it, such as a lamp, matches the
+ *  icon: `<StatusLabel variant={runStatusTone(status)}>`. */
 export function runStatusTone(status: RunStatusIconStatus): Tone {
   return looks[status ?? ''].tone
 }
@@ -65,8 +65,8 @@ export interface RunStatusIconProps
 }
 
 /** A run's, job's or step's status as an icon in its tone, beside the name of what ran. It
- *  is named by `label`, or else `strings.dag.statusLabel`. To say the status in words, use
- *  `StatusBadge` with `runStatusTone`. */
+ *  is named by `label`, or else `strings.dag.statusLabel`. To say the status in words beside it,
+ *  use `RunStatusLabel`. */
 export function RunStatusIcon({
   status,
   label: ownLabel,

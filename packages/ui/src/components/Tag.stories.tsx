@@ -3,8 +3,12 @@ import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { Tag, type TagItem, TagList } from './Tag'
 
+/** `Tag` is a tag: what someone has labelled a thing. A neutral hairline pill with an optional
+ *  color dot, which can link or have an ×. Not a flag, which is a `StatusBadge`, and not a status,
+ *  which is a `StatusLabel`. See [Which one](?path=/story/ui-badges--which-one). */
 const meta: Meta = {
-  title: 'UI/Tags',
+  title: 'UI/Badges/Tag',
+  tags: ['autodocs'],
 }
 export default meta
 
@@ -18,8 +22,9 @@ const styleArgTypes = {
   caps: { control: 'boolean', description: 'Small capitals, for a short code; off by default.' },
 } as const
 
-/** The one tag look: a pill with a hairline border and 11px text, with an optional color
- *  dot, a link with `href`, and an × with `onRemove`. */
+/** A tag, what someone has labelled a thing: a pill with a hairline border and 11px text, with
+ *  an optional color dot, a link with `href`, and an × with `onRemove`. Never tinted by a
+ *  status. See [Which one](?path=/story/ui-badges--which-one). */
 export const Tags: StoryObj<TagArgs> = {
   args: { mono: false, caps: false },
   argTypes: styleArgTypes,

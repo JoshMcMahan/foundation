@@ -44,19 +44,12 @@ import { NumberInput } from './NumberInput'
 import { Overview } from './Overview'
 import { Pagination } from './Pagination'
 import { type AvatarColoring, UIProvider } from './Provider'
-import { RunStatusIcon, type RunStatusIconStatus, runStatusTone } from './RunStatusIcon'
+import { RunStatusIcon, type RunStatusIconStatus } from './RunStatusIcon'
 import { Elapsed, RelativeTime } from './relativeTime'
 import { SegmentedControl } from './SegmentedControl'
 import { Select } from './Select'
-import {
-  type BadgeEmphasis,
-  type BadgeShape,
-  type BadgeSize,
-  type BadgeVariant,
-  CountBadge,
-  StatusBadge,
-  StatusDot,
-} from './StatusBadge'
+import { type BadgeSize, CountBadge, StatusBadge, StatusDot } from './StatusBadge'
+import { RunStatusLabel, StatusLabel } from './StatusLabel'
 import { Switch } from './Switch'
 import { type SortDirection, Table, type TableDensity } from './Table'
 import { Tag } from './Tag'
@@ -82,8 +75,9 @@ const RUN_STATUSES: RunStatusIconStatus[] = [
   '',
 ]
 
-/** A run status as an icon beside what ran, and in words as a badge in the same tone. Under
- *  way spins in info blue; `pending` and `warning` are looks a host maps its own statuses onto. */
+/** A run status as an icon beside what ran, and as a status (`RunStatusLabel`): the icon and
+ *  the status's name in muted text. Under way spins in info blue; `pending` and `warning` are
+ *  looks a host maps its own statuses onto. See [Which one](?path=/story/ui-badges--which-one). */
 export const RunStatuses: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-2 text-sm">
@@ -93,7 +87,7 @@ export const RunStatuses: StoryObj = {
             <RunStatusIcon status={status} />
             build
           </span>
-          <StatusBadge variant={runStatusTone(status)}>{status || 'not run'}</StatusBadge>
+          <RunStatusLabel status={status} />
         </div>
       ))}
     </div>
@@ -102,6 +96,7 @@ export const RunStatuses: StoryObj = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('img', { name: 'error' })).toBeVisible()
     await expect(canvas.getByRole('img', { name: 'completed' })).toBeVisible()
+    await expect(canvas.getAllByText('Failed')).toHaveLength(2)
   },
 }
 
@@ -127,148 +122,20 @@ export const RunStatusLabels: StoryObj<{ tooltip: boolean }> = {
   },
 }
 
-const BADGE_VARIANTS: BadgeVariant[] = [
-  'default',
-  'success',
-  'warning',
-  'error',
-  'info',
-  'muted',
-  'accent',
-]
-
-export const Badges: StoryObj<{
-  emphasis: BadgeEmphasis
-  shape: BadgeShape
-  caps: boolean
-  size: BadgeSize
-}> = {
-  args: { emphasis: 'soft', shape: 'pill', caps: false, size: 'sm' },
-  argTypes: {
-    emphasis: { control: 'inline-radio', options: ['soft', 'solid', 'outline'] },
-    shape: { control: 'inline-radio', options: ['pill', 'tag'] },
-    caps: { description: 'Uppercase, tracked letters.' },
-    size: { control: 'inline-radio', options: ['sm', 'md'] },
-  },
-  render: (args) => (
-    <div className="flex flex-wrap items-center gap-3">
-      <StatusBadge {...args} variant="success" dot>
-        Running
-      </StatusBadge>
-      <StatusBadge {...args} variant="warning" pulse>
-        Degraded
-      </StatusBadge>
-      <StatusBadge {...args} variant="error">
-        Stopped
-      </StatusBadge>
-      <StatusBadge {...args} variant="info">
-        Preview
-      </StatusBadge>
-      <StatusBadge {...args} variant="muted">
-        Archived
-      </StatusBadge>
-      <StatusBadge {...args} variant="accent">
-        New
-      </StatusBadge>
-      <StatusDot variant="success" />
-    </div>
-  ),
-}
-
-/** Every tone at every emphasis, as pills and as tags. */
-export const BadgeEmphases: StoryObj = {
-  render: () => (
-    <div className="flex flex-col gap-3">
-      {(['pill', 'tag'] as const).map((shape) =>
-        (['soft', 'solid', 'outline'] as const).map((emphasis) => (
-          <div key={`${shape}-${emphasis}`} className="flex flex-wrap items-center gap-2">
-            <span className="w-24 text-xs theme-muted-text">
-              {shape} {emphasis}
-            </span>
-            {BADGE_VARIANTS.map((variant) => (
-              <StatusBadge
-                key={variant}
-                variant={variant}
-                emphasis={emphasis}
-                shape={shape}
-                size="md"
-              >
-                {variant}
-              </StatusBadge>
-            ))}
-          </div>
-        )),
-      )}
-    </div>
-  ),
-}
-
-/** A tag for a short label, in caps or sentence case; a link badge; a long state cut off
- *  inside a narrow cell. */
-export const BadgeUses: StoryObj = {
-  render: () => (
-    <div className="flex flex-col gap-4 text-sm">
-      <div className="flex items-center gap-2">
-        <StatusBadge shape="tag" caps variant="accent" emphasis="solid">
-          All users
-        </StatusBadge>
-        <StatusBadge shape="tag" caps variant="info">
-          Preview
-        </StatusBadge>
-        <StatusBadge shape="tag" emphasis="outline" variant="accent" size="md">
-          Decided
-        </StatusBadge>
-        <StatusBadge
-          shape="tag"
-          emphasis="outline"
-          variant="muted"
-          size="md"
-          className="line-through"
-        >
-          Superseded
-        </StatusBadge>
-      </div>
-      <div className="flex items-center gap-2">
-        <StatusBadge
-          variant="accent"
-          size="md"
-          render={<a href="#changelog" />}
-          className="font-mono"
-        >
-          v2.4.0
-        </StatusBadge>
-        <StatusBadge variant="accent" emphasis="solid">
-          New
-        </StatusBadge>
-        <StatusBadge emphasis="outline">Your version</StatusBadge>
-      </div>
-      <div className="w-28 rounded-md border border-(--theme-border) p-2">
-        <StatusBadge variant="warning" dot truncate>
-          Waiting for capacity
-        </StatusBadge>
-      </div>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('link', { name: 'v2.4.0' })).toBeVisible()
-  },
-}
-
-/** Badges, a count, a tag, a key and a status icon as a tooltip's direct child, each taking the
+/** A status, a flag, a count, a tag, a key and a status icon as a tooltip's direct child, each taking the
  *  trigger's props and ref itself, with no wrapper. A focusable one, given `tabIndex`, shows its
  *  tooltip on focus too. */
 export const BadgesWithTooltips: StoryObj = {
   render: () => (
     <div className="flex flex-wrap items-center gap-3 p-8 text-sm">
       <Tooltip content="2 of 3 nodes answering; jobs may queue longer than usual">
-        <StatusBadge variant="warning" dot tabIndex={0}>
+        <StatusLabel variant="warning" tabIndex={0}>
           Degraded
-        </StatusBadge>
+        </StatusLabel>
       </Tooltip>
-      <Tooltip content="Started 4 minutes ago on gpu-east">
-        <StatusBadge variant="info" pulse tabIndex={0}>
-          Running
+      <Tooltip content="Only its owner can change it">
+        <StatusBadge variant="muted" tabIndex={0}>
+          Read only
         </StatusBadge>
       </Tooltip>
       <Tooltip content="4 decisions waiting for your review">
@@ -1505,7 +1372,7 @@ function TablesDemo({ density }: { density: TableDensity }) {
           <tr key={cluster.name}>
             <Table.Item>{cluster.name}</Table.Item>
             <Table.Item>
-              <StatusBadge variant="success">{cluster.status}</StatusBadge>
+              <StatusLabel variant="success">{cluster.status}</StatusLabel>
             </Table.Item>
             <Table.Item>{cluster.region}</Table.Item>
             <Table.Item className="text-right tabular-nums">{cluster.nodes}</Table.Item>

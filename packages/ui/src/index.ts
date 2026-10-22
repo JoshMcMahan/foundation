@@ -326,7 +326,6 @@ export { LoadingRegion, Skeleton, type SkeletonProps } from './components/Skelet
 export { Slider, type SliderProps } from './components/Slider'
 export {
   type BadgeEmphasis,
-  type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
   CountBadge,
@@ -337,6 +336,14 @@ export {
   type StatusDotProps,
   statusTextClass,
 } from './components/StatusBadge'
+export {
+  RunStatusLabel,
+  type RunStatusLabelProps,
+  runStatusLook,
+  StatusLabel,
+  type StatusLabelProps,
+  useRunStatusName,
+} from './components/StatusLabel'
 export { StickyBar, type StickyBarProps } from './components/StickyBar'
 export { Switch, type SwitchProps } from './components/Switch'
 export type { SegmentTone } from './components/segmented'

@@ -27,17 +27,16 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Yours')).toHaveClass('bg-transparent')
   })
 
-  it('keeps a tag in sentence case unless asked for caps', () => {
+  it('is always a pill, in sentence case unless asked for caps', () => {
     render(
       <>
-        <StatusBadge shape="tag">Decided</StatusBadge>
-        <StatusBadge shape="tag" caps>
-          Beta
-        </StatusBadge>
+        <StatusBadge>Read only</StatusBadge>
+        <StatusBadge caps>Beta</StatusBadge>
       </>,
     )
-    expect(screen.getByText('Decided')).not.toHaveClass('uppercase')
-    expect(screen.getByText('Beta')).toHaveClass('uppercase', 'rounded-[4px]')
+    expect(screen.getByText('Read only')).toHaveClass('rounded-full')
+    expect(screen.getByText('Read only')).not.toHaveClass('uppercase')
+    expect(screen.getByText('Beta')).toHaveClass('uppercase', 'rounded-full')
   })
 
   it('cuts a long label off inside its cell', () => {

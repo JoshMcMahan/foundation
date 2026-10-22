@@ -47,8 +47,13 @@ export interface TagProps
   className?: string | undefined
 }
 
-/** A tag or label on a thing: a pill with an optional color dot, a link with `href`, and an ×
- *  with `onRemove`. */
+/** A tag: what someone has labelled a thing. A neutral hairline pill with an optional color
+ *  dot; people add, remove and filter by tags, so it can be a link with `href` and have an ×
+ *  with `onRemove`. For marketplace tags, labels, key=value pairs, and a report's schedule or
+ *  format.
+ *
+ *  Not for a fixed fact worth noticing, such as "Preview" (a flag: `StatusBadge`), or a state
+ *  (a status: `StatusLabel`). See "UI/Badges/Which one". */
 export function Tag({
   children,
   color,

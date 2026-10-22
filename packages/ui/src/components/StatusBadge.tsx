@@ -13,9 +13,6 @@ export type BadgeVariant = Tone | 'accent'
  *  must catch the eye, and `outline` leaves only its edge and text. */
 export type BadgeEmphasis = 'soft' | 'solid' | 'outline'
 
-/** A badge's outline: a `pill`, or a squarer `tag` for a label such as "Beta". */
-export type BadgeShape = 'pill' | 'tag'
-
 // The accent's own text shade can lack contrast on a tint, so words in the accent
 // take the link color, which every theme keeps readable.
 const softClasses: Record<BadgeVariant, string> = {
@@ -59,21 +56,11 @@ const LAMP = 'bg-[linear-gradient(var(--lamp-from),var(--lamp-to))] shadow-[0_0_
 const LAMP_OFF = 'shadow-[inset_0_0_0_1.5px_var(--theme-border-strong)]'
 
 const sizeClasses = {
-  sm: 'gap-1 py-px text-[10px] leading-3.5',
-  md: 'gap-1.5 py-0.5 text-[11px] leading-4',
+  sm: 'gap-1 px-1.5 py-px text-[10px] leading-3.5',
+  md: 'gap-1.5 px-2 py-0.5 text-[11px] leading-4',
 } as const
 
 export type BadgeSize = keyof typeof sizeClasses
-
-const padClasses: Record<BadgeShape, Record<BadgeSize, string>> = {
-  pill: { sm: 'px-1.5', md: 'px-2' },
-  tag: { sm: 'px-1', md: 'px-1.5' },
-}
-
-const shapeClasses: Record<BadgeShape, string> = {
-  pill: 'rounded-full',
-  tag: 'rounded-[4px]',
-}
 
 /** Any other span attribute and the ref reach its element, so it can be a Tooltip's or a popover's
  *  direct child. */
@@ -85,8 +72,6 @@ export interface StatusBadgeProps
   variant?: BadgeVariant | undefined
   /** `soft` (the default) tints it; `solid` fills it; `outline` draws only its edge. */
   emphasis?: BadgeEmphasis | undefined
-  /** `pill` (the default), or `tag` for a squarer label such as "Preview". */
-  shape?: BadgeShape | undefined
   /** Uppercase, tracked letters, for a short label such as "Beta". */
   caps?: boolean | undefined
   /** Cuts a long label off with an ellipsis instead of growing past its cell. */
@@ -111,12 +96,19 @@ export function statusTextClass(variant: BadgeVariant): string {
   return variant === 'accent' ? 'text-(--theme-link)' : toneText[variant]
 }
 
-/** A short status or label in a tone, such as "Running" or "Preview". */
+/** A flag: what's notable about this one. A small soft pill right after a name, for a fixed
+ *  fact worth noticing, such as Inline, New, Your version, Preview, Ends soon or Read only: short
+ *  and rare, at most one or two on a row. It's neutral by default (`muted`, such as Inline, Your
+ *  version or Read only), `accent` for something new to you (New, Preview, Beta), `warning` when
+ *  it warns (Ends soon), and never `success` or `error`, which are statuses.
+ *
+ *  Not for a state, which changes over time: that is a status (`StatusLabel`, or
+ *  `RunStatusLabel` for a run), never a tinted pill. Not for a label someone gave it: that is a
+ *  `Tag`. See "UI/Badges/Which one". */
 export function StatusBadge({
   children,
   variant = 'default',
   emphasis = 'soft',
-  shape = 'pill',
   caps = false,
   truncate = false,
   pulse = false,
@@ -136,8 +128,7 @@ export function StatusBadge({
         'inline-flex items-center border font-medium no-underline',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
         sizeClasses[size],
-        padClasses[shape][size],
-        shapeClasses[shape],
+        'rounded-full',
         caps && 'uppercase tracking-wider',
         truncate && 'min-w-0 max-w-full',
         emphasisClasses[emphasis][variant],

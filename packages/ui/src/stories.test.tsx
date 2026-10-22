@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as accessDrawer from './access/AccessDrawer.stories'
 import * as accessPanel from './access/AccessPanel.stories'
+import * as badges from './components/Badges.stories'
 import * as breadcrumbs from './components/Breadcrumbs.stories'
 import * as callout from './components/Callout.stories'
 import * as codeBlock from './components/CodeBlock.stories'
@@ -29,6 +30,8 @@ import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as pickers from './components/pickers.stories'
 import * as primitives from './components/primitives.stories'
+import * as statusBadge from './components/StatusBadge.stories'
+import * as statusLabel from './components/StatusLabel.stories'
 import * as sections from './components/sections.stories'
 import * as tabs from './components/Tabs.stories'
 import * as tags from './components/Tag.stories'
@@ -86,6 +89,9 @@ const SUITES = {
   charts,
   kbd,
   tags,
+  badges,
+  statusBadge,
+  statusLabel,
   icons,
   sections,
   descriptionList,

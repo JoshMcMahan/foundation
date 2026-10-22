@@ -6,7 +6,7 @@ import DescriptionList, {
   type DescriptionListVariant,
 } from './DescriptionList'
 import { ExternalLink } from './ExternalLink'
-import { StatusBadge } from './StatusBadge'
+import { StatusLabel } from './StatusLabel'
 
 const meta: Meta = {
   title: 'UI/Description list',
@@ -37,16 +37,14 @@ interface DetailsArgs {
   width: number
 }
 
-// A record's details as a drawer shows them: a badge, a link, IDs to copy, dates,
+// A record's details as a drawer shows them: a status, a link, IDs to copy, dates,
 // and values the record doesn't have.
 function SessionDetails({ variant, stacked }: Omit<DetailsArgs, 'width'>) {
   return (
     <DescriptionList variant={variant} stacked={stacked}>
       <DescriptionListItem label="Name">notebook-gpu</DescriptionListItem>
       <DescriptionListItem label="Status">
-        <StatusBadge variant="success" dot>
-          Running
-        </StatusBadge>
+        <StatusLabel variant="success">Running</StatusLabel>
       </DescriptionListItem>
       <DescriptionListItem label="Owner">ada</DescriptionListItem>
       <DescriptionListItem label="Impersonated by" />
