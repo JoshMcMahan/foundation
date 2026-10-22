@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.90.0](https://github.com/parallelworks/foundation/compare/ui-v0.89.0...ui-v0.90.0) (2026-10-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** a status, a flag and a tag each have one look, and a status reads as a lamp or icon with its name ([#505](https://github.com/parallelworks/foundation/issues/505))
+
+### Features
+
+* **ui:** a status, a flag and a tag each have one look, and a status reads as a lamp or icon with its name ([#505](https://github.com/parallelworks/foundation/issues/505)) ([07bf72e](https://github.com/parallelworks/foundation/commit/07bf72eeff70a0cb28239947c4bc07b391fce642))
+* **ui:** the chat's allocation picker has a search box, like the model picker ([#502](https://github.com/parallelworks/foundation/issues/502)) ([31f8611](https://github.com/parallelworks/foundation/commit/31f8611db63514992b9e9918db132d364b0771df))
+
+
+### Bug Fixes
+
+* **ui:** a narrow filter row never leaves Clear or Reset on a line of its own ([#500](https://github.com/parallelworks/foundation/issues/500)) ([ee0bbbc](https://github.com/parallelworks/foundation/commit/ee0bbbc8e1ee77bbe3e5d6d7c923540f5dd23626))
+* **ui:** a narrow filter row never puts a required or pinned chip in the sheet ([#501](https://github.com/parallelworks/foundation/issues/501)) ([d726d03](https://github.com/parallelworks/foundation/commit/d726d032fe160b24c224bfe2979484818abcc681))
+
 ## [0.89.0](https://github.com/parallelworks/foundation/compare/ui-v0.88.2...ui-v0.89.0) (2026-10-22)
 
 
