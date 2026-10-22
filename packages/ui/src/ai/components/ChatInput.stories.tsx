@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo } from 'react'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
   DEFAULT_PERMISSION_MODE,
@@ -230,8 +230,13 @@ export const SharedProviders: StoryObj<{
   },
 }
 
-export const Allocations: StoryObj<{ pickerOpen: boolean }> = {
-  args: { pickerOpen: true },
+// An organization model bills an allocation, and the picker searches them by
+// name. The play opens the picker and types `search` into it.
+export const Allocations: StoryObj<{ pickerOpen: boolean; search: string }> = {
+  args: { pickerOpen: true, search: '' },
+  argTypes: {
+    search: { control: 'text', description: 'Typed into the open picker' },
+  },
   render: () => {
     const Composer = () => {
       const adapter = useMemo(
@@ -249,6 +254,7 @@ export const Allocations: StoryObj<{ pickerOpen: boolean }> = {
                 disabled: true,
               },
               { name: 'research', total: 500, used: 123.4, description: '123.40 / 500.00 USD' },
+              { name: 'research-gpu', total: 900, used: 610, description: '610.00 / 900.00 USD' },
               { name: 'teaching', total: 100, description: '0.00 / 100.00 USD' },
             ],
           }),
@@ -272,9 +278,12 @@ export const Allocations: StoryObj<{ pickerOpen: boolean }> = {
     if (!args.pickerOpen) {
       return
     }
-    const trigger = await within(canvasElement).findByRole('combobox', { name: 'Allocation' })
+    const trigger = await within(canvasElement).findByRole('combobox', { name: /^Allocation/ })
     await waitFor(() => expect(trigger).toHaveTextContent('research'))
     await userEvent.click(trigger)
+    if (args.search) {
+      await userEvent.type(await screen.findByPlaceholderText('Search allocations…'), args.search)
+    }
   },
 }
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import useSWR from 'swr'
-import { Select } from '../../components/Select'
+import { Combobox } from '../../components/Combobox'
 import { ChevronDownIcon } from '../../icons'
 import { useChat } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -61,8 +61,9 @@ export default function AllocationSelector({
   const selected = allocations.find((a) => a.name === selectedAllocation)
   return (
     <div className="flex min-w-0 shrink-[3] items-center gap-2">
-      <Select
+      <Combobox<string>
         aria-label={t.choose}
+        placeholder={t.search}
         items={allocations.map((a) => ({
           value: a.name,
           label: a.name,

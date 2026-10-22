@@ -79,6 +79,7 @@ export interface ChatStrings {
   allocationPicker: {
     choose: string
     placeholder: string
+    search: string
     usage: (used: string, total: string) => string
   }
   queue: {
@@ -414,6 +415,7 @@ export const defaultChatStrings: ChatStrings = {
   allocationPicker: {
     choose: 'Allocation',
     placeholder: 'Select allocation',
+    search: 'Search allocations\u2026',
     usage: (used, total) => `${used} / ${total}`,
   },
   activity: {
