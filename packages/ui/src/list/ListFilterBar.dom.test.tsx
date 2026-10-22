@@ -292,3 +292,140 @@ describe('a date chip', () => {
     expect(screen.getByRole('group', { name: 'Due is 14.03.2020' })).toBeInTheDocument()
   })
 })
+
+describe('a date field with its own presets', () => {
+  function Presets() {
+    const view = useListView<{ at: string }>({
+      storageKey: 'presets',
+      columns: [{ key: 'name', label: 'Name', alwaysVisible: true }],
+      filterFields: [
+        {
+          key: 'at',
+          label: 'Time',
+          kind: 'date',
+          pinned: true,
+          presets: ['-24h', '-365d', 'year', 'all'],
+          value: (r) => r.at,
+        },
+      ],
+    })
+    return <ListPage view={view}>{null}</ListPage>
+  }
+
+  it('offers them, worded for hours, days, the year and every date', async () => {
+    render(<Presets />)
+    fireEvent.click(screen.getByRole('button', { name: 'Value: Any' }))
+    for (const name of ['Last 24 hours', 'Last 365 days', 'This year', 'All time']) {
+      expect(await screen.findByRole('button', { name })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'This year' }))
+    expect(await screen.findByRole('group', { name: 'Time is This year' })).toBeInTheDocument()
+  })
+})
+
+describe('quick filters', () => {
+  function Quick({
+    multiple,
+    defaultFilters,
+  }: {
+    multiple?: boolean
+    defaultFilters?: ActiveFilter[]
+  }) {
+    const view = useListView<Row>({
+      storageKey: `quick-${multiple}-${defaultFilters?.length ?? 0}`,
+      columns: [{ key: 'name', label: 'Name', alwaysVisible: true }],
+      facets: [
+        {
+          key: 'status',
+          label: 'Status',
+          options: [
+            { value: 'running', label: 'Running' },
+            { value: 'stopped', label: 'Stopped' },
+          ],
+          matches: (row, selected) => selected.includes(row.status),
+        },
+      ],
+      filterFields: [
+        {
+          key: 'mine',
+          label: 'Needs attention',
+          kind: 'boolean',
+          value: (row) => row.owner === 'bob',
+        },
+      ],
+      quickFilters: [
+        {
+          field: 'status',
+          counts: { running: 2, stopped: 1 },
+          all: { count: 3 },
+          multiple,
+        },
+        { field: 'mine', counts: { true: 1 }, tone: 'warning' },
+      ],
+      defaultFilters,
+    })
+    const rows = view.applyFilters(ROWS)
+    return (
+      <ListPage view={view} toolbar={<ListFilterMenu view={view} />}>
+        <output data-testid="rows">{rows.map((r) => r.owner).join(',')}</output>
+      </ListPage>
+    )
+  }
+
+  const toggle = (name: RegExp) => screen.getByRole('button', { name })
+  const chip = (name: RegExp) => screen.queryByRole('group', { name })
+
+  it('show their toggles with counts, All pressed, before any filter is on', () => {
+    render(<Quick />)
+    expect(toggle(/^All\s*3/)).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle(/^Running\s*2/)).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle(/^Needs attention\s*1/)).toHaveClass(
+      'not-aria-pressed:text-(--theme-warning-text)',
+    )
+    expect(screen.queryByRole('group', { name: 'Active filters' })).not.toBeInTheDocument()
+  })
+
+  it('are the control for what they can say, with no chip beside them, and Clear empties them', () => {
+    render(<Quick />)
+    fireEvent.click(toggle(/^Running\s*2/))
+    expect(rows()).toBe('alice,carol')
+    expect(toggle(/^All\s*3/)).toHaveAttribute('aria-pressed', 'false')
+    expect(chip(/^Status is/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(rows()).toBe('alice,bob,carol')
+    expect(toggle(/^All\s*3/)).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('leave a condition they cannot say to its chip, pressing nothing, not even All', () => {
+    render(<Quick defaultFilters={[{ field: 'status', op: 'isNot', values: ['running'] }]} />)
+    expect(rows()).toBe('bob')
+    expect(chip(/^Status is not Running/)).toBeInTheDocument()
+    expect(toggle(/^Running\s*2/)).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle(/^All\s*3/)).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(toggle(/^Running\s*2/))
+    expect(rows()).toBe('alice,carol')
+    expect(chip(/^Status is/)).not.toBeInTheDocument()
+  })
+
+  it('replace the last toggle when only one can be pressed', () => {
+    render(<Quick multiple={false} />)
+    fireEvent.click(toggle(/^Running\s*2/))
+    fireEvent.click(toggle(/^Stopped\s*1/))
+    expect(rows()).toBe('bob')
+    expect(toggle(/^Running\s*2/)).toHaveAttribute('aria-pressed', 'false')
+    expect(chip(/^Status is/)).toBeNull()
+  })
+
+  it('turn a yes-or-no field on and off', () => {
+    render(<Quick />)
+    fireEvent.click(toggle(/^Needs attention\s*1/))
+    expect(rows()).toBe('bob')
+    expect(toggle(/^Needs attention\s*1/)).toHaveAttribute('aria-pressed', 'true')
+    // Only the toggles' group says it; no chip repeats it.
+    expect(screen.getAllByRole('group', { name: 'Needs attention' })).toHaveLength(1)
+    fireEvent.click(toggle(/^Needs attention\s*1/))
+    expect(rows()).toBe('alice,bob,carol')
+  })
+})

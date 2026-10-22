@@ -8,6 +8,7 @@ import {
   fieldOperators,
   fromStored,
   isComplete,
+  type QuickFilter,
   type StoredFilters,
   sameFilters,
   toStored,
@@ -35,6 +36,8 @@ export interface ListFiltersConfig<T> {
   store?: FilterStore | undefined
   /** False leaves remembering to the store alone. */
   remember?: boolean | undefined
+  /** Fields whose values also show as toggles above the chips. */
+  quick?: readonly QuickFilter[] | undefined
 }
 
 /** A request for a chip to open one of its pickers, which the chip clears once it has. */
@@ -48,6 +51,8 @@ export interface FilterEditRequest {
 export interface ListFilters {
   // biome-ignore lint/suspicious/noExplicitAny: the row type stays with the page; the chip row only needs the fields' shape
   fields: readonly FilterField<any>[]
+  /** Fields whose values also show as toggles above the chips. */
+  quick: readonly QuickFilter[]
   /** The filters in effect, in the order they were added. */
   active: readonly ActiveFilter[]
   /** The chips to show: the filters in effect, then one being added that has no value yet. */
@@ -82,6 +87,7 @@ export interface ListFilters {
 }
 
 const NONE: readonly ActiveFilter[] = []
+const NO_QUICK: readonly QuickFilter[] = []
 
 /** A list's active filters: which, in what order, where they are remembered and how rows
  *  match them. `useListView` builds one from its facets and fields; a page not on it, or
@@ -93,6 +99,7 @@ export function useListFilters<T>({
   defaultFilters = NONE,
   store,
   remember = true,
+  quick = NO_QUICK,
 }: ListFiltersConfig<T>): ListFilters {
   const sharedKeys = useMemo(
     () => new Set(fields.filter((f) => f.shared).map((f) => f.key)),
@@ -356,6 +363,7 @@ export function useListFilters<T>({
 
   return {
     fields,
+    quick,
     active,
     chips,
     draft: draft?.filter.field ?? null,

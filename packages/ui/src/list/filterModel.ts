@@ -61,6 +61,10 @@ export interface FilterField<T = never> {
   valueLabel?: ((value: string) => string | undefined) | undefined
   /** enum and people: whether more than one value can be chosen (default true). */
   multiple?: boolean | undefined
+  /** date: the presets its picker offers, in order, such as `['-24h', '-7d', '-30d', 'year',
+   *  'all']`. Defaults to {@link DATE_PRESETS}. Any `-Nh` or `-Nd` works, as do `today`,
+   *  `month`, `year` and `all`. */
+  presets?: readonly string[] | undefined
   /** Whether the picker has a search field. Default: more than eight options, or `loadOptions`. */
   searchable?: boolean | undefined
   /** Always shows its chip, with no remove button, reading "Any" while unset; Clear leaves it. */
@@ -76,6 +80,26 @@ export interface FilterField<T = never> {
   matches?: ((row: T, filter: ActiveFilter) => boolean) | undefined
 }
 
+/** A field's values as a row of toggles above the chips, for the few a reader picks most, such as
+ *  a job's state. The toggles set the same filter its chip edits, so either changes both. */
+export interface QuickFilter {
+  /** The field the toggles set. */
+  field: string
+  /** enum and people: the options shown as toggles, in order; every option by default. */
+  values?: readonly string[] | undefined
+  /** How many rows hold each value, shown after its label; a yes-or-no field's is under `true`.
+   *  An option's own `count` is used where this has none. */
+  counts?: Readonly<Record<string, number>> | undefined
+  /** Leads with an "All" toggle, pressed while the field is unset, that clears it. `{ count }`
+   *  shows the total beside it and `{ label }` names what it covers, such as "All states". */
+  all?: boolean | { count?: number | undefined; label?: string | undefined } | undefined
+  /** Whether several can be pressed at once; the field's own `multiple` by default. */
+  multiple?: boolean | undefined
+  /** `warning`: a toggle asking to be looked at, such as "Needs attention", in the warning tone
+   *  while it is off. */
+  tone?: 'warning' | undefined
+}
+
 /** One filter in effect: plain data, so it can go in a URL, storage or a saved view. */
 export interface ActiveFilter {
   field: string
@@ -85,9 +109,17 @@ export interface ActiveFilter {
   values: readonly string[]
 }
 
-/** The relative date presets the date picker offers, as a filter stores them. */
+/** The relative date presets the date picker offers unless a field names its own, as a filter
+ *  stores them. */
 export const DATE_PRESETS = ['today', '-7d', '-30d', '-90d', 'month'] as const
-export type DatePreset = (typeof DATE_PRESETS)[number]
+/** A relative date a filter can hold: today, this month or year so far, every date (`all`), or
+ *  the last N hours or days (`-24h`, `-365d`). */
+export type DatePreset =
+  | (typeof DATE_PRESETS)[number]
+  | 'year'
+  | 'all'
+  | `-${number}h`
+  | `-${number}d`
 
 const DEFAULT_OPERATORS: Record<FilterKind, readonly FilterOperator[]> = {
   enum: ['is', 'isNot'],
@@ -343,25 +375,39 @@ export function parseDay(value: string | undefined): Date | undefined {
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 
+const NAMED_PRESETS = new Set(['today', 'month', 'year', 'all'])
+
 export function isDatePreset(value: string | undefined): value is DatePreset {
-  return (DATE_PRESETS as readonly string[]).includes(value ?? '') || /^-\d+d$/.test(value ?? '')
+  return NAMED_PRESETS.has(value ?? '') || /^-\d+[dh]$/.test(value ?? '')
 }
 
-/** The days a preset or a day covers, as `[first, last]` local days, both included. */
-function presetDays(value: string, now: Date): [Date, Date] | undefined {
+/** The span a preset or a day covers: `from` included, `to` excluded, either open. Whole local
+ *  days, except the last N hours, which run from that moment on. */
+function presetSpan(value: string, now: Date): { from?: Date; to?: Date } | undefined {
   const today = startOfDay(now)
+  const tomorrow = addDays(today, 1)
+  if (value === 'all') {
+    return {}
+  }
   if (value === 'today') {
-    return [today, today]
+    return { from: today, to: tomorrow }
   }
   if (value === 'month') {
-    return [new Date(today.getFullYear(), today.getMonth(), 1), today]
+    return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: tomorrow }
+  }
+  if (value === 'year') {
+    return { from: new Date(today.getFullYear(), 0, 1), to: tomorrow }
+  }
+  const hours = value.match(/^-(\d+)h$/)
+  if (hours) {
+    return { from: new Date(now.getTime() - Number(hours[1]) * 3_600_000) }
   }
   const days = value.match(/^-(\d+)d$/)
   if (days) {
-    return [addDays(today, 1 - Number(days[1])), today]
+    return { from: addDays(today, 1 - Number(days[1])), to: tomorrow }
   }
   const day = parseDay(value)
-  return day ? [day, day] : undefined
+  return day ? { from: day, to: addDays(day, 1) } : undefined
 }
 
 /** The span a date filter covers right now: `from` included, `to` excluded (the start of the
@@ -371,24 +417,29 @@ export function dateFilterRange(
   now: Date = new Date(),
 ): { from?: Date; to?: Date } | undefined {
   const [first, second] = filter.values
-  const days = (v: string | undefined) => (v ? presetDays(v, now) : undefined)
+  const span = (v: string | undefined) => (v ? presetSpan(v, now) : undefined)
+  // Drops the open ends, so a range compares equal however it was built.
+  const range = (from: Date | undefined, to: Date | undefined) => ({
+    ...(from && { from }),
+    ...(to && { to }),
+  })
   switch (filter.op) {
     case 'is': {
-      const span = days(first)
-      return span && { from: span[0], to: addDays(span[1], 1) }
+      const s = span(first)
+      return s && range(s.from, s.to)
     }
     case 'after': {
-      const span = days(first)
-      return span && { from: span[0] }
+      const s = span(first)
+      return s && range(s.from, undefined)
     }
     case 'before': {
-      const span = days(first)
-      return span && { to: addDays(span[1], 1) }
+      const s = span(first)
+      return s && range(undefined, s.to)
     }
     case 'between': {
-      const a = days(first)
-      const b = days(second)
-      return a && b ? { from: a[0], to: addDays(b[1], 1) } : undefined
+      const a = span(first)
+      const b = span(second)
+      return a && b ? range(a.from, b.to) : undefined
     }
     default:
       return undefined
@@ -455,6 +506,10 @@ export function matchFilter<T>(
   }
   if (field.kind === 'date') {
     const range = dateFilterRange(filter, now)
+    if (range && range.from === undefined && range.to === undefined) {
+      // Every date, and none.
+      return true
+    }
     const t = asTime(v)
     if (!range || t === undefined) {
       return range === undefined

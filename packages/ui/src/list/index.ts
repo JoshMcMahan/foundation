@@ -19,6 +19,7 @@ export {
   type FilterRowValue,
   filterParamKeys,
   matchFilter,
+  type QuickFilter,
   sameFilters,
   withFilterParams,
 } from './filterModel'

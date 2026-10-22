@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useCallback, useMemo } from 'react'
 import { usePersistedState, useStrings } from '../components/Provider'
-import type { ActiveFilter, FilterField } from './filterModel'
+import type { ActiveFilter, FilterField, QuickFilter } from './filterModel'
 import { actionsColumnWidth } from './ListTable'
 import { type FilterStore, type ListFilters, useListFilters } from './useListFilters'
 
@@ -132,6 +132,9 @@ export interface ListViewConfig<T> {
   filterStore?: FilterStore | undefined
   /** False leaves remembering the filters to `filterStore` alone. */
   rememberFilters?: boolean | undefined
+  /** Fields whose values also show as toggles above the chips, such as a job's state with how
+   *  many jobs are in each. */
+  quickFilters?: readonly QuickFilter[] | undefined
   actions?: ActionDef[]
   /** Explicit pinned-button count when not using actions+isPinned; sizes the actions column. */
   actionCount?: number
@@ -244,6 +247,7 @@ export function useListView<T>({
   defaultFilters,
   filterStore,
   rememberFilters = true,
+  quickFilters,
   actions = [],
   actionCount,
   defaultShowColumnHeaders = true,
@@ -337,6 +341,7 @@ export function useListView<T>({
     defaultFilters,
     store: filterStore,
     remember: rememberFilters,
+    quick: quickFilters,
   })
   const filters = useMemo(() => {
     const out: Record<string, string[]> = {}

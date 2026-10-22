@@ -138,6 +138,29 @@ describe('matching', () => {
     })
   })
 
+  it('reads the last hours, the year so far and every date', () => {
+    const now = new Date(2026, 9, 21, 15, 30)
+    expect(dateFilterRange({ field: 'due', op: 'is', values: ['-24h'] }, now)).toEqual({
+      from: new Date(2026, 9, 20, 15, 30),
+    })
+    expect(dateFilterRange({ field: 'due', op: 'is', values: ['year'] }, now)).toEqual({
+      from: new Date(2026, 0, 1),
+      to: new Date(2026, 9, 22),
+    })
+    expect(dateFilterRange({ field: 'due', op: 'is', values: ['-365d'] }, now)).toEqual({
+      from: new Date(2025, 9, 22),
+      to: new Date(2026, 9, 22),
+    })
+    expect(dateFilterRange({ field: 'due', op: 'is', values: ['all'] }, now)).toEqual({})
+    // Every date includes a row with none.
+    expect(titles([{ field: 'due', op: 'is', values: ['all'] }], now)).toHaveLength(3)
+    expect(titles([{ field: 'due', op: 'is', values: ['-24h'] }], now)).toEqual([])
+    expect(titles([{ field: 'due', op: 'is', values: ['year'] }], now)).toEqual([
+      'Fix login',
+      'Speed up search',
+    ])
+  })
+
   it('ignores a filter still waiting for a value', () => {
     expect(titles([{ field: 'status', op: 'is', values: [] }])).toHaveLength(3)
   })

@@ -677,8 +677,11 @@ export interface UIStrings {
     changeValue: (values: string) => string
     /** Joins the values a chip lists. */
     list: (values: string[]) => string
-    /** A relative date preset: `today`, `-7d`, `-30d`, `-90d` or `month`; any `-Nd`. */
+    /** A relative date preset: `today`, `month` (so far), `year` (so far), `all` (every date),
+     *  any `-Nd` (the last N days) or any `-Nh` (the last N hours). */
     datePreset: (preset: string) => string
+    /** At phone width, the toggle that shows a quick filter's other options: "+3 more". */
+    quickMore: (count: number) => string
     /** The date picker's entry that picks days on a calendar. */
     customDate: string
     /** Two days a filter spans. */
@@ -1559,15 +1562,19 @@ const DEFAULTS: UIProviderValue = {
       changeValue: (values) => `Value: ${values}`,
       list: (values) => values.join(', '),
       datePreset: (preset) => {
+        const named: Record<string, string> = {
+          today: 'Today',
+          month: 'This month',
+          year: 'This year',
+          all: 'All time',
+        }
         const days = preset.match(/^-(\d+)d$/)?.[1]
-        return preset === 'today'
-          ? 'Today'
-          : preset === 'month'
-            ? 'This month'
-            : days
-              ? `Last ${days} days`
-              : preset
+        const hours = preset.match(/^-(\d+)h$/)?.[1]
+        return (
+          named[preset] ?? (days ? `Last ${days} days` : hours ? `Last ${hours} hours` : preset)
+        )
       },
+      quickMore: (count) => `+${count} more`,
       customDate: 'Custom…',
       between: (from, to) => `${from} – ${to}`,
       formatDate: (date, locale) =>

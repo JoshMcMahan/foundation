@@ -687,3 +687,188 @@ export const ConditionWordedByCount: StoryObj = {
     await expect(within(provider).getByText('is any of')).toBeInTheDocument()
   },
 }
+
+// --- Quick filters ---------------------------------------------------------
+
+type JobState = 'running' | 'pending' | 'completed' | 'failed' | 'cancelled'
+
+interface Job {
+  id: string
+  name: string
+  state: JobState
+  partition: string
+  user: string
+  submitted: string
+  overBudget: boolean
+}
+
+const JOB_STATE: Record<JobState, { label: string; tone: Tone }> = {
+  running: { label: 'Running', tone: 'info' },
+  pending: { label: 'Pending', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'success' },
+  failed: { label: 'Failed', tone: 'error' },
+  cancelled: { label: 'Canceled', tone: 'muted' },
+}
+
+const JOB_NAMES = [
+  'wrf-forecast',
+  'bwa-align',
+  'lammps-md',
+  'openfoam-cavity',
+  'pytorch-ddp',
+  'gromacs-npt',
+  'blast-search',
+  'cp2k-relax',
+  'hpl-bench',
+  'nwchem-opt',
+  'star-index',
+  'vasp-scf',
+  'paraview-batch',
+  'namd-equil',
+]
+
+const JOBS: Job[] = JOB_NAMES.map((name, i) => ({
+  id: String(48210 + i),
+  name,
+  state: (
+    ['running', 'pending', 'running', 'completed', 'failed', 'running', 'cancelled'] as const
+  )[i % 7] as JobState,
+  partition: (['compute', 'gpu', 'highmem'] as const)[i % 3] ?? 'compute',
+  user: OWNERS[i % OWNERS.length] ?? 'alice',
+  submitted: dayOffset(-((i * 23) % 400)),
+  overBudget: i % 4 === 2,
+}))
+
+/** A job list whose states also show as toggles with how many jobs are in each, beside a
+ *  suggested "Over budget" toggle in the warning tone. The toggles and the chips set the same
+ *  filters. Its Submitted field offers presets of its own. */
+function QuickFiltersDemo({ width }: { width?: number }) {
+  const counts = useMemo(() => {
+    const out: Record<string, number> = {}
+    for (const job of JOBS) {
+      out[job.state] = (out[job.state] ?? 0) + 1
+    }
+    return out
+  }, [])
+  const view = useListView<Job>({
+    storageKey: `story-quick-${width ?? 'wide'}`,
+    columns: [
+      { key: 'name', label: 'Job', alwaysVisible: true },
+      { key: 'partition', label: 'Partition' },
+      { key: 'state', label: 'State' },
+    ],
+    facets: [
+      {
+        key: 'state',
+        label: 'State',
+        options: (Object.keys(JOB_STATE) as JobState[]).map((s) => ({
+          value: s,
+          label: JOB_STATE[s].label,
+          icon: <StatusDot variant={JOB_STATE[s].tone} size={8} />,
+        })),
+        matches: (row, selected) => selected.includes(row.state),
+      },
+      {
+        key: 'partition',
+        label: 'Partition',
+        options: ['compute', 'gpu', 'highmem'].map((p) => ({ value: p, label: p })),
+        matches: (row, selected) => selected.includes(row.partition),
+      },
+    ],
+    filterFields: [
+      {
+        key: 'overBudget',
+        label: 'Over budget',
+        kind: 'boolean',
+        value: (r) => r.overBudget,
+      },
+      {
+        key: 'submitted',
+        label: 'Submitted',
+        icon: <CalendarIcon />,
+        kind: 'date',
+        presets: ['-24h', '-7d', '-30d', '-365d', 'year', 'all'],
+        value: (r) => r.submitted,
+      },
+    ],
+    quickFilters: [
+      { field: 'state', counts, all: { count: JOBS.length }, multiple: false },
+      {
+        field: 'overBudget',
+        counts: { true: JOBS.filter((j) => j.overBudget).length },
+        tone: 'warning',
+      },
+    ],
+    defaultFilters: [{ field: 'submitted', op: 'is', values: ['-365d'] }],
+  })
+  const rows = view.applyFilters(JOBS)
+  return (
+    <Shell width={width}>
+      <div className="flex h-12 shrink-0 items-center border-b border-(--theme-border) px-4 text-[16px] font-semibold">
+        Jobs
+      </div>
+      <ListPage
+        view={view}
+        toolbar={
+          <div className="flex items-center justify-between gap-3 py-1.5">
+            <ListCount
+              total={JOBS.length}
+              matches={rows.length}
+              filterActive={view.activeFilterCount > 0}
+              noun="job"
+              nounPlural="jobs"
+            />
+            <div className="ml-auto flex items-center gap-2">
+              <ListFilterMenu view={view} />
+              <ListDisplayMenu view={view} />
+            </div>
+          </div>
+        }
+      >
+        <Table {...listTableProps}>
+          <Table.Header caps={false}>Job</Table.Header>
+          <Table.Header caps={false} className="hidden @[36rem]:table-cell">
+            Partition
+          </Table.Header>
+          <Table.Header caps={false}>State</Table.Header>
+          {rows.map((r) => (
+            <tr key={r.id} className="hover:theme-hover">
+              <Table.Item>
+                <div className="font-medium">{r.name}</div>
+                <div className="text-[12px] text-(--theme-muted-text-color)">
+                  {r.id} · {r.user}
+                </div>
+              </Table.Item>
+              <Table.Item className="hidden @[36rem]:table-cell">{r.partition}</Table.Item>
+              <Table.Item>
+                <StatusBadge variant={JOB_STATE[r.state].tone}>
+                  {JOB_STATE[r.state].label}
+                </StatusBadge>
+              </Table.Item>
+            </tr>
+          ))}
+        </Table>
+      </ListPage>
+    </Shell>
+  )
+}
+
+export const QuickFilters: StoryObj = {
+  render: () => <QuickFiltersDemo />,
+}
+
+export const QuickFiltersDark: StoryObj = {
+  ...QuickFilters,
+  globals: { mode: 'dark' },
+}
+
+/** At phone width the state toggles keep to one line, the pressed one always shown, and
+ *  "+n more" opens the rest in the filters sheet. */
+export const QuickFiltersAtPhoneWidth: StoryObj = {
+  render: () => <QuickFiltersDemo width={390} />,
+}
+
+export const QuickFiltersAtPhoneWidthDark: StoryObj = {
+  ...QuickFiltersAtPhoneWidth,
+  globals: { mode: 'dark' },
+}

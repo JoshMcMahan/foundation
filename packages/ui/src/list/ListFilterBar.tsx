@@ -24,6 +24,7 @@ import {
 import { Popover } from '../components/Popover'
 import { useLocale, useStrings } from '../components/Provider'
 import { useQueryMatch } from '../components/search'
+import { ToggleGroup, type ToggleGroupOption } from '../components/ToggleGroup'
 import { cx } from '../cx'
 import { AddIcon, CheckIcon, CloseIcon } from '../icons'
 import {
@@ -37,6 +38,7 @@ import {
   isMultiple,
   operatorCount,
   parseDay,
+  type QuickFilter,
   toDay,
 } from './filterModel'
 import type { ListFilters } from './useListFilters'
@@ -712,7 +714,7 @@ function BooleanValuePicker({ filters, filter, open, onOpenChange, trigger }: Pi
   )
 }
 
-function DateValuePicker({ filters, filter, open, onOpenChange, trigger }: PickerProps) {
+function DateValuePicker({ filters, filter, field, open, onOpenChange, trigger }: PickerProps) {
   const t = useStrings().filters
   const [custom, setCustom] = useState(false)
   const [first, second] = filter.values
@@ -741,7 +743,7 @@ function DateValuePicker({ filters, filter, open, onOpenChange, trigger }: Picke
         <div
           className={cx('flex flex-col p-1', showCalendar && 'border-b border-(--theme-border)')}
         >
-          {DATE_PRESETS.map((preset) => (
+          {(field.presets ?? DATE_PRESETS).map((preset) => (
             <button
               key={preset}
               type="button"
@@ -939,6 +941,212 @@ export function AddFilterMenu({ filters, trigger, align = 'start' }: AddFilterMe
   )
 }
 
+// --- Quick filters ---------------------------------------------------------
+
+// Stands in for "none of these" while the field's filter says something the toggles can't, such
+// as "is not" or a value without a toggle, so neither a toggle nor All shows pressed.
+const NO_TOGGLE = '\u0000none'
+
+/** A quick filter's toggles and what they show pressed, from the field's filter. */
+function quickToggles(filters: ListFilters, quick: QuickFilter, field: Field) {
+  const filter = filters.active.find((f) => f.field === quick.field)
+  if (field.kind === 'boolean') {
+    const on = filter?.op === 'is' && filter.values[0] !== 'false'
+    const options: ToggleGroupOption<string>[] = [
+      { value: 'true', label: field.label, count: quick.counts?.['true'], tone: quick.tone },
+    ]
+    return { options, value: on ? ['true'] : filter ? [NO_TOGGLE] : [], multiple: true }
+  }
+  const multiple = quick.multiple ?? isMultiple(field)
+  const values = quick.values ?? (field.options ?? []).map((o) => o.value)
+  const options = values.map((value): ToggleGroupOption<string> => {
+    const option = field.options?.find((o) => o.value === value)
+    return {
+      value,
+      label: option?.label ?? field.valueLabel?.(value) ?? value,
+      icon: option?.icon,
+      count: quick.counts?.[value] ?? option?.count,
+      tone: quick.tone,
+    }
+  })
+  const shows =
+    filter?.op === 'is' &&
+    filter.values.every((v) => values.includes(v)) &&
+    (multiple || filter.values.length === 1)
+  return { options, value: !filter ? [] : shows ? [...filter.values] : [NO_TOGGLE], multiple }
+}
+
+/** Whether a filter is said by its quick filter's toggles alone, so it needs no chip. */
+function saidByToggles(filters: ListFilters, filter: ActiveFilter): boolean {
+  const quick = filters.quick.find((q) => q.field === filter.field)
+  const field = filters.fields.find((f) => f.key === filter.field)
+  if (!quick || !field || filters.draft === filter.field) {
+    return false
+  }
+  const { value } = quickToggles(filters, quick, field)
+  return (value.length > 0 || Boolean(quick.all)) && !value.includes(NO_TOGGLE)
+}
+
+interface QuickGroup {
+  quick: QuickFilter
+  field: Field
+}
+
+/** Every quick filter's toggles on one row, a rule between fields. On a narrow row they keep to
+ *  one line, the pressed ones always among them, and "+n more" opens the rest in the sheet. */
+function QuickRow({
+  filters,
+  groups,
+  narrow,
+  onMore,
+  end,
+  stacked = false,
+}: {
+  filters: ListFilters
+  groups: readonly QuickGroup[]
+  narrow: boolean
+  /** Each field's toggles on a line of their own, as the sheet shows them. */
+  stacked?: boolean
+  onMore?: (() => void) | undefined
+  /** After the toggles, such as Clear while no chip shows. */
+  end?: ReactNode
+}) {
+  const t = useStrings().filters
+  const row = useRef<HTMLDivElement>(null)
+  const [limit, setLimit] = useState<number | null>(null)
+  const [width, setWidth] = useState(0)
+  const fits = narrow && Boolean(onMore)
+
+  // Each group's toggles, All first, numbered across the groups so a narrow row can stop
+  // anywhere along them.
+  const built = groups.map(({ quick, field }) => {
+    const toggles = quickToggles(filters, quick, field)
+    const items = [
+      ...(quick.all ? [{ value: ALL_ITEM, pressed: toggles.value.length === 0 }] : []),
+      ...toggles.options.map((o) => ({ value: o.value, pressed: toggles.value.includes(o.value) })),
+    ]
+    return { quick, field, toggles, items }
+  })
+  const total = built.reduce((n, g) => n + g.items.length, 0)
+  const keys = built
+    .map((g) => g.items.map((i) => `${i.value}${i.pressed ? '+' : ''}`).join(','))
+    .join('|')
+
+  useLayoutEffect(() => {
+    const el = row.current
+    if (!el || !fits) {
+      return
+    }
+    let last = el.getBoundingClientRect().width
+    setWidth(last)
+    const observer = new ResizeObserver(() => {
+      const next = el.getBoundingClientRect().width
+      if (next !== last) {
+        last = next
+        setWidth(next)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [fits])
+
+  // A change in width, toggles or what is pressed starts over from every toggle shown.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are what restart the fit
+  useLayoutEffect(() => setLimit(null), [fits, keys, width])
+
+  // Drops toggles into the sheet until the row fits on one line.
+  useLayoutEffect(() => {
+    const el = row.current
+    if (!el || !fits) {
+      return
+    }
+    const tops = new Set<number>()
+    for (const button of el.querySelectorAll<HTMLElement>('button')) {
+      tops.add(Math.round(button.getBoundingClientRect().top))
+    }
+    const shown = limit ?? total
+    if (tops.size > 1 && shown > 1) {
+      setLimit(shown - 1)
+    }
+  })
+
+  const cap = fits && limit !== null ? limit : total
+  let index = 0
+  let hidden = 0
+  const parts: ReactNode[] = []
+  for (const { quick, field, toggles, items } of built) {
+    // The pressed ones stay in view, so the row never hides what narrows the list.
+    const keep = new Set<string>()
+    for (const item of items) {
+      if (index < cap || item.pressed) {
+        keep.add(item.value)
+      } else {
+        hidden += 1
+      }
+      index += 1
+    }
+    if (keep.size === 0) {
+      continue
+    }
+    const all = quick.all
+    const set = (next: string[]) => {
+      const values = next.filter((v) => v !== NO_TOGGLE)
+      if (values.length > 0) {
+        filters.update(quick.field, { op: 'is', values })
+      } else if (field.required || field.pinned) {
+        filters.update(quick.field, { values: [] })
+      } else {
+        filters.remove(quick.field)
+      }
+    }
+    if (parts.length > 0 && !stacked) {
+      parts.push(<QuickRule key={`rule-${quick.field}`} />)
+    }
+    parts.push(
+      <ToggleGroup
+        key={quick.field}
+        label={field.label}
+        options={toggles.options.filter((o) => keep.has(o.value))}
+        value={toggles.value}
+        multiple={toggles.multiple}
+        all={keep.has(ALL_ITEM) && (typeof all === 'object' ? { count: all.count } : all)}
+        allLabel={typeof all === 'object' ? all.label : undefined}
+        onValueChange={set}
+        dimIcons={false}
+        className="min-w-0"
+      />,
+    )
+  }
+  return (
+    <div
+      ref={row}
+      className={cx(
+        'flex min-w-0',
+        stacked ? 'flex-col items-start gap-2' : 'flex-wrap items-center gap-1',
+      )}
+    >
+      {parts}
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={onMore}
+          className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+        >
+          {t.quickMore(hidden)}
+        </button>
+      )}
+      {end}
+    </div>
+  )
+}
+
+// Stands in for a group's All toggle among its items.
+const ALL_ITEM = '\u0000all'
+
+function QuickRule() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-(--theme-border)" />
+}
+
 // --- Row -------------------------------------------------------------------
 
 export interface ListFilterBarProps {
@@ -953,12 +1161,17 @@ export interface ListFilterBarProps {
 /** The chips that say what narrows a list, under its toolbar: one per filter, each editable in
  *  place, then "+ Filter" and Clear (or Reset, where the page has default filters). It shows
  *  only while a filter is on or a field is required. At phone width it stops at two lines and
- *  a "+n filters" chip opens the rest in a sheet. */
+ *  a "+n filters" chip opens the rest in a sheet.
+ *
+ *  The list's quick filters show above the chips as toggles, always, setting the same filters
+ *  the chips edit. At phone width each keeps to one line, and "+n more" opens the rest in the
+ *  same sheet. */
 export function ListFilterBar({ filters, trailing, label, className }: ListFilterBarProps) {
   const strings = useStrings()
   const t = strings.filters
   const registerBar = filters?.registerBar
   useEffect(() => registerBar?.(), [registerBar])
+  const box = useRef<HTMLDivElement>(null)
   const row = useRef<HTMLDivElement>(null)
   const [narrow, setNarrow] = useState(false)
   const [width, setWidth] = useState(0)
@@ -968,13 +1181,18 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
 
   const chips = filters ? orderedChips(filters) : []
   const fieldOf = (key: string) => filters?.fields.find((f) => f.key === key)
+  const quick: QuickGroup[] = (filters?.quick ?? []).flatMap((q) => {
+    const field = fieldOf(q.field)
+    return field ? [{ quick: q, field }] : []
+  })
   const empty = chips.length === 0
+  const hasQuick = quick.length > 0
   const chipKeys = chips.map((c) => c.filter.field).join('\u0000')
 
-  // The row mounts again once it has chips, so it is measured again then.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `empty` is what remounts the row
+  // The bar mounts again once it has chips, so it is measured again then.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `empty` and `hasQuick` are what remount the bar
   useLayoutEffect(() => {
-    const el = row.current
+    const el = box.current
     if (!el) {
       return
     }
@@ -987,7 +1205,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [empty])
+  }, [empty, hasQuick])
 
   // A change in width or chips starts over from every chip shown.
   // biome-ignore lint/correctness/useExhaustiveDependencies: width and the chips are what restart the fit
@@ -1038,7 +1256,7 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
     }
   }, [hiddenRequest])
 
-  if (!filters || empty) {
+  if (!filters || (empty && !hasQuick)) {
     return null
   }
   const removable = filters.active.some((f) => !fieldOf(f.field)?.required)
@@ -1053,29 +1271,68 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
       {resetting ? strings.common.reset : strings.common.clear}
     </button>
   )
-  const addButton = (
+  const addButton = (narrow: boolean) => (
     <AddFilterMenu
       filters={filters}
       trigger={
         <button
           type="button"
           data-filter-add=""
-          className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+          // On a narrow row it is the + alone, so the chips and Clear keep to fewer lines.
+          aria-label={narrow ? t.addFilter : undefined}
+          className={buttonClasses({ variant: 'ghost', size: 'sm', iconOnly: narrow })}
         >
           <AddIcon aria-hidden="true" />
-          {t.addFilter}
+          {!narrow && t.addFilter}
         </button>
       }
     />
   )
-
-  return (
+  const drawer = (
+    <Drawer
+      open={sheet}
+      onClose={() => setSheet(false)}
+      title={t.sheetTitle}
+      width={400}
+      footer={
+        <div className="flex w-full items-center gap-1.5">
+          {addButton(false)}
+          {clearButton}
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-2">
+        {hasQuick && <QuickRow filters={filters} groups={quick} narrow={false} stacked />}
+        {chips.map(({ filter, field }) => (
+          <FilterChip
+            key={filter.field}
+            filters={filters}
+            filter={filter}
+            field={field}
+            stretch
+            answers={sheet}
+          />
+        ))}
+      </div>
+    </Drawer>
+  )
+  const chipRow = !empty && (
     // biome-ignore lint/a11y/useSemanticElements: a fieldset is for form controls; this groups chips
     <div
-      ref={row}
+      ref={
+        hasQuick
+          ? row
+          : (node) => {
+              row.current = node
+              box.current = node
+            }
+      }
       role="group"
       aria-label={label ?? t.activeFilters}
-      className={cx('flex flex-wrap items-center gap-1.5 py-1.5', className)}
+      className={cx(
+        'flex flex-wrap items-center gap-1.5',
+        hasQuick ? undefined : cx('py-1.5', className),
+      )}
     >
       {shownChips.map(({ filter, field }, i) => (
         <FilterChip
@@ -1096,34 +1353,34 @@ export function ListFilterBar({ filters, trailing, label, className }: ListFilte
           {t.overflow(overflow)}
         </button>
       )}
-      {addButton}
+      {addButton(narrow)}
       {clearButton}
       {trailing && <div className="ml-auto flex items-center gap-1.5">{trailing}</div>}
-      <Drawer
-        open={sheet}
-        onClose={() => setSheet(false)}
-        title={t.sheetTitle}
-        width={400}
-        footer={
-          <div className="flex w-full items-center gap-1.5">
-            {addButton}
-            {clearButton}
-          </div>
+      {!hasQuick && drawer}
+    </div>
+  )
+  if (!hasQuick) {
+    return chipRow
+  }
+  return (
+    <div ref={box} className={cx('flex min-w-0 flex-col gap-1.5 py-1.5', className)}>
+      <QuickRow
+        filters={filters}
+        groups={quick}
+        narrow={narrow}
+        onMore={() => setSheet(true)}
+        end={
+          // With no chip, the row's end still clears the toggles and holds the trailing slot.
+          empty && (
+            <>
+              {clearButton}
+              {trailing && <div className="ml-auto flex items-center gap-1.5">{trailing}</div>}
+            </>
+          )
         }
-      >
-        <div className="flex flex-col gap-2">
-          {chips.map(({ filter, field }) => (
-            <FilterChip
-              key={filter.field}
-              filters={filters}
-              filter={filter}
-              field={field}
-              stretch
-              answers={sheet}
-            />
-          ))}
-        </div>
-      </Drawer>
+      />
+      {chipRow}
+      {drawer}
     </div>
   )
 }
@@ -1149,5 +1406,7 @@ function orderedChips(filters: ListFilters): { filter: ActiveFilter; field: Fiel
       out.push({ filter, field })
     }
   }
-  return out
+  // A filter the toggles say alone has them as its control; it shows a chip only for what they
+  // can't say, such as "is not".
+  return out.filter(({ filter }) => !saidByToggles(filters, filter))
 }
