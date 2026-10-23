@@ -396,9 +396,10 @@ function ResourceName({ resource }: { resource: Resource }) {
 }
 
 function StateCell({ state }: { state: Resource['state'] }) {
+  // A status: a lamp and its name, unlit for a resource that's off.
   return (
-    <Table.Item className="py-2.5">
-      <StatusLabel variant="success" off={state !== 'running'}>
+    <Table.Item className="py-2.5 text-[13px]">
+      <StatusLabel variant={state === 'running' ? 'success' : 'muted'} off={state !== 'running'}>
         {state === 'running' ? 'Running' : 'Stopped'}
       </StatusLabel>
     </Table.Item>
@@ -471,5 +472,114 @@ export const CellsInHostComponents: StoryObj = {
     const [name, state] = within(row).getAllByRole('cell')
     await expect(name?.querySelector('[data-stacked]')).toHaveTextContent('Running')
     await expect(state).toHaveClass('@[36rem]:table-cell')
+  },
+}
+
+interface Job {
+  name: string
+  id: string
+  state: 'running' | 'pending'
+  user: string
+  partition: string
+  nodes: string
+}
+
+const JOBS: Job[] = [
+  {
+    name: 'wrf-forecast',
+    id: '48210',
+    state: 'running',
+    user: 'maya',
+    partition: 'compute',
+    nodes: 'compute-[01-04]',
+  },
+  {
+    name: 'bwa-align',
+    id: '48211',
+    state: 'running',
+    user: 'jo',
+    partition: 'gpu',
+    nodes: 'gpu-01',
+  },
+  {
+    name: 'lammps-md',
+    id: '48212',
+    state: 'pending',
+    user: 'priya',
+    partition: 'compute',
+    nodes: '',
+  },
+]
+
+function JobsList() {
+  const view = useListView<Job>({
+    storageKey: 'story-stacked-lines',
+    columns: [
+      { key: 'name', label: 'Job', alwaysVisible: true },
+      { key: 'state', label: 'State', stackLine: 'own' },
+      { key: 'user', label: 'User', stackLine: 'own' },
+      { key: 'partition', label: 'Partition', stackLine: 'own' },
+      { key: 'nodes', label: 'Nodes', stackLine: 'join' },
+    ],
+  })
+  const { openMenu, contextMenu } = useContextMenu()
+  const goTo = useListNavigate()
+  return (
+    <PageHeaderProvider>
+      <div className="flex flex-col overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-app-bg)">
+        <PageHeader breadcrumbs={[{ label: 'Jobs' }]} />
+        <ListPage view={view} total={JOBS.length} matches={JOBS.length}>
+          <Table {...listTableProps} tbodyClassName="divide-y divide-(--theme-border)">
+            <ListColumns view={view} />
+            {JOBS.map((job) => (
+              <ListRow
+                key={job.id}
+                href={null}
+                onActivate={() => {}}
+                items={[{ label: 'Details', onClick: () => {} }]}
+                goTo={goTo}
+                openMenu={openMenu}
+              >
+                <NameCell
+                  icon={<ComputeIcon />}
+                  name={job.name}
+                  subtitle={`#${job.id}`}
+                  href={null}
+                />
+                <Table.Item className="py-2.5 text-[13px]">
+                  <StatusLabel variant="info" off={job.state === 'pending'}>
+                    {job.state === 'running' ? 'Running' : 'Pending'}
+                  </StatusLabel>
+                </Table.Item>
+                <TextCell value={job.user} />
+                <TextCell value={job.partition} mono />
+                <Table.Item className="max-w-[16rem] truncate py-2.5">
+                  {job.nodes && <ListCellText mono>{job.nodes}</ListCellText>}
+                </Table.Item>
+              </ListRow>
+            ))}
+          </Table>
+        </ListPage>
+      </div>
+      {contextMenu}
+    </PageHeaderProvider>
+  )
+}
+
+/** On a phone, stacked values can each take a line, or join the one before after a dot, so every
+ *  row reads alike however long its values are: the state, then who ran it, then where. They read
+ *  as secondary text, the size of a subtitle. A job not yet placed has no nodes, and its line ends
+ *  at the partition. */
+export const StackedOnLines: StoryObj = {
+  render: () => <JobsList />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const row = canvas.getByText('wrf-forecast').closest('tr') as HTMLElement
+    const lines = Array.from(row.querySelectorAll('[data-stacked-line]'))
+    await expect(lines.map((line) => line.textContent)).toEqual([
+      'Running',
+      'maya',
+      'computecompute-[01-04]',
+    ])
   },
 }

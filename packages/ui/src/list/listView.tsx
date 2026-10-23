@@ -30,6 +30,11 @@ export interface ColumnDef {
    * column there: for something short that compares best lined up, like a
    * total. The first column never stacks; it is what the others stack under. */
   stack?: boolean
+  /** Where a stacked column's value sits on the lines under the name. By default the stacked
+   *  values share a line, flowing and wrapping between them. `own` starts a line of its own, for
+   *  a value read first, such as a status; `join` stays on the line before it after a "·", for
+   *  one that belongs with that value, such as a job's nodes after its partition. */
+  stackLine?: StackLine | undefined
   /** The `value` of the {@link OrderByOption} this column sorts by. Its header
    * then sorts the list: it shows, and sets, the same order as Display
    * options' Ordering. */
@@ -48,6 +53,10 @@ export interface ColumnDef {
 
 /** Column responsive importance; `low` drops before `medium`. See {@link ColumnDef.priority}. */
 type ColumnPriority = 'low' | 'medium'
+
+/** How a stacked column's value lines up with the others under the name; see
+ *  {@link ColumnDef.stackLine}. */
+export type StackLine = 'own' | 'join'
 
 // Per-priority "show at/above this container width" classes (hidden below it).
 // Full literal strings so Tailwind's scanner emits them.
@@ -167,6 +176,8 @@ export interface ListViewChrome {
   /** Per visible column, whether it stacks under the first on a narrow
    * container ({@link ColumnDef.stack}); `ListRow` reads entry `i`. */
   columnStacks: boolean[]
+  /** Per visible column, the line its stacked value takes ({@link ColumnDef.stackLine}). */
+  columnStackLines?: (StackLine | undefined)[] | undefined
   /** Whether the last column is a locked one, such as a delete button's: the
    * row's `⋯` then keeps a lane of its own after it rather than floating over
    * it on hover. */
@@ -375,6 +386,7 @@ export function useListView<T>({
 
   const columnClasses = useMemo(() => visibleColumns.map(columnClass), [visibleColumns])
   const columnStacks = useMemo(() => visibleColumns.map(stacks), [visibleColumns])
+  const columnStackLines = useMemo(() => visibleColumns.map((c) => c.stackLine), [visibleColumns])
   const last = visibleColumns.at(-1)
   const lastColumnLocked =
     visibleColumns.length > 1 && last !== undefined && !last.alwaysVisible && isLocked(last)
@@ -504,6 +516,7 @@ export function useListView<T>({
     visibleColumns,
     columnClasses,
     columnStacks,
+    columnStackLines,
     lastColumnLocked,
     reservesActionLane,
     isVisible,

@@ -28,7 +28,14 @@ import {
   warnIfInert,
 } from '../components/MenuEntries'
 import { useNavigation } from '../components/Provider'
-import { CellPlacementContext, type SortDirection, STACKED_ITEM, Table } from '../components/Table'
+import {
+  CellPlacementContext,
+  hasContent,
+  type SortDirection,
+  STACKED_ITEM,
+  STACKED_JOINED,
+  Table,
+} from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ListFilterBar, type ListFilterBarProps } from './ListFilterBar'
@@ -44,7 +51,7 @@ import {
 } from './ListTable'
 import { ListToolbar, type ListToolbarProps, toolbarCount } from './ListToolbar'
 import { ListCountText, ListFooterCountContext } from './listSearch'
-import type { ColumnDef, ListView, ListViewChrome } from './listView'
+import type { ColumnDef, ListView, ListViewChrome, StackLine } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
 /** Defaults mean rows outside a ListView fully show actions (no view = show everything). */
@@ -53,8 +60,18 @@ const RowActionsContext = createContext<{
   always: boolean
   columnClasses: string[]
   columnStacks: boolean[]
+  columnStackLines: (StackLine | undefined)[]
   reservesLane: boolean
-}>({ show: true, always: false, columnClasses: [], columnStacks: [], reservesLane: false })
+}>({
+  show: true,
+  always: false,
+  columnClasses: [],
+  columnStacks: [],
+  columnStackLines: [],
+  reservesLane: false,
+})
+
+const NO_STACK_LINES: (StackLine | undefined)[] = []
 
 function useRowActions(view?: ListViewChrome) {
   return useMemo(
@@ -63,6 +80,7 @@ function useRowActions(view?: ListViewChrome) {
       always: view?.alwaysShowActions ?? false,
       columnClasses: view?.columnClasses ?? [],
       columnStacks: view?.columnStacks ?? [],
+      columnStackLines: view?.columnStackLines ?? NO_STACK_LINES,
       reservesLane: view?.reservesActionLane ?? view?.lastColumnLocked ?? false,
     }),
     [
@@ -70,6 +88,7 @@ function useRowActions(view?: ListViewChrome) {
       view?.alwaysShowActions,
       view?.columnClasses,
       view?.columnStacks,
+      view?.columnStackLines,
       view?.lastColumnLocked,
       view?.reservesActionLane,
     ],
@@ -279,11 +298,17 @@ function ListFooter({
 
 // How a list row shows a cell under its first: as an item of a line, in place of a cell.
 const STACKED = { stacked: true }
+const STACKED_JOINED_PLACEMENT = { stacked: true, joined: true }
 
 // The line the stacked values share: it follows the subtitle by a 4px step, and its items wrap
 // with a 4px step between lines and 12px between values.
 const STACKED_LINE =
-  'mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 empty:hidden @[36rem]:hidden'
+  'mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--theme-muted-text-color) empty:hidden @[36rem]:hidden'
+
+// Stacked values on lines of their own: the same steps, each line wrapping on its own.
+const STACKED_LINES =
+  'mt-1 flex min-w-0 flex-col gap-y-1 text-xs text-(--theme-muted-text-color) empty:hidden @[36rem]:hidden'
+const STACKED_LINES_LINE = 'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1'
 
 // A cell given straight to a row, whose content is there to see, rather than through a component.
 const isCellElement = (child: ReactElement) => child.type === Table.Item || child.type === 'td'
@@ -330,6 +355,7 @@ export function ListRow({
     always: alwaysShowActions,
     columnClasses,
     columnStacks,
+    columnStackLines,
     reservesLane,
   } = useContext(RowActionsContext)
 
@@ -345,34 +371,63 @@ export function ListRow({
     if (i === 0 || !columnStacks[i] || !isValidElement(child)) {
       return []
     }
+    const line = columnStackLines[i]
     if (isCellElement(child)) {
       const content = (child as ReactElement<{ children?: ReactNode }>).props.children
-      return Children.toArray(content).length > 0 ? [child] : []
+      return hasContent(content) ? [{ child, line }] : []
     }
-    return [child]
+    return [{ child, line }]
   })
-  // The stacked values share one line under the name, flowing inline and wrapping between them,
-  // so a phone's row stays a few lines tall rather than one line per column. It shows only where
-  // the columns' own cells have given way, and is gone when no value renders.
-  const under =
-    stacked.length > 0 ? (
-      <div className={STACKED_LINE} data-stacked-line>
-        {stacked.map((child, j) =>
-          // A bare `<td>` can't show as an item, so its content does.
-          isValidElement(child) && child.type === 'td' ? (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
-            <div key={j} className={STACKED_ITEM} data-stacked>
-              {(child as ReactElement<{ children?: ReactNode }>).props.children}
-            </div>
-          ) : (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
-            <CellPlacementContext key={j} value={STACKED}>
-              {child}
-            </CellPlacementContext>
-          ),
-        )}
+  // A stacked value as an item of its line; one joined to the value before it brings its dot.
+  const item = (child: ReactNode, j: number, joined = false) =>
+    // A bare `<td>` can't show as an item, so its content does.
+    isValidElement(child) && child.type === 'td' ? (
+      <div
+        // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
+        key={j}
+        className={cx(STACKED_ITEM, joined && STACKED_JOINED)}
+        data-stacked
+      >
+        {(child as ReactElement<{ children?: ReactNode }>).props.children}
       </div>
-    ) : undefined
+    ) : (
+      // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
+      <CellPlacementContext key={j} value={joined ? STACKED_JOINED_PLACEMENT : STACKED}>
+        {child}
+      </CellPlacementContext>
+    )
+  // The stacked values share one line under the name, flowing inline and wrapping between them,
+  // so a phone's row stays a few lines tall rather than one line per column. A column can ask for
+  // a line of its own, or to join the value before it after a dot, so every row reads alike. It
+  // shows only where the columns' own cells have given way, and is gone when no value renders.
+  let under: ReactNode
+  if (stacked.length > 0 && stacked.every(({ line }) => line === undefined)) {
+    under = (
+      <div className={STACKED_LINE} data-stacked-line>
+        {stacked.map(({ child }, j) => item(child, j))}
+      </div>
+    )
+  } else if (stacked.length > 0) {
+    const lines: ReactNode[][] = []
+    stacked.forEach(({ child, line }, j) => {
+      const current = lines.at(-1)
+      if (!current || line === 'own') {
+        lines.push([item(child, j)])
+        return
+      }
+      current.push(item(child, j, line === 'join'))
+    })
+    under = (
+      <div className={STACKED_LINES} data-stacked-lines>
+        {lines.map((values, k) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the lines keep their columns' order
+          <div key={k} className={STACKED_LINES_LINE} data-stacked-line>
+            {values}
+          </div>
+        ))}
+      </div>
+    )
+  }
   const styledCells = cells.map((child, i) => {
     // Where columns stack under the name, a column that stays a column, such as
     // a total, sits on the name's line rather than floating mid-row.
@@ -734,6 +789,15 @@ function shareWidths(columns: ColumnDef[], stacks: boolean[]): (Tiers | undefine
       (sum, col, i) => sum + (shows(col, i, tier) ? (shares[i] ?? 0) : 0),
       0,
     )
+    // Where the tier drops columns and every column left holds a share, as when a phone stacks
+    // the rest under the name, the shares take the whole list between them. Otherwise the
+    // auto-laid-out table hands the spare width to the row's actions, and the name, with what
+    // stacks under it, gets half a row.
+    const drops = columns.some((col, i) => !shows(col, i, tier))
+    const unshared = columns.some((col, i) => shows(col, i, tier) && shares[i] === undefined)
+    if (drops && !unshared && kept > 0) {
+      return 100 / kept
+    }
     // The list's width less the shares the tier drops.
     const left = 100 - (total - kept)
     return left > 0 ? 100 / left : 1

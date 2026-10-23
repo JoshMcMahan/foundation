@@ -73,6 +73,7 @@ export {
   type ListViewChrome,
   type ListViewConfig,
   type OrderByOption,
+  type StackLine,
   useListView,
 } from './listView'
 export {

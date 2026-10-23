@@ -267,6 +267,87 @@ describe('ListRow stacked columns', () => {
     }
   })
 
+  it('puts a stacked value on a line of its own, or joins it to the one before after a dot', () => {
+    render(
+      <ListRowActionsProvider
+        view={{
+          ...view,
+          columnClasses: ['', ...Array(4).fill('hidden @[36rem]:table-cell')],
+          columnStacks: [false, true, true, true, true],
+          columnStackLines: [undefined, 'own', 'own', 'own', 'join'],
+        }}
+      >
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameCell icon={<span />} name="wrf-forecast" href={null} />
+              <Table.Item>Running</Table.Item>
+              <Table.Item>maya</Table.Item>
+              <Table.Item>compute</Table.Item>
+              <Table.Item>compute-[01-04]</Table.Item>
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const first = screen.getAllByRole('cell')[0]
+    const group = first?.querySelector('[data-stacked-lines]')
+    expect(group).toHaveClass('@[36rem]:hidden')
+    const lines = Array.from(first?.querySelectorAll('[data-stacked-line]') ?? [])
+    expect(lines.map((line) => line.textContent)).toEqual([
+      'Running',
+      'maya',
+      'computecompute-[01-04]',
+    ])
+    // The joined value brings its own dot, drawn before it, so it is only seen.
+    const [partition, nodes] = Array.from(lines[2]?.querySelectorAll('[data-stacked]') ?? [])
+    expect(partition).not.toHaveClass("before:content-['·']")
+    expect(nodes).toHaveClass("before:content-['·']")
+  })
+
+  it('leaves no dot where a joined value is empty, as a job not yet placed has no nodes', () => {
+    render(
+      <ListRowActionsProvider
+        view={{
+          ...view,
+          columnClasses: ['', 'hidden @[36rem]:table-cell', 'hidden @[36rem]:table-cell'],
+          columnStacks: [false, true, true],
+          columnStackLines: [undefined, 'own', 'join'],
+        }}
+      >
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <Table.Item>lammps-md</Table.Item>
+              <Table.Item>compute</Table.Item>
+              <Table.Item>{''}</Table.Item>
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const items = screen.getAllByRole('cell')[0]?.querySelectorAll('[data-stacked]') ?? []
+    expect(Array.from(items).map((item) => item.textContent)).toEqual(['compute'])
+  })
+
+  it('reads stacked values as secondary text, the size of a subtitle', () => {
+    render(
+      <ListRowActionsProvider view={view}>
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <Table.Item>Ada</Table.Item>
+              <Table.Item>Lisbon</Table.Item>
+              <Table.Item>Running</Table.Item>
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const line = screen.getAllByRole('cell')[0]?.querySelector('[data-stacked-line]')
+    expect(line).toHaveClass('text-xs')
+  })
+
   it('adds nothing for a stacked cell with nothing in it', () => {
     render(
       <ListRowActionsProvider view={view}>

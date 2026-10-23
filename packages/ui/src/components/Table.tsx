@@ -50,12 +50,24 @@ export interface CellPlacement {
   className?: string | undefined
   after?: React.ReactNode
   stacked?: boolean | undefined
+  /** A stacked value joined to the one before it on its line, after a dot. */
+  joined?: boolean | undefined
 }
 
 /** A stacked column's value on the line under a row's name: it flows inline with the others and
  *  wraps between them, never inside a value, which truncates if it is wider than the line. */
 export const STACKED_ITEM =
   'flex min-w-0 max-w-full items-center whitespace-nowrap [&>*]:min-w-0 [&>*]:truncate'
+
+/** A joined stacked value's dot, part of the value so a value that renders nothing leaves none:
+ *  6px either side of it, where the line keeps 12px between values. */
+export const STACKED_JOINED =
+  "-ml-1.5 before:pr-1.5 before:content-['·'] before:text-(--theme-muted-text-color)"
+
+/** Whether a cell's content shows anything: an empty string, like a missing value, doesn't. */
+export function hasContent(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some((child) => child !== '')
+}
 
 /** Set by a list row around each of its cells; a `Table.Item` takes what it asks. */
 export const CellPlacementContext = createContext<CellPlacement | null>(null)
@@ -71,8 +83,8 @@ function Item({ wrap = false, children, className, ...tdProps }: ItemProps) {
   if (placed?.stacked) {
     // One item of the line under the name, shown only where the column's own cell has given way
     // (see `ListRow`); a cell with nothing in it, such as a status only some rows have, adds none.
-    return React.Children.toArray(children).length > 0 ? (
-      <div className={STACKED_ITEM} data-stacked>
+    return hasContent(children) ? (
+      <div className={cx(STACKED_ITEM, placed.joined && STACKED_JOINED)} data-stacked>
         {children}
       </div>
     ) : null

@@ -602,6 +602,39 @@ describe('column widths', () => {
     expect(type).toHaveClass('@[52rem]:w-(--share-wide)', '@[36rem]:w-(--share-medium)')
   })
 
+  it('gives the name the whole row on a phone where the columns left beside it all stack', () => {
+    function NamedShare() {
+      const view = useListView<unknown>({
+        storageKey: 'name-share',
+        columns: [
+          { key: 'name', label: 'Name', alwaysVisible: true, width: '28%' },
+          { key: 'state', label: 'State' },
+          { key: 'user', label: 'User' },
+          { key: 'runtime', label: 'Runtime', priority: 'medium' },
+        ],
+      })
+      return (
+        <ListRowActionsProvider view={view}>
+          <Table {...listTableProps}>
+            <ListColumns view={view} />
+          </Table>
+        </ListRowActionsProvider>
+      )
+    }
+    render(
+      <UIProvider>
+        <NamedShare />
+      </UIProvider>,
+    )
+    const name = header('Name')
+    // Beside the other columns it keeps its own share.
+    expect(name.style.getPropertyValue('--share-wide')).toBe('28%')
+    expect(name.style.getPropertyValue('--share-medium')).toBe('28%')
+    // On a phone the rest stack under it or drop, so it takes the row rather than leaving the spare
+    // width to the row's actions.
+    expect(name.style.getPropertyValue('--share-narrow')).toBe('100%')
+  })
+
   it('keeps a locked column out of the picker at its own width, and only the name at a minimum', () => {
     render(
       <UIProvider>
