@@ -382,16 +382,10 @@ export function ListRow({
   const item = (child: ReactNode, j: number, joined = false) =>
     // A bare `<td>` can't show as an item, so its content does.
     isValidElement(child) && child.type === 'td' ? (
-      <div
-        // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
-        key={j}
-        className={cx(STACKED_ITEM, joined && STACKED_JOINED)}
-        data-stacked
-      >
+      <div key={j} className={cx(STACKED_ITEM, joined && STACKED_JOINED)} data-stacked>
         {(child as ReactElement<{ children?: ReactNode }>).props.children}
       </div>
     ) : (
-      // biome-ignore lint/suspicious/noArrayIndexKey: stacked cells keep their column order
       <CellPlacementContext key={j} value={joined ? STACKED_JOINED_PLACEMENT : STACKED}>
         {child}
       </CellPlacementContext>
