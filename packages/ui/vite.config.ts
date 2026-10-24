@@ -67,6 +67,7 @@ export default defineConfig({
         index: 'src/index.ts',
         icons: 'src/icons.tsx',
         brandIcons: 'src/brandIcons.tsx',
+        'app-frame/index': 'src/app-frame/index.tsx',
         'theme/index': 'src/theme/index.ts',
         'logviewer/index': 'src/logviewer/index.ts',
         'graph/index': 'src/graph/index.ts',

@@ -34,7 +34,9 @@
     "./ai": "./src/ai/index.ts",
     "./ai/openai": "./src/ai/adapter/openai/index.ts",
     "./ai/mock": "./src/ai/adapter/mock/index.ts",
-    "./ai.css": "./src/ai/ai.css"
+    "./ai.css": "./src/ai/ai.css",
+    "./app-frame": "./src/app-frame/index.tsx",
+    "./app-frame.css": "./src/app-frame/app-frame.css"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -102,7 +104,12 @@
         "types": "./dist/ai/adapter/mock/index.d.ts",
         "import": "./dist/ai/adapter/mock/index.js"
       },
-      "./ai.css": "./dist/ai/ai.css"
+      "./ai.css": "./dist/ai/ai.css",
+      "./app-frame": {
+        "types": "./dist/app-frame/index.d.ts",
+        "import": "./dist/app-frame/index.js"
+      },
+      "./app-frame.css": "./dist/app-frame/app-frame.css"
     }
   },
   "files": [
@@ -111,7 +118,7 @@
   "scripts": {
     "build": "vite build && pnpm build:types && pnpm build:css",
     "build:types": "tsc -p tsconfig.build.json && node scripts/declaration-extensions.mjs",
-    "build:css": "mkdir -p dist/styles dist/logviewer dist/ai && cp src/styles/theme.css src/styles/base.css src/styles/fonts.css src/styles/*.woff2 dist/styles/ && tailwindcss -i ./src/styles.css -o ./dist/styles.css --minify && cp src/logviewer/logviewer.css dist/logviewer/ && cp src/ai/ai.css dist/ai/",
+    "build:css": "mkdir -p dist/styles dist/logviewer dist/ai && cp src/styles/theme.css src/styles/base.css src/styles/fonts.css src/styles/*.woff2 dist/styles/ && tailwindcss -i ./src/styles.css -o ./dist/styles.css --minify && cp src/logviewer/logviewer.css dist/logviewer/ && cp src/ai/ai.css dist/ai/ && mkdir -p dist/app-frame && cp src/app-frame/app-frame.css dist/app-frame/",
     "clean": "rm -rf dist",
     "test": "vitest run",
     "lint:package": "publint --strict",

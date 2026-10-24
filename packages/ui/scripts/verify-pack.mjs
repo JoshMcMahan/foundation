@@ -34,6 +34,7 @@ const CSS_ENTRYPOINTS = [
   'fonts.css',
   'logviewer.css',
   'ai.css',
+  'app-frame.css',
 ]
 
 const uiPkg = JSON.parse(readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
@@ -199,6 +200,7 @@ try {
       "import * as root from '@parallelworks/ui'",
       "import * as icons from '@parallelworks/ui/icons'",
       "import * as brandIcons from '@parallelworks/ui/brand-icons'",
+      "import * as appFrame from '@parallelworks/ui/app-frame'",
       "import * as theme from '@parallelworks/ui/theme'",
       "import * as logviewer from '@parallelworks/ui/logviewer'",
       "import * as graph from '@parallelworks/ui/graph'",
@@ -214,6 +216,9 @@ try {
       // biome-ignore lint/suspicious/noTemplateCurlyInString: this line is source for the generated script, which interpolates
       '  if (!(key in mod)) throw new Error(`${name} is missing export ${key}`)',
       '}',
+      "need(appFrame, 'app-frame', 'AppFrame')",
+      "need(appFrame, 'app-frame', 'AppFrameNavItem')",
+      "need(appFrame, 'app-frame', 'AppFrameToggle')",
       "need(root, 'root', 'deriveTheme')",
       "need(root, 'root', 'Table')",
       "need(root, 'root', 'Loader')",
@@ -299,6 +304,9 @@ try {
   writeFileSync(
     path.join(fixture, 'consumer.ts'),
     [
+      "import { AppFrame, type AppFrameProps } from '@parallelworks/ui/app-frame'",
+      'export const frameProps: AppFrameProps = { navigation: null, children: null }',
+      'export const frame = AppFrame',
       "import { deriveTheme, parseTheme, schemeFor, THEME_PRESETS } from '@parallelworks/ui/theme'",
       "import type { Theme, ThemeVariables } from '@parallelworks/ui/theme'",
       "import { AddIcon, TrashIcon, type IconType } from '@parallelworks/ui/icons'",

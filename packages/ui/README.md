@@ -8,6 +8,7 @@ so an application ships only what it imports:
 | `.` | theme contract, primitives (buttons, inputs, tables, tooltips, modals, dropdowns, settings layouts, page header), `UIProvider` |
 | `./theme` | theme seeds and presets, `generateTheme`, `applyTheme`, `fitSeed` |
 | `./icons` | the icon barrel |
+| `./app-frame` | inset application frame, resizable navigation, icon rail, and mobile drawer |
 | `./list` | list pages, tables, row menus and list controls |
 | `./form` | `DynamicForm` and its field registry |
 | `./graph` | job dependency graph and tree view, and the visual workflow editor: the graph, the run form as an inputs editor, and their dialogs |
@@ -16,7 +17,7 @@ so an application ships only what it imports:
 | `./file-explorer` | object storage explorer over a host-supplied provider |
 | `./access` | `AccessDrawer`: who has access to a resource, and granting roles to people and groups |
 | `./ai`, `./ai/openai`, `./ai/mock` | chat interface and adapters |
-| `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css` | stylesheets |
+| `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css`, `./app-frame.css` | stylesheets |
 
 Hosts bind strings, navigation, data hooks and the workflow engine through
 `UIProvider`, which also shows the package's toasts:
@@ -1245,3 +1246,75 @@ colors and sizing can obscure labels or make controls hard to use. Keep trusted
 confirmation summaries, permissions, and security notices outside the authored
 layout. Full stylesheets or mutually untrusted embedded applications require a
 separate isolation design.
+
+## Application frame
+
+`AppFrame` provides a sidebar and an inset content surface. The sidebar collapses
+to a 64px icon rail, resizes with a pointer or keyboard, and becomes a modal
+navigation drawer below 768px. Its header, scrolling navigation, and footer stay
+separate from the page's scrolling content. Long navigation labels truncate within
+the current sidebar width; badges remain visible. Navigation scrollbar tracks stay
+hidden while wheel and keyboard scrolling keep destinations reachable in short
+containers.
+
+```tsx
+import { AppFrame, AppFrameNavItem, AppFrameToggle } from '@parallelworks/ui/app-frame'
+import '@parallelworks/ui/app-frame.css'
+
+<AppFrame
+  navigationKey={pathname}
+  brand={({ expanded }) => expanded ? <Wordmark /> : <Mark />}
+  navigation={
+    <nav aria-label="Main navigation">
+      <AppFrameNavItem label="Projects" icon={<ProjectsIcon />} href="/projects" selected />
+    </nav>
+  }
+  footer={({ isMobile }) => !isMobile && <AppFrameToggle />}
+  header={<PageTools />}
+>
+  <ProjectList />
+</AppFrame>
+```
+
+`PageTools` can use `useAppFrame().isMobile` to show an `AppFrameToggle` on small
+screens. The drawer supplies its own close button, traps focus, closes on Escape
+or an outside click, and returns focus to its opener. Navigation items close it
+on an ordinary click; modified links keep the current view in place. A changed
+`navigationKey` also dismisses it.
+Reopening mobile navigation restores its scroll position within the current
+section. Closing it unmounts its contents, including any nested popups.
+Use `navigationResetKey` for a section identifier when navigation scroll should
+survive route changes within that section. It defaults to `navigationKey`.
+`sidebarProps` passes host attributes, styling, and events to the desktop sidebar
+and mobile dialog, for example a navigation context menu. The frame retains its
+own layout, dialog semantics, and measured width.
+
+The host owns routing, persistence, identity, permissions, and page tools. Links
+use `UIProvider`'s link slot. Pass `expanded`/`onExpandedChange` and
+`width`/`onWidthChange` to persist preferences, or use the uncontrolled defaults.
+Pointer drags preview their width locally and call `onWidthChange` once when the
+gesture ends, so persistence does not run on every pointer movement.
+`defaultWidth` is 240, bounded by `minWidth` (200) and `maxWidth` (400); compact
+applications can choose smaller bounds. The resize handle supports arrows, Home,
+End, drag-to-collapse, and double-click to restore `defaultWidth`. Logical layout
+and resizing support right-to-left direction. Reduced motion disables resizing
+and drawer transitions. `resizable={false}` removes the handle.
+
+`brand`, `navigation`, and `footer` accept nodes or functions receiving the frame
+state. `header` sits above the main content; `banner` spans both columns.
+`fullBleed` removes the 8px inset and 12px rounded border. The frame fills the
+viewport by default; pass `style={{ height: '100%' }}` for a bounded container.
+The mobile drawer stays inside the frame, below its banner, and uses the chosen
+sidebar width, capped to leave 48px for dismissal. It slides from the navigation
+edge while the backdrop fades; both finish in 200ms and respect reduced motion.
+
+The five `--theme-sidebar-*` tokens produced by `generateTheme` style navigation:
+`bg`, `text`, `hover`, `active-bg`, and `active-text`. Without them the frame uses
+the ordinary surface and accent tokens. Content uses `--theme-app-bg` and
+`--theme-border`. Supply translated `labels` for navigation, skip, open, close,
+expand, collapse, and resize actions. The frame owns the main landmark and skip
+link; put page content inside it without nesting a second `<main>`.
+
+Frame styles use the `pw-ui` cascade layer. Put broad host element defaults
+(such as anchor colors and scrollbar styling) in a lower-priority layer declared
+before the package styles, so they do not replace navigation states.

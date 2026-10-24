@@ -4,6 +4,7 @@
 // build:css first.
 import '../dist/styles/fonts.css'
 import '../dist/styles.css'
+import '../dist/app-frame/app-frame.css'
 import '../dist/logviewer/logviewer.css'
 import * as parser from '@parallelworks/workflow-parser'
 import type { Decorator, Preview } from '@storybook/react-vite'
