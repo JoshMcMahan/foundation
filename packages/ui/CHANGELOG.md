@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.93.0](https://github.com/parallelworks/foundation/compare/ui-v0.92.0...ui-v0.93.0) (2026-10-24)
+
+
+### Features
+
+* **ui:** add a shared application frame with responsive navigation ([#506](https://github.com/parallelworks/foundation/issues/506)) ([f8a474a](https://github.com/parallelworks/foundation/commit/f8a474a04f67e5a4b2b2e5da3062b508f577be4e))
+
+
+### Bug Fixes
+
+* **ui:** drop two lint suppressions the stacked lines don't need ([#511](https://github.com/parallelworks/foundation/issues/511)) ([f4292ac](https://github.com/parallelworks/foundation/commit/f4292ac0162a56e82d93bb74854f95bafdd061b9))
+
 ## [0.92.0](https://github.com/parallelworks/foundation/compare/ui-v0.91.0...ui-v0.92.0) (2026-10-23)
 
 
