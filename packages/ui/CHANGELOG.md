@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.94.0](https://github.com/parallelworks/foundation/compare/ui-v0.93.0...ui-v0.94.0) (2026-10-24)
+
+
+### Features
+
+* **ui:** on a phone a list's search takes the whole header bar, and the header never lets its actions overlap the breadcrumbs ([#514](https://github.com/parallelworks/foundation/issues/514)) ([cc8818f](https://github.com/parallelworks/foundation/commit/cc8818fd6b5f353517347cc6fce29c240fc6bf03))
+
+
+### Bug Fixes
+
+* **ui:** a screen reader hears a list's count change to no matches, and back ([#513](https://github.com/parallelworks/foundation/issues/513)) ([36ef248](https://github.com/parallelworks/foundation/commit/36ef2488682bb1e955212ab1dfb0bd512acb0c9a))
+
 ## [0.93.0](https://github.com/parallelworks/foundation/compare/ui-v0.92.0...ui-v0.93.0) (2026-10-24)
 
 
