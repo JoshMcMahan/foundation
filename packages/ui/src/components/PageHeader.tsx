@@ -13,7 +13,13 @@ import { MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
 import { type Breadcrumb, Breadcrumbs } from './Breadcrumbs'
 import { buttonClasses } from './buttonClasses'
-import { HeaderActionsFit, HeaderActionsFitContext, overflowingActions } from './headerActionsFit'
+import {
+  ACTION_GAP,
+  HeaderActionsFit,
+  HeaderActionsFitContext,
+  MENU_BUTTON_WIDTH,
+  overflowingActions,
+} from './headerActionsFit'
 import { useSlots, useStrings } from './Provider'
 import { type PageHeaderRegion, PageHeaderStore, type RegionNodes } from './pageHeaderStore'
 
@@ -260,10 +266,18 @@ function HeaderLayout({
   const [row, setRow] = useState<HTMLDivElement | null>(null)
   const [lead, setLead] = useState<HTMLDivElement | null>(null)
   const [end, setEnd] = useState<HTMLDivElement | null>(null)
+  const [cover, setCover] = useState<HTMLDivElement | null>(null)
   useActionsFit(fit, row, lead, end)
+  useLayoutEffect(() => {
+    fit.setCoverNode(cover)
+    return () => fit.setCoverNode(null)
+  }, [fit, cover])
   useSyncExternalStore(fit.subscribe, fit.getVersion, fit.getVersion)
   const moved = fit.menu()
   const hasTrail = breadcrumbs.length > 0
+  // A search that takes the bar covers the rest, which stays laid out as it was, so closing the
+  // search puts the bar back exactly, but can't be seen, reached or pressed meanwhile.
+  const covered = fit.isCovered()
   return (
     <div
       className={cx(
@@ -276,12 +290,16 @@ function HeaderLayout({
       <div
         ref={setRow}
         className={cx(
-          'flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
+          'relative flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
           compact ? 'h-8' : 'h-12',
         )}
       >
         {/* Grows to the room the actions leave, so the trail can measure it. */}
-        <div ref={setLead} className="flex min-w-0 flex-1 items-center gap-2">
+        <div
+          ref={setLead}
+          inert={covered}
+          className={cx('flex min-w-0 flex-1 items-center gap-2', covered && 'invisible')}
+        >
           {navToggle?.()}
           {hasTrail && <Breadcrumbs crumbs={breadcrumbs} heading={heading} />}
           {present(titleActions) && (
@@ -290,7 +308,11 @@ function HeaderLayout({
           {hasTrail && breadcrumbPin?.({ crumbs: breadcrumbs })}
         </div>
         {present(actions) && (
-          <div ref={setEnd} className="flex shrink-0 items-center gap-1">
+          <div
+            ref={setEnd}
+            inert={covered}
+            className={cx('flex shrink-0 items-center gap-1', covered && 'invisible')}
+          >
             <HeaderActionsFitContext value={fit}>{actions}</HeaderActionsFitContext>
             {moved.length > 0 && (
               <ActionMenu
@@ -303,6 +325,12 @@ function HeaderLayout({
             )}
           </div>
         )}
+        {/* The layer a search takes the bar in, from its start to its end. It stays laid out,
+            so the field can take focus the moment it arrives. */}
+        <div
+          ref={setCover}
+          className="pointer-events-none absolute inset-0 flex items-center px-4"
+        />
       </div>
       {present(toolbar) && <div className="px-4">{toolbar}</div>}
     </div>
@@ -376,14 +404,17 @@ function useActionsFit(
         Number.parseFloat(style.paddingRight || '0') -
         leadMin -
         ROW_GAP
+      const shown = end.getBoundingClientRect().width
+      const moved = items.filter((id) => fit.isOverflowed(id))
       fit.setOverflow(
         overflowingActions(
           items.map((id) => ({ id, width: width(id) })),
-          end.getBoundingClientRect().width,
-          items.filter((id) => fit.isOverflowed(id)),
+          shown,
+          moved,
           room,
         ),
       )
+      fit.setSearchCovers(searchCovers(end, items, moved, width, shown, room))
     }
     measure()
     const resize = new ResizeObserver(measure)
@@ -399,4 +430,37 @@ function useActionsFit(
       changes.disconnect()
     }
   }, [fit, row, lead, end, widths])
+}
+
+// The search field's width where it opens in the bar (w-72).
+const SEARCH_FIELD_WIDTH = 288
+
+/**
+ * Whether a search in the actions, opened in place, would leave the trail too little room even
+ * with every action in the "…" menu, so it takes the whole bar instead. It works from the
+ * actions' width as they are now, whether the search shows as its button or its field, so the
+ * answer is the same either way.
+ */
+function searchCovers(
+  end: HTMLElement,
+  items: readonly string[],
+  moved: readonly string[],
+  width: (id: string) => number,
+  shown: number,
+  room: number,
+): boolean {
+  const search = end.querySelector<HTMLElement>('[data-header-search]')
+  const control = search?.firstElementChild
+  if (!control) {
+    return false
+  }
+  let least = shown - control.getBoundingClientRect().width + SEARCH_FIELD_WIDTH
+  const still = items.filter((id) => !moved.includes(id))
+  if (still.length > 0) {
+    least -= still.reduce((sum, id) => sum + width(id) + ACTION_GAP, 0)
+    if (moved.length === 0) {
+      least += MENU_BUTTON_WIDTH + ACTION_GAP
+    }
+  }
+  return least > room + 0.5
 }

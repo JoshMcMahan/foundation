@@ -4,11 +4,19 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { Button } from '../components/Button'
 import { useContextMenu } from '../components/ContextMenu'
 import { PageHeader, PageHeaderBar, PageHeaderProvider } from '../components/PageHeader'
-import { PageHeaderAddButton } from '../components/PageHeaderAction'
+import { PageHeaderAction, PageHeaderAddButton } from '../components/PageHeaderAction'
 import { Pagination } from '../components/Pagination'
+import { type UILinkComponent, UIProvider } from '../components/Provider'
 import { StatusLabel } from '../components/StatusLabel'
 import { Table } from '../components/Table'
-import { ComputeIcon, KeyIcon, RefreshIcon, StorageIcon } from '../icons'
+import {
+  AllocationIcon,
+  ComputeIcon,
+  KeyIcon,
+  RefreshIcon,
+  SidebarOpenIcon,
+  StorageIcon,
+} from '../icons'
 import { ActionToolbar } from './ActionToolbar'
 import { ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
 import { ListCellText, listTableProps, NameCell } from './ListTable'
@@ -582,4 +590,159 @@ export const StackedOnLines: StoryObj = {
       'computecompute-[01-04]',
     ])
   },
+}
+
+interface Allocation {
+  team: string
+  lead: string
+  budget: string
+  used: string
+}
+
+const ALLOCATIONS: Allocation[] = [
+  { team: 'Climate modeling', lead: 'maya', budget: '$42,000', used: '68%' },
+  { team: 'Genomics pipeline', lead: 'arjun', budget: '$18,500', used: '91%' },
+  { team: 'Materials simulation', lead: 'lena', budget: '$27,000', used: '34%' },
+  { team: 'Wind tunnel CFD', lead: 'tomas', budget: '$12,750', used: '12%' },
+]
+
+// Links render as anchors that go nowhere, as the workshop's own do.
+const StoryLink: UILinkComponent = ({ href, onClick, children, ...rest }) => (
+  <a
+    href={href}
+    {...rest}
+    onClick={(e) => {
+      e.preventDefault()
+      onClick?.(e)
+    }}
+  >
+    {children}
+  </a>
+)
+
+// The host's navigation toggle, where an app frame puts it: first in the bar.
+const headerSlots = {
+  link: StoryLink,
+  navToggle: () => (
+    <button
+      type="button"
+      aria-label="Open navigation"
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-(--theme-muted-text-color) hover:bg-(--theme-muted-panel-bg)"
+    >
+      <SidebarOpenIcon />
+    </button>
+  ),
+}
+
+function AllocationsPage({ searching }: { searching: boolean }) {
+  const search = useListSearch(true)
+  const view = useListView<Allocation>({
+    storageKey: 'story-header-allocations',
+    columns: [
+      { key: 'team', label: 'Team', alwaysVisible: true },
+      { key: 'budget', label: 'Budget', align: 'end' },
+      { key: 'used', label: 'Used', align: 'end', stack: false },
+    ],
+    facets: [
+      {
+        key: 'lead',
+        label: 'Lead',
+        options: ALLOCATIONS.map((row) => ({ value: row.lead, label: row.lead })),
+        matches: (row, selected) => selected.includes(row.lead),
+      },
+    ],
+  })
+  const { openMenu, contextMenu } = useContextMenu()
+  const goTo = useListNavigate()
+  const { setFilter, openSearch } = search
+  useEffect(() => {
+    if (searching) {
+      openSearch()
+      setFilter('sim')
+    }
+  }, [searching, setFilter, openSearch])
+  const query = search.filter.trim().toLowerCase()
+  const shown = view.applyFilters(
+    ALLOCATIONS.filter((row) => row.team.toLowerCase().includes(query)),
+  )
+  return (
+    <UIProvider slots={headerSlots}>
+      <PageHeaderProvider>
+        <div className="flex min-h-screen flex-col bg-(--theme-app-bg)">
+          <PageHeaderBar />
+          <PageHeader
+            breadcrumbs={[
+              { label: 'Billing', href: '/billing' },
+              { label: 'Budgets', href: '/billing/budgets' },
+              { label: 'Research computing' },
+            ]}
+            actions={
+              <>
+                <ListToolbar view={view} search={search} searchLabel="Search allocations" />
+                <PageHeaderAction
+                  icon={AllocationIcon}
+                  label="Edit allocations"
+                  onClick={() => {}}
+                />
+                <PageHeaderAddButton label="New allocation" onClick={() => {}} />
+              </>
+            }
+          />
+          <ListPage
+            view={view}
+            total={ALLOCATIONS.length}
+            matches={shown.length}
+            count={{
+              noun: 'allocation',
+              nounPlural: 'allocations',
+              filterActive: query !== '' || view.activeFilterCount > 0,
+            }}
+            noMatches="No allocations match"
+          >
+            <Table {...listTableProps}>
+              <ListColumns view={view} />
+              {shown.map((row) => (
+                <ListRow
+                  key={row.team}
+                  href={null}
+                  items={[{ label: 'Edit', onClick: () => {} }]}
+                  goTo={goTo}
+                  openMenu={openMenu}
+                >
+                  <NameCell
+                    icon={<AllocationIcon />}
+                    name={row.team}
+                    subtitle={`Led by ${row.lead}`}
+                    href={null}
+                  />
+                  <Table.Item>
+                    <ListCellText className="tabular-nums">{row.budget}</ListCellText>
+                  </Table.Item>
+                  <Table.Item>
+                    <ListCellText className="tabular-nums">{row.used}</ListCellText>
+                  </Table.Item>
+                </ListRow>
+              ))}
+            </Table>
+          </ListPage>
+          {contextMenu}
+        </div>
+      </PageHeaderProvider>
+    </UIProvider>
+  )
+}
+
+/** A list whose controls sit in the page header, so its count can sit under its rows: the
+ *  filter, display options and search, then the page's own actions. On a phone the header folds
+ *  its actions into "…" and the trail to the current page before anything overlaps. */
+export const ControlsInTheHeader: StoryObj = {
+  parameters: { layout: 'fullscreen' },
+  render: () => <AllocationsPage searching={false} />,
+}
+
+/** The search open with a query typed. Where the field fits beside the trail it opens in place;
+ *  on a narrower header it takes the whole bar until it closes. */
+export const ControlsInTheHeaderSearching: StoryObj = {
+  parameters: { layout: 'fullscreen' },
+  render: () => <AllocationsPage searching />,
 }

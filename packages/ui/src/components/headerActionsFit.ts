@@ -11,6 +11,9 @@ import type { MenuEntry } from './MenuEntries'
 export class HeaderActionsFit {
   private entries = new Map<string, MenuEntry>()
   private overflow: readonly string[] = []
+  private covers = false
+  private cover: HTMLElement | null = null
+  private coverers = new Set<string>()
   private version = 0
   private listeners = new Set<() => void>()
 
@@ -60,6 +63,48 @@ export class HeaderActionsFit {
     this.changed()
   }
 
+  /** Whether an open search would take the whole bar: its field, opened in place, wouldn't fit
+   *  beside the trail even with every action in the "…" menu. The bar measures it. */
+  searchCovers(): boolean {
+    return this.covers
+  }
+
+  setSearchCovers(covers: boolean) {
+    if (covers !== this.covers) {
+      this.covers = covers
+      this.changed()
+    }
+  }
+
+  /** Where a search that takes the bar renders its field: a layer over the bar's row. */
+  coverNode(): HTMLElement | null {
+    return this.cover
+  }
+
+  setCoverNode(node: HTMLElement | null) {
+    if (node !== this.cover) {
+      this.cover = node
+      this.changed()
+    }
+  }
+
+  /** Whether a search has the bar now, so the bar hides and disables what it covers. */
+  isCovered(): boolean {
+    return this.coverers.size > 0
+  }
+
+  setCovering(id: string, covering: boolean) {
+    if (covering === this.coverers.has(id)) {
+      return
+    }
+    if (covering) {
+      this.coverers.add(id)
+    } else {
+      this.coverers.delete(id)
+    }
+    this.changed()
+  }
+
   private changed() {
     this.version++
     for (const listener of this.listeners) {
@@ -73,8 +118,8 @@ export class HeaderActionsFit {
 export const HeaderActionsFitContext = createContext<HeaderActionsFit | null>(null)
 
 // gap-1 between the bar's actions, and the size-6 "…" button.
-const ACTION_GAP = 4
-const MENU_BUTTON_WIDTH = 24
+export const ACTION_GAP = 4
+export const MENU_BUTTON_WIDTH = 24
 
 /**
  * The trailing actions to move into the "…" menu so the rest fit in `room`

@@ -654,6 +654,8 @@ export interface UIStrings {
     /** Where the page sits, for `Pagination` too narrow for page numbers: it shows "5 / 12". */
     pageOfTotal: (page: number, total: number) => string
     removeSearchTerm: (term: string) => string
+    /** The search button's name while a query it holds narrows the list, its field closed. */
+    searchActive: (label: string) => string
   }
   /** The chip row of a list's active filters, its Filter menu and its pickers. Field and option
    *  labels come from the host's fields, already translated. */
@@ -1567,6 +1569,7 @@ const DEFAULTS: UIProviderValue = {
       page: (page) => `Page ${page}`,
       pageOfTotal: (page, total) => `Page ${page} of ${total}`,
       removeSearchTerm: (term) => `Remove filter ${term}`,
+      searchActive: (label) => `${label}, on`,
     },
     filters: {
       addFilter: 'Filter',

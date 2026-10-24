@@ -1,9 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  createContext,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type Ref,
+  use,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { buttonClasses } from '../components/buttonClasses'
+import { HeaderActionsFitContext } from '../components/headerActionsFit'
 import { ariaKeyShortcuts } from '../components/Kbd'
 import { useLocale, usePersistedState, useStrings } from '../components/Provider'
 import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
+import { cx } from '../cx'
 import { formatInteger } from '../format'
 import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
@@ -110,9 +126,79 @@ export function ListSearchControl({
 }) {
   const { common, list } = useStrings()
   const label = labelProp ?? common.search
-  if (search.searchOpen || search.terms.length > 0) {
-    return (
-      <div className="flex min-h-7 w-72 max-w-[55vw] flex-wrap items-center gap-1.5 rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-0.5">
+  // In a page header's actions, the bar says whether an open search fits beside the trail or
+  // takes the whole bar.
+  const fit = use(HeaderActionsFitContext)
+  useSyncExternalStore(fit?.subscribe ?? subscribeNever, fit?.getVersion ?? zero, zero)
+  const covers = fit?.searchCovers() ?? false
+  const coverNode = fit?.coverNode() ?? null
+  const covering = covers && search.searchOpen && coverNode !== null
+  // Where the search takes the bar, it shows as its button until it opens, even while terms
+  // narrow the list; elsewhere the terms keep the field open.
+  const field = covering || (!covers && (search.searchOpen || search.terms.length > 0))
+  const active = search.terms.length > 0 || search.filter.trim() !== ''
+  const id = useId()
+  useLayoutEffect(() => {
+    fit?.setCovering(id, covering)
+  }, [fit, id, covering])
+  useLayoutEffect(() => (fit ? () => fit.setCovering(id, false) : undefined), [fit, id])
+
+  // Closing the field from inside it hands focus back to the button that opened it, rather than
+  // dropping it to the page.
+  const button = useRef<HTMLButtonElement>(null)
+  const returnFocus = useRef(false)
+  useLayoutEffect(() => {
+    if (!field && returnFocus.current) {
+      returnFocus.current = false
+      // After the bar has re-rendered, so a button it covered is no longer inert.
+      queueMicrotask(() => button.current?.focus())
+    }
+  })
+  // The field moves between the bar's row and the layer over it as the bar resizes; it keeps
+  // focus when it does.
+  const { inputRef, searchOpen } = search
+  const wasCovering = useRef(covering)
+  useLayoutEffect(() => {
+    if (wasCovering.current === covering) {
+      return
+    }
+    wasCovering.current = covering
+    if (!searchOpen) {
+      return
+    }
+    // Once the bar has re-rendered: taking it makes the control that opened the search inert.
+    queueMicrotask(() => {
+      const focused = document.activeElement
+      if (!focused || focused === document.body || coverNode?.parentElement?.contains(focused)) {
+        inputRef.current?.focus()
+      }
+    })
+  })
+
+  if (field) {
+    const close = () => {
+      returnFocus.current = true
+      search.clearSearch()
+    }
+    // Escape belongs to the field, not the window: a dialog or menu open over the list closes on
+    // its own Escape and keeps the search.
+    const closeOnEscape = (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (e.key === 'Escape' && search.searchOpen) {
+        e.preventDefault()
+        // The terms keep the field in place, and focus with it.
+        returnFocus.current = covering || search.terms.length === 0
+        search.closeSearch()
+        return true
+      }
+      return false
+    }
+    const box = (
+      <div
+        className={cx(
+          'flex flex-wrap items-center gap-1.5 rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-0.5',
+          covering ? 'pointer-events-auto min-h-8 w-full' : 'min-h-7 w-72 max-w-[55vw]',
+        )}
+      >
         <SearchIcon className="w-3.5 h-3.5 shrink-0 text-(--theme-muted-text-color)" />
         {search.terms.map((term) => (
           <span
@@ -137,12 +223,10 @@ export function ListSearchControl({
           onFocus={search.openSearch}
           aria-label={label}
           onKeyDown={(e) => {
-            // Escape belongs to the field, not the window: a dialog or menu
-            // open over the list closes on its own Escape and keeps the search.
-            if (e.key === 'Escape' && search.searchOpen) {
-              e.preventDefault()
-              search.closeSearch()
-            } else if (e.key === 'Enter') {
+            if (closeOnEscape(e)) {
+              return
+            }
+            if (e.key === 'Enter') {
               e.preventDefault()
               search.addTerm(search.filter)
             } else if (e.key === 'Backspace' && !search.filter) {
@@ -157,25 +241,92 @@ export function ListSearchControl({
         />
         <button
           type="button"
-          onClick={search.clearSearch}
+          onClick={close}
+          onKeyDown={closeOnEscape}
           aria-label={common.clearSearch}
-          className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
+          className={cx(
+            'shrink-0 rounded text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors',
+            // A finger's target where the field has the bar.
+            covering ? '-me-1 inline-flex size-6 items-center justify-center' : 'p-0.5',
+          )}
         >
           <CloseIcon className="w-3 h-3" />
         </button>
       </div>
     )
+    if (covering && coverNode) {
+      // The button keeps its place in the covered row, so the bar's layout doesn't move.
+      return (
+        <>
+          <span data-header-search="" className="contents">
+            <SearchButton
+              label={label}
+              name={active ? list.searchActive(label) : label}
+              active={active}
+              onOpen={search.openSearch}
+            />
+          </span>
+          {createPortal(box, coverNode)}
+        </>
+      )
+    }
+    return fit ? (
+      <span data-header-search="" className="contents">
+        {box}
+      </span>
+    ) : (
+      box
+    )
   }
+  const control = (
+    <SearchButton
+      ref={button}
+      label={label}
+      name={active ? list.searchActive(label) : label}
+      active={active}
+      onOpen={search.openSearch}
+    />
+  )
+  return fit ? (
+    <span data-header-search="" className="contents">
+      {control}
+    </span>
+  ) : (
+    control
+  )
+}
+
+const subscribeNever = () => () => {}
+const zero = () => 0
+
+/** The search closed: a button, with a dot while a query it holds narrows the list. */
+function SearchButton({
+  ref,
+  label,
+  name = label,
+  active,
+  onOpen,
+}: {
+  ref?: Ref<HTMLButtonElement>
+  label: string
+  name?: string
+  active: boolean
+  onOpen: () => void
+}) {
   return (
     <Tooltip content={label} shortcut="/">
       <button
+        ref={ref}
         type="button"
-        onClick={search.openSearch}
-        aria-label={label}
+        onClick={onOpen}
+        aria-label={name}
         aria-keyshortcuts={`/ ${ariaKeyShortcuts('Mod+F')}`}
         className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
       >
         <SearchIcon />
+        {active && (
+          <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-(--theme-link)" />
+        )}
       </button>
     </Tooltip>
   )

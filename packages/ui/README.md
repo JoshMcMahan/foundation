@@ -228,6 +228,14 @@ A page declares its header in one place, and the shell shows it:
   such as a log's follow and refresh: its buttons are outlined, and `primary`
   fills the one, if any, the panel leads to.
   **`toolbar`** is a row under the bar, such as tabs or a time range.
+- A list's controls may sit in **`actions`**: a `ListToolbar` there, with its
+  filter, display options and search, leaves the list's count under its rows.
+  Where its search field, opened, wouldn't fit beside the trail, as on a phone,
+  the open search takes the whole bar until it closes; the rest of the bar
+  stays as it was underneath, hidden and `inert`, and focus returns to the
+  search button. While a search term narrows the list with the field closed,
+  the button shows a dot and its name says so (`searchActive`). Nothing to set
+  up: the bar measures it.
 - **`hidden`** takes the bar away while the page is mounted, for a page that
   fills the window.
 
