@@ -201,16 +201,34 @@ export const ListToolbarInlineContext = createContext(false)
 
 /** The count's words, "7 tokens" or "2 of 7 tokens", as a status so a screen reader hears the
  *  count change as a filter narrows it. */
-export function ListCountText({ total, matches, filterActive, noun, nounPlural }: ListCountProps) {
+export function ListCountText(props: ListCountProps) {
+  return <ListCountStatus count={props} />
+}
+
+/** A list's count as a status that can say nothing yet: kept mounted while its text is empty, so
+ *  a screen reader hears the count when it arrives, as it would not from a status that mounts
+ *  with its text already in. */
+export function ListCountStatus({
+  count,
+  className = 'text-[13px] text-(--theme-muted-text-color)',
+}: {
+  count: ListCountProps | undefined
+  className?: string | undefined
+}) {
   const { list: t } = useStrings()
   // Grouped in the host's locale: 1,204 or 1.204.
   const locale = useLocale()
-  const count = (n: number) => formatInteger(n, locale)
+  const n = (value: number) => formatInteger(value, locale)
+  let words = ''
+  if (count) {
+    const { total, matches, filterActive, noun, nounPlural } = count
+    words = filterActive
+      ? t.matchCount(n(matches), n(total), nounPlural)
+      : t.count(n(total), total === 1 ? noun : nounPlural)
+  }
   return (
-    <span role="status" className="text-[13px] text-(--theme-muted-text-color)">
-      {filterActive
-        ? t.matchCount(count(matches), count(total), nounPlural)
-        : t.count(count(total), total === 1 ? noun : nounPlural)}
+    <span role="status" className={className}>
+      {words}
     </span>
   )
 }

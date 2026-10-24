@@ -172,27 +172,114 @@ describe('ListPage count', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2 of 7 buckets')
   })
 
-  it('shows no count with the empty or no-matches state, or while loading', () => {
+  it('shows no count with the empty or no-matches state, and says nothing while loading', () => {
     const { rerender } = render(
       <ListPage total={0} count={NOUNS} empty={{ title: 'No buckets yet' }}>
         rows
       </ListPage>,
     )
     expect(screen.getByText('No buckets yet')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).toBeNull()
+    // Only a screen reader finds the count: the line under the rows is gone.
+    expect(screen.getByRole('status')).toHaveTextContent('0 buckets')
+    expect(screen.getByRole('status').parentElement).toHaveClass('sr-only')
     rerender(
       <ListPage total={7} matches={0} count={NOUNS} noMatches="No buckets match">
         rows
       </ListPage>,
     )
     expect(screen.getByText('No buckets match')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('0 of 7 buckets')
+    expect(screen.getByRole('status').parentElement).toHaveClass('sr-only')
     rerender(
       <ListPage loading total={7} count={NOUNS}>
         rows
       </ListPage>,
     )
     expect(screen.queryByText('7 buckets')).toBeNull()
+  })
+
+  it('keeps one count status mounted from rows to no matches and back, so each change is heard', () => {
+    function Searched({ matches }: { matches: number }) {
+      return (
+        <ListPage total={7} matches={matches} count={NOUNS} noMatches="No buckets match">
+          rows
+        </ListPage>
+      )
+    }
+    const { rerender } = render(<Searched matches={7} />)
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('7 buckets')
+    expect(status.parentElement).not.toHaveClass('sr-only')
+
+    rerender(<Searched matches={0} />)
+    expect(screen.getByText('No buckets match')).toBeInTheDocument()
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toBeInTheDocument()
+    expect(status).toHaveTextContent('0 of 7 buckets')
+    expect(status.parentElement).toHaveClass('sr-only')
+
+    rerender(<Searched matches={2} />)
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toHaveTextContent('2 of 7 buckets')
+    expect(status.parentElement).not.toHaveClass('sr-only')
+
+    rerender(<Searched matches={7} />)
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toHaveTextContent('7 buckets')
+  })
+
+  it('keeps the count status mounted, and empty, while loading or failed', () => {
+    const { rerender } = render(
+      <ListPage loading total={0} count={NOUNS}>
+        rows
+      </ListPage>,
+    )
+    const status = screen
+      .getAllByRole('status')
+      .find((el) => el.closest('.sr-only') && !el.textContent?.includes('Loading'))
+    expect(status).toBeDefined()
+    expect(status).toBeEmptyDOMElement()
+    rerender(
+      <ListPage error={new Error('timed out')} errorNoun="buckets" total={0} count={NOUNS}>
+        rows
+      </ListPage>,
+    )
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toBeEmptyDOMElement()
+    rerender(
+      <ListPage total={7} count={NOUNS}>
+        rows
+      </ListPage>,
+    )
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toHaveTextContent('7 buckets')
+  })
+
+  it("keeps a ListToolbar's count status mounted through no matches", () => {
+    function Searched({ matches }: { matches: number }) {
+      return (
+        <ListPage
+          total={7}
+          matches={matches}
+          noMatches="No buckets match"
+          toolbar={
+            <ListToolbar count={{ total: 7, matches, filterActive: matches !== 7, ...NOUNS }} />
+          }
+        >
+          rows
+        </ListPage>
+      )
+    }
+    const { rerender } = render(<Searched matches={3} />)
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('3 of 7 buckets')
+    rerender(<Searched matches={0} />)
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toHaveTextContent('0 of 7 buckets')
+    rerender(<Searched matches={7} />)
+    expect(screen.getAllByRole('status')).toEqual([status])
+    expect(status).toHaveTextContent('7 buckets')
   })
 
   it('puts the count and the pager on one line', () => {

@@ -1,10 +1,4 @@
-import type {
-  ComponentProps,
-  CSSProperties,
-  ReactElement,
-  MouseEvent as ReactMouseEvent,
-  ReactNode,
-} from 'react'
+import type { CSSProperties, ReactElement, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import {
   Children,
   cloneElement,
@@ -50,7 +44,7 @@ import {
   StretchRowLinkContext,
 } from './ListTable'
 import { ListToolbar, type ListToolbarProps, toolbarCount } from './ListToolbar'
-import { ListCountText, ListFooterCountContext } from './listSearch'
+import { type ListCountProps, ListCountStatus, ListFooterCountContext } from './listSearch'
 import type { ColumnDef, ListView, ListViewChrome, StackLine } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
@@ -236,7 +230,11 @@ export function ListPage({
   // The count shows under rows only: never while loading, failed, empty or matching nothing.
   const showsRows =
     !loading && !failed && !isEmpty && !noneMatch && (!counted || counted.matches > 0)
-  const footerCount = showsRows ? counted : undefined
+  // A page that counts its rows keeps the count's status mounted for as long as it is, so a screen
+  // reader hears every change, to no matches and back. It says nothing while loading or failed,
+  // which speak for themselves.
+  const countable = !!count || fromToolbar !== undefined
+  const spokenCount = loading || failed ? undefined : counted
   // With the count gone from the toolbar, the toolbar shares the chips' line, at its end, rather
   // than keep a line for its controls alone. A toolbar that still holds a count of its own keeps
   // its line.
@@ -267,30 +265,47 @@ export function ListPage({
       {/* The list body is the @container priority columns measure to auto-hide. */}
       <div className="relative @container min-h-0 flex-1 overflow-auto">
         <ListRowActionsProvider view={view}>{body}</ListRowActionsProvider>
-        {(footerCount || (showsRows && !!pager)) && (
-          <ListFooter count={footerCount} pager={pager} />
+        {(countable || (showsRows && !!pager)) && (
+          <ListFooter
+            count={spokenCount}
+            countable={countable}
+            pager={showsRows ? pager : null}
+            shown={showsRows && (counted !== undefined || !!pager)}
+          />
         )}
       </div>
     </div>
   )
 }
 
-/** The line under a list's last row: its count at the rows' start, its pager at their end. */
+/** The line under a list's last row: its count at the rows' start, its pager at their end. With no
+ *  rows to show, only a screen reader finds it, so the count's status stays mounted. */
 function ListFooter({
   count,
+  countable,
   pager,
+  shown,
 }: {
-  count: ComponentProps<typeof ListCountText> | undefined
+  count: ListCountProps | undefined
+  countable: boolean
   pager: ReactNode
+  shown: boolean
 }) {
   return (
     // No rule or band of its own: it sits on the rows' last divider, its text
     // on the rows' 16px start. A pager that renders nothing leaves it empty, and
     // then it takes no space. A `Pagination` takes the rest of the line (it
     // sizes by its own width), its position beside its steps, and its inset
-    // gives way to the line's.
-    <div className="flex min-h-10 flex-wrap items-center gap-x-3 px-4 empty:hidden [&>:not([role=status])]:ml-auto [&>nav]:flex-1 [&>nav]:px-0 [&>nav>div:first-child]:justify-end">
-      {count && <ListCountText {...count} />}
+    // gives way to the line's. Hidden, it keeps the same element, so the count's
+    // status is never remounted.
+    <div
+      className={
+        shown
+          ? 'flex min-h-10 flex-wrap items-center gap-x-3 px-4 empty:hidden [&>:not([role=status])]:ml-auto [&>nav]:flex-1 [&>nav]:px-0 [&>nav>div:first-child]:justify-end'
+          : 'sr-only'
+      }
+    >
+      {countable && <ListCountStatus count={count} />}
       {pager}
     </div>
   )
