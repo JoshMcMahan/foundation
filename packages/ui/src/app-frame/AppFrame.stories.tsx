@@ -280,6 +280,67 @@ export const Banner: Story = {
   },
 }
 export const Dark: Story = { globals: { mode: 'dark' } }
+function CustomNavigationDemo(args: AppFrameProps) {
+  const [active, setActive] = useState('Projects')
+  return (
+    <AppFrame
+      {...args}
+      navigationKey={active}
+      brand={({ expanded }) => <strong>{expanded ? 'Workspace' : 'W'}</strong>}
+      navigation={({ expanded, isMobile }) => (
+        <nav aria-label="Main navigation">
+          {[
+            { label: 'Overview', icon: GridIcon },
+            { label: 'Projects', icon: ListViewIcon },
+            { label: 'Settings', icon: SettingsIcon },
+          ].map(({ label, icon: Icon }) => (
+            <button
+              key={label}
+              type="button"
+              aria-label={label}
+              aria-current={active === label ? 'page' : undefined}
+              onClick={() => setActive(label)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: expanded ? 'start' : 'center',
+                gap: 8,
+                minHeight: isMobile ? 44 : 40,
+                padding: expanded ? '8px 12px' : 0,
+                border: '1px solid var(--theme-border)',
+                borderRadius: 4,
+                background: active === label ? 'var(--theme-sidebar-active-bg)' : 'transparent',
+                color: active === label ? 'var(--theme-sidebar-active-text)' : 'inherit',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
+              {expanded && label}
+            </button>
+          ))}
+        </nav>
+      )}
+      footer={({ isMobile }) => !isMobile && <AppFrameToggle />}
+      header={<Header />}
+    >
+      <div style={{ padding: 24 }}>
+        <h2 style={{ fontSize: 20, marginBottom: 8 }}>{active}</h2>
+        <p>The host styles these navigation buttons. The frame owns layout and its controls.</p>
+      </div>
+    </AppFrame>
+  )
+}
+export const CustomNavigation: Story = {
+  render: CustomNavigationDemo,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Custom navigation can use @parallelworks/ui/app-frame/layout.css alone. AppFrameNavItem requires navigation.css as well, or the combined app-frame.css import.',
+      },
+    },
+  },
+}
 export const Mobile: Story = {
   args: { mobileBreakpoint: 10000, style: { width: 390, maxWidth: '100%', height: 700 } },
 }

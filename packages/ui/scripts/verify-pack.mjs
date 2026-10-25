@@ -17,6 +17,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { build } from 'vite'
 
 const pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const run = (cmd, args, cwd) =>
@@ -35,6 +36,8 @@ const CSS_ENTRYPOINTS = [
   'logviewer.css',
   'ai.css',
   'app-frame.css',
+  'app-frame/layout.css',
+  'app-frame/navigation.css',
 ]
 
 const uiPkg = JSON.parse(readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
@@ -118,6 +121,61 @@ try {
 
   console.log('• installing the tarball into a fixture (npm, as a consumer would)')
   run('npm', ['install', '--no-audit', '--no-fund', '--loglevel', 'error'], fixture)
+
+  console.log('• bundling the frame styles from the installed package')
+  // A direct stylesheet link must remain one request, without an import waterfall.
+  const combinedCss = readFileSync(
+    path.join(fixture, 'node_modules/@parallelworks/ui/dist/app-frame/app-frame.css'),
+    'utf8',
+  )
+  if (combinedCss.includes('@import')) {
+    throw new Error('published app-frame.css must inline its layout and navigation styles')
+  }
+  const frameCss = {}
+  for (const [name, imports] of Object.entries({
+    combined: ['app-frame.css'],
+    split: ['app-frame/layout.css', 'app-frame/navigation.css'],
+    layout: ['app-frame/layout.css'],
+  })) {
+    const entry = path.join(fixture, `${name}.css`)
+    writeFileSync(
+      entry,
+      imports.map((subpath) => `@import '@parallelworks/ui/${subpath}';`).join('\n'),
+    )
+    const result = await build({
+      configFile: false,
+      root: fixture,
+      logLevel: 'error',
+      build: { write: false, rolldownOptions: { input: entry } },
+    })
+    const sheets = result.output.filter(
+      (file) => file.type === 'asset' && file.fileName.endsWith('.css'),
+    )
+    if (sheets.length !== 1) throw new Error(`${name} frame import did not emit one stylesheet`)
+    frameCss[name] = String(sheets[0].source)
+    if (!frameCss[name].includes('@layer pw-ui{') || frameCss[name].includes('@import')) {
+      throw new Error(`${name} frame stylesheet lost its layer or has unresolved imports`)
+    }
+  }
+  if (frameCss.combined !== frameCss.split) {
+    throw new Error('combined and separate frame imports produce different styles')
+  }
+  if (/\.pw-frame-nav-(item|icon|label|badge)\b/.test(frameCss.layout)) {
+    throw new Error('layout-only frame import includes optional navigation item styles')
+  }
+  if (!frameCss.combined.includes('.pw-frame-nav-item')) {
+    throw new Error('combined frame import is missing navigation item styles')
+  }
+  for (const selector of [
+    '.pw-frame-sidebar',
+    '.pw-frame-drawer',
+    '.pw-frame-toggle',
+    '.pw-frame-skip',
+  ]) {
+    if (!frameCss.layout.includes(selector)) {
+      throw new Error(`layout-only frame import is missing ${selector}`)
+    }
+  }
 
   console.log('• asserting the standalone stylesheet is layered')
   const css = readFileSync(

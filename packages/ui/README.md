@@ -1326,3 +1326,20 @@ link; put page content inside it without nesting a second `<main>`.
 Frame styles use the `pw-ui` cascade layer. Put broad host element defaults
 (such as anchor colors and scrollbar styling) in a lower-priority layer declared
 before the package styles, so they do not replace navigation states.
+
+Applications that supply their own navigation items can load only the layout:
+
+```tsx
+import { AppFrame, AppFrameToggle } from '@parallelworks/ui/app-frame'
+import '@parallelworks/ui/app-frame/layout.css'
+```
+
+This includes the sidebar, scrolling regions, resize handle, mobile drawer,
+toggle and close buttons, focus indicators, and skip link. Style custom navigation
+items in the host, including their selected, hover, rail, and mobile states.
+
+When using `AppFrameNavItem`, also import
+`@parallelworks/ui/app-frame/navigation.css`. The existing
+`@parallelworks/ui/app-frame.css` import includes both stylesheets and continues
+to work without changes. Use either the combined import or the two separate
+imports; there is no need to load both forms.
