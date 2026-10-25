@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.94.1](https://github.com/parallelworks/foundation/compare/ui-v0.94.0...ui-v0.94.1) (2026-10-25)
+
+
+### Performance Improvements
+
+* **ui:** make app frame navigation styles optional ([#516](https://github.com/parallelworks/foundation/issues/516)) ([7838d3c](https://github.com/parallelworks/foundation/commit/7838d3c4499446475957a13019b3db64dbe739da))
+
 ## [0.94.0](https://github.com/parallelworks/foundation/compare/ui-v0.93.0...ui-v0.94.0) (2026-10-24)
 
 
