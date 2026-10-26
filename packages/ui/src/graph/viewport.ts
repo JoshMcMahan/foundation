@@ -69,13 +69,24 @@ export interface FitOptions {
   /** Fits the graph's width alone, for one that runs down the panel to be panned along: centered
    *  across the panel, from its top below `top`. */
   width?: boolean | undefined
+  /** Room kept clear at the panel's top at any scale, such as under buttons over a small panel:
+   *  the graph fits in the rest. */
+  clear?: number | undefined
+  /** Centers a graph that fits in the room left, for a panel that doesn't shrink to its graph. */
+  center?: boolean | undefined
 }
 
 /** The view that shows all of `bounds` in a panel from its top left, no closer than a fit comes. */
 export function fitView(
   bounds: Bounds,
   panel: { width: number; height: number },
-  { minScale = MIN_SCALE, top = 0, width: byWidth = false }: FitOptions = {},
+  {
+    minScale = MIN_SCALE,
+    top = 0,
+    width: byWidth = false,
+    clear = 0,
+    center = false,
+  }: FitOptions = {},
 ): View | null {
   const width = bounds.maxX - bounds.minX
   const height = bounds.maxY - bounds.minY
@@ -85,17 +96,28 @@ export function fitView(
   const margin = fitMargin(panel)
   const fit = Math.min(
     (panel.width - margin * 2) / width,
-    byWidth ? FIT_MAX_SCALE : (panel.height - margin * 2) / height,
+    byWidth ? FIT_MAX_SCALE : (panel.height - clear - margin * 2) / height,
     FIT_MAX_SCALE,
   )
   const floor = Math.min(Math.max(MIN_SCALE, minScale), FIT_MAX_SCALE)
   const scale = Math.max(floor, fit)
   // Cut off, the graph starts below what covers the panel's top, so its first jobs show whole.
-  const y = fit < floor || byWidth ? Math.max(margin, top + margin) : margin
+  const y = (fit < floor || byWidth ? Math.max(margin, top + margin) : margin) + clear
   // By width, centered: a graph running down centers its rows, so a wider one cut off at both sides
   // still shows its chain of jobs down the middle.
-  const x = byWidth ? (panel.width - width * scale) / 2 : margin
-  return { x: x - bounds.minX * scale, y: y - bounds.minY * scale, scale }
+  let x = byWidth ? (panel.width - width * scale) / 2 : margin
+  let shownTop = y
+  if (center) {
+    const roomX = panel.width - margin * 2
+    const roomY = panel.height - clear - margin * 2
+    if (width * scale <= roomX) {
+      x = margin + (roomX - width * scale) / 2
+    }
+    if (height * scale <= roomY) {
+      shownTop = clear + margin + (roomY - height * scale) / 2
+    }
+  }
+  return { x: x - bounds.minX * scale, y: shownTop - bounds.minY * scale, scale }
 }
 
 /** The least shift that brings [start, end] inside [low, high]; none when it can't all fit, so the view stays. */

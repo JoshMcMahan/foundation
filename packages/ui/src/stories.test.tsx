@@ -30,6 +30,7 @@ import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as pickers from './components/pickers.stories'
 import * as primitives from './components/primitives.stories'
+import * as splitView from './components/SplitView.stories'
 import * as statTile from './components/StatTile.stories'
 import * as statusBadge from './components/StatusBadge.stories'
 import * as statusLabel from './components/StatusLabel.stories'
@@ -112,6 +113,7 @@ const SUITES = {
   descriptionList,
   errorPage,
   tabs,
+  splitView,
   loading,
   markdown,
   combobox,

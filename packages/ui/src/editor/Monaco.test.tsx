@@ -68,7 +68,17 @@ vi.mock('monaco-editor/editor/editor.api', () => {
         input.setAttribute('role', 'textbox')
         node.append(input)
         element.append(node)
+        const layoutListeners = new Set<(info: { width: number }) => void>()
+        const keyboardButton = { dispose: vi.fn() }
         const editor = {
+          layoutListeners,
+          keyboardButton,
+          onDidLayoutChange: (listener: (info: { width: number }) => void) => {
+            layoutListeners.add(listener)
+            return { dispose: () => layoutListeners.delete(listener) }
+          },
+          getContribution: (id: string) =>
+            id === 'editor.contrib.iPadShowKeyboard' ? keyboardButton : null,
           getDomNode: () => node,
           updateOptions: vi.fn(),
           getModel: () => options.model,
@@ -281,4 +291,45 @@ test('outside a Field, the editor keeps its own name and no field attributes', (
   expect(input).not.toHaveAttribute('aria-labelledby')
   expect(input).not.toHaveAttribute('aria-describedby')
   expect(input).not.toHaveAttribute('id')
+})
+
+test('drops the minimap when the editor is too narrow for it, unless the host sets it', () => {
+  render(<MonacoEditor value="a" />)
+  const editor = last().editor as {
+    layoutListeners: Set<(info: { width: number }) => void>
+    updateOptions: ReturnType<typeof vi.fn>
+  }
+  const layOut = (width: number) =>
+    act(() => {
+      for (const listener of editor.layoutListeners) {
+        listener({ width })
+      }
+    })
+  layOut(360)
+  expect(editor.updateOptions).toHaveBeenLastCalledWith(
+    expect.objectContaining({ minimap: { enabled: false } }),
+  )
+  // Hidden, 0 wide, it keeps what it had.
+  layOut(0)
+  layOut(900)
+  expect(editor.updateOptions).toHaveBeenLastCalledWith(
+    expect.objectContaining({ minimap: { enabled: true } }),
+  )
+
+  cleanup()
+  render(<MonacoEditor value="a" minimap={{ enabled: true }} />)
+  const own = last().editor as typeof editor
+  for (const listener of own.layoutListeners) {
+    act(() => listener({ width: 360 }))
+  }
+  expect(own.updateOptions).not.toHaveBeenCalledWith(
+    expect.objectContaining({ minimap: { enabled: false } }),
+  )
+})
+
+test('leaves out the touch keyboard button, which would cover the text', () => {
+  render(<MonacoEditor value="a" />)
+  expect(
+    (last().editor['keyboardButton'] as { dispose: ReturnType<typeof vi.fn> }).dispose,
+  ).toHaveBeenCalled()
 })

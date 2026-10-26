@@ -164,6 +164,9 @@ function ViewToggle({
   )
 }
 
+// How far the view buttons sit from the panel's top, as `top-2`.
+const VIEW_BAR_OFFSET_PX = 8
+
 const VIEW_BAR =
   'flex max-w-full flex-wrap items-center justify-end gap-0.5 rounded-md border theme-border bg-(--theme-panel-bg) p-0.5'
 
@@ -1189,6 +1192,8 @@ function graphBounds(content: HTMLElement): Bounds | null {
 
 // A panel narrower than this is a phone's, where a fit of a whole run would be too small to read.
 const NARROW_PANEL_PX = 640
+// The widest a preview's pane is when it runs the graph down the pane: a phone's.
+const TALL_PANEL_MAX_PX = 480
 
 // On a phone, past the host's `p-4` to the container's edges, with no side borders or corners.
 const BLEED_CLASSES = 'max-sm:-mx-4 max-sm:w-auto max-sm:rounded-none max-sm:border-x-0'
@@ -1235,6 +1240,7 @@ export default function DependencyGraph({
   inputs,
   workflow,
   fixedHeight,
+  fill = false,
   openStep,
   onCloseLog,
   stickySidebar,
@@ -1252,6 +1258,9 @@ export default function DependencyGraph({
   /** The workflow as written, for what the editor's expressions can read. */
   workflow?: Record<string, unknown> | undefined
   fixedHeight?: string | undefined
+  /** Takes its container's height, with `fixedHeight` 100%; the graph refits as the panel
+   *  resizes, until the reader pans or zooms it. */
+  fill?: boolean | undefined
   /** A step to open; `prefix` is its `subworkflows/<job>/step_<n>/` chain when it runs inside a subworkflow. */
   openStep?: { job: string; step: number; prefix?: string | undefined } | undefined
   /** Called when the log dialog closes, so a host can forget the step it asked to open. */
@@ -1347,7 +1356,11 @@ export default function DependencyGraph({
   const containerHeight = topOffset !== null ? Math.max(windowSize.h - topOffset - 16, 160) : null
   // On a phone a run's graph runs down the screen, its ranks as rows, so scrolling follows the work
   // and most pipelines fit the width at a size their jobs read at.
-  const runsDown = !preview && !editor && windowSize.w < NARROW_PANEL_PX
+  // A preview filling a narrow pane taller than it is wide, as on a phone, runs down it too, so the
+  // graph takes the pane's height rather than a strip across its top. A pane beside an editor on a
+  // wider screen keeps the graph running across.
+  const [tallPanel, setTallPanel] = useState(false)
+  const runsDown = !editor && (preview ? fill && tallPanel : windowSize.w < NARROW_PANEL_PX)
 
   // The panel is only as tall as the graph, up to that cap, so a small graph
   // leaves no empty box above the step summaries under it. The transform
@@ -1678,17 +1691,23 @@ export default function DependencyGraph({
       // A run's graph on a phone fits no farther out than its jobs read, from its start, to be
       // panned along by touch; a fit of all of a long run there would be too small to read.
       // Running down, it fits its width, and the rest is panned to down the panel.
+      // A hidden panel has nothing to fit to; it fits once it shows.
+      if (panel.width === 0 || panel.height === 0) {
+        return
+      }
       const narrow = !preview && !editor && panel.width < NARROW_PANEL_PX
+      const barHeight = viewBarRef.current?.offsetHeight ?? 0
+      // A preview's panel is often small, and its view buttons would cover the graph's top. One
+      // that fills a pane centers the graph in it, as the pane doesn't shrink to the graph.
+      const previewFit = preview
+        ? { clear: barHeight + VIEW_BAR_OFFSET_PX, center: fill }
+        : undefined
       const view = fitView(
         bounds,
         panel,
         narrow || runsDown
-          ? {
-              minScale: READABLE_SCALE,
-              top: viewBarRef.current?.offsetHeight ?? 0,
-              width: runsDown,
-            }
-          : undefined,
+          ? { minScale: READABLE_SCALE, width: runsDown, ...(previewFit ?? { top: barHeight }) }
+          : previewFit,
       )
       if (!view) {
         return
@@ -1707,7 +1726,7 @@ export default function DependencyGraph({
       // Tell the library after paint so it doesn't overwrite our direct DOM change
       requestAnimationFrame(() => transform.setTransform(view.x, view.y, view.scale, 0))
     },
-    [nodeOf, editor, runRowOf, preview, runsDown],
+    [nodeOf, editor, runRowOf, preview, runsDown, fill],
   )
 
   // Boxes open and close over CSS transitions, so a fit before they end measures them mid-way:
@@ -1916,6 +1935,32 @@ export default function DependencyGraph({
     wrapper.addEventListener('wheel', onWheel, { passive: false })
     return () => wrapper.removeEventListener('wheel', onWheel)
   }, [containerEl, zoomTo])
+
+  // A panel that takes its container's height refits as that resizes, such as when it first
+  // shows or a handle beside it moves, unless the reader has moved the graph since.
+  useEffect(() => {
+    if (!fill || !containerEl || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    let raf = 0
+    const observer = new ResizeObserver(() => {
+      const { clientWidth, clientHeight } = containerEl
+      if (clientWidth > 0) {
+        setTallPanel(clientWidth < TALL_PANEL_MAX_PX && clientHeight > clientWidth)
+      }
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        if (!viewed.current) {
+          fitGraph()
+        }
+      })
+    })
+    observer.observe(containerEl)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(raf)
+    }
+  }, [fill, containerEl, fitGraph])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a resized window or a re-rooted graph re-fits the view.
   useEffect(() => {
@@ -2197,7 +2242,7 @@ export default function DependencyGraph({
   )
 
   const graph = (
-    <div className="flex flex-col lg:flex-row w-full">
+    <div className={cx('flex flex-col lg:flex-row w-full', fill && 'h-full')}>
       {!preview && (
         <div
           ref={setSidebarEl}
@@ -2591,6 +2636,9 @@ export function DependencyGraphPreview(inputs: {
   editor?: DependencyGraphEditor | undefined
   /** A fixed panel height; without one the panel is only as tall as the graph. */
   height?: string | undefined
+  /** Takes its container's height instead, such as a pane's, and refits the graph as the pane
+   *  resizes until the reader pans or zooms it. */
+  fill?: boolean | undefined
 }) {
   const engine = useWorkflowEngine()
   const { editing } = engine
@@ -2655,7 +2703,8 @@ export function DependencyGraphPreview(inputs: {
       yamlJobs={jobs}
       inputs={workflowInputs}
       workflow={inputs.yml}
-      fixedHeight={inputs.height}
+      fixedHeight={inputs.fill ? '100%' : inputs.height}
+      fill={inputs.fill}
     />
   )
 }

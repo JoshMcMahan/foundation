@@ -14,6 +14,11 @@ const meta: Meta<typeof DependencyGraphPreview> = {
       control: 'text',
       description: 'A fixed panel height; without one the panel is only as tall as the graph.',
     },
+    fill: {
+      control: 'boolean',
+      description:
+        "Takes its container's height, such as a pane's, and refits as it resizes; the SplitView stories show it.",
+    },
     layout: {
       control: 'object',
       description:

@@ -1,5 +1,5 @@
 import * as monaco from 'monaco-editor/editor/editor.api'
-import { useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFieldLabelledControl } from '../components/Field'
 import { useStrings } from '../components/Provider'
 import { useCssIsDark } from '../components/useCssIsDark'
@@ -79,6 +79,12 @@ function editorText(value: string): string {
 }
 
 const noop = () => {}
+
+// Narrower than this, as on a phone, the minimap would take room the text needs.
+const MINIMAP_MIN_WIDTH = 480
+// A touch keyboard opens when the text is tapped; this button over the text, for touch
+// keyboards on tablets, only covers lines.
+const TOUCH_KEYBOARD_BUTTON = 'editor.contrib.iPadShowKeyboard'
 
 const DISABLED_BACKGROUNDS = [
   '--vscode-editor-background',
@@ -174,6 +180,10 @@ export default function MonacoEditor({
   // `disabled` turns false would keep an editor that opened disabled locked.
   const readOnly = Boolean(disabled || options.readOnly)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Whether the editor is wide enough for a minimap, when the host leaves the minimap to it.
+  const [roomy, setRoomy] = useState(true)
+  const minimapOwnedRef = useRef(false)
+  minimapOwnedRef.current = options.minimap === undefined
   const monacoRef = useRef<ReturnType<typeof monaco.editor.create>>(null)
   const isSyncingValueRef = useRef(false)
   const lintSources = useLintSources()
@@ -205,6 +215,7 @@ export default function MonacoEditor({
         : monaco.editor.ShowLightbulbIconMode.OnCode,
     },
     scrollBeyondLastLine: !readOnly,
+    ...(options.minimap === undefined && { minimap: { enabled: roomy } }),
     ...options,
     // Text to read sits in a page, which should go on scrolling once the text reaches its end.
     scrollbar: { alwaysConsumeMouseWheel: !readOnly, ...options.scrollbar },
@@ -238,10 +249,15 @@ export default function MonacoEditor({
     monaco.editor.setTheme(getThemeName(isDarkRef.current))
     const { value: initial, language: initialLanguage } = initialRef.current
     const model = modelFor(monaco.Uri.parse(path), initial ?? '', initialLanguage)
+    // A hidden editor, 0 wide, keeps what it had until it shows.
+    const fitsMinimap = (width: number, had: boolean) =>
+      width === 0 ? had : width >= MINIMAP_MIN_WIDTH
+    const roomyAtFirst = fitsMinimap(container.clientWidth, true)
     const editor = monaco.editor.create(container, {
       automaticLayout: true,
       model,
       ...optionsRef.current,
+      ...(minimapOwnedRef.current && { minimap: { enabled: roomyAtFirst } }),
       fixedOverflowWidgets: true,
       suggest: {
         preview: true,
@@ -250,6 +266,10 @@ export default function MonacoEditor({
         showInlineDetails: true,
       },
     })
+
+    setRoomy(roomyAtFirst)
+    editor.onDidLayoutChange(({ width }) => setRoomy((had) => fitsMinimap(width, had)))
+    editor.getContribution(TOUCH_KEYBOARD_BUTTON)?.dispose()
 
     // A refilled model may still hold the last editor's markers; the lint's come back once it runs.
     setMarkers(

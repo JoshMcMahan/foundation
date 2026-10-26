@@ -107,6 +107,31 @@ describe('fitView', () => {
     expect(fan?.x).toBe((390 - 600) / 2)
   })
 
+  it('fits a graph below what covers the panel’s top, at any scale', () => {
+    const small = { width: 400, height: 300 }
+    const graph = { minX: 0, minY: 0, maxX: 760, maxY: 200 }
+    const view = fitView(graph, small, { clear: 40 })
+    // The width decides, 760 across 400 less 15 each side; the graph starts under the 40.
+    expect(view?.scale).toBeCloseTo(370 / 760)
+    expect(view?.y).toBe(40 + 15)
+    // A tall graph fits in the height left under it.
+    const tall = fitView({ minX: 0, minY: 0, maxX: 100, maxY: 1000 }, small, { clear: 40 })
+    expect(tall?.scale).toBeCloseTo((300 - 40 - 30) / 1000)
+  })
+
+  it('centers a graph that fits in the room under what covers the top, when asked', () => {
+    const pane = { width: 600, height: 600 }
+    // Too small to fill the pane at the closest a fit comes, it sits in the middle of the room left.
+    const view = fitView({ minX: 0, minY: 0, maxX: 300, maxY: 60 }, pane, {
+      clear: 40,
+      center: true,
+    })
+    const scale = FIT_MAX_SCALE
+    expect(view?.scale).toBe(scale)
+    expect(view?.x).toBeCloseTo((600 - 300 * scale) / 2)
+    expect(view?.y).toBeCloseTo(40 + 30 + (600 - 40 - 60 - 60 * scale) / 2)
+  })
+
   it('has nothing to fit without a graph', () => {
     expect(fitView({ minX: 0, minY: 0, maxX: 0, maxY: 0 }, panel)).toBeNull()
   })

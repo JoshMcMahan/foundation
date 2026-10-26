@@ -324,6 +324,7 @@ export {
 } from './components/SettingsCard'
 export { LoadingRegion, Skeleton, type SkeletonProps } from './components/Skeleton'
 export { Slider, type SliderProps } from './components/Slider'
+export { SplitView, type SplitViewPane, type SplitViewProps } from './components/SplitView'
 export {
   StatTile,
   type StatTileBar,

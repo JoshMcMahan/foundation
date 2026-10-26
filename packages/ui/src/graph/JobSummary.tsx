@@ -75,11 +75,13 @@ export function Joblist(
   const engine = useWorkflowEngine()
   const marks = useWarningMarks()
   const prefix = inputs.pathPrefix
+  let rows = 0
   return inputs.jobNames.map((jobName) => {
     // Skip synthetic matrix group nodes — rendered by the caller, not Joblist
     if (inputs.jobs[jobName]?._matrixGroup) {
       return null
     }
+    const first = rows++ === 0
     const job = inputs.jobs[jobName]
     const jobStatus = job?.status
     const label = jobLabel(jobName, job)
@@ -102,7 +104,15 @@ export function Joblist(
       </button>
     )
     return (
-      <div key={`job-${jobName}`} className="py-1 select-none">
+      <div
+        key={`job-${jobName}`}
+        // Jobs that share a box are ruled apart, so two read as two rather than as one name on two
+        // lines.
+        className={cx(
+          '-mx-8 px-8 py-1 select-none',
+          !first && 'border-t-2 border-solid border-(--theme-border)',
+        )}
+      >
         {inputs.editable ? (
           <EditableJobRow job={jobName} label={label}>
             {toggle}

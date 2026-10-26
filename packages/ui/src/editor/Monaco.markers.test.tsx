@@ -90,6 +90,8 @@ vi.mock('monaco-editor/editor/editor.api', () => ({
     onDidChangeMarkers: (listener: (resources: string[]) => void) =>
       fake.listen(fake.markerListeners, listener, 'markers'),
     create: () => ({
+      onDidLayoutChange: () => ({ dispose: () => {} }),
+      getContribution: () => null,
       getDomNode: () => null,
       updateOptions: vi.fn(),
       getModel: () => fake.model,

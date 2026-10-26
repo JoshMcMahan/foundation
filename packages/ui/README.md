@@ -111,6 +111,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A titled part of a page or form | `Section` |
 | More detail under a line | `Disclosure` |
 | Views of one thing | `Tabs` |
+| Two panes of one task side by side, such as text and its preview | `SplitView`: a handle resizes them, and on a phone one shows at a time with a switch between them. `fill` on `DependencyGraphPreview` and `height="100%"` on `Editor` fill a pane |
 | Chrome that stays in view as the page scrolls | `sticky` on `ActionToolbar` or `Tabs`; `StickyBar` around controls of your own. They stack under the page header by themselves (see [Host chrome](#host-chrome)) |
 | A list of actions | `ActionMenu`; `useContextMenu` for a right-click or a row's menu |
 | A panel of controls anchored to a trigger | `Popover` |
