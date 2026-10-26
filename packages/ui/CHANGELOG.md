@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.96.0](https://github.com/parallelworks/foundation/compare/ui-v0.95.0...ui-v0.96.0) (2026-10-26)
+
+
+### Features
+
+* **ui:** a list's groups can collapse, and remember which are closed ([#520](https://github.com/parallelworks/foundation/issues/520)) ([ee48532](https://github.com/parallelworks/foundation/commit/ee485322e92101be799c29a51d08d2719fe93992))
+
 ## [0.95.0](https://github.com/parallelworks/foundation/compare/ui-v0.94.1...ui-v0.95.0) (2026-10-26)
 
 
