@@ -63,7 +63,8 @@ describe('Tabs', () => {
 
   it('pins the row, at the top of a scroller that pins nothing else', () => {
     render(<Tabs label="Resource" sticky items={items} />)
-    const row = screen.getByRole('tablist').parentElement as HTMLElement
+    // The list sits in a box that holds its scroll arrows, inside the row.
+    const row = screen.getByRole('tablist').parentElement?.parentElement as HTMLElement
     expect(row).toHaveClass('sticky')
     expect(row).toHaveStyle({ top: '0px' })
   })
@@ -176,10 +177,20 @@ describe('a line row too wide for its space', () => {
     HTMLElement.prototype.scrollTo = scrollTo as unknown as typeof HTMLElement.prototype.scrollTo
     try {
       render(<Tabs label="Inventory" items={items} defaultValue="t9" />)
-      // Tab 9 spans 900–1000: scrolled so it ends 24px inside the row's right edge.
-      expect(scrollTo).toHaveBeenCalledWith({ left: 724, behavior: 'instant' })
+      // Tab 9 spans 900–1000: scrolled so it ends clear of the 48px fade at the row's right edge.
+      expect(scrollTo).toHaveBeenCalledWith({ left: 748, behavior: 'instant' })
       const list = screen.getByRole('tablist')
       expect(list.style.maskImage).toContain('linear-gradient')
+      // Wide enough to dissolve a tab cut at the edge, not just its last letter.
+      expect(list.style.maskImage).toContain('48px')
+      // An arrow at each end that hides tabs moves the row most of its width that way.
+      const scrollBy = vi.fn()
+      list.scrollBy = scrollBy as unknown as typeof list.scrollBy
+      const arrowAtEnd = document.querySelector('[data-scroll-arrow="end"]') as HTMLElement
+      expect(document.querySelector('[data-scroll-arrow="start"]')).toBeInTheDocument()
+      expect(arrowAtEnd).toHaveAttribute('aria-hidden', 'true')
+      fireEvent.click(arrowAtEnd)
+      expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: 204 }))
     } finally {
       for (const undo of restore) {
         undo()

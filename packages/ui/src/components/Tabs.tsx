@@ -1,6 +1,14 @@
 import { Tabs as BaseTabs } from '@base-ui/react/tabs'
-import { type ReactNode, type Ref, useLayoutEffect, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { cx } from '../cx'
+import { ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { AppLink } from './AppLink'
 import { fadeMask, useHiddenEnds } from './scrollFade'
 import {
@@ -54,6 +62,13 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
   children?: ReactNode
 }
 
+// A line row that runs past its width fades over about a short tab's width at the end that
+// hides tabs. A narrower fade covers only a letter or two of a tab cut at the edge, which reads
+// as the row being clipped rather than as more tabs past it.
+const TAB_FADE_PX = 48
+// The arrow at an end that hides tabs, over the fade's outer half, where no tab text shows.
+const ARROW_PX = 24
+
 // A toned tab keeps its tone while current; the underline still marks it.
 const lineTone: Record<SegmentTone, string> = {
   warning: 'text-(--theme-warning)',
@@ -98,8 +113,8 @@ export function Tabs<Value extends string>({
     if (!list || !tab || segmented) {
       return
     }
-    // In view with room to see the tab beside it, as the fade covers the edge.
-    const margin = 24
+    // In view clear of the fade, with room to see the tab beside it.
+    const margin = TAB_FADE_PX
     const left = tab.offsetLeft
     const right = left + tab.offsetWidth
     let to: number | undefined
@@ -173,27 +188,73 @@ export function Tabs<Value extends string>({
             className,
           )}
         >
-          <BaseTabs.List
-            aria-label={label}
-            ref={segmented ? undefined : (scroller.ref as Ref<HTMLDivElement>)}
-            onScroll={segmented ? undefined : scroller.onScroll}
-            style={segmented ? undefined : fadeMask(scroller.ends)}
-            className={cx(
-              segmented
-                ? segmentGroupClassName(layout)
-                : 'relative flex min-w-0 overflow-x-auto rtl:[--fade-end:left]',
+          {/* Holds the row's arrows at its ends, over the fade. */}
+          <div className={cx('relative flex min-w-0', segmented && 'contents')}>
+            <BaseTabs.List
+              aria-label={label}
+              ref={segmented ? undefined : (scroller.ref as Ref<HTMLDivElement>)}
+              onScroll={segmented ? undefined : scroller.onScroll}
+              style={
+                segmented ? undefined : fadeMask(scroller.ends, `${TAB_FADE_PX}px`, `${ARROW_PX}px`)
+              }
+              className={cx(
+                segmented
+                  ? segmentGroupClassName(layout)
+                  : 'relative flex min-w-0 overflow-x-auto rtl:[--fade-end:left]',
+              )}
+            >
+              {tabs}
+              {!segmented && (
+                <BaseTabs.Indicator className="absolute bottom-0 left-0 h-0.5 w-(--active-tab-width) translate-x-(--active-tab-left) bg-(--theme-link) transition-[translate,width] duration-200 ease-in-out motion-reduce:transition-none" />
+              )}
+            </BaseTabs.List>
+            {!segmented && scroller.ends.start && (
+              <ScrollArrow side="start" onPress={() => scrollRow(scroller.ref.current, -1)} />
             )}
-          >
-            {tabs}
-            {!segmented && (
-              <BaseTabs.Indicator className="absolute bottom-0 left-0 h-0.5 w-(--active-tab-width) translate-x-(--active-tab-left) bg-(--theme-link) transition-[translate,width] duration-200 ease-in-out motion-reduce:transition-none" />
+            {!segmented && scroller.ends.end && (
+              <ScrollArrow side="end" onPress={() => scrollRow(scroller.ref.current, 1)} />
             )}
-          </BaseTabs.List>
+          </div>
           {end}
         </div>
       )}
       {children}
     </BaseTabs.Root>
+  )
+}
+
+/** Scrolls a tab row most of its width toward one end, keeping a tab of the last view in sight.
+ *  A right-to-left row scrolls the other way along x. */
+function scrollRow(list: HTMLElement | null, toward: 1 | -1) {
+  if (!list) {
+    return
+  }
+  const rtl = getComputedStyle(list).direction === 'rtl'
+  const by = Math.max(list.clientWidth - TAB_FADE_PX * 2, TAB_FADE_PX) * toward * (rtl ? -1 : 1)
+  const smooth = !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  list.scrollBy?.({ left: by, behavior: smooth ? 'smooth' : 'instant' })
+}
+
+/** An arrow at an end of a tab row that hides tabs: the cue that more tabs sit past the edge,
+ *  and a way to reach them with a pointer that can't scroll sideways. Keyboards move between
+ *  tabs with the arrow keys and screen readers list every tab, so it is for pointers only. */
+function ScrollArrow({ side, onPress }: { side: 'start' | 'end'; onPress: () => void }) {
+  const Icon = side === 'end' ? ChevronRightIcon : ChevronLeftIcon
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-hidden="true"
+      data-scroll-arrow={side}
+      onClick={onPress}
+      style={{ '--arrow': `${ARROW_PX}px` } as CSSProperties}
+      className={cx(
+        'absolute inset-y-0 flex w-(--arrow) cursor-pointer items-center theme-muted-text hover:theme-text',
+        side === 'end' ? 'end-0 justify-end' : 'start-0 justify-start',
+      )}
+    >
+      <Icon className="size-4 rtl:rotate-180" />
+    </button>
   )
 }
 

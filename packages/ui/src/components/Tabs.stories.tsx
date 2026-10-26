@@ -129,3 +129,32 @@ export const ManyTabs: StoryObj = {
     await expect(tab.right).toBeLessThanOrEqual(row.right)
   },
 }
+
+const CLUSTER_VIEWS = ['Details', 'Jobs', 'Queues', 'Nodes', 'Environments', 'Events'].map(
+  (label) => ({
+    value: label.toLowerCase(),
+    label,
+  }),
+)
+
+/** Six views on a phone, one tab cut at the edge and one past it: the row fades over the cut
+ *  tab and shows an arrow at each end that hides tabs, so it reads as running on rather than
+ *  clipped. It scrolls sideways, and a press on an arrow moves it most of its width. */
+export const OnAPhone: StoryObj = {
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  render: () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
+      <Tabs label="First tab current" items={CLUSTER_VIEWS} defaultValue="details" />
+      <Tabs label="Last tab current" items={CLUSTER_VIEWS} defaultValue="events" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const events = canvas.getAllByRole('tab', { name: 'Events' })[1] as HTMLElement
+    const list = events.closest('[role="tablist"]') as HTMLElement
+    // The current tab shows whole, clear of the fade at the row's start.
+    await expect(events.getBoundingClientRect().right).toBeLessThanOrEqual(
+      list.getBoundingClientRect().right,
+    )
+  },
+}

@@ -42,10 +42,18 @@ export function useHiddenEnds(active: boolean) {
 // How far the fade reaches into a value that runs on past an edge.
 const FADE = '1.25rem'
 
-export function fadeMask({ start, end }: HiddenEnds): CSSProperties | undefined {
+/** Fades whichever ends hide content, over `reach` from each edge, leaving the outermost `clear`
+ *  of it fully hidden, such as for a control that sits there. */
+export function fadeMask(
+  { start, end }: HiddenEnds,
+  reach = FADE,
+  clear?: string,
+): CSSProperties | undefined {
   if (!start && !end) {
     return undefined
   }
-  const image = `linear-gradient(to var(--fade-end, right), ${start ? `transparent, #000 ${FADE}` : '#000'}, ${end ? `#000 calc(100% - ${FADE}), transparent` : '#000'})`
+  const from = clear ? `transparent ${clear}` : 'transparent'
+  const to = clear ? `transparent calc(100% - ${clear})` : 'transparent'
+  const image = `linear-gradient(to var(--fade-end, right), ${start ? `${from}, #000 ${reach}` : '#000'}, ${end ? `#000 calc(100% - ${reach}), ${to}` : '#000'})`
   return { maskImage: image, WebkitMaskImage: image }
 }

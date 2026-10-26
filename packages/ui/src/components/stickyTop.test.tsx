@@ -25,7 +25,8 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
     this: HTMLElement,
   ) {
-    const tabs = this.querySelector(':scope > [role="tablist"]') ? 37 : 0
+    // The tab row: the list sits in the box that holds its scroll arrows.
+    const tabs = this.querySelector(':scope > * > [role="tablist"]') ? 37 : 0
     const height = heights[this.dataset['testid'] ?? ''] ?? tabs
     return { height, width: 0, top: 0, left: 0, right: 0, bottom: height } as DOMRect
   })
@@ -86,7 +87,8 @@ function Shell({ toolbar, children }: { toolbar: ReactNode; children?: ReactNode
 }
 
 const toolbar = () => screen.getByTestId('toolbar')
-const tabRow = () => screen.getByRole('tablist').parentElement as HTMLElement
+// The list sits in a box that holds its scroll arrows, inside the row.
+const tabRow = () => screen.getByRole('tablist').parentElement?.parentElement as HTMLElement
 const thead = () => screen.getAllByRole('rowgroup')[0] as HTMLElement
 
 describe('sticky page chrome', () => {
