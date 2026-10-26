@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.97.1](https://github.com/parallelworks/foundation/compare/ui-v0.97.0...ui-v0.97.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **ui:** a tab row that runs past a phone's width shows an arrow at the end that hides tabs ([#526](https://github.com/parallelworks/foundation/issues/526)) ([9ed9032](https://github.com/parallelworks/foundation/commit/9ed90321830a2db10e850e997b55a72d35ce3708))
+
 ## [0.97.0](https://github.com/parallelworks/foundation/compare/ui-v0.96.1...ui-v0.97.0) (2026-10-26)
 
 
