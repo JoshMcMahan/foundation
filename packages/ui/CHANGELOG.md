@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.96.1](https://github.com/parallelworks/foundation/compare/ui-v0.96.0...ui-v0.96.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **ui:** a wizard's last button reads in the host's language ([#522](https://github.com/parallelworks/foundation/issues/522)) ([70e742c](https://github.com/parallelworks/foundation/commit/70e742cdf366a0f9f4aa2a8c6d4930dbacbe0857))
+
 ## [0.96.0](https://github.com/parallelworks/foundation/compare/ui-v0.95.0...ui-v0.96.0) (2026-10-26)
 
 
