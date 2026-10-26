@@ -625,6 +625,8 @@ export interface UIStrings {
     matchCount: (matches: string, total: string, nounPlural: string) => string
     displayOptions: string
     grouping: string
+    /** The Display menu's line that collapses or expands every group the list shows. */
+    groups: string
     ordering: string
     orderDefault: string
     orderFavorites: string
@@ -1543,6 +1545,7 @@ const DEFAULTS: UIProviderValue = {
       matchCount: (matches, total, nounPlural) => `${matches} of ${total} ${nounPlural}`,
       displayOptions: 'Display options',
       grouping: 'Grouping',
+      groups: 'Groups',
       ordering: 'Ordering',
       orderDefault: 'Default',
       orderFavorites: 'Favorites',

@@ -33,6 +33,8 @@ export {
 export {
   GroupRow,
   ListColumns,
+  ListGroup,
+  type ListGroupProps,
   ListPage,
   type ListPageCount,
   type ListPageEmpty,
@@ -69,6 +71,7 @@ export {
   DEFAULT_ORDER,
   FAVORITE_ORDER,
   type FilterFacet,
+  type ListGroupState,
   type ListView,
   type ListViewChrome,
   type ListViewConfig,

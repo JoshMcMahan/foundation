@@ -5,6 +5,8 @@ import {
   createContext,
   isValidElement,
   useContext,
+  useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -29,9 +31,12 @@ import {
   STACKED_ITEM,
   STACKED_JOINED,
   Table,
+  TableBodyContext,
 } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
+import { isDev } from '../dev'
+import { ChevronRightIcon } from '../icons'
 import { ListFilterBar, type ListFilterBarProps } from './ListFilterBar'
 import {
   FLOATING_ACTIONS_LANE,
@@ -45,7 +50,7 @@ import {
 } from './ListTable'
 import { ListToolbar, type ListToolbarProps, toolbarCount } from './ListToolbar'
 import { type ListCountProps, ListCountStatus, ListFooterCountContext } from './listSearch'
-import type { ColumnDef, ListView, ListViewChrome, StackLine } from './listView'
+import type { ColumnDef, ListGroupState, ListView, ListViewChrome, StackLine } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
 
 /** Defaults mean rows outside a ListView fully show actions (no view = show everything). */
@@ -89,6 +94,16 @@ function useRowActions(view?: ListViewChrome) {
   )
 }
 
+// The view's remembered collapsed groups, for the list's `ListGroup`s.
+const GroupStateContext = createContext<ListGroupState | undefined>(undefined)
+
+// A collapsible group's toggle, for its header row.
+const GroupToggleContext = createContext<{
+  collapsed: boolean
+  toggle: () => void
+  controls: string
+} | null>(null)
+
 export function ListRowActionsProvider({
   view,
   children,
@@ -97,7 +112,11 @@ export function ListRowActionsProvider({
   children: ReactNode
 }) {
   const rowActions = useRowActions(view)
-  return <RowActionsContext.Provider value={rowActions}>{children}</RowActionsContext.Provider>
+  return (
+    <RowActionsContext.Provider value={rowActions}>
+      <GroupStateContext value={view?.groupState}>{children}</GroupStateContext>
+    </RowActionsContext.Provider>
+  )
 }
 
 // The name cell's own top padding, so the value lines up with the name.
@@ -580,6 +599,102 @@ export function ListRow({
   )
 }
 
+export interface ListGroupProps {
+  /** The group's header: a `GroupRow`, or a component of the host's that renders one. Its
+   *  row holds the toggle. */
+  header: ReactNode
+  /** Names the group to the list's view, which remembers it collapsed or expanded under its
+   *  `storageKey` and counts it in Collapse all and Expand all. Unique among the list's groups. */
+  groupKey?: string | undefined
+  /** Collapsed, held by the host; with it, the view neither remembers nor collapses the group. */
+  collapsed?: boolean | undefined
+  /** Collapsed until the reader opens it, the first time the group shows. */
+  defaultCollapsed?: boolean | undefined
+  onCollapsedChange?: ((collapsed: boolean) => void) | undefined
+  /** The group's rows. */
+  children?: ReactNode
+}
+
+/**
+ * A group of a list's rows under a header that collapses them: a click on the header, other
+ * than on a link or button in it, or the chevron's button, which Tab reaches, folds the rows
+ * away and brings them back. A collapsed group's header still shows its count, and the list
+ * still counts its rows.
+ *
+ * It renders `<tbody>`s of its own, so it goes straight among a `Table`'s children, as
+ * `groups.map((g) => <ListGroup key=… header={…}>…</ListGroup>)`, not inside a fragment.
+ */
+export function ListGroup({
+  header,
+  groupKey,
+  collapsed,
+  defaultCollapsed = false,
+  onCollapsedChange,
+  children,
+}: ListGroupProps) {
+  const store = useContext(GroupStateContext)
+  const body = useContext(TableBodyContext)
+  const [own, setOwn] = useState(defaultCollapsed)
+  const controlled = collapsed !== undefined
+  const remembered = !controlled && groupKey !== undefined && store !== undefined
+  const register = store?.register
+  useEffect(() => {
+    if (remembered && register && groupKey !== undefined) {
+      return register(groupKey, defaultCollapsed)
+    }
+    return undefined
+  }, [remembered, register, groupKey, defaultCollapsed])
+  const isCollapsed =
+    collapsed ??
+    (remembered && groupKey !== undefined ? store.isCollapsed(groupKey, defaultCollapsed) : own)
+  const id = useId()
+  const toggle = () => {
+    const next = !isCollapsed
+    if (remembered && groupKey !== undefined) {
+      store.setCollapsed(groupKey, next)
+    } else if (!controlled) {
+      setOwn(next)
+    }
+    onCollapsedChange?.(next)
+  }
+  const context = { collapsed: isCollapsed, toggle, controls: id }
+  if (!body) {
+    if (isDev() && !warnedLooseGroup) {
+      warnedLooseGroup = true
+      console.warn(
+        'ListGroup renders <tbody>s of its own: put it straight among a Table’s children, not in a fragment.',
+      )
+    }
+    return (
+      <>
+        <GroupToggleContext value={context}>{header}</GroupToggleContext>
+        {!isCollapsed && children}
+      </>
+    )
+  }
+  return (
+    <>
+      {/* The header in a body of its own, so the rows' body can leave the page as one. Under a
+          collapsed last group, its rule is the list's last divider, as the last row's would be. */}
+      <tbody className={body.className} data-list-group>
+        <GroupToggleContext value={context}>{header}</GroupToggleContext>
+      </tbody>
+      {/* Collapsed, the rows unmount, and the body they leave is hidden, so nothing reads it. */}
+      <tbody id={id} className={body.className} hidden={isCollapsed} data-list-group-rows>
+        {!isCollapsed && children}
+      </tbody>
+    </>
+  )
+}
+
+let warnedLooseGroup = false
+
+// Table puts it among its bodies, rather than in one.
+ListGroup.isTableSection = true
+
+// Where a click on a collapsible header belongs to a control of its own, not the toggle.
+const OWN_CONTROL = 'a,button,input,label,select,textarea,[role=button],[role=link]'
+
 /**
  * A group's header row in a list: its label, such as a status or a cluster,
  * and, against the row's far end, what sums it up, such as "2/3 running".
@@ -618,9 +733,18 @@ export function GroupRow({
 }) {
   const { show: showActions, columnClasses } = useContext(RowActionsContext)
   const gutters = useRowGutters()
-  const content = children ?? (
+  const toggle = useContext(GroupToggleContext)
+  const labelId = useId()
+  const content = children ? (
+    // The toggle's name, laid out as the header's own content.
+    <span id={labelId} className="contents">
+      {children}
+    </span>
+  ) : (
     <>
-      <span className="flex min-w-0 items-center gap-2 text-(--theme-app)">{label}</span>
+      <span id={labelId} className="flex min-w-0 items-center gap-2 text-(--theme-app)">
+        {label}
+      </span>
       {detail !== undefined && detail !== null && detail !== false && (
         <span
           className="ml-2 hidden min-w-0 shrink-[100] truncate text-(--theme-muted-text-color) @[36rem]:block"
@@ -646,19 +770,60 @@ export function GroupRow({
   )
   // A fixed height, so a header with badges is as tall as one without.
   const line = 'flex h-8 min-w-0 items-center text-xs font-medium whitespace-nowrap'
-  const row = cx('bg-(--theme-muted-panel-bg)', className)
+  const row = cx(
+    'bg-(--theme-muted-panel-bg)',
+    toggle && 'group/group-row cursor-pointer',
+    className,
+  )
+  // Before the label, as a section's title has its chevron: right when collapsed, turned down
+  // when open. It reaches into the row's start, so the label moves over by little more than the
+  // glyph.
+  const chevron = toggle && (
+    <button
+      type="button"
+      aria-expanded={!toggle.collapsed}
+      aria-controls={toggle.controls}
+      aria-labelledby={labelId}
+      onClick={toggle.toggle}
+      className="-ml-1 mr-1 flex h-6 w-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-(--theme-muted-text-color) group-hover/group-row:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus)"
+      data-group-toggle
+    >
+      <ChevronRightIcon
+        aria-hidden="true"
+        className={cx(
+          'h-3.5 w-3.5 transition-transform motion-reduce:transition-none',
+          !toggle.collapsed && 'rotate-90',
+        )}
+      />
+    </button>
+  )
+  // The whole header toggles to a pointer, but for its own links and buttons. The chevron's
+  // button is the keyboard's and the screen reader's way.
+  const onClick = toggle
+    ? (e: ReactMouseEvent) => {
+        if (!(e.target as HTMLElement).closest(OWN_CONTROL)) {
+          toggle.toggle()
+        }
+      }
+    : undefined
+  const header = (
+    <>
+      {chevron}
+      {content}
+    </>
+  )
   if (columnClasses.length === 0) {
     return (
-      <tr className={row}>
+      <tr className={row} onClick={onClick}>
         <td colSpan={colSpan}>
-          <div className={line}>{content}</div>
+          <div className={line}>{header}</div>
         </td>
       </tr>
     )
   }
   const cells = leading + columnClasses.length + (showActions ? 1 : 0)
   return (
-    <tr className={row} data-group-row ref={gutters.ref} style={gutters.style}>
+    <tr className={row} data-group-row ref={gutters.ref} style={gutters.style} onClick={onClick}>
       {Array.from({ length: cells }, (_, i) => {
         const column = i - leading
         const cls = column >= 0 && column < columnClasses.length ? columnClasses[column] : undefined
@@ -676,7 +841,7 @@ export function GroupRow({
                     width: 'calc(100cqw - var(--group-start, 1rem) - var(--group-end, 1rem))',
                   }}
                 >
-                  {content}
+                  {header}
                 </div>
               </div>
             )}

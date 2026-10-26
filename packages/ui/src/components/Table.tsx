@@ -243,6 +243,17 @@ const isHeaderChild = (child: unknown): boolean => {
   )
 }
 
+// A child that renders its own `<tbody>`s, such as a list's collapsible group, by a static
+// `isTableSection` flag: the rows around it go in bodies of their own rather than hold it.
+const isSectionChild = (child: unknown): boolean =>
+  React.isValidElement(child) &&
+  typeof child.type === 'function' &&
+  (child.type as { isTableSection?: boolean }).isTableSection === true
+
+/** The class of the table's row bodies, for a section that renders bodies of its own. Null
+ *  outside a section, where a section can't add a body. */
+export const TableBodyContext = createContext<{ className: string | undefined } | null>(null)
+
 /** Rows of values under a row of column titles. Put `Table.Header`s first among
  *  the children, then `<tr>`s of `Table.Item`s. */
 export function Table({
@@ -332,9 +343,10 @@ export function Table({
                 >
                   <tr>{childList.filter(isHeaderChild)}</tr>
                 </thead>
-                <tbody className={tbodyClassName}>
-                  {childList.filter((c) => !isHeaderChild(c))}
-                </tbody>
+                <TableBody
+                  className={tbodyClassName}
+                  rows={childList.filter((c) => !isHeaderChild(c))}
+                />
               </table>
             </div>
           )}
@@ -342,6 +354,42 @@ export function Table({
       </CapsContext>
     </DensityContext>
   )
+}
+
+/** The rows in one `<tbody>`, or, among sections that render bodies of their own, the rows
+ *  between them in a body each. */
+function TableBody({
+  className,
+  rows,
+}: {
+  className: string | undefined
+  rows: React.ReactNode[]
+}) {
+  if (!rows.some(isSectionChild)) {
+    return <tbody className={className}>{rows}</tbody>
+  }
+  const parts: React.ReactNode[] = []
+  let run: React.ReactNode[] = []
+  const flush = () => {
+    if (run.length > 0) {
+      parts.push(
+        <tbody key={`rows-${parts.length}`} className={className}>
+          {run}
+        </tbody>,
+      )
+      run = []
+    }
+  }
+  for (const row of rows) {
+    if (isSectionChild(row)) {
+      flush()
+      parts.push(row)
+    } else {
+      run.push(row)
+    }
+  }
+  flush()
+  return <TableBodyContext value={{ className }}>{parts}</TableBodyContext>
 }
 
 Table.Header = Header

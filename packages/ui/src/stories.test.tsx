@@ -58,6 +58,7 @@ import * as appShell from './list/appShell.stories'
 import * as filterBar from './list/filterBar.stories'
 import * as list from './list/ListTable.stories'
 import * as listControls from './list/listControls.stories'
+import * as listGroup from './list/listGroup.stories'
 import * as listPage from './list/listPage.stories'
 import * as stickyHeaders from './list/stickyHeaders.stories'
 import * as userHoverCard from './list/UserHoverCard.stories'
@@ -127,6 +128,7 @@ const SUITES = {
   list,
   actionLane,
   listControls,
+  listGroup,
   filterBar,
   listPage,
   stickyHeaders,

@@ -27,6 +27,8 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
   const { common, list: t } = useStrings()
   const toggleable = view.columns.filter((c) => !isLocked(c))
   const hasGrouping = view.groupBys.length > 0
+  // Collapsible groups the list shows now, which it can fold or open all at once.
+  const hasGroups = view.groupKeys.length > 0
   const orderDirLabel = view.orderDir === 'asc' ? t.ascending : t.descending
   return (
     <Popover
@@ -48,8 +50,25 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
           />
         </div>
       )}
-      {view.orderBys.length > 0 && (
+      {hasGroups && (
         <div className={cx('flex items-center justify-between gap-3', hasGrouping && 'mt-2.5')}>
+          <span className="text-[13px] text-(--theme-app)">{t.groups}</span>
+          <button
+            type="button"
+            onClick={view.allGroupsCollapsed ? view.expandAllGroups : view.collapseAllGroups}
+            className="rounded-md border border-(--theme-border) px-2 py-1 text-[12px] text-(--theme-app) hover:bg-(--theme-muted-panel-bg)"
+          >
+            {view.allGroupsCollapsed ? common.expandAll : common.collapseAll}
+          </button>
+        </div>
+      )}
+      {view.orderBys.length > 0 && (
+        <div
+          className={cx(
+            'flex items-center justify-between gap-3',
+            (hasGrouping || hasGroups) && 'mt-2.5',
+          )}
+        >
           <span className="text-[13px] text-(--theme-app)">{t.ordering}</span>
           <div className="flex items-center gap-1">
             <Tooltip content={orderDirLabel}>
@@ -78,7 +97,7 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
       <div
         className={cx(
           'flex items-center justify-between gap-3',
-          (hasGrouping || view.orderBys.length > 0) && 'mt-2.5',
+          (hasGrouping || hasGroups || view.orderBys.length > 0) && 'mt-2.5',
         )}
       >
         <span className="text-[13px] text-(--theme-app)">{t.columnHeaders}</span>

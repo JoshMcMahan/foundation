@@ -89,6 +89,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | Nothing to show yet, or nothing matches | `EmptyState` |
 | A page, card or section that couldn't show what it was asked for, such as a 404 | `ErrorPage`, its words chosen by the status |
 | A list page's toolbar and its loading, error, empty and no-match states | `ListToolbar` in `ListPage` with `total`, `matches`, `empty` and `noMatches` (from `./list`) |
+| A list's rows under headers that collapse, such as queues by cluster | `ListGroup` with a `GroupRow` as its `header`, straight among the `Table`'s children. A click on the header, but not on a link or button in it, or the chevron's button toggles it; `collapsed`, `defaultCollapsed` and `onCollapsedChange` as elsewhere. With a `groupKey` inside a `ListPage` with a view, the view remembers it under `${storageKey}:collapsedGroups`, and Display options collapse or expand every group. A `GroupRow` outside one doesn't collapse |
 | How many rows a list has, or how many of them match ("2 of 7 tokens") | `count` on `ListPage`, with its `total` and `matches`: it shows under the last row, only while there are rows. A `ListToolbar`'s `count` moves there too, and the toolbar then sits at the end of the filter chips' first line (`ListFilterBar`'s `end`), or on a line alone while no chip shows. `ListCount` placed by hand is deprecated |
 | A text field | `Input`, `Textarea`, or a control framed by `Field`, whose `actions` hold buttons that act on it |
 | A number, a date, a color | `NumberInput`, `DatePicker`, `ColorInput` |
