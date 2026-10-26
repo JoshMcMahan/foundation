@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.97.0](https://github.com/parallelworks/foundation/compare/ui-v0.96.1...ui-v0.97.0) (2026-10-26)
+
+
+### Features
+
+* **ui:** two panes of one task show side by side where they fit and one at a time on a phone ([#524](https://github.com/parallelworks/foundation/issues/524)) ([8eff1ed](https://github.com/parallelworks/foundation/commit/8eff1edf095066bf9a81a1db1d53905d9e993bb7))
+
 ## [0.96.1](https://github.com/parallelworks/foundation/compare/ui-v0.96.0...ui-v0.96.1) (2026-10-26)
 
 
