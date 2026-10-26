@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.95.0](https://github.com/parallelworks/foundation/compare/ui-v0.94.1...ui-v0.95.0) (2026-10-26)
+
+
+### Features
+
+* **ui:** a stat tile shows a count with its label, lamp and bar, and tiles line up in a group that fits a phone ([#518](https://github.com/parallelworks/foundation/issues/518)) ([30313b4](https://github.com/parallelworks/foundation/commit/30313b4b54ca7b7ee58b1e6a067ed3d12a2f4722))
+
 ## [0.94.1](https://github.com/parallelworks/foundation/compare/ui-v0.94.0...ui-v0.94.1) (2026-10-25)
 
 
