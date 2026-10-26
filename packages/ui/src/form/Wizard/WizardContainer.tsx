@@ -475,7 +475,7 @@ export function WizardContainer({
         isCurrentStepValid={!invalidSteps.has(pageKey)}
         nextLabel={page?.config.nextLabel}
         prevLabel={page?.config.prevLabel}
-        submitLabel={config.submitLabel || 'Execute'}
+        submitLabel={config.submitLabel || strings.runWizard}
         onNext={goToNext}
         onPrevious={goToPrevious}
         onSubmit={nested ? undefined : handleSubmit}

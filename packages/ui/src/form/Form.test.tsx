@@ -63,6 +63,7 @@ vi.mock('./fieldRegistry', async (importOriginal) => {
   }
 })
 
+import { UIProvider } from '../components/Provider'
 import { testEngine } from '../test/engine'
 import { renderDynamicForm } from '../test/form'
 
@@ -626,6 +627,28 @@ describe('a repeated wizard page’s buttons', () => {
     await screen.findByRole('heading', { name: 'CPU workers' })
     expect(screen.getByRole('button', { name: 'Remove CPU workers' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+ Add GPU workers 3' })).toBeInTheDocument()
+  })
+})
+
+describe('a wizard’s last step', () => {
+  it('names its submit in the host’s words', async () => {
+    render(
+      <UIProvider strings={{ form: { runWizard: 'Lancer' } }}>
+        <DynamicForm
+          initialValues={{}}
+          formJSONs={{
+            $meta: { wizard: { mode: 'wizard' } },
+            one: { type: 'step', title: 'One', options: { a: { type: 'string' } } },
+            two: { type: 'step', title: 'Two', options: { b: { type: 'string' } } },
+          }}
+        />
+      </UIProvider>,
+    )
+    await screen.findByTestId('field-a')
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await screen.findByTestId('field-b')
+    expect(screen.getByRole('button', { name: 'Lancer' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Execute' })).toBeNull()
   })
 })
 
