@@ -30,6 +30,7 @@ import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as pickers from './components/pickers.stories'
 import * as primitives from './components/primitives.stories'
+import * as statTile from './components/StatTile.stories'
 import * as statusBadge from './components/StatusBadge.stories'
 import * as statusLabel from './components/StatusLabel.stories'
 import * as sections from './components/sections.stories'
@@ -104,6 +105,7 @@ const SUITES = {
   badges,
   statusBadge,
   statusLabel,
+  statTile,
   icons,
   sections,
   descriptionList,

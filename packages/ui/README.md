@@ -121,6 +121,7 @@ Each need has one component. Reach for it before styling markup by hand.
 | A message set into the page: guidance, a warning, an error | `Callout`; `variant="bar"` across a surface under its header |
 | A passing notice, or the progress of work in the background | `toast` |
 | How full something is, how far a task has come | `Meter`, `ProgressBar` |
+| Counts at the top of a page, such as jobs running and failed: a value, its label, a lamp, a bar, or a link to the list | `StatTile`, laid out in a `StatTileGroup`, which folds to two columns on a phone with `wide` tiles and any that would sit alone across the row |
 | Pages of a long list | `Pagination`; in a `ListPage`, as its `pager`, on the count's line under the last row, where a "Load more" button goes too |
 | A grouped page of settings | `SettingsCard` with `SettingRow`s |
 | A person or an agent | `Avatar`, colored by name without a picture, or by kind; `AvatarGroup` for an overlapping stack with a "+N" chip |

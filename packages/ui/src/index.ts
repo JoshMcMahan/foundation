@@ -325,6 +325,14 @@ export {
 export { LoadingRegion, Skeleton, type SkeletonProps } from './components/Skeleton'
 export { Slider, type SliderProps } from './components/Slider'
 export {
+  StatTile,
+  type StatTileBar,
+  StatTileGroup,
+  type StatTileGroupProps,
+  type StatTileLamp,
+  type StatTileProps,
+} from './components/StatTile'
+export {
   type BadgeEmphasis,
   type BadgeSize,
   type BadgeVariant,
