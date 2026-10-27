@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { cx } from '../cx'
 import { CopyButton } from './CopyButton'
+import { InDescriptionListGroup } from './descriptionListGroup'
 import { InfoTip } from './InfoTip'
 import { useStrings } from './Provider'
 import { withPathBreaks } from './pathBreaks'
@@ -65,9 +66,6 @@ const columns = (stacked: boolean) =>
     !stacked && '@sm/dl:grid-cols-[fit-content(40%)_minmax(0,1fr)] @sm/dl:gap-x-6',
   )
 
-// Inside a group, a list and its rows lay out on the group's columns.
-const InGroup = createContext(false)
-
 const titleClassName = 'col-span-full m-0 mb-1 text-sm font-semibold text-(--theme-app)'
 
 /** Names and their values, such as the details of a record in a drawer or a card. The
@@ -85,7 +83,7 @@ export default function DescriptionList({
   children,
   ...props
 }: DescriptionListProps) {
-  const grouped = useContext(InGroup)
+  const grouped = useContext(InDescriptionListGroup)
   const size = useContext(SizeContext) ?? sizeProp ?? 'sm'
   const titleId = useId()
   const Heading = `h${headingLevel}` as const
@@ -130,7 +128,10 @@ export default function DescriptionList({
 /** Description lists in one panel, such as a record's Overview, Actor and Target, that
  *  share one label column: it fits the longest label across all of them, so their
  *  values start at one edge down the panel. Each list keeps its own title and variant;
- *  all of them stack together when the panel is narrow. */
+ *  all of them stack together when the panel is narrow. A list may sit in a `Section`
+ *  in the group, such as a record's own details followed by its type's settings under
+ *  a heading: the section passes the columns through. Put the lists, and sections of
+ *  them, directly in the group; another wrapper between them breaks the shared column. */
 export function DescriptionListGroup({
   stacked = false,
   size,
@@ -143,16 +144,16 @@ export function DescriptionListGroup({
   size?: DescriptionListSize | undefined
   /** Styles the box around the group, such as its margins or width. */
   className?: string | undefined
-  /** `DescriptionList`s. */
+  /** `DescriptionList`s, and `Section`s that hold them. */
   children: ReactNode
 }) {
   return (
     // The lists subgrid onto these columns, so every row's label sizes the one column.
     <div className={cx('@container/dl min-w-0', className)}>
       <div className={cx(columns(stacked), 'gap-y-6')}>
-        <InGroup value>
+        <InDescriptionListGroup value>
           {size ? <SizeContext value={size}>{children}</SizeContext> : children}
-        </InGroup>
+        </InDescriptionListGroup>
       </div>
     </div>
   )

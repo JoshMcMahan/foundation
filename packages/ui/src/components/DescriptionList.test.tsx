@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import DescriptionList, { DescriptionListGroup, DescriptionListItem } from './DescriptionList'
+import { Section } from './Section'
 import { toast } from './Toast'
 
 const notifySuccess = vi.spyOn(toast, 'success')
@@ -166,6 +167,51 @@ describe('DescriptionListGroup', () => {
     }
     expect(container.querySelectorAll('.\\@container\\/dl')).toHaveLength(1)
     expect(screen.getByRole('group', { name: 'Target' })).toHaveTextContent('Session')
+  })
+
+  it('passes its columns through a section, so a list under a heading shares them', () => {
+    const { container } = render(
+      <DescriptionListGroup>
+        <DescriptionList variant="divided">
+          <DescriptionListItem label="Name">scratch-lustre</DescriptionListItem>
+        </DescriptionList>
+        <Section title="Managed Lustre settings">
+          <DescriptionList variant="divided">
+            <DescriptionListItem label="Storage size (TiB)">18</DescriptionListItem>
+          </DescriptionList>
+        </Section>
+        <Section variant="card" collapsible={false} title="Maintenance">
+          <DescriptionList>
+            <DescriptionListItem label="Window">Sunday 02:00</DescriptionListItem>
+          </DescriptionList>
+        </Section>
+      </DescriptionListGroup>,
+    )
+    const grid = container.querySelector('.\\@container\\/dl > div') as HTMLElement
+    // Every box from the group down to each list's rows lays out on the group's columns.
+    for (const value of ['scratch-lustre', '18', 'Sunday 02:00']) {
+      let box = screen.getByText(value).closest('dl') as HTMLElement | null
+      while (box && box !== grid) {
+        expect(box).toHaveClass('col-span-full', 'grid-cols-subgrid')
+        box = box.parentElement
+      }
+      expect(box).toBe(grid)
+    }
+    // The heading spans both columns over its list.
+    const heading = screen.getByRole('heading', { name: 'Managed Lustre settings' })
+    expect(heading.closest('[data-section-header]')).toHaveClass('col-span-full')
+  })
+
+  it('keeps a section out of the group laid out as before', () => {
+    const { container } = render(
+      <Section title="Storage definition">
+        <DescriptionList>
+          <DescriptionListItem label="Name">scratch-lustre</DescriptionListItem>
+        </DescriptionList>
+      </Section>,
+    )
+    expect(container.firstElementChild).toHaveClass('flex', 'flex-col')
+    expect(container.querySelector('.grid-cols-subgrid:not(dl *, dl)')).toBeNull()
   })
 })
 

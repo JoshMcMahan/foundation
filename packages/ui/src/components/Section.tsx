@@ -1,8 +1,9 @@
 import { Collapsible } from '@base-ui/react/collapsible'
-import { type ReactNode, useId } from 'react'
+import { type ReactNode, useContext, useId } from 'react'
 import { cx } from '../cx'
 import { ChevronRightIcon } from '../icons'
 import { collapsePanelClassName } from './Disclosure'
+import { InDescriptionListGroup } from './descriptionListGroup'
 
 export type SectionVariant = 'plain' | 'bare' | 'card'
 export type SectionTone = 'default' | 'error'
@@ -51,6 +52,15 @@ const rootClasses: Record<SectionVariant, string> = {
   card: 'panel mb-1 flex w-full flex-col',
 }
 
+// In a DescriptionListGroup the section, and each box between it and its lists, lays out on the
+// group's columns, so the lists in it share the group's label column with the lists outside it.
+const groupedRootClasses: Record<SectionVariant, string> = {
+  plain: 'col-span-full grid grid-cols-subgrid',
+  bare: 'col-span-full grid grid-cols-subgrid',
+  card: 'panel mb-1 col-span-full grid grid-cols-subgrid',
+}
+const passColumns = 'col-span-full grid grid-cols-subgrid'
+
 // A danger zone keeps the card's frame but drops its fill, so its red edge reads
 // as the warning rather than a tinted block.
 const errorCardClassName = 'border-(--theme-error)/30 bg-transparent'
@@ -98,7 +108,8 @@ const chevronIndent = 'pl-6'
 /** A titled part of a page or form, its title a heading in the page's outline,
  *  that can fold away. Folding keeps the content mounted, so fields hold their
  *  values and validation while closed. For a line inside content that reveals
- *  more detail, use Disclosure. */
+ *  more detail, use Disclosure. In a `DescriptionListGroup`, the description lists
+ *  in it share the group's label column. */
 export function Section({
   title,
   description,
@@ -118,6 +129,7 @@ export function Section({
   children,
 }: SectionProps) {
   const Heading = `h${headingLevel}` as const
+  const grouped = useContext(InDescriptionListGroup)
   const descriptionId = useId()
   const describedBy = description ? descriptionId : undefined
   // Marks the title for hosts that treat it as a handle, such as the inputs editor's drag.
@@ -126,11 +138,23 @@ export function Section({
   const fill = !beside && !actions
   const card = variant === 'card'
   const danger = card && tone === 'error'
-  const rootClassName = cx(rootClasses[variant], danger && errorCardClassName, className)
+  const rootClassName = cx(
+    (grouped ? groupedRootClasses : rootClasses)[variant],
+    danger && errorCardClassName,
+    className,
+  )
   const titleTone = danger && 'text-(--theme-error-text)'
-  const body = card && !flush ? <div className={cardBodyClassName}>{children}</div> : children
+  const body =
+    card && !flush ? (
+      <div className={cx(cardBodyClassName, grouped && passColumns)}>{children}</div>
+    ) : (
+      children
+    )
   const header = (heading: ReactNode) => (
-    <div className={cx(headerClasses[variant], !card && ruleGaps[spacing])} data-section-header>
+    <div
+      className={cx(headerClasses[variant], !card && ruleGaps[spacing], grouped && 'col-span-full')}
+      data-section-header
+    >
       <div className="flex min-w-0 grow basis-0 flex-col gap-0.5">
         <div className="flex min-w-0 items-start gap-2">
           {heading}
@@ -204,7 +228,7 @@ export function Section({
           </Collapsible.Trigger>
         </Heading>,
       )}
-      <Collapsible.Panel keepMounted className={collapsePanelClassName}>
+      <Collapsible.Panel keepMounted className={cx(collapsePanelClassName, grouped && passColumns)}>
         {body}
       </Collapsible.Panel>
     </Collapsible.Root>
