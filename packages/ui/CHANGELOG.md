@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.100.0](https://github.com/parallelworks/foundation/compare/ui-v0.99.0...ui-v0.100.0) (2026-10-27)
+
+
+### Features
+
+* **ui:** a long button label wraps, and Button keeps a caller's aria-busy ([#539](https://github.com/parallelworks/foundation/issues/539)) ([d343bf5](https://github.com/parallelworks/foundation/commit/d343bf592303c86a941c593c60579d60ee2ad0c7))
+
+
+### Bug Fixes
+
+* **ui:** a date filter's last day and last hour read as words in English ([#547](https://github.com/parallelworks/foundation/issues/547)) ([80f2876](https://github.com/parallelworks/foundation/commit/80f28768655b3399057a3dd96a7d93387a401330))
+* **ui:** on a phone, a list row's note wraps inside it, and its stacked line and checkbox line up with its name ([#548](https://github.com/parallelworks/foundation/issues/548)) ([ee1f350](https://github.com/parallelworks/foundation/commit/ee1f35001fd13a3cad51379700946246365b2ebb))
+
 ## [0.99.0](https://github.com/parallelworks/foundation/compare/ui-v0.98.0...ui-v0.99.0) (2026-10-27)
 
 
