@@ -348,14 +348,16 @@ export function Field({
       {required && <RequiredMark />}
     </>
   )
-  // Beside the label rather than in it, so a help button doesn't name the control.
+  // Beside the label rather than in it, so a help button doesn't name the control. The ? and
+  // the hint flow with the label's text rather than sitting beside it as flex items, so where a
+  // narrow column wraps the label they follow its last word, not the far end of the row.
   const labelExtras = (
     <>
-      {helpTip}
-      {hint}
-      {actions && <span className={actionsClassName}>{actions}</span>}
+      {helpTip && <span className={controlFirstExtrasClassName}>{helpTip}</span>}
+      {hint && <span className="ms-1">{hint}</span>}
     </>
   )
+  const labelActions = actions && <span className={actionsClassName}>{actions}</span>
   const placed = typeof children === 'function' ? children(control) : children
   // A field inside this one, such as in a group, starts its own row.
   const controlInContext = (
@@ -533,8 +535,11 @@ export function Field({
       >
         <div className={frame}>
           <Fieldset.Legend id={labelId} className={labelBox}>
-            <span>{nameContent}</span>
-            {labelExtras}
+            <span className="min-w-0">
+              {nameContent}
+              {labelExtras}
+            </span>
+            {labelActions}
           </Fieldset.Legend>
           {body}
         </div>
@@ -549,8 +554,11 @@ export function Field({
       data-field-row={inRow || undefined}
     >
       <div className={labelBox}>
-        {fieldLabel()}
-        {labelExtras}
+        <span className="min-w-0">
+          {fieldLabel()}
+          {labelExtras}
+        </span>
+        {labelActions}
       </div>
       {body}
     </BaseField.Root>

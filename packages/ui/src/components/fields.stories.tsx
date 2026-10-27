@@ -338,6 +338,54 @@ export const FrameWithActions: StoryObj = {
   },
 }
 
+/** In a narrow column, such as a grid of color fields on a phone, a long label wraps. Its ? and
+ *  hint follow its last word, as a sentence's punctuation would, rather than standing at the far
+ *  end of the row; actions, which act on the field, keep to the end. */
+export const FrameLabelWraps: StoryObj = {
+  render: () => (
+    <div className="grid w-72 max-w-full grid-cols-2 items-end gap-3">
+      <Field
+        label="Disabled input background"
+        help="The fill of a field that can't be changed."
+        size="sm"
+      >
+        <Input defaultValue="#f3f4f6" size="sm" className="font-mono" />
+      </Field>
+      <Field
+        label="Muted panel secondary text color"
+        hint={<code className="text-xs theme-muted-text">muted</code>}
+        size="sm"
+      >
+        <Input defaultValue="#5f6b76" size="sm" className="font-mono" />
+      </Field>
+      <ColorInput
+        label="Top banner background color"
+        size="sm"
+        value="#2563eb"
+        onValueChange={() => {}}
+        actions={<IconButton icon={<UndoIcon />} label="Reset" size="sm" variant="ghost" />}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const hint = canvas.getByText('muted')
+    const label = canvas.getByText('Muted panel secondary text color', { selector: 'label' })
+    const row = label.parentElement?.parentElement as HTMLElement
+    // The label wraps, and the hint follows its last word, short of the row's end.
+    await expect(label.getClientRects().length).toBeGreaterThan(1)
+    await expect(
+      row.getBoundingClientRect().right - hint.getBoundingClientRect().right,
+    ).toBeGreaterThan(16)
+  },
+}
+
+/** On a phone, the same fields in a two-column grid. */
+export const FrameLabelWrapsOnPhone: StoryObj = {
+  ...FrameLabelWraps,
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+}
+
 // Room above the first field for its help, which opens over the ? when it is hovered, as a
 // page's header would leave it.
 const roomAbove: Decorator = (Story) => (

@@ -231,7 +231,7 @@ describe('WorkflowSettingsDialog', () => {
     // The field: its label's row, which holds the expression switch, and the control under it.
     const redirect = within(session).getByText(GRAPH_EDITOR_STRINGS.fields.redirect, {
       selector: 'label',
-    }).parentElement?.parentElement as HTMLElement
+    }).parentElement?.parentElement?.parentElement as HTMLElement
     fireEvent.click(
       within(redirect).getByRole('button', { name: GRAPH_EDITOR_STRINGS.useExpression }),
     )

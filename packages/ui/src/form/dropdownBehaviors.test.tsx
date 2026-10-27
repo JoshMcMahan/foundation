@@ -27,7 +27,11 @@ function renderForm(formJSONs: Record<string, unknown>) {
 
 const fieldRow = (label: string) => {
   const labelEl = screen.getByText(label, { exact: true })
-  const row = labelEl.closest('[data-field-label]')?.parentElement?.parentElement
+  // The field's root: the nearest ancestor of the label that holds a control too.
+  let row: HTMLElement | null = labelEl.closest('[data-field-label]')
+  while (row && !row.querySelector('[data-testid="combobox"]')) {
+    row = row.parentElement
+  }
   if (!row) {
     throw new Error(`no field row for label ${label}`)
   }

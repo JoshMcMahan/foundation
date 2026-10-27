@@ -28,7 +28,8 @@ describe('Field', () => {
     const label = document.querySelector(`label[for="${box.id}"]`)
     // The required mark follows the label's last word, inside the label itself.
     expect(label?.lastElementChild).toHaveTextContent('*')
-    expect(label?.parentElement).toHaveClass('row-start-1')
+    // The label sits in the row's text, with any ? or hint after it.
+    expect(label?.parentElement?.parentElement).toHaveClass('row-start-1')
     expect(box.closest('.row-start-2')).not.toBeNull()
     // Its own box steps aside, so its label and control sit in the row's grid.
     expect(label?.closest('[data-field-row]')).toHaveClass('contents')
@@ -47,7 +48,7 @@ describe('Field', () => {
     )
     const labelRow = (name: string) =>
       document.querySelector(`label[for="${screen.getByRole('textbox', { name }).id}"]`)
-        ?.parentElement
+        ?.parentElement?.parentElement
     expect(labelRow('Allocation')).toHaveClass('min-h-7', 'text-xs')
     expect(labelRow('Zone')).toHaveClass('min-h-8', 'text-sm')
   })
@@ -401,7 +402,7 @@ describe('Field help', () => {
 
   it('sizes its label to match a small input given a label', () => {
     render(<Input label="Filter" size="sm" />)
-    expect(screen.getByText('Filter').parentElement).toHaveClass('text-xs')
+    expect(screen.getByText('Filter').parentElement?.parentElement).toHaveClass('text-xs')
   })
 })
 

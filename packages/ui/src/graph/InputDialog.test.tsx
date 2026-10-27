@@ -125,7 +125,9 @@ describe('InputDialog', () => {
       target: { value: '${{ inputs.choices }}' },
     })
     openSection('Behavior')
-    const hidden = screen.getByText('Hidden', { selector: 'label' }).parentElement as HTMLElement
+    // The label's row, which holds the expression switch beside the label's text.
+    const hidden = screen.getByText('Hidden', { selector: 'label' }).parentElement
+      ?.parentElement as HTMLElement
     fireEvent.click(within(hidden).getByRole('button', { name: 'Use an expression instead' }))
     fireEvent.change(screen.getByLabelText('Hidden'), {
       target: { value: '${{ inputs.simple }}' },
