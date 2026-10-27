@@ -330,6 +330,40 @@ describe('ListRow stacked columns', () => {
     expect(Array.from(items).map((item) => item.textContent)).toEqual(['compute'])
   })
 
+  it('collapses a stacked value whose host component renders nothing, so the next starts the line', () => {
+    // A status only some rows have, rendered by the host's own component inside the cell.
+    const NoStatus = () => null
+    render(
+      <ListRowActionsProvider
+        view={{
+          ...view,
+          columnClasses: ['', ...Array(2).fill('hidden @[36rem]:table-cell')],
+          columnStacks: [false, true, true],
+        }}
+      >
+        <table>
+          <tbody>
+            <ListRow href={null} items={[]} goTo={() => {}} openMenu={() => {}}>
+              <NameCell icon={<span />} name="job-48210-scratch" href={null} />
+              <Table.Item>
+                <NoStatus />
+              </Table.Item>
+              <Table.Item>maya</Table.Item>
+            </ListRow>
+          </tbody>
+        </table>
+      </ListRowActionsProvider>,
+    )
+    const line = screen.getAllByRole('cell')[0]?.querySelector('[data-stacked-line]')
+    const [status, owner] = Array.from(line?.querySelectorAll('[data-stacked]') ?? [])
+    // Hidden while empty, so it leaves no gap before the owner.
+    expect(status).toBeEmptyDOMElement()
+    expect(status).toHaveClass('empty:hidden')
+    expect(owner).toHaveTextContent('maya')
+    // And a line of nothing but such values is gone with them.
+    expect(line).toHaveClass('not-has-[>:not(:empty)]:hidden')
+  })
+
   it('reads stacked values as secondary text, the size of a subtitle', () => {
     render(
       <ListRowActionsProvider view={view}>

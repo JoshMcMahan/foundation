@@ -212,7 +212,15 @@ export function DescriptionListItem({
                 too long for a line of its own, such as a hash. */}
             {truncate ? (
               <Tooltip content={children} overflowOnly>
-                <div data-value className={cx('min-w-0 truncate', leading, mono && sizeMono[size])}>
+                <div
+                  data-value
+                  className={cx(
+                    // Clipped 4px out, so a status lamp's glow at the value's edge shows whole.
+                    'min-w-0 overflow-clip text-ellipsis whitespace-nowrap [overflow-clip-margin:4px]',
+                    leading,
+                    mono && sizeMono[size],
+                  )}
+                >
                   {children}
                 </div>
               </Tooltip>

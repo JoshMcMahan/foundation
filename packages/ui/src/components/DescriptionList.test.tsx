@@ -225,7 +225,7 @@ describe('DescriptionList size and truncation', () => {
       </DescriptionList>,
     )
     const value = screen.getByText('node-0001,node-0002,node-0003')
-    expect(value).toHaveClass('truncate', 'font-mono', 'text-[0.75rem]')
+    expect(value).toHaveClass('text-ellipsis', 'whitespace-nowrap', 'font-mono', 'text-[0.75rem]')
     expect(value.closest('dl')).toHaveClass('text-xs')
   })
 

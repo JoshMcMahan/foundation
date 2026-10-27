@@ -337,13 +337,15 @@ const STACKED_JOINED_PLACEMENT = { stacked: true, joined: true }
 
 // The line the stacked values share: it follows the subtitle by a 4px step, and its items wrap
 // with a 4px step between lines and 12px between values.
+// A line whose values all render nothing is gone too, rather than leaving its 4px.
 const STACKED_LINE =
-  'mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--theme-muted-text-color) empty:hidden @[36rem]:hidden'
+  'mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--theme-muted-text-color) not-has-[>:not(:empty)]:hidden @[36rem]:hidden'
 
 // Stacked values on lines of their own: the same steps, each line wrapping on its own.
 const STACKED_LINES =
-  'mt-1 flex min-w-0 flex-col gap-y-1 text-xs text-(--theme-muted-text-color) empty:hidden @[36rem]:hidden'
-const STACKED_LINES_LINE = 'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1'
+  'mt-1 flex min-w-0 flex-col gap-y-1 text-xs text-(--theme-muted-text-color) not-has-[>*>:not(:empty)]:hidden @[36rem]:hidden'
+const STACKED_LINES_LINE =
+  'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 not-has-[>:not(:empty)]:hidden'
 
 // A cell given straight to a row, whose content is there to see, rather than through a component.
 const isCellElement = (child: ReactElement) => child.type === Table.Item || child.type === 'td'

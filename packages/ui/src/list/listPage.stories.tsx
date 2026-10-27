@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { Avatar } from '../components/Avatar'
 import { Button } from '../components/Button'
 import { useContextMenu } from '../components/ContextMenu'
 import { PageHeader, PageHeaderBar, PageHeaderProvider } from '../components/PageHeader'
@@ -480,6 +481,147 @@ export const CellsInHostComponents: StoryObj = {
     const [name, state] = within(row).getAllByRole('cell')
     await expect(name?.querySelector('[data-stacked]')).toHaveTextContent('Running')
     await expect(state).toHaveClass('@[36rem]:table-cell')
+  },
+}
+
+interface Volume {
+  name: string
+  type: string
+  ephemeral: boolean
+  owner: string
+  size: string
+}
+
+const VOLUMES: Volume[] = [
+  {
+    name: 'scratch-lustre',
+    type: 'Managed Lustre',
+    ephemeral: false,
+    owner: 'maya',
+    size: '4,800',
+  },
+  {
+    name: 'job-48210-scratch',
+    type: 'Ephemeral Managed Lustre',
+    ephemeral: true,
+    owner: 'maya',
+    size: '1,200',
+  },
+  { name: 'datasets', type: 'Bucket', ephemeral: false, owner: 'omar', size: '—' },
+]
+
+// A status only some rows have: a volume made for one job and gone after it has none, so the
+// host's component renders nothing inside the cell it was given.
+function VolumeStatus({ volume }: { volume: Volume }) {
+  if (volume.ephemeral) {
+    return null
+  }
+  return <StatusLabel variant="success">Provisioned</StatusLabel>
+}
+
+function VolumesList() {
+  const view = useListView<Volume>({
+    storageKey: 'story-volumes',
+    columns: [
+      { key: 'name', label: 'Name', alwaysVisible: true },
+      { key: 'status', label: 'Status' },
+      { key: 'owner', label: 'Owner' },
+      { key: 'size', label: 'Size (GB)' },
+    ],
+  })
+  const { openMenu, contextMenu } = useContextMenu()
+  const goTo = useListNavigate()
+  return (
+    <PageHeaderProvider>
+      <div className="flex flex-col overflow-hidden rounded-md border border-(--theme-border) bg-(--theme-app-bg)">
+        <PageHeader breadcrumbs={[{ label: 'Storage' }]} />
+        <ListPage view={view} total={VOLUMES.length} matches={VOLUMES.length}>
+          <Table {...listTableProps} tbodyClassName="divide-y divide-(--theme-border)">
+            <ListColumns view={view} />
+            {VOLUMES.map((volume) => (
+              <ListRow
+                key={volume.name}
+                href={null}
+                onActivate={() => {}}
+                items={[{ label: 'Details', onClick: () => {} }]}
+                goTo={goTo}
+                openMenu={openMenu}
+              >
+                <NameCell
+                  icon={<StorageIcon />}
+                  iconTile
+                  name={volume.name}
+                  subtitle={volume.type}
+                  href={null}
+                />
+                <Table.Item className="py-2.5 text-[13px]">
+                  <VolumeStatus volume={volume} />
+                </Table.Item>
+                <Table.Item className="py-2.5">
+                  <div className="flex min-w-0 items-center gap-2 text-[13px] text-(--theme-muted-text-color)">
+                    <Avatar name={volume.owner} size="sm" className="shrink-0" />
+                    <span className="truncate">{volume.owner}</span>
+                  </div>
+                </Table.Item>
+                <Table.Item className="py-2.5 text-[13px] text-(--theme-muted-text-color)">
+                  {volume.size}
+                </Table.Item>
+              </ListRow>
+            ))}
+          </Table>
+        </ListPage>
+      </div>
+      {contextMenu}
+    </PageHeaderProvider>
+  )
+}
+
+/** A storage list, where a volume made for one job has no status: on a phone, where the status,
+ *  owner and size stack under the name, the missing status takes no room, so the owner starts the
+ *  line under the name as it does on every other row. */
+export const EmptyCellsOnAPhone: StoryObj = {
+  render: () => <VolumesList />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const lines = ['scratch-lustre', 'job-48210-scratch'].map(
+      (name) =>
+        (canvas.getByText(name).closest('td') as HTMLElement).querySelector(
+          '[data-stacked-line]',
+        ) as HTMLElement,
+    )
+    // Where the line shows, the owner starts it on the row without a status as the status does
+    // on the row with one.
+    if (lines[1]?.checkVisibility()) {
+      const start = (line: HTMLElement | undefined) =>
+        [...(line?.children ?? [])].find((item) => item.checkVisibility())?.getBoundingClientRect()
+          .left
+      await expect(start(lines[1])).toBe(start(lines[0]))
+    }
+    // A status lamp's glow, 3px about it, shows whole: no box that clips it, up to its row,
+    // clips nearer to it than that, whether the status is its own cell or on the line.
+    for (const name of canvas.getAllByText('Provisioned')) {
+      const lamp = name.previousElementSibling as HTMLElement
+      if (!lamp.checkVisibility()) {
+        continue
+      }
+      const dot = lamp.getBoundingClientRect()
+      for (let box = lamp.parentElement; box && box.tagName !== 'TR'; box = box.parentElement) {
+        const style = getComputedStyle(box)
+        if (style.overflowX === 'visible' && style.overflowY === 'visible') {
+          continue
+        }
+        const margin =
+          style.overflowX === 'clip' ? Number.parseFloat(style.overflowClipMargin) || 0 : 0
+        const edge = box.getBoundingClientRect()
+        const room = Math.min(
+          dot.left - edge.left,
+          edge.right - dot.right,
+          dot.top - edge.top,
+          edge.bottom - dot.bottom,
+        )
+        await expect(room + margin).toBeGreaterThanOrEqual(3)
+      }
+    }
   },
 }
 
