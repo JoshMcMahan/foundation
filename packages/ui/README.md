@@ -526,12 +526,6 @@ narrow screen or under user text spacing. `Button` and `IconButton` apply it. An
 by hand. A pressed toggle
 (`aria-pressed`) and an open popup's trigger read as selected.
 
-A button that can't act for a reason a tooltip gives, such as every action
-while viewing the app as someone else, takes `aria-disabled` and `data-locked`.
-It looks as it would until pointed at or focused, then shows itself
-unavailable, so the page reads as it does for whoever can act. The host stops
-its clicks.
-
 A host gives the primary button its own fill and shadow on `:root`:
 `--button-primary-image` draws over the accent, such as a gradient that starts
 at it, and `--button-primary-shadow` is a shadow at rest that the button keeps

@@ -230,41 +230,6 @@ export const ButtonLabelWraps: StoryObj = {
   },
 }
 
-/** A button that can't act for a reason a tooltip gives, such as every action
- *  while viewing as someone else, takes `aria-disabled` and `data-locked`: it
- *  looks as it would until pointed at or focused, then shows itself
- *  unavailable. Without `data-locked`, `aria-disabled` is dimmed throughout. */
-export const ButtonLocked: StoryObj = {
-  name: 'Button locked',
-  render: () => (
-    <div className="flex flex-wrap items-center gap-3 p-8">
-      <Button variant="secondary" aria-disabled data-locked="" aria-describedby="locked-why">
-        Revoke
-      </Button>
-      <Button variant="primary" aria-disabled data-locked="" aria-describedby="locked-why">
-        Approve
-      </Button>
-      <Button variant="primary" aria-disabled>
-        Unavailable
-      </Button>
-      <span id="locked-why" className="text-sm theme-muted-text">
-        Viewing as someone else
-      </span>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const revoke = canvas.getByRole('button', { name: 'Revoke' })
-    await expect(getComputedStyle(revoke).opacity).toBe('1')
-    await expect(
-      getComputedStyle(canvas.getByRole('button', { name: 'Unavailable' })).opacity,
-    ).toBe('0.5')
-    await userEvent.tab()
-    await expect(revoke).toHaveFocus()
-    await expect(getComputedStyle(revoke).opacity).toBe('0.5')
-  },
-}
-
 /** A host's own primary: an image over the accent, here a gradient from it to
  *  its hover shade, the same small step in either theme, and a shadow at rest
  *  that stays while the button is hovered. */

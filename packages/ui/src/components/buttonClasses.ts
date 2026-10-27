@@ -34,13 +34,9 @@ export interface ButtonStyle {
 // on by its fill, and a filter row of them that rose would read as a row of
 // actions and lift its top edge out of a box that clips. A row keeps a button
 // on one line (shrink-0); max-w-full wraps the label only once the button alone
-// is wider than its row. An unavailable button that also carries `data-locked`
-// looks as it would until pointed at or focused, so a page whose actions are
-// locked for a reason a tooltip gives, such as while viewing as someone else,
-// reads as it does for whoever can act. Written out in full for Tailwind's
-// scanner.
+// is wider than its row. Written out in full for Tailwind's scanner.
 const base =
-  'relative inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-center font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-[var(--button-hover-shadow,var(--theme-shadow-sm))] active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:not-data-locked:opacity-50 aria-disabled:data-locked:hover:opacity-50 aria-disabled:data-locked:focus-visible:opacity-50'
+  'relative inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-center font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-[var(--button-hover-shadow,var(--theme-shadow-sm))] active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 const variants: Record<ButtonVariant, string> = {
   // A host may draw an image over the accent, such as a gradient that starts

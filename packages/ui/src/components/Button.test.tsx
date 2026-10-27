@@ -97,12 +97,6 @@ describe('buttonClasses', () => {
     expect(classes).not.toContain('h-8')
     expect(classes).not.toContain('whitespace-nowrap')
   })
-
-  it('dims a locked button only while pointed at or focused', () => {
-    const classes = buttonClasses().split(' ')
-    expect(classes).toContain('aria-disabled:not-data-locked:opacity-50')
-    expect(classes).not.toContain('aria-disabled:opacity-50')
-  })
 })
 
 describe('FileButton', () => {
