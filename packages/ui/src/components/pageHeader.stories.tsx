@@ -501,8 +501,8 @@ export const LoadingName: Story = {
 }
 
 /** A trail too wide for its bar folds all but the parent, the way back, into a
- *  menu of links; the page's own name truncates only once nothing else can go,
- *  with the full name on hover. */
+ *  menu of links, and the parent too where the page's name can't fit whole
+ *  beside it. The name itself never truncates; see `LongName`. */
 export const LongTrail: Story = {
   args: {
     breadcrumbs: [
@@ -516,18 +516,46 @@ export const LongTrail: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const title = canvas.getByRole('heading', { level: 1 })
-    await waitFor(() => expect(title.scrollWidth).toBeGreaterThan(title.clientWidth))
-    // A phone-width shell has no room for the parent beside the name either.
-    if (!args.narrow) {
+    await waitFor(() => expect(canvas.queryByRole('link', { name: 'Organizations' })).toBeNull())
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth)
+    // A phone-width shell has no room for the parent beside the name.
+    if (args.narrow) {
+      await expect(canvas.queryByRole('link', { name: 'Cloud accounts' })).toBeNull()
+    } else {
       await expect(canvas.getByRole('link', { name: 'Cloud accounts' })).toBeVisible()
     }
-    await expect(canvas.queryByRole('link', { name: 'Organizations' })).toBeNull()
     // The folded crumbs are links in a menu.
     await userEvent.click(canvas.getByRole('button', { name: 'Show full path' }))
     const body = within(canvasElement.ownerDocument.body)
     const org = await body.findByRole('menuitem', { name: 'Organizations' })
     await expect(org.closest('a')).toHaveAttribute('href', '/org')
     await userEvent.keyboard('{Escape}')
+  },
+}
+
+/** A page's name too long for the room the trail leaves wraps, and the bar
+ *  grows to fit, so a phone shows the whole name with no tooltip to reach. Its
+ *  ancestors fold first. */
+export const LongName: Story = {
+  args: {
+    narrow: true,
+    breadcrumbs: [
+      { label: 'Storage', href: '/storage' },
+      { label: 'Buckets', href: '/storage/buckets' },
+      { label: 'Shared training data for the vision research group' },
+    ],
+  },
+  render: (args) => <BucketPage {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const title = canvas.getByRole('heading', { level: 1 })
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth)
+    if (args.narrow) {
+      await waitFor(() => expect(canvas.queryByRole('link', { name: 'Buckets' })).toBeNull())
+      const style = getComputedStyle(title)
+      const text = title.clientHeight - Number.parseFloat(style.paddingTop) * 2
+      await expect(text / Number.parseFloat(style.lineHeight)).toBeGreaterThan(1)
+    }
   },
 }
 
