@@ -11,7 +11,9 @@ import {
   CloudIcon,
   DiskIcon,
   ExternalLinkIcon,
+  GearsIcon,
   InstanceIcon,
+  LinkIcon,
   NetworkInterfaceIcon,
   TrashIcon,
 } from '../icons'
@@ -442,5 +444,238 @@ export const SessionsByType: StoryObj = {
     }
     // The band reaches both edges the row under it reaches.
     await expect(span(band)).toEqual(span(row))
+  },
+}
+
+interface HostSession {
+  id: string
+  name: string
+  type: 'tunnel' | 'link'
+  state: 'running' | 'error'
+  target?: string
+  port?: number
+  /** Where an external session's link goes. */
+  url?: string
+  error?: string
+}
+
+const HOST_SESSIONS: HostSession[] = [
+  {
+    id: 'ss-1',
+    name: 'devadmin/jupyter-lab',
+    type: 'tunnel',
+    state: 'error',
+    target: 'devadmin/gputrainer',
+    port: 8888,
+    error:
+      "Resource's agent is not connected. The session can't start until the agent on devadmin/gputrainer reconnects.",
+  },
+  {
+    id: 'ss-2',
+    name: 'devadmin/tensorboard',
+    type: 'tunnel',
+    state: 'error',
+    target: 'devadmin/gputrainer',
+    port: 6006,
+    error:
+      "Resource's agent is not connected. The session can't start until the agent on devadmin/gputrainer reconnects.",
+  },
+  {
+    id: 'ss-3',
+    name: 'devadmin/lab-wiki',
+    type: 'link',
+    state: 'running',
+    url: 'wiki.example.com',
+  },
+  {
+    id: 'ss-4',
+    name: 'devadmin/grafana',
+    type: 'link',
+    state: 'running',
+    url: 'grafana.example.com/d/gpu',
+  },
+]
+
+const HOST_SESSION_GROUPS = [
+  { id: 'tunnel', label: 'Tunnels' },
+  { id: 'link', label: 'External' },
+] as const
+
+/** A sessions list: a checkbox before the columns, each session's icon in a tile beside its
+ *  name and the host's own link for the name, a subtitle naming the resource it runs on with a link to it, a
+ *  failed session's error under that, and the status as a column of its own that stacks under the
+ *  name on a phone. */
+function HostSessionsDemo() {
+  const goTo = useListNavigate()
+  const { openMenu, contextMenu } = useContextMenu()
+  const view = useListView<HostSession>({
+    storageKey: 'workshop-host-sessions',
+    columns: [
+      {
+        key: 'name',
+        label: 'Name',
+        headerClassName: 'py-2 w-[55%]',
+        alwaysVisible: true,
+        orderBy: 'name',
+      },
+      { key: 'icon', label: 'Icon', inline: true },
+      { key: 'status', label: 'Status', headerClassName: 'py-2', orderBy: 'status' },
+      { key: 'id', label: 'ID', headerClassName: 'py-2', defaultHidden: true },
+    ],
+    orderBys: [
+      { value: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
+      { value: 'status', label: 'Status', compare: (a, b) => a.state.localeCompare(b.state) },
+    ],
+    isFavorite: () => false,
+    actions: [
+      { key: 'open', label: 'Open in new window', defaultPinned: true },
+      { key: 'delete', label: 'Delete' },
+    ],
+  })
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const toggle = (id: string) =>
+    setSelected((was) => {
+      const next = new Set(was)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  return (
+    <ListPage view={view} total={HOST_SESSIONS.length} matches={HOST_SESSIONS.length}>
+      <Table {...listTableProps}>
+        <ListSelectAllHeader
+          selected={selected.size}
+          total={HOST_SESSIONS.length}
+          onToggle={() =>
+            setSelected(
+              selected.size === HOST_SESSIONS.length
+                ? new Set()
+                : new Set(HOST_SESSIONS.map((x) => x.id)),
+            )
+          }
+        />
+        <ListColumns view={view} />
+        {HOST_SESSION_GROUPS.flatMap((group) => {
+          const rows = HOST_SESSIONS.filter((x) => x.type === group.id)
+          return [
+            <GroupRow
+              key={`group-${group.id}`}
+              label={group.label}
+              count={rows.length}
+              colSpan={view.visibleColumns.length + 2}
+            />,
+            ...rows.map((x) => (
+              <ListRow
+                key={x.id}
+                href={null}
+                onActivate={() => {}}
+                items={[{ label: 'Delete', onClick: () => {} }]}
+                goTo={goTo}
+                openMenu={openMenu}
+                selected={selected.has(x.id)}
+                pinnedActions={[
+                  {
+                    key: 'open',
+                    label: 'Open in new window',
+                    icon: <ExternalLinkIcon />,
+                    onClick: () => {},
+                  },
+                ]}
+                leading={
+                  <Table.Item className="py-2.5">
+                    <RowSelectCheckbox
+                      checked={selected.has(x.id)}
+                      label={`Select ${x.name}`}
+                      onToggle={() => toggle(x.id)}
+                    />
+                  </Table.Item>
+                }
+              >
+                <NameCell
+                  icon={
+                    view.isVisible('icon') && (x.type === 'tunnel' ? <CloudIcon /> : <LinkIcon />)
+                  }
+                  iconTile
+                  // The host's own link, which opens the session in a new tab, and is dimmed
+                  // while it can't.
+                  name={
+                    <a
+                      href="#session"
+                      className={x.state === 'error' ? 'opacity-50' : undefined}
+                      aria-disabled={x.state === 'error' || undefined}
+                    >
+                      {x.name}
+                    </a>
+                  }
+                  // Every session has a second line, so every row's icon has its tile.
+                  subtitle={
+                    x.url ??
+                    (x.target && (
+                      <span className="inline-flex items-center gap-1">
+                        on
+                        <GearsIcon className="size-3.5 shrink-0" />
+                        <a href="#resource" className="hover:underline">
+                          {x.target}
+                        </a>
+                        <span>{x.port}</span>
+                      </span>
+                    ))
+                  }
+                  description={x.error}
+                  descriptionTone="error"
+                  href={null}
+                />
+                {view.isVisible('status') && (
+                  <Table.Item className="py-2.5">
+                    <StatusLabel
+                      className="text-[13px]"
+                      variant={x.state === 'running' ? 'success' : 'error'}
+                    >
+                      {x.state === 'running' ? 'Running' : 'Error'}
+                    </StatusLabel>
+                  </Table.Item>
+                )}
+                {view.isVisible('id') && (
+                  <Table.Item className="py-2.5">
+                    <ListCellText mono>{x.id}</ListCellText>
+                  </Table.Item>
+                )}
+              </ListRow>
+            )),
+          ]
+        })}
+      </Table>
+      {contextMenu}
+    </ListPage>
+  )
+}
+
+/** A sessions list where two sessions failed. The error under the name wraps inside the name's
+ *  column for two lines at most, so on a phone it never runs past the row, and the status that
+ *  stacks under it starts at the name's edge, past the glyph, as the name and subtitle do. */
+export const SessionsWithErrors: StoryObj = {
+  render: () => <HostSessionsDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = canvas.getByText('devadmin/jupyter-lab')
+    const row = name.closest('tr') as HTMLElement
+    const error = within(row).getByText(/agent is not connected/)
+    // The error ends inside its row, however long it is.
+    await expect(error.getBoundingClientRect().right).toBeLessThanOrEqual(
+      row.getBoundingClientRect().right,
+    )
+    const line = row.querySelector('[data-stacked-line]') as HTMLElement
+    // Where the status stacks under the name, it starts where the name does, and the row's
+    // checkbox sits at its top, centered on the icon's tile and as far from it as the tile is from
+    // the name, rather than in the middle of the lines under them.
+    if (line.checkVisibility()) {
+      const box = within(row).getByRole('checkbox').getBoundingClientRect()
+      const tile = (row.querySelector('td .rounded-md') as HTMLElement).getBoundingClientRect()
+      const middle = (r: DOMRect) => r.top + r.height / 2
+      await expect(Math.abs(middle(box) - middle(tile))).toBeLessThan(1)
+      await expect(Math.round(tile.left - box.right)).toBe(
+        Math.round(error.getBoundingClientRect().left - tile.right),
+      )
+      await expect(line.getBoundingClientRect().left).toBe(error.getBoundingClientRect().left)
+    }
   },
 }

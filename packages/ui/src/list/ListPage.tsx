@@ -347,6 +347,18 @@ const STACKED_LINES =
 const STACKED_LINES_LINE =
   'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 not-has-[>:not(:empty)]:hidden'
 
+// A row's selection checkbox on a narrow list, where its row grows lines under the name: it
+// keeps the 10px an icon keeps from its name, rather than a column's 24px, and it sits at the
+// row's top, centered on the name's first line, or on a name and subtitle, the line an icon tile
+// centers on, rather than floating in the middle of the lines under them. The name's cell keeps
+// to the top too, as a column beside the stack does, so the two line up in a row of any height. A name's line is 16px,
+// one with its subtitle 31px, so the box's top is 10px down, as a name cell's padding is, or 10px and half of 31px less its
+// 16px.
+const LEADING_SELECT = {
+  className:
+    '@max-[36rem]:has-[[data-row-select]]:w-px @max-[36rem]:has-[[data-row-select]]:pr-0 @max-[36rem]:has-[[data-row-select]]:align-top @max-[36rem]:has-[[data-row-select]]:pt-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:pl-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:align-top @max-[36rem]:has-[[data-row-select]]:group-has-[[data-name-subtitle]]:pt-[17.625px]',
+}
+
 // A cell given straight to a row, whose content is there to see, rather than through a component.
 const isCellElement = (child: ReactElement) => child.type === Table.Item || child.type === 'td'
 
@@ -549,7 +561,7 @@ export function ListRow({
       onClick={handleRowClick}
       {...rowContextMenuProps(openRowMenu, items)}
     >
-      {leading}
+      {leading && <CellPlacementContext value={LEADING_SELECT}>{leading}</CellPlacementContext>}
       <StretchRowLinkContext.Provider value={stretch}>{styledCells}</StretchRowLinkContext.Provider>
       {/* Actions off by default (Display toggle); right-click still opens the
        * menu. Buttons are absolutely positioned so toggling them never changes

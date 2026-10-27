@@ -66,14 +66,20 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** An overflowOnly anchor opens only while its text is cut off. */
+/** An overflowOnly anchor opens only while its text is cut off, at its end or, clamped to a few
+ *  lines, below them. */
 function skipUnclipped(open: boolean, details: BaseTooltip.Root.ChangeEventDetails) {
   const anchor = details.trigger
   if (
     open &&
     anchor instanceof HTMLElement &&
     anchor.hasAttribute('data-overflow-only') &&
-    anchor.scrollWidth <= anchor.clientWidth
+    anchor.scrollWidth <= anchor.clientWidth &&
+    // Text clamped to a few lines is cut off below them.
+    !(
+      getComputedStyle(anchor).webkitLineClamp !== 'none' &&
+      anchor.scrollHeight > anchor.clientHeight
+    )
   ) {
     details.cancel()
   }
