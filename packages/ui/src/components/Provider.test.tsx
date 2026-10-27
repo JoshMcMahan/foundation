@@ -23,6 +23,21 @@ describe('UIProvider strings', () => {
   })
 })
 
+describe('English date presets', () => {
+  it('names the last day and hour in words, and more of them with their count', () => {
+    function Presets() {
+      const { filters } = useStrings()
+      return (
+        <p>{['-1d', '-7d', '-365d', '-1h', '-24h', 'year'].map(filters.datePreset).join(' | ')}</p>
+      )
+    }
+    render(<Presets />)
+    expect(screen.getByRole('paragraph')).toHaveTextContent(
+      'Last day | Last 7 days | Last 365 days | Last hour | Last 24 hours | This year',
+    )
+  })
+})
+
 describe('UIProvider re-renders', () => {
   it('re-renders no string reader when the host passes equal objects again', () => {
     const renders = vi.fn()

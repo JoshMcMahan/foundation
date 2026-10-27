@@ -1611,8 +1611,14 @@ const DEFAULTS: UIProviderValue = {
         }
         const days = preset.match(/^-(\d+)d$/)?.[1]
         const hours = preset.match(/^-(\d+)h$/)?.[1]
+        // One reads as a word, as hosts' plural messages have it: "Last day", "Last 7 days".
+        const last = (count: string, one: string, other: string) =>
+          Number(count) === 1
+            ? `Last ${one}`
+            : `Last ${Number(count).toLocaleString('en')} ${other}`
         return (
-          named[preset] ?? (days ? `Last ${days} days` : hours ? `Last ${hours} hours` : preset)
+          named[preset] ??
+          (days ? last(days, 'day', 'days') : hours ? last(hours, 'hour', 'hours') : preset)
         )
       },
       quickMore: (count) => `+${count} more`,
