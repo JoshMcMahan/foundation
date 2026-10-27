@@ -265,8 +265,9 @@ export const ButtonLocked: StoryObj = {
   },
 }
 
-/** A host's own primary: an image over the accent, here a gradient that starts
- *  at it, and a shadow at rest that stays while the button is hovered. */
+/** A host's own primary: an image over the accent, here a gradient from it to
+ *  its hover shade, the same small step in either theme, and a shadow at rest
+ *  that stays while the button is hovered. */
 export const ButtonPrimaryHostFill: StoryObj = {
   name: 'Button primary with a host fill',
   render: () => (
@@ -275,7 +276,7 @@ export const ButtonPrimaryHostFill: StoryObj = {
       style={
         {
           '--button-primary-image':
-            'linear-gradient(135deg, var(--theme-accent), var(--theme-link))',
+            'linear-gradient(135deg, var(--theme-accent), var(--theme-accent-hover))',
           '--button-primary-shadow': '0 4px 6px -1px rgb(0 0 0 / 0.35)',
         } as CSSProperties
       }
