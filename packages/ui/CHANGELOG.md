@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.99.0](https://github.com/parallelworks/foundation/compare/ui-v0.98.0...ui-v0.99.0) (2026-10-27)
+
+
+### Features
+
+* **ui:** description lists in sections share a group's label column ([#542](https://github.com/parallelworks/foundation/issues/542)) ([878a90a](https://github.com/parallelworks/foundation/commit/878a90a126bf3cdb778d3b4507c5ba9010123236))
+
+
+### Bug Fixes
+
+* **ui:** a group's band spans the whole row with a selection checkbox before the columns, and a phone's sort line names the default order as one phrase ([#546](https://github.com/parallelworks/foundation/issues/546)) ([65db9d4](https://github.com/parallelworks/foundation/commit/65db9d477d09aca72b6317aaddbfde78a8f46da3))
+* **ui:** an empty state's description wraps to even lines, so its last line never strands a word ([#540](https://github.com/parallelworks/foundation/issues/540)) ([6260ef8](https://github.com/parallelworks/foundation/commit/6260ef85028ba4dc3f5188dc1ae598526ba03f5e))
+* **ui:** on a narrow page an overview's mark sits beside the name and the lines under it start at the page's edge ([#543](https://github.com/parallelworks/foundation/issues/543)) ([b55911d](https://github.com/parallelworks/foundation/commit/b55911d8dc03e2fc3e447fdac78c81b95c6975e9))
+* **ui:** on a phone, a list row's empty cell takes no room in the line under its name ([#541](https://github.com/parallelworks/foundation/issues/541)) ([a686e20](https://github.com/parallelworks/foundation/commit/a686e208a68c1ee5dc9c065ffc16a5a7684cfa78))
+
 ## [0.98.0](https://github.com/parallelworks/foundation/compare/ui-v0.97.2...ui-v0.98.0) (2026-10-27)
 
 
