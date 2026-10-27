@@ -194,6 +194,42 @@ export const ButtonIconSizes: StoryObj = {
   },
 }
 
+/** A row keeps each button on one line. A label wider than all the room it has
+ *  wraps and the button grows, as on a narrow screen or under user text
+ *  spacing, instead of spilling out of its box. */
+export const ButtonLabelWraps: StoryObj = {
+  name: 'Button label wraps',
+  render: () => (
+    <div className="p-8">
+      <div
+        data-testid="narrow"
+        className="flex flex-col items-start gap-3 rounded-lg border border-(--theme-border) p-3"
+        style={{ width: 220 }}
+      >
+        <Button variant="primary">Request access to the shared workspace</Button>
+        <Button variant="secondary" icon={<MailIcon />}>
+          Send the invitation again
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary">Cancel</Button>
+          <Button variant="primary">Save</Button>
+        </div>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await document.fonts.ready
+    const box = canvas.getByTestId('narrow').getBoundingClientRect()
+    const long = canvas.getByRole('button', { name: 'Request access to the shared workspace' })
+    await expect(long.getBoundingClientRect().right).toBeLessThanOrEqual(box.right)
+    await expect(long.getBoundingClientRect().height).toBeGreaterThan(32)
+    await expect(canvas.getByRole('button', { name: 'Save' }).getBoundingClientRect().height).toBe(
+      32,
+    )
+  },
+}
+
 function FileButtonDemo({ multiple, accept }: { multiple: boolean; accept: string }) {
   const [names, setNames] = useState<string[]>([])
   return (

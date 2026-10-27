@@ -516,7 +516,10 @@ Every pressable thing has one look, from `buttonClasses({ variant, size, iconOnl
 | `outline`, `ghost` | toolbar and inline actions, bordered or not |
 | `danger` | confirming what can't be undone |
 
-Sizes are `xs`, `sm` and `md`. `Button` and `IconButton` apply it. An
+Sizes are `xs`, `sm`, `md` (the default, in line with inputs) and `lg`. Each
+is a minimum height: a row keeps a button on one line, and a label wider than
+all the room it has wraps and grows the button, rather than spilling out of a
+narrow screen or under user text spacing. `Button` and `IconButton` apply it. An
 `IconButton` is named by its tooltip, and takes `pressed` for a toggle and
 `dot` for an indicator. Either takes `href` to be a link in the same look. Pass
 `buttonClasses()` to another component's trigger rather than styling a button

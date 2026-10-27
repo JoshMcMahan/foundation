@@ -13,7 +13,10 @@ export type ButtonVariant =
   | 'danger-outline'
 
 /** `md` (32px) lines up with inputs and is the default; `lg` (40px) is for a
- *  standalone page's one action, such as signing in or approving a device. */
+ *  standalone page's one action, such as signing in or approving a device.
+ *  Each is a minimum: a label wider than the space it has wraps and the
+ *  button grows, instead of spilling out at 320px or under user text spacing
+ *  (WCAG 1.4.10, 1.4.12). */
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 export interface ButtonStyle {
@@ -29,10 +32,11 @@ export interface ButtonStyle {
 // shadow and settles back while pressed; with reduced motion it keeps the
 // shadow and doesn't move. A toggle (`aria-pressed`) stays put: it says it is
 // on by its fill, and a filter row of them that rose would read as a row of
-// actions and lift its top edge out of a box that clips. Written out in full
-// for Tailwind's scanner.
+// actions and lift its top edge out of a box that clips. A row keeps a button
+// on one line (shrink-0); max-w-full wraps the label only once the button alone
+// is wider than its row. Written out in full for Tailwind's scanner.
 const base =
-  'relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-(--theme-shadow-sm) active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
+  'relative inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-center font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-(--theme-shadow-sm) active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 const variants: Record<ButtonVariant, string> = {
   primary:
@@ -52,12 +56,13 @@ const variants: Record<ButtonVariant, string> = {
 // Each size names every box property once: a utility overriding another for the
 // same property wins by stylesheet order, not by its place in the class list.
 // The icon size is a default: :where() drops the selector's weight to the svg's
-// own, so a size class on the icon, such as size-3.5, wins.
+// own, so a size class on the icon, such as size-3.5, wins. The padding leaves
+// one line of the label, bordered, inside the minimum height.
 const sizes: Record<ButtonSize, string> = {
-  xs: 'h-6 px-2 text-xs [:where(&)_svg]:size-3',
-  sm: 'h-7 px-2.5 text-xs [:where(&)_svg]:size-3.5',
-  md: 'h-8 px-3 text-sm [:where(&)_svg]:size-4',
-  lg: 'h-10 px-4 text-base [:where(&)_svg]:size-5',
+  xs: 'min-h-6 px-2 py-0.5 text-xs [:where(&)_svg]:size-3',
+  sm: 'min-h-7 px-2.5 py-1 text-xs [:where(&)_svg]:size-3.5',
+  md: 'min-h-8 px-3 py-1 text-sm [:where(&)_svg]:size-4',
+  lg: 'min-h-10 px-4 py-1.5 text-base [:where(&)_svg]:size-5',
 }
 
 const squares: Record<ButtonSize, string> = {
