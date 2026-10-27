@@ -1,7 +1,8 @@
-import { type ReactNode, useLayoutEffect, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { cx } from '../cx'
 import { useSplitter } from './splitter'
 import { Tabs } from './Tabs'
+import { useWidth } from './useWidth'
 
 // The gap between the two panes, which the handle sits in.
 const GAP_PX = 12
@@ -32,24 +33,6 @@ export interface SplitViewProps<Value extends string> {
   /** At the switch row's far end, such as an action on what the panes show. */
   end?: ReactNode
   className?: string | undefined
-}
-
-function useWidth(el: HTMLElement | null): number | null {
-  const [width, setWidth] = useState<number | null>(null)
-  useLayoutEffect(() => {
-    if (!el) {
-      return
-    }
-    const measure = () => setWidth(el.getBoundingClientRect().width || null)
-    measure()
-    if (typeof ResizeObserver === 'undefined') {
-      return
-    }
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [el])
-  return width
 }
 
 /** Two panes of one task side by side, such as text and a preview of it, with a handle between

@@ -23,6 +23,7 @@ export {
   sameFilters,
   withFilterParams,
 } from './filterModel'
+export { ListDetail, type ListDetailProps } from './ListDetail'
 export {
   AddFilterMenu,
   type AddFilterMenuProps,
