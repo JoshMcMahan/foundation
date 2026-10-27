@@ -131,6 +131,44 @@ describe('ListToolbar', () => {
     expect(buttons).toEqual(['Display options', 'Search buckets', 'Export'])
   })
 
+  it("lets an open search fill its own line on a phone, but not the chips' line", () => {
+    function Searching({ chips }: { chips: boolean }) {
+      const search = useListSearch(true)
+      const filters = useListFilters({
+        storageKey: 'fill-line',
+        fields: [
+          {
+            key: 'status',
+            label: 'Status',
+            kind: 'enum',
+            options: [{ value: 'running', label: 'Running' }],
+          },
+        ],
+        remember: false,
+        store: {
+          value: chips ? [{ field: 'status', op: 'is', values: ['running'] }] : [],
+          onChange: () => {},
+        },
+      })
+      return (
+        <ListPage
+          total={7}
+          count={NOUNS}
+          toolbar={<ListToolbar search={search} searchLabel="Search buckets" />}
+          filterBar={chips ? <ListFilterBar filters={filters} /> : null}
+        >
+          rows
+        </ListPage>
+      )
+    }
+    const { rerender } = render(<Searching chips={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Search buckets' }))
+    const box = () => screen.getByRole('textbox', { name: 'Search buckets' }).parentElement
+    expect(box()).toHaveClass('max-sm:flex-1')
+    rerender(<Searching chips />)
+    expect(box()).not.toHaveClass('max-sm:flex-1')
+  })
+
   it('counts matches when the host says a filter is on', () => {
     render(
       <ListToolbar

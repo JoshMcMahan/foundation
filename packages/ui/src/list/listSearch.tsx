@@ -119,10 +119,15 @@ export function ListSearchControl({
   search,
   placeholder,
   label: labelProp,
+  fill = false,
 }: {
   search: ListSearch
   placeholder: string
   label?: string | undefined
+  /** On a phone, the open field takes the rest of its line rather than keep a desktop's width:
+   *  for a search on a line of its own, such as a list's toolbar. In a page header's actions it
+   *  has no effect, as the bar decides there. */
+  fill?: boolean | undefined
 }) {
   const { common, list } = useStrings()
   const label = labelProp ?? common.search
@@ -197,6 +202,8 @@ export function ListSearchControl({
         className={cx(
           'flex flex-wrap items-center gap-1.5 rounded-md border border-(--theme-border) bg-(--theme-muted-panel-bg) px-2 py-0.5',
           covering ? 'pointer-events-auto min-h-8 w-full' : 'min-h-7 w-72 max-w-[55vw]',
+          // A phone's line is too narrow to leave space beside a field of a fixed width.
+          fill && !fit && 'max-sm:max-w-none max-sm:flex-1',
         )}
       >
         <SearchIcon className="w-3.5 h-3.5 shrink-0 text-(--theme-muted-text-color)" />

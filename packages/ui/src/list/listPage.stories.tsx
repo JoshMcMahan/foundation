@@ -746,3 +746,136 @@ export const ControlsInTheHeaderSearching: StoryObj = {
   parameters: { layout: 'fullscreen' },
   render: () => <AllocationsPage searching />,
 }
+
+// Whether the story's frame is phone width, as the field's own rule reads it.
+function usePhoneWidth() {
+  const query = '(max-width: 639.98px)'
+  const [phone, setPhone] = useState(() => !!window.matchMedia?.(query).matches)
+  useEffect(() => {
+    if (!window.matchMedia) {
+      return
+    }
+    const media = window.matchMedia(query)
+    const change = () => setPhone(media.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+  return phone
+}
+
+function SettingsTokensPage({ searching }: { searching: boolean }) {
+  const search = useListSearch(true)
+  const view = useListView<Token>({
+    storageKey: 'story-settings-tokens',
+    columns: [
+      { key: 'name', label: 'Name', alwaysVisible: true },
+      { key: 'prefix', label: 'Prefix' },
+      { key: 'uses', label: 'Uses', align: 'end', stack: false },
+    ],
+  })
+  const { openMenu, contextMenu } = useContextMenu()
+  const goTo = useListNavigate()
+  const phone = usePhoneWidth()
+  const { openSearch } = search
+  useEffect(() => {
+    if (searching) {
+      openSearch()
+    }
+  }, [searching, openSearch])
+  const query = search.filter.trim()
+  const shown = TOKENS.filter((row) => row.name.includes(query))
+  const toolbar = <ListToolbar view={view} search={search} searchLabel="Search tokens" />
+  // On a phone, an open search gets a line of its own under the page's description, directly
+  // above the rows it narrows; closed, its button stays at the end of the title's line.
+  const ownLine = phone && (search.searchOpen || search.terms.length > 0)
+  return (
+    <PageHeaderProvider>
+      {/* Sizes are inline: the package's stylesheet doesn't scan stories. */}
+      <div className="flex flex-col bg-(--theme-app-bg)">
+        <PageHeaderBar />
+        <PageHeader
+          breadcrumbs={[{ label: 'Settings', href: '/settings' }, { label: 'API tokens' }]}
+          heading={false}
+          actions={<PageHeaderAddButton label="New token" onClick={() => {}} />}
+        />
+        <header style={{ padding: '24px 16px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <h1 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 20, fontWeight: 600 }}>
+              API tokens
+            </h1>
+            {!ownLine && <div style={{ margin: '-6px 0' }}>{toolbar}</div>}
+          </div>
+          <p
+            style={{ margin: '4px 0 0', fontSize: 14 }}
+            className="text-(--theme-muted-text-color)"
+          >
+            Tokens act as you, within the access you give them. Create one for a script or an
+            integration. Unused tokens expire after 90 days.
+          </p>
+          {ownLine && <div style={{ marginTop: 12 }}>{toolbar}</div>}
+        </header>
+        <div style={{ marginTop: ownLine ? 8 : 24 }} className="border-t border-(--theme-border)">
+          <ListPage
+            view={view}
+            total={TOKENS.length}
+            matches={shown.length}
+            count={{ noun: 'token', nounPlural: 'tokens', filterActive: query !== '' }}
+            noMatches="No tokens match"
+          >
+            <Table {...listTableProps}>
+              <ListColumns view={view} />
+              {shown.map((token) => (
+                <ListRow
+                  key={token.name}
+                  href={null}
+                  items={[{ label: 'Revoke', destructive: true, onClick: () => {} }]}
+                  goTo={goTo}
+                  openMenu={openMenu}
+                >
+                  <NameCell
+                    icon={<KeyIcon />}
+                    iconTile
+                    name={token.name}
+                    subtitle={token.scope}
+                    href={null}
+                  />
+                  <Table.Item>
+                    <ListCellText mono>{token.prefix}</ListCellText>
+                  </Table.Item>
+                  <Table.Item>
+                    <ListCellText className="tabular-nums">{token.uses}</ListCellText>
+                  </Table.Item>
+                </ListRow>
+              ))}
+            </Table>
+          </ListPage>
+        </div>
+      </div>
+      {contextMenu}
+    </PageHeaderProvider>
+  )
+}
+
+/** A settings list whose toolbar sits at the end of its title's line, as a page with a title and
+ *  a description lays it out. On a phone, the open search takes a line of its own under the
+ *  description, directly above the rows, and fills it beside the display options; closed, the
+ *  buttons go back to the title's end. On a desktop the field keeps its width beside the title. */
+export const SearchOnAPhone: StoryObj = {
+  parameters: { layout: 'fullscreen' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  render: () => <SettingsTokensPage searching />,
+  play: async ({ canvasElement }) => {
+    const field = await within(canvasElement).findByRole('textbox', { name: 'Search tokens' })
+    const line = field.closest('header')?.getBoundingClientRect().width ?? 0
+    const box = field.parentElement?.getBoundingClientRect().width ?? 0
+    // The field takes the line beside the display options' button, not a fixed share of it.
+    await expect(box).toBeGreaterThan(line * 0.7)
+  },
+}
+
+/** The same page with the search closed: its button stays at the end of the title's line. */
+export const SearchClosedOnAPhone: StoryObj = {
+  parameters: { layout: 'fullscreen' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  render: () => <SettingsTokensPage searching={false} />,
+}

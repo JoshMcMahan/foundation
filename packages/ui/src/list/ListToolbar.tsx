@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { useContext } from 'react'
+import { HeaderActionsFitContext } from '../components/headerActionsFit'
 import { useStrings } from '../components/Provider'
+import { cx } from '../cx'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import {
   type ListCountProps,
@@ -74,6 +76,10 @@ export function ListToolbar<T>(props: ListToolbarProps<T>) {
   const count = inFooter ? undefined : toolbarCount(props)
   // At the end of the chips' line, the line sets the height.
   const inline = useContext(ListToolbarInlineContext)
+  // On a line of its own, rather than at the end of the chips' or in a page header's, an open
+  // search takes the rest of the line on a phone.
+  const inHeader = useContext(HeaderActionsFitContext) !== null
+  const ownLine = !inline && !inHeader
   return (
     <div
       className={
@@ -88,7 +94,9 @@ export function ListToolbar<T>(props: ListToolbarProps<T>) {
           <ListCountText {...count} />
         </div>
       )}
-      <div className="flex min-w-0 items-center gap-1">
+      <div
+        className={cx('flex min-w-0 items-center justify-end gap-1', ownLine && 'max-sm:flex-1')}
+      >
         {children}
         {view && <ListFilterMenu view={view} />}
         {view && <ListDisplayMenu view={view} />}
@@ -97,6 +105,7 @@ export function ListToolbar<T>(props: ListToolbarProps<T>) {
             search={search}
             label={searchLabel}
             placeholder={searchPlaceholder ?? searchLabel ?? common.search}
+            fill={ownLine}
           />
         )}
         {!!action && <span className="ml-1 flex">{action}</span>}
