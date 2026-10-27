@@ -26,6 +26,7 @@ import * as kbd from './components/Kbd.stories'
 import * as loading from './components/loading.stories'
 import * as markdown from './components/Markdown.stories'
 import * as menus from './components/Menu.stories'
+import * as overview from './components/Overview.stories'
 import * as overlays from './components/overlays.stories'
 import * as pageHeader from './components/pageHeader.stories'
 import * as pickers from './components/pickers.stories'
@@ -111,6 +112,7 @@ const SUITES = {
   statTile,
   icons,
   sections,
+  overview,
   descriptionList,
   errorPage,
   tabs,

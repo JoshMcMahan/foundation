@@ -41,7 +41,6 @@ import { positionKeys } from './keys'
 import { type BarTone, type BarValuePlacement, Meter, ProgressBar } from './Meter'
 import { Modal, type ModalProps, type ModalSize } from './Modal'
 import { NumberInput } from './NumberInput'
-import { Overview } from './Overview'
 import { Pagination } from './Pagination'
 import { type AvatarColoring, UIProvider } from './Provider'
 import { RunStatusIcon, type RunStatusIconStatus } from './RunStatusIcon'
@@ -1880,32 +1879,6 @@ export const InfoTipDescribingAControl: StoryObj = {
     )
     await expect(canvas.queryByRole('button', { name: 'More information' })).toBeNull()
   },
-}
-
-/** A thing's summary: its mark, name and kind, a row of badges, and its actions. */
-export const OverviewStory: StoryObj<{ loading: boolean }> = {
-  name: 'Overview',
-  args: { loading: false },
-  render: ({ loading }) => (
-    <Overview
-      className="max-w-xl"
-      loading={loading}
-      iconSize={48}
-      icon={<Avatar name="Grace Hopper" size="2xl" />}
-      name="gpu-trainer-01"
-      type="Cluster"
-      actions={<Button size="sm">Restart</Button>}
-    >
-      <StatusBadge variant="success" dot>
-        Running
-      </StatusBadge>
-    </Overview>
-  ),
-}
-
-export const OverviewLoading: StoryObj = {
-  name: 'Overview loading',
-  render: () => <Overview icon={null} name="Resource" loading className="max-w-sm" />,
 }
 
 export const Switches: StoryObj<{
