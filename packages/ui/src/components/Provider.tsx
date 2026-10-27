@@ -637,6 +637,9 @@ export interface UIStrings {
      *  label, such as a column's. It shows without `direction`, which its arrow shows; a screen
      *  reader hears it with one. */
     sortedBy: (order: string, direction?: 'ascending' | 'descending') => string
+    /** `sortedBy` for the list's own default order, as one phrase, such as "Default order",
+     *  rather than `orderDefault` set into `sortedBy` as if it were a column's name. */
+    sortedByDefault: (direction?: 'ascending' | 'descending') => string
     columnHeaders: string
     showColumnHeaders: string
     /** The header checkbox that ticks every row, or clears them all. */
@@ -1558,6 +1561,7 @@ const DEFAULTS: UIProviderValue = {
       descending: 'Descending',
       sortedBy: (order, direction) =>
         direction ? `Sorted by ${order}, ${direction}` : `Sorted by ${order}`,
+      sortedByDefault: (direction) => (direction ? `Default order, ${direction}` : 'Default order'),
       columnHeaders: 'Column headers',
       showColumnHeaders: 'Show column headers',
       selectAll: 'Select all',

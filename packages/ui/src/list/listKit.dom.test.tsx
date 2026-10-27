@@ -561,9 +561,12 @@ describe('Counts in the host locale', () => {
 function GroupedList({
   leading = false,
   actions = true,
+  countLeading = true,
 }: {
   leading?: boolean
   actions?: boolean
+  /** Whether the group row is told of the leading column. */
+  countLeading?: boolean
 }) {
   const view = useListView<unknown>({
     storageKey: `grouped${leading ? ':leading' : ''}${actions ? '' : ':no-actions'}`,
@@ -585,7 +588,7 @@ function GroupedList({
           label={<span>gpu-training</span>}
           count={3}
           trailing="2/3 running"
-          leading={leading ? 1 : 0}
+          leading={leading && countLeading ? 1 : 0}
         />
       </Table>
     </ListRowActionsProvider>
@@ -629,6 +632,16 @@ describe('GroupRow', () => {
     expect(cells[0]).not.toHaveClass('hidden')
     expect(cells[2]).toHaveClass('@[36rem]:table-cell')
     expect(cells[3]).toHaveClass('@[52rem]:table-cell')
+  })
+
+  it('adds a cell for a leading column it isn’t told of, so its band spans the whole row', () => {
+    render(<GroupedList leading countLeading={false} />)
+    const cells = groupCells()
+    expect(cells).toHaveLength(screen.getAllByRole('columnheader').length)
+    // The header starts in the leading cell, and the columns' classes follow it.
+    expect(cells[0]).toHaveTextContent('gpu-training')
+    expect(cells[2]).toHaveClass('hidden', '@[36rem]:table-cell')
+    expect(cells.at(-1)).not.toHaveClass('hidden')
   })
 
   it('spans colSpan columns in one cell outside a list view', () => {

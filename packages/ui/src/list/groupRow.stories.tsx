@@ -1,13 +1,29 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
 import { expect, within } from 'storybook/test'
 import { useContextMenu } from '../components/ContextMenu'
 import { IconButton } from '../components/IconButton'
 import { StatusBadge } from '../components/StatusBadge'
+import { StatusLabel } from '../components/StatusLabel'
 import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
-import { CloudIcon, DiskIcon, InstanceIcon, NetworkInterfaceIcon, TrashIcon } from '../icons'
+import {
+  CloudIcon,
+  DiskIcon,
+  ExternalLinkIcon,
+  InstanceIcon,
+  NetworkInterfaceIcon,
+  TrashIcon,
+} from '../icons'
 import { GroupRow, ListColumns, ListPage, ListRow, useListNavigate } from './ListPage'
-import { ListCellText, listTableFixedProps, NameCell } from './ListTable'
+import {
+  ListCellText,
+  ListSelectAllHeader,
+  listTableFixedProps,
+  listTableProps,
+  NameCell,
+  RowSelectCheckbox,
+} from './ListTable'
 import { type ColumnDef, useListView } from './listView'
 
 const meta: Meta = {
@@ -267,4 +283,164 @@ export const ClusterTabGroups: StoryObj = {
  *  share a line under the name that wraps between values. */
 export const ClusterTabWithoutPriorities: StoryObj = {
   render: () => <ClusterTab priorities={false} />,
+}
+
+interface Session {
+  id: string
+  name: string
+  type: 'desktop' | 'tunnel'
+  state: 'running' | 'starting'
+  owner: string
+}
+
+const SESSIONS: Session[] = [
+  { id: 's-1', name: 'vscode-gpu-dev', type: 'desktop', state: 'running', owner: 'maya' },
+  { id: 's-2', name: 'jupyter-tunnel', type: 'tunnel', state: 'running', owner: 'maya' },
+  { id: 's-3', name: 'tensorboard', type: 'tunnel', state: 'running', owner: 'maya' },
+  { id: 's-4', name: 'mlflow-ui', type: 'tunnel', state: 'starting', owner: 'jonas' },
+  { id: 's-5', name: 'grafana-cluster', type: 'tunnel', state: 'running', owner: 'maya' },
+]
+
+const SESSION_GROUPS = [
+  { id: 'desktop', label: 'VS Code and desktops' },
+  { id: 'tunnel', label: 'Tunnels' },
+] as const
+
+/** A sessions list grouped by type: a selection checkbox before the columns, the columns, and
+ *  the rows' actions, with a group header over each type. */
+function SessionsByTypeDemo() {
+  const goTo = useListNavigate()
+  const { openMenu, contextMenu } = useContextMenu()
+  const view = useListView<Session>({
+    storageKey: 'workshop-sessions-by-type',
+    columns: [
+      {
+        key: 'name',
+        label: 'Name',
+        headerClassName: 'py-2 w-[55%]',
+        alwaysVisible: true,
+        orderBy: 'name',
+      },
+      { key: 'icon', label: 'Icon', inline: true },
+      { key: 'status', label: 'Status', headerClassName: 'py-2', orderBy: 'status' },
+      { key: 'id', label: 'ID', headerClassName: 'py-2', defaultHidden: true },
+    ],
+    orderBys: [
+      { value: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
+      { value: 'status', label: 'Status', compare: (a, b) => a.state.localeCompare(b.state) },
+    ],
+    isFavorite: () => false,
+    actions: [
+      { key: 'open', label: 'Open in new window', defaultPinned: true },
+      { key: 'details', label: 'Details', defaultPinned: true },
+      { key: 'delete', label: 'Delete' },
+    ],
+  })
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(['s-2']))
+  const toggle = (id: string) =>
+    setSelected((was) => {
+      const next = new Set(was)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  return (
+    <ListPage view={view}>
+      <Table {...listTableProps}>
+        <ListSelectAllHeader
+          selected={selected.size}
+          total={SESSIONS.length}
+          onToggle={() =>
+            setSelected(
+              selected.size === SESSIONS.length ? new Set() : new Set(SESSIONS.map((x) => x.id)),
+            )
+          }
+        />
+        <ListColumns view={view} />
+        {SESSION_GROUPS.flatMap((group) => {
+          const rows = SESSIONS.filter((x) => x.type === group.id)
+          return [
+            // As a host writes it: the columns it spans, without counting the checkbox's.
+            <GroupRow
+              key={`group-${group.id}`}
+              label={group.label}
+              count={rows.length}
+              colSpan={view.visibleColumns.length + 2}
+            />,
+            ...rows.map((x) => (
+              <ListRow
+                key={x.id}
+                href={null}
+                onActivate={() => {}}
+                items={[{ label: 'Delete', onClick: () => {} }]}
+                goTo={goTo}
+                openMenu={openMenu}
+                selected={selected.has(x.id)}
+                pinnedActions={[
+                  {
+                    key: 'open',
+                    label: 'Open in new window',
+                    icon: <ExternalLinkIcon />,
+                    onClick: () => {},
+                  },
+                ]}
+                leading={
+                  <Table.Item className="py-2.5">
+                    <RowSelectCheckbox
+                      checked={selected.has(x.id)}
+                      label={`Select ${x.name}`}
+                      onToggle={() => toggle(x.id)}
+                    />
+                  </Table.Item>
+                }
+              >
+                <NameCell
+                  icon={<InstanceIcon className="size-4" />}
+                  iconTile
+                  name={x.name}
+                  subtitle={x.owner}
+                  href={null}
+                />
+                {view.isVisible('status') && (
+                  <Table.Item className="py-2.5">
+                    <StatusLabel
+                      variant={x.state === 'running' ? 'success' : 'info'}
+                      pulse={x.state === 'starting'}
+                    >
+                      {x.state === 'running' ? 'Running' : 'Starting'}
+                    </StatusLabel>
+                  </Table.Item>
+                )}
+                {view.isVisible('id') && (
+                  <Table.Item className="py-2.5">
+                    <ListCellText mono>{x.id}</ListCellText>
+                  </Table.Item>
+                )}
+              </ListRow>
+            )),
+          ]
+        })}
+      </Table>
+      {contextMenu}
+    </ListPage>
+  )
+}
+
+/** A sessions list grouped by type, with a selection checkbox before its columns and the rows'
+ *  actions after them. Each group's band spans the whole row, as the rows under it do, at any
+ *  width: the header row takes a cell for each of the table's columns, the checkbox's too. */
+export const SessionsByType: StoryObj = {
+  render: () => <SessionsByTypeDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const band = canvas.getByText('Tunnels').closest('tr') as HTMLElement
+    const row = canvas.getByText('jupyter-tunnel').closest('tr') as HTMLElement
+    const span = (tr: HTMLElement) => {
+      const cells = [...tr.querySelectorAll(':scope > td')].filter(
+        (c) => c.getClientRects().length > 0,
+      )
+      return [cells[0]?.getBoundingClientRect().left, cells.at(-1)?.getBoundingClientRect().right]
+    }
+    // The band reaches both edges the row under it reaches.
+    await expect(span(band)).toEqual(span(row))
+  },
 }

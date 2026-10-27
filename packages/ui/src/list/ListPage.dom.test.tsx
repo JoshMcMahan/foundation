@@ -626,9 +626,29 @@ describe('ListColumns on a phone', () => {
     expect(screen.getByRole('combobox', { name: 'Ordering' })).toHaveTextContent('Nodes')
   })
 
-  it('names the built-in default order', () => {
+  it('names the built-in default order as a phrase of its own', () => {
     render(<SortableList favorites />)
-    expect(sortMenu()).toHaveAccessibleName('Sorted by Default, ascending')
+    const menu = screen.getByRole('button', { name: 'Default order, ascending' })
+    expect(menu).toHaveTextContent('Default order')
+  })
+
+  it('takes the default order’s phrase from the host, not its label set into "Sorted by"', () => {
+    render(
+      <UIProvider
+        strings={{
+          list: {
+            sortedBy: (order) => `Ordenado por ${order}`,
+            orderDefault: 'Predeterminado',
+            sortedByDefault: () => 'Orden predeterminado',
+          },
+        }}
+      >
+        <SortableList favorites />
+      </UIProvider>,
+    )
+    expect(screen.getByRole('button', { name: 'Orden predeterminado' })).toHaveTextContent(
+      'Orden predeterminado',
+    )
   })
 })
 

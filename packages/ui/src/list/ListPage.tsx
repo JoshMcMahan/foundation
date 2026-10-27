@@ -824,11 +824,13 @@ export function GroupRow({
       </tr>
     )
   }
-  const cells = leading + columnClasses.length + (showActions ? 1 : 0)
+  // Cells the rows have before the columns that `leading` didn't count, such as a selection
+  // checkbox's, so the band spans the whole row as the rows under it do.
+  const cells = leading + gutters.missing + columnClasses.length + (showActions ? 1 : 0)
   return (
     <tr className={row} data-group-row ref={gutters.ref} style={gutters.style} onClick={onClick}>
       {Array.from({ length: cells }, (_, i) => {
-        const column = i - leading
+        const column = i - leading - gutters.missing
         const cls = column >= 0 && column < columnClasses.length ? columnClasses[column] : undefined
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: one cell per column, in column order
@@ -857,16 +859,28 @@ export function GroupRow({
 
 /** The padding at a row's ends, read from its first and last shown cells, as custom properties a
  *  group row's header subtracts from the list's width: so it lines up with the rows however the
- *  host pads its list. Until it has measured, 16px, as `listTableProps` pads. */
+ *  host pads its list. Until it has measured, 16px, as `listTableProps` pads. And how many cells
+ *  short of the table's columns the row is, which it adds before its columns. */
 function useRowGutters() {
   const ref = useRef<HTMLTableRowElement>(null)
   const [gutters, setGutters] = useState<{ start: string; end: string } | null>(null)
+  const [missing, setMissing] = useState(0)
   useLayoutEffect(() => {
     const row = ref.current
     if (!row || typeof getComputedStyle === 'undefined') {
       return
     }
     const measure = () => {
+      // The table's columns, counted from its first row that isn't a group's, such as the
+      // header's; the row's own cells, less those it added last time.
+      const span = (tr: HTMLTableRowElement) =>
+        Array.from(tr.cells).reduce((sum, cell) => sum + cell.colSpan, 0)
+      const other = Array.from(row.closest('table')?.rows ?? []).find(
+        (tr) => !tr.hasAttribute('data-group-row'),
+      )
+      if (other) {
+        setMissing((was) => Math.max(0, was + span(other) - span(row)))
+      }
       const cells = Array.from(row.cells).filter((cell) => cell.getClientRects().length > 0)
       const first = cells[0]
       const last = cells.at(-1)
@@ -889,7 +903,7 @@ function useRowGutters() {
   const style = gutters
     ? ({ '--group-start': gutters.start, '--group-end': gutters.end } as CSSProperties)
     : undefined
-  return { ref, style }
+  return { ref, style, missing }
 }
 
 function PinnedActionButton({ action, visible }: { action: RowAction; visible: boolean }) {

@@ -26,7 +26,7 @@ import {
   SortUpIcon,
 } from '../icons'
 import { AddFilterMenu } from './ListFilterBar'
-import { type FilterFacet, isLocked, type ListView } from './listView'
+import { DEFAULT_ORDER, type FilterFacet, isLocked, type ListView } from './listView'
 import type { ListFilters } from './useListFilters'
 
 /** A toggle pill, for the Display panel's column and pinned-action pickers. */
@@ -200,16 +200,21 @@ export function ListSortMenu<T>({ view, className }: { view: ListView<T>; classN
   }
   const ascending = view.orderDir === 'asc'
   const DirIcon = ascending ? SortUpIcon : SortDownIcon
+  // The default order reads as a phrase of its own; any other is named as its column is.
+  const sortedBy = (direction?: 'ascending' | 'descending') =>
+    current.value === DEFAULT_ORDER
+      ? t.sortedByDefault(direction)
+      : t.sortedBy(current.label, direction)
   return (
     <Menu.Root>
       <Menu.Trigger
-        aria-label={t.sortedBy(current.label, ascending ? 'ascending' : 'descending')}
+        aria-label={sortedBy(ascending ? 'ascending' : 'descending')}
         className={cx(
           '-mx-1 -my-1 inline-flex max-w-full cursor-pointer items-center gap-1 rounded px-1 py-1 align-middle text-inherit hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) data-popup-open:text-(--theme-app)',
           className,
         )}
       >
-        <span className="truncate">{t.sortedBy(current.label)}</span>
+        <span className="truncate">{sortedBy()}</span>
         <DirIcon aria-hidden="true" className="size-3.5 shrink-0" />
       </Menu.Trigger>
       <MenuPopup label={t.ordering}>
