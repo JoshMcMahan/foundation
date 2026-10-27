@@ -22,6 +22,15 @@ describe('Button', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it('keeps the busy state its caller sets without loading', () => {
+    render(
+      <Button aria-busy aria-disabled>
+        Sending
+      </Button>,
+    )
+    expect(screen.getByRole('button', { name: 'Sending' })).toHaveAttribute('aria-busy', 'true')
+  })
+
   it('keeps focus when it turns busy', () => {
     const { rerender } = render(<Button onClick={() => {}}>Save</Button>)
     const button = screen.getByRole('button', { name: 'Save' })
@@ -80,6 +89,19 @@ describe('buttonClasses', () => {
 
   it('has a quieter destructive look for actions that aren’t the confirmation', () => {
     expect(buttonClasses({ variant: 'danger-outline' })).toContain('text-(--theme-error-text)')
+  })
+
+  it('grows with a label that wraps, instead of fixing its height', () => {
+    const classes = buttonClasses({ size: 'md' }).split(' ')
+    expect(classes).toContain('min-h-8')
+    expect(classes).not.toContain('h-8')
+    expect(classes).not.toContain('whitespace-nowrap')
+  })
+
+  it('dims a locked button only while pointed at or focused', () => {
+    const classes = buttonClasses().split(' ')
+    expect(classes).toContain('aria-disabled:not-data-locked:opacity-50')
+    expect(classes).not.toContain('aria-disabled:opacity-50')
   })
 })
 

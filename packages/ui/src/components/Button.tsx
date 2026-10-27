@@ -38,6 +38,9 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cx(buttonClasses({ variant, size, iconOnly }), className)
+  // A caller that shows its own progress, such as a label that says what is
+  // under way, keeps its busy state when `loading` isn't set.
+  const busy = loading || props['aria-busy'] || undefined
   const content =
     loading && !icon ? (
       // The label stays, unseen but still the button's name, so the button
@@ -56,12 +59,7 @@ export function Button({
     )
   if (props.href !== undefined) {
     return (
-      <AppLink
-        {...props}
-        disabled={props.disabled || loading}
-        aria-busy={loading || undefined}
-        className={classes}
-      >
+      <AppLink {...props} disabled={props.disabled || loading} aria-busy={busy} className={classes}>
         {content}
       </AppLink>
     )
@@ -73,7 +71,7 @@ export function Button({
       focusableWhenDisabled={loading || undefined}
       {...props}
       disabled={props.disabled || loading}
-      aria-busy={loading || undefined}
+      aria-busy={busy}
       className={classes}
     >
       {content}

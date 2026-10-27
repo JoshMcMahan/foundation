@@ -407,7 +407,7 @@ describe('PageHeaderAction', () => {
         <PageHeaderAction icon={Icon} label="Edit" iconOnly onClick={() => {}} />
       </>,
     )
-    expect(screen.getByRole('button', { name: 'Add' })).toHaveClass('border', 'h-6')
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveClass('border', 'min-h-6')
     const open = screen.getByRole('link', { name: 'Open' })
     expect(open).toHaveClass('*:text-(--theme-link)')
     expect(open).not.toHaveClass('border')
