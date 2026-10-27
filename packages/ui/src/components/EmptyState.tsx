@@ -75,7 +75,11 @@ export function EmptyState({
         {title}
       </Title>
       {!!description && (
-        <p className="m-0 max-w-sm text-xs text-(--theme-muted-text-color)">{description}</p>
+        // Centered lines of even length, so the last never strands a word or two; in Japanese,
+        // which breaks between any two characters, a lone "前。" otherwise ends a sentence.
+        <p className="m-0 max-w-sm text-xs text-balance text-(--theme-muted-text-color)">
+          {description}
+        </p>
       )}
       {!!action && <div className="mt-4">{action}</div>}
     </div>

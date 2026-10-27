@@ -638,6 +638,53 @@ export const EmptyStateVariants: StoryObj = {
   },
 }
 
+// A relative time reads as one phrase, so a line never breaks inside it.
+const lastListed = (when: string) => <span className="whitespace-nowrap">{when}</span>
+
+// A list's jobs that couldn't be fetched, as the list says it.
+function JobsUnavailable({ lang }: { lang: 'en' | 'ja' }) {
+  return lang === 'en' ? (
+    <EmptyState
+      variant="plain"
+      title="Job list unavailable"
+      description={
+        <>The scheduler's jobs couldn't be listed. Last listed {lastListed('4 minutes ago')}.</>
+      }
+    />
+  ) : (
+    <EmptyState
+      variant="plain"
+      title="ジョブ一覧を取得できません"
+      description={
+        <>スケジューラーのジョブ一覧を取得できませんでした。最終取得: {lastListed('4 分前')}。</>
+      }
+    />
+  )
+}
+
+/** A list's jobs that couldn't be fetched, in English and Japanese, across a page and in a
+ *  narrow card: the description wraps to lines of even length, so its last line never
+ *  strands a word or two, such as when the jobs were last listed. */
+export const EmptyStateWrapping: StoryObj = {
+  render: () => (
+    <div className="flex flex-col gap-6">
+      {(['en', 'ja'] as const).map((lang) => (
+        <div key={lang} lang={lang} className="flex flex-col gap-6">
+          <JobsUnavailable lang={lang} />
+          {/* A card on a dashboard, where even the English wraps. */}
+          <div className="panel w-72 max-w-full self-center">
+            <JobsUnavailable lang={lang} />
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const description = within(canvasElement).getAllByText(/最終取得/)[0] as HTMLElement
+    await expect(getComputedStyle(description).textWrapStyle).toBe('balance')
+  },
+}
+
 type ModalArgs = Pick<ModalProps, 'align' | 'dismissible' | 'size' | 'closeButton'> & {
   paragraphs: number
 }
