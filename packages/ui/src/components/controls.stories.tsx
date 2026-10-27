@@ -230,35 +230,6 @@ export const ButtonLabelWraps: StoryObj = {
   },
 }
 
-/** A host's own primary: an image over the accent, here a gradient from it to
- *  its hover shade, the same small step in either theme, and a shadow at rest
- *  that stays while the button is hovered. */
-export const ButtonPrimaryHostFill: StoryObj = {
-  name: 'Button primary with a host fill',
-  render: () => (
-    <div
-      className="flex items-center gap-3 p-8"
-      style={
-        {
-          '--button-primary-image':
-            'linear-gradient(135deg, var(--theme-accent), var(--theme-accent-hover))',
-          '--button-primary-shadow': '0 4px 6px -1px rgb(0 0 0 / 0.35)',
-        } as CSSProperties
-      }
-    >
-      <Button variant="secondary">Back</Button>
-      <Button variant="primary" icon={<SaveIcon />}>
-        Save
-      </Button>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const save = within(canvasElement).getByRole('button', { name: 'Save' })
-    await expect(getComputedStyle(save).backgroundImage).toContain('linear-gradient')
-    await expect(getComputedStyle(save).boxShadow).toContain('0px 4px 6px -1px')
-  },
-}
-
 function FileButtonDemo({ multiple, accept }: { multiple: boolean; accept: string }) {
   const [names, setNames] = useState<string[]>([])
   return (

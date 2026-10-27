@@ -36,14 +36,11 @@ export interface ButtonStyle {
 // on one line (shrink-0); max-w-full wraps the label only once the button alone
 // is wider than its row. Written out in full for Tailwind's scanner.
 const base =
-  'relative inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-center font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-[var(--button-hover-shadow,var(--theme-shadow-sm))] active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
+  'relative inline-flex max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-center font-medium no-underline transition-[color,background-color,border-color,box-shadow,translate] duration-150 hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:-translate-y-px hover:not-disabled:not-aria-disabled:not-[[aria-pressed]]:shadow-(--theme-shadow-sm) active:not-disabled:not-aria-disabled:translate-y-0 active:not-disabled:not-aria-disabled:shadow-none motion-reduce:hover:not-disabled:not-aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50'
 
 const variants: Record<ButtonVariant, string> = {
-  // A host may draw an image over the accent, such as a gradient that starts
-  // at it (--button-primary-image), and give the button a shadow at rest that
-  // it keeps while hovered (--button-primary-shadow). Unset, neither draws.
   primary:
-    'bg-(--theme-accent) bg-(image:--button-primary-image) text-(--theme-accent-text) shadow-[var(--button-primary-shadow,0_0_#0000)] [--button-hover-shadow:var(--button-primary-shadow)] hover:not-disabled:not-aria-disabled:bg-(--theme-accent-hover)',
+    'bg-(--theme-accent) text-(--theme-accent-text) hover:not-disabled:not-aria-disabled:bg-(--theme-accent-hover)',
   secondary:
     'border border-(--theme-border) bg-(--theme-panel-bg) text-(--theme-app) hover:not-disabled:not-aria-disabled:bg-(--theme-hover)',
   outline:

@@ -526,20 +526,6 @@ narrow screen or under user text spacing. `Button` and `IconButton` apply it. An
 by hand. A pressed toggle
 (`aria-pressed`) and an open popup's trigger read as selected.
 
-A host gives the primary button its own fill and shadow on `:root`:
-`--button-primary-image` draws over the accent, such as a gradient that starts
-at it, and `--button-primary-shadow` is a shadow at rest that the button keeps
-while hovered. An image hides the accent's hover color, so the button then
-answers a pointer by its lift alone. Its label stays `--theme-accent-text`, so
-the image keeps 4.5:1 against that.
-
-```css
-:root {
-  --button-primary-image: linear-gradient(135deg, var(--theme-accent), #5b1780);
-  --button-primary-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.35);
-}
-```
-
 `Loader` is the one spinner. Inside a button, or beside text that already
 says what is happening, use `<Loader inline decorative />`.
 
