@@ -461,7 +461,9 @@ function SortableList({ favorites = false }: { favorites?: boolean }) {
   )
 }
 
-const header = (name: string) => screen.getByRole('columnheader', { name })
+// The name's header also holds the phone's sort menu, which jsdom doesn't hide, so it names
+// the column first.
+const header = (name: string) => screen.getByRole('columnheader', { name: new RegExp(`^${name}`) })
 const names = () =>
   screen
     .getAllByRole('row')
@@ -535,7 +537,7 @@ describe('ListColumns sorting', () => {
     render(<SortableList favorites />)
     expect(header('Name')).toHaveAttribute('aria-sort', 'none')
     expect(header('Nodes')).toHaveAttribute('aria-sort', 'none')
-    fireEvent.click(within(header('Name')).getByRole('button'))
+    fireEvent.click(within(header('Name')).getByRole('button', { name: 'Name' }))
     expect(header('Name')).toHaveAttribute('aria-sort', 'ascending')
   })
 
@@ -546,6 +548,53 @@ describe('ListColumns sorting', () => {
     expect(thead).toHaveClass('sticky', 'z-(--layer-sticky)')
     // Nothing else is pinned in the list's scroller, so it pins at the top.
     expect(thead).toHaveStyle({ top: '0px' })
+  })
+})
+
+describe('ListColumns on a phone', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  const sortMenu = () => screen.getByRole('button', { name: /^Sorted by/ })
+
+  it('says what the list is sorted by and which way in the name’s header', () => {
+    render(<SortableList />)
+    fireEvent.click(within(header('Nodes')).getByRole('button'))
+    fireEvent.click(within(header('Nodes')).getByRole('button'))
+    // Its own header gives way below the medium width; the name's then names the order.
+    expect(header('Nodes')).toHaveClass('hidden', '@[36rem]:table-cell')
+    expect(within(header('Name')).getByRole('button', { name: 'Name' })).toHaveClass(
+      'hidden',
+      '@[36rem]:inline-flex',
+    )
+    expect(sortMenu()).toHaveAccessibleName('Sorted by Nodes, descending')
+    expect(sortMenu()).toHaveClass('@[36rem]:hidden')
+    expect(header('Name')).toContainElement(sortMenu())
+  })
+
+  it('changes the order and its direction, and Display options follows', async () => {
+    render(<SortableList />)
+    fireEvent.click(sortMenu())
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Nodes' }))
+    await waitFor(() => expect(header('Nodes')).toHaveAttribute('aria-sort', 'ascending'))
+    expect(names()).toEqual(['beta', 'gamma', 'alpha'])
+
+    fireEvent.click(sortMenu())
+    const descending = await screen.findByRole('menuitemradio', { name: 'Descending' })
+    expect(screen.getByRole('menuitemradio', { name: 'Nodes' })).toBeChecked()
+    fireEvent.click(descending)
+    await waitFor(() => expect(header('Nodes')).toHaveAttribute('aria-sort', 'descending'))
+    expect(names()).toEqual(['alpha', 'gamma', 'beta'])
+    expect(sortMenu()).toHaveAccessibleName('Sorted by Nodes, descending')
+
+    openDisplay()
+    expect(screen.getByRole('combobox', { name: 'Ordering' })).toHaveTextContent('Nodes')
+  })
+
+  it('names the built-in default order', () => {
+    render(<SortableList favorites />)
+    expect(sortMenu()).toHaveAccessibleName('Sorted by Default, ascending')
   })
 })
 

@@ -49,6 +49,7 @@ import {
   StretchRowLinkContext,
 } from './ListTable'
 import { ListToolbar, type ListToolbarProps, toolbarCount } from './ListToolbar'
+import { ListSortMenu } from './ListViewControls'
 import { type ListCountProps, ListCountStatus, ListFooterCountContext } from './listSearch'
 import type { ColumnDef, ListGroupState, ListView, ListViewChrome, StackLine } from './listView'
 import { MoreButton, type RowAction, rowContextMenuProps, useRowMenuActive } from './rowMenu'
@@ -1012,11 +1013,18 @@ function headerStyle(col: ColumnDef, tiers: Tiers | undefined): CSSProperties | 
  *  other display option that is off. */
 export function ListColumns<T>({ view }: { view: ListView<T> }) {
   const widths = shareWidths(view.visibleColumns, view.columnStacks)
+  // Below the medium width the stacked columns' headers give way, and the low ones' drop, so the
+  // header that sorts by one is gone: the name's header says what the list is sorted by instead,
+  // and changes it.
+  const sortMenu =
+    view.orderBys.length > 0 &&
+    view.visibleColumns.some((col, i) => view.columnStacks[i] || col.priority !== undefined)
   return (
     <>
       {view.visibleColumns.map((col, i) => {
         // A column naming an order the view doesn't offer stays a plain title.
         const orderBy = view.orderBys.some((o) => o.value === col.orderBy) ? col.orderBy : undefined
+        const narrowSort = sortMenu && i === 0
         return (
           <Table.Header
             key={col.key}
@@ -1032,8 +1040,23 @@ export function ListColumns<T>({ view }: { view: ListView<T> }) {
             style={headerStyle(col, widths[i])}
             sort={orderBy === undefined ? undefined : columnSort(view, orderBy)}
             onSort={orderBy === undefined ? undefined : () => view.sortBy(orderBy)}
+            sortClassName={narrowSort ? 'hidden @[36rem]:inline-flex' : undefined}
+            aside={
+              narrowSort && (
+                <>
+                  {/* The title gives way to the menu but still names the column to a screen
+                   * reader. */}
+                  <span className="sr-only @[36rem]:hidden">{col.label}</span>
+                  <ListSortMenu view={view} className="@[36rem]:hidden" />
+                </>
+              )
+            }
           >
-            {col.label}
+            {narrowSort && orderBy === undefined ? (
+              <span className="hidden @[36rem]:inline">{col.label}</span>
+            ) : (
+              col.label
+            )}
           </Table.Header>
         )
       })}

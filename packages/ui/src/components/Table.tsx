@@ -124,6 +124,10 @@ interface HeaderProps {
   sort?: SortDirection | undefined
   /** Sorts by this column, or flips its direction. */
   onSort?: (() => void) | undefined
+  /** Classes on the sort button, such as ones that hide it where `aside` takes its place. */
+  sortClassName?: string | undefined
+  /** After the title, outside its sort button: another control the header holds. */
+  aside?: React.ReactNode
   /** False sets the title in sentence case instead of small capitals. The
    *  table's `caps` by default. */
   caps?: boolean | undefined
@@ -135,7 +139,17 @@ const sortIcons = {
   none: SortUnsortedIcon,
 } as const
 
-function Header({ children, className, style, colSpan, sort, onSort, caps }: HeaderProps) {
+function Header({
+  children,
+  className,
+  style,
+  colSpan,
+  sort,
+  onSort,
+  sortClassName,
+  aside,
+  caps,
+}: HeaderProps) {
   const density = useContext(DensityContext)
   const tableCaps = useContext(CapsContext)
   const Icon = sortIcons[sort ?? 'none']
@@ -158,7 +172,10 @@ function Header({ children, className, style, colSpan, sort, onSort, caps }: Hea
           type="button"
           onClick={onSort}
           // In a right-aligned column the mark leads, so the title still lines up with the values.
-          className="group/sort -mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) in-[.text-right]:flex-row-reverse"
+          className={cx(
+            'group/sort -mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) in-[.text-right]:flex-row-reverse',
+            sortClassName,
+          )}
         >
           {children}
           {/* Only the sorted column shows its mark at rest: a mark on every
@@ -178,6 +195,7 @@ function Header({ children, className, style, colSpan, sort, onSort, caps }: Hea
       ) : (
         children
       )}
+      {aside}
     </th>
   )
 }

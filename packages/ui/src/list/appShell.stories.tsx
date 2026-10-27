@@ -503,6 +503,33 @@ export const SelectedRows: Story = { args: { selectable: true } }
 /** At phone width the Status column gives way and each status sits under its row's name. */
 export const NarrowStacksStatus: Story = { args: { narrow: true } }
 
+/** At phone width the headers that sort by Status and the rest have given way, so the name's
+ *  header says what the list is sorted by and which way, and opens a menu that changes both,
+ *  from the same order as Display options' Ordering. Here it's sorted by Status, descending. */
+export const NarrowSortedByStatus: Story = {
+  args: { narrow: true },
+  beforeEach: () => {
+    for (const key of ['orderBy', 'orderDir']) {
+      localStorage.removeItem(`workshop-app-shell-clusters:${key}`)
+    }
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const sort = await canvas.findByRole('button', { name: /sorted by default/i })
+    await userEvent.click(sort)
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Status' }))
+    await userEvent.click(canvas.getByRole('button', { name: /sorted by status, ascending/i }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Descending' }))
+    const sorted = canvas.getByRole('button', { name: /sorted by status, descending/i })
+    await expect(sorted).toBeVisible()
+    // Stopped sorts last ascending, so first descending.
+    const rows = canvas.getAllByRole('row').slice(1)
+    await expect(rows[0]).toHaveTextContent('Stopped')
+    // The header row's own sort button for Name has given way to the menu.
+    await expect(canvas.queryByRole('button', { name: 'Name' })).toBeNull()
+  },
+}
+
 /** Rows whose Status is empty add nothing under the name. */
 export const NarrowWithSomeStatusesEmpty: Story = { args: { narrow: true, sparseStatus: true } }
 

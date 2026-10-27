@@ -632,6 +632,11 @@ export interface UIStrings {
     orderFavorites: string
     ascending: string
     descending: string
+    /** On a phone, where a list's other columns stack under its name, the header's control that
+     *  shows and changes the order, as Display options' Ordering does. `order` is the order's
+     *  label, such as a column's. It shows without `direction`, which its arrow shows; a screen
+     *  reader hears it with one. */
+    sortedBy: (order: string, direction?: 'ascending' | 'descending') => string
     columnHeaders: string
     showColumnHeaders: string
     /** The header checkbox that ticks every row, or clears them all. */
@@ -1551,6 +1556,8 @@ const DEFAULTS: UIProviderValue = {
       orderFavorites: 'Favorites',
       ascending: 'Ascending',
       descending: 'Descending',
+      sortedBy: (order, direction) =>
+        direction ? `Sorted by ${order}, ${direction}` : `Sorted by ${order}`,
       columnHeaders: 'Column headers',
       showColumnHeaders: 'Show column headers',
       selectAll: 'Select all',

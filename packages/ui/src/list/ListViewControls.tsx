@@ -3,7 +3,13 @@ import { Toggle } from '@base-ui/react/toggle'
 import { useState } from 'react'
 import { IconButton } from '../components/IconButton'
 import { InfoTip } from '../components/InfoTip'
-import { MenuCheckboxItem, MenuPopup, MenuSubmenuTrigger } from '../components/Menu'
+import {
+  MenuCheckboxItem,
+  MenuPopup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuSubmenuTrigger,
+} from '../components/Menu'
 import { Popover } from '../components/Popover'
 import { useStrings } from '../components/Provider'
 import { Select } from '../components/Select'
@@ -11,7 +17,14 @@ import { Switch } from '../components/Switch'
 import { useQueryMatch } from '../components/search'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { ChevronDownIcon, ChevronUpIcon, DisplayIcon, FilterIcon } from '../icons'
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DisplayIcon,
+  FilterIcon,
+  SortDownIcon,
+  SortUpIcon,
+} from '../icons'
 import { AddFilterMenu } from './ListFilterBar'
 import { type FilterFacet, isLocked, type ListView } from './listView'
 import type { ListFilters } from './useListFilters'
@@ -173,6 +186,54 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
         </div>
       )}
     </Popover>
+  )
+}
+
+/** The phone's sort control, in the name column's header where the other columns' headers have
+ *  given way: it says what the list is sorted by and which way, and changes both, as Display
+ *  options' Ordering does, from the same state. */
+export function ListSortMenu<T>({ view, className }: { view: ListView<T>; className?: string }) {
+  const t = useStrings().list
+  const current = view.orderBys.find((o) => o.value === view.orderBy) ?? view.orderBys[0]
+  if (!current) {
+    return null
+  }
+  const ascending = view.orderDir === 'asc'
+  const DirIcon = ascending ? SortUpIcon : SortDownIcon
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        aria-label={t.sortedBy(current.label, ascending ? 'ascending' : 'descending')}
+        className={cx(
+          '-mx-1 -my-1 inline-flex max-w-full cursor-pointer items-center gap-1 rounded px-1 py-1 align-middle text-inherit hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) data-popup-open:text-(--theme-app)',
+          className,
+        )}
+      >
+        <span className="truncate">{t.sortedBy(current.label)}</span>
+        <DirIcon aria-hidden="true" className="size-3.5 shrink-0" />
+      </Menu.Trigger>
+      <MenuPopup label={t.ordering}>
+        <Menu.RadioGroup value={current.value} onValueChange={(v: string) => view.setOrderBy(v)}>
+          {view.orderBys.map((o) => (
+            <MenuRadioItem key={o.value} value={o.value}>
+              {o.label}
+            </MenuRadioItem>
+          ))}
+        </Menu.RadioGroup>
+        <MenuSeparator />
+        <Menu.RadioGroup
+          value={view.orderDir}
+          onValueChange={(dir: string) => {
+            if (dir !== view.orderDir) {
+              view.toggleOrderDir()
+            }
+          }}
+        >
+          <MenuRadioItem value="asc">{t.ascending}</MenuRadioItem>
+          <MenuRadioItem value="desc">{t.descending}</MenuRadioItem>
+        </Menu.RadioGroup>
+      </MenuPopup>
+    </Menu.Root>
   )
 }
 
