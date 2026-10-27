@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.97.2](https://github.com/parallelworks/foundation/compare/ui-v0.97.1...ui-v0.97.2) (2026-10-27)
+
+
+### Bug Fixes
+
+* **ui:** a field's ? and hint follow its label's last word when the label wraps ([#528](https://github.com/parallelworks/foundation/issues/528)) ([1a7edae](https://github.com/parallelworks/foundation/commit/1a7edae9c4e75c92be68a2fd6b6b436ba8113233))
+* **ui:** on a phone, a list's header says what it is sorted by and changes it ([#533](https://github.com/parallelworks/foundation/issues/533)) ([041b79d](https://github.com/parallelworks/foundation/commit/041b79d50db8e0f27d778307a74f171f3d14f6f1))
+
 ## [0.97.1](https://github.com/parallelworks/foundation/compare/ui-v0.97.0...ui-v0.97.1) (2026-10-26)
 
 
