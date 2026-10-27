@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.98.0](https://github.com/parallelworks/foundation/compare/ui-v0.97.2...ui-v0.98.0) (2026-10-27)
+
+
+### Features
+
+* **ui:** a list and the item open from it show side by side where they fit and one at a time on a phone ([#532](https://github.com/parallelworks/foundation/issues/532)) ([caee4d2](https://github.com/parallelworks/foundation/commit/caee4d2f87e82ad34238470999bf6f8463718305))
+
+
+### Bug Fixes
+
+* **ui:** on a phone, an open list search fills its toolbar's line instead of keeping a desktop's width ([#536](https://github.com/parallelworks/foundation/issues/536)) ([0782733](https://github.com/parallelworks/foundation/commit/0782733a3b0b12567f2bdbc3992a71f2ee1a1cf4))
+
 ## [0.97.2](https://github.com/parallelworks/foundation/compare/ui-v0.97.1...ui-v0.97.2) (2026-10-27)
 
 
