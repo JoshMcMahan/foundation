@@ -272,7 +272,9 @@ function OptionSelect({
 
 /** The toolbar's Filter button, which F presses. Beside a chip row (`ListFilterBar`, which
  *  `ListPage` shows), it opens the Add filter menu: picking a field adds its chip and opens its
- *  value picker there. Without one, it keeps a submenu of values for each facet. */
+ *  value picker there. Without one, it keeps a submenu of values for each facet. On a page that
+ *  lays out its own chip row, pass it as the bar's `end`, which centers it on the chips' first
+ *  line however they wrap; set beside the bar in a row of the page's own, it sits above them. */
 export function ListFilterMenu<T>({
   view,
   filters,

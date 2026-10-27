@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   ClusterIcon,
   FilterIcon,
+  HistoryIcon,
   OrganizationIcon,
   RefreshIcon,
   TagIcon,
@@ -947,6 +948,100 @@ export const SharedLineAtPhoneWidth: StoryObj = {
 export const SharedLineAtPhoneWidthDark: StoryObj = {
   ...SharedLineAtPhoneWidth,
   globals: { mode: 'dark' },
+}
+
+// --- An audit log's filters beside their menu ----------------------------------
+
+const AUDIT_FIELDS: FilterField[] = [
+  {
+    key: 'actor',
+    label: 'Actor',
+    icon: <UserIcon />,
+    kind: 'people',
+    multiple: false,
+    operators: ['is'],
+    options: [
+      { value: 'user:*', label: 'Any person' },
+      { value: 'agent:*', label: 'Any agent' },
+      ...['Maya Chen', 'Jonas Weber'].map((name) => ({
+        value: `user:${name.split(' ')[0]?.toLowerCase()}`,
+        label: name,
+        group: 'People',
+        icon: <Avatar name={name} size="xs" decorative />,
+      })),
+    ],
+  },
+  {
+    key: 'type',
+    label: 'Activity',
+    icon: <HistoryIcon />,
+    kind: 'enum',
+    multiple: false,
+    operators: ['is'],
+    options: ['Issues', 'Docs', 'Members', 'Settings'].map((g) => ({ value: g, label: g })),
+  },
+  { key: 'date', label: 'Date', icon: <CalendarIcon />, kind: 'date' },
+]
+
+type AuditChips = 'none' | 'one' | 'wrapped'
+
+const AUDIT_ACTIVE: Record<AuditChips, ActiveFilter[]> = {
+  none: [],
+  one: [{ field: 'date', op: 'is', values: ['-24h'] }],
+  wrapped: [
+    { field: 'actor', op: 'is', values: ['user:maya'] },
+    { field: 'type', op: 'is', values: ['Settings'] },
+    { field: 'date', op: 'is', values: ['-24h'] },
+  ],
+}
+
+/** An audit log's filters as a settings page lays them out: the chips, and the filter menu at
+ *  the end of their first line. */
+function AuditLogDemo({ chips }: { chips: AuditChips }) {
+  const [active, setActive] = useState<ActiveFilter[]>(AUDIT_ACTIVE[chips])
+  const filters = useListFilters({
+    storageKey: `story-audit-${chips}`,
+    fields: AUDIT_FIELDS,
+    remember: false,
+    store: { value: active, onChange: setActive },
+  })
+  return (
+    <div className="bg-(--theme-app-bg) p-4">
+      {/* The menu goes in the bar's `end`, which centers it on the chips' first line, and on
+          the row's own line while no chip shows. */}
+      <ListFilterBar
+        filters={filters}
+        end={<ListFilterMenu filters={filters} />}
+        className="mb-2"
+      />
+      <div className="panel h-40" />
+    </div>
+  )
+}
+
+/** An audit log's filters: a chip per filter, "+ Filter" and Clear, and the filter menu at the
+ *  row's end, its dot saying a filter is on. The menu sits centered on the chips' first line,
+ *  with one chip, with none, and with chips that wrap to two lines. */
+export const BesideTheFilterMenu: StoryObj<{ chips: AuditChips }> = {
+  args: { chips: 'one' },
+  argTypes: { chips: { control: 'inline-radio', options: ['none', 'one', 'wrapped'] } },
+  render: ({ chips }) => <AuditLogDemo key={chips} chips={chips} />,
+  play: async ({ canvasElement, args }) => {
+    const center = (el: Element) => {
+      const r = el.getBoundingClientRect()
+      return (r.top + r.bottom) / 2
+    }
+    // The filter menu's button, which F presses.
+    const menu = canvasElement.querySelector(
+      '[aria-keyshortcuts="F"], [aria-keyshortcuts="f"]',
+    ) as HTMLElement
+    await expect(menu).toBeVisible()
+    const chip = canvasElement.querySelector('[data-filter-chip]')
+    if (args.chips !== 'none' && chip) {
+      // On the first line's center, whether the chips take one line or wrap to two.
+      await expect(Math.abs(center(menu) - center(chip))).toBeLessThan(1)
+    }
+  },
 }
 
 // --- Required chips on a narrow row -----------------------------------------
