@@ -30,6 +30,7 @@ import {
   pickerHintClassName,
   pickerItemClassName,
 } from './comboboxItems'
+import { useFieldControlId } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, positionerClassName } from './floating'
 import { Loader } from './Loader'
@@ -257,7 +258,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     placeholder,
     disabled,
     required,
-    id,
+    id: ownId,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     'aria-describedby': ariaDescribedBy,
@@ -278,6 +279,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
     align = 'start',
     onCreate,
   } = props
+  const id = useFieldControlId(ownId)
   const entries = useEntries(items)
   const filter = useEntryFilter()
   const t = useStrings().dropdown

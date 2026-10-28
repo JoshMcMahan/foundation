@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { Checkbox } from './Checkbox'
+import { Checkbox, CheckboxGroup } from './Checkbox'
 import { Combobox } from './Combobox'
 import { DatePicker } from './DatePicker'
 import { ErrorText, Field, FieldOption, FieldRowContext, FieldValue, RevealToggle } from './Field'
@@ -10,6 +10,7 @@ import { fieldBox } from './fieldBox'
 import { Input, Textarea } from './Input'
 import { Modal } from './Modal'
 import { NumberInput } from './NumberInput'
+import { OneTimeCodeInput } from './OneTimeCodeInput'
 import { Radio, RadioGroup } from './Radio'
 import { Select } from './Select'
 import { Slider } from './Slider'
@@ -117,6 +118,78 @@ describe('Field', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Single' }))
     expect(screen.getByRole('radio', { name: 'Single' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Half' })).not.toBeChecked()
+  })
+
+  it('gives its id to the control placed in it, which its label names', () => {
+    render(
+      <>
+        <Field label="Region" id="region">
+          <Input />
+        </Field>
+        <Field label="Notes" id="notes">
+          <Textarea />
+        </Field>
+        <Field label="Country" id="country">
+          <Select items={[{ value: 'us', label: 'United States' }]} />
+        </Field>
+        <Field label="Owner" id="owner">
+          <Combobox items={['Ada', 'Lin']} />
+        </Field>
+        <Field label="Nodes" id="nodes">
+          <NumberInput />
+        </Field>
+        <Field label="Code" id="code">
+          <OneTimeCodeInput length={4} />
+        </Field>
+        <Field label="Notify" id="notify">
+          <Checkbox />
+        </Field>
+        <Field label="Enabled" id="enabled">
+          <Switch />
+        </Field>
+      </>,
+    )
+    const named = [
+      ['region', screen.getByRole('textbox', { name: 'Region' })],
+      ['notes', screen.getByRole('textbox', { name: 'Notes' })],
+      ['country', screen.getByRole('combobox', { name: 'Country' })],
+      ['owner', screen.getByRole('combobox', { name: 'Owner' })],
+      ['nodes', screen.getByRole('textbox', { name: 'Nodes' })],
+      ['code', screen.getByRole('textbox', { name: 'Code' })],
+    ] as const
+    for (const [id, control] of named) {
+      expect(control).toHaveAttribute('id', id)
+      expect(document.querySelector(`label[for="${id}"]`)).not.toBeNull()
+    }
+    // A checkbox and a switch keep the id on their native input, which the label points at.
+    for (const [id, name, role] of [
+      ['notify', 'Notify', 'checkbox'],
+      ['enabled', 'Enabled', 'switch'],
+    ] as const) {
+      expect(screen.getByRole(role, { name })).toBeInTheDocument()
+      expect(document.getElementById(id)).toBeInstanceOf(HTMLInputElement)
+      expect(document.querySelector(`label[for="${id}"]`)).toHaveTextContent(name)
+    }
+  })
+
+  it('keeps its id from a group’s options, which each keep their own', () => {
+    render(
+      <Field label="Zones" group id="zones">
+        <CheckboxGroup>
+          <FieldOption>
+            <Checkbox value="east" />
+            East
+          </FieldOption>
+          <FieldOption>
+            <Checkbox value="west" />
+            West
+          </FieldOption>
+        </CheckboxGroup>
+      </Field>,
+    )
+    const ids = screen.getAllByRole('checkbox').map((box) => box.id)
+    expect(new Set(ids).size).toBe(2)
+    expect(document.getElementById('zones')).toBeNull()
   })
 })
 

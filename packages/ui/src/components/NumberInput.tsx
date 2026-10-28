@@ -1,6 +1,7 @@
 import { NumberField } from '@base-ui/react/number-field'
 import { cx } from '../cx'
 import { ChevronDownIcon, ChevronUpIcon } from '../icons'
+import { useFieldControlId } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 
 export interface NumberInputProps
@@ -46,9 +47,11 @@ export function NumberInput({
   className,
   ...rootProps
 }: NumberInputProps) {
+  const id = useFieldControlId(rootProps.id)
   return (
     <NumberField.Root
       {...rootProps}
+      id={id}
       format={{ maximumFractionDigits: 20, useGrouping: false, ...format }}
     >
       <NumberField.Group

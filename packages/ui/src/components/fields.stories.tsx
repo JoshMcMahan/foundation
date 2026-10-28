@@ -386,6 +386,46 @@ export const FrameLabelWrapsOnPhone: StoryObj = {
   globals: { viewport: { value: 'mobile1', isRotated: false } },
 }
 
+/** Given an `id`, a Field hands it to its control: the label points at the control and names it,
+ *  a click on the label focuses it, and a page can find it by that id, such as to move focus to a
+ *  form's first problem. */
+export const FrameWithId: StoryObj = {
+  render: () => (
+    <div className="flex max-w-sm flex-col gap-4">
+      <Field label="Region" id="frame-with-id-region">
+        <Select
+          items={[
+            { value: 'east', label: 'East' },
+            { value: 'west', label: 'West' },
+          ]}
+          placeholder="Pick a region"
+        />
+      </Field>
+      <Field label="Owner" id="frame-with-id-owner">
+        <Combobox items={['Ada', 'Lin']} placeholder="Pick an owner" />
+      </Field>
+      <Field label="Nodes" id="frame-with-id-nodes">
+        <NumberInput placeholder="1" />
+      </Field>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Region' })).toHaveAttribute(
+      'id',
+      'frame-with-id-region',
+    )
+    await expect(canvas.getByRole('combobox', { name: 'Owner' })).toHaveAttribute(
+      'id',
+      'frame-with-id-owner',
+    )
+    const nodes = canvas.getByRole('textbox', { name: 'Nodes' })
+    await expect(nodes).toHaveAttribute('id', 'frame-with-id-nodes')
+    await userEvent.click(canvas.getByText('Nodes'))
+    await expect(nodes).toHaveFocus()
+  },
+}
+
 // Room above the first field for its help, which opens over the ? when it is hovered, as a
 // page's header would leave it.
 const roomAbove: Decorator = (Story) => (

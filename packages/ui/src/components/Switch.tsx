@@ -1,5 +1,6 @@
 import { Switch as BaseSwitch } from '@base-ui/react/switch'
 import { cx } from '../cx'
+import { useFieldControlId } from './Field'
 import { focusOutline } from './fieldBox'
 
 const sizes = {
@@ -29,9 +30,11 @@ export interface SwitchProps extends Omit<BaseSwitch.Root.Props, 'className' | '
  * puts the id on the button the label points at.
  */
 export function Switch({ size = 'md', className, onLabel, offLabel, ...props }: SwitchProps) {
+  const id = useFieldControlId(props.id)
   const control = (
     <BaseSwitch.Root
       {...props}
+      id={id}
       className={cx(
         // The off track takes the control edge, which holds 3:1 against the page and keeps the
         // white thumb showing on it. On, the track fills with the focus color: the accent as
