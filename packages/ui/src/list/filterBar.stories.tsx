@@ -1041,6 +1041,10 @@ export const BesideTheFilterMenu: StoryObj<{ chips: AuditChips }> = {
       // On the first line's center, whether the chips take one line or wrap to two.
       await expect(Math.abs(center(menu) - center(chip))).toBeLessThan(1)
     }
+    // The bar's margin keeps the panel 8px below the row, with chips or without.
+    const panel = canvasElement.querySelector('.panel') as HTMLElement
+    const row = panel.previousElementSibling as HTMLElement
+    await expect(panel.getBoundingClientRect().top - row.getBoundingClientRect().bottom).toBe(8)
   },
 }
 

@@ -1163,6 +1163,8 @@ export interface ListFilterBarProps {
   end?: ReactNode
   /** Names the row; defaults to the provider's `filters.activeFilters`. */
   label?: string | undefined
+  /** On the row. With `end`, on the line it shares with the controls, which stays while no
+   *  chip shows, so a margin set here keeps its space either way. */
   className?: string | undefined
 }
 
@@ -1186,7 +1188,7 @@ export function ListFilterBar({ end, trailing, ...props }: ListFilterBarProps) {
 const VALUE_MIN_PX = 88
 
 /** The chips with the list's controls at their first line's end. */
-function SharedRow({ end, trailing, ...props }: ListFilterBarProps) {
+function SharedRow({ end, trailing, className, ...props }: ListFilterBarProps) {
   const box = useRef<HTMLDivElement>(null)
   const controls = useRef<HTMLDivElement>(null)
   const endBox = useRef<HTMLDivElement>(null)
@@ -1260,7 +1262,9 @@ function SharedRow({ end, trailing, ...props }: ListFilterBarProps) {
     <ListToolbarInlineContext value>
       {/* The chips measure their own width, so they wrap and give way beside the controls. A
           row with no chips leaves the box empty, and the controls take the line. */}
-      <div ref={box} className="flex min-h-10 items-start gap-3">
+      {/* The page's class goes on this box, not the chips' line: that line leaves while no chip
+          shows, and a margin inside the box would not collapse with the next element's. */}
+      <div ref={box} className={cx('flex min-h-10 items-start gap-3', className)}>
         <div className="min-w-0 flex-1 empty:hidden">
           <FilterRow
             {...props}

@@ -680,6 +680,43 @@ describe("a row sharing its first line with the list's controls", () => {
   })
 })
 
+describe("a row's class beside the list's controls", () => {
+  function Spaced({ initial }: { initial: ActiveFilter[] }) {
+    const [active, setActive] = useState<ActiveFilter[]>(initial)
+    const filters = useListFilters({
+      storageKey: 'shared-row-class',
+      fields: [
+        {
+          key: 'status',
+          label: 'Status',
+          kind: 'enum',
+          options: [{ value: 'started', label: 'In progress' }],
+        },
+      ],
+      remember: false,
+      store: { value: active, onChange: setActive },
+    })
+    return (
+      <ListFilterBar
+        filters={filters}
+        end={<button type="button">Display</button>}
+        className="mb-2"
+      />
+    )
+  }
+
+  it.each([
+    ['with a chip', [{ field: 'status', op: 'is', values: ['started'] }] as ActiveFilter[]],
+    ['with no chip', [] as ActiveFilter[]],
+  ])('goes on the line the controls share, %s', (_, initial) => {
+    render(<Spaced initial={initial} />)
+    const display = screen.getByRole('button', { name: 'Display' })
+    const spaced = document.querySelectorAll('.mb-2')
+    expect(spaced).toHaveLength(1)
+    expect(spaced[0]).toContainElement(display)
+  })
+})
+
 describe('a narrow row with required and pinned fields', () => {
   it('never puts their chips in the sheet, only the ones after them', async () => {
     function Fixed() {
