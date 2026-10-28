@@ -1,7 +1,7 @@
 // Package pgdb gives an application its own schema in a PostgreSQL
-// database: a pool whose connections use it, hopper's job tables in it, and
-// goose migrations applied to it, so several applications can share one
-// database without their tables meeting.
+// database: a pool whose connections use it and goose migrations applied to
+// it, so several applications can share one database without their tables
+// meeting.
 package pgdb
 
 import (
@@ -16,8 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/parallelworks/hopper/driver/hopperpgx"
-	"github.com/parallelworks/hopper/hoppermigrate"
 	"github.com/pressly/goose/v3"
 )
 
@@ -55,12 +53,6 @@ func Schema(pool *pgxpool.Pool) string {
 	return pool.Config().ConnConfig.RuntimeParams["search_path"]
 }
 
-// HopperDriver returns hopper's driver for a pool from Open, with hopper's
-// tables in the pool's schema. hopper's own default is a schema named hopper.
-func HopperDriver(pool *pgxpool.Pool) *hopperpgx.Driver {
-	return hopperpgx.NewWithConfig(pool, &hopperpgx.Config{Schema: Schema(pool)})
-}
-
 // Migrations are an application's goose migrations.
 type Migrations struct {
 	// FS holds the migration files at its root.
@@ -72,9 +64,8 @@ type Migrations struct {
 	Logger *slog.Logger
 }
 
-// Migrate creates the pool's schema, installs or upgrades hopper's tables in
-// it and applies the application's migrations. It is safe to call from
-// several replicas at once.
+// Migrate creates the pool's schema and applies the application's migrations.
+// It is safe to call from several replicas at once.
 //
 // The lock is held on a dedicated connection outside the pool, so replicas
 // waiting on it never starve the migration itself of pool connections.
@@ -113,9 +104,6 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, m Migrations) (err error) 
 
 	if _, err := conn.Exec(ctx, "CREATE SCHEMA IF NOT EXISTS "+pgx.Identifier{schema}.Sanitize()); err != nil {
 		return fmt.Errorf("pgdb: create schema %s: %w", schema, err)
-	}
-	if _, err := hoppermigrate.Up(ctx, HopperDriver(pool), &hoppermigrate.Options{Logger: logger}); err != nil {
-		return fmt.Errorf("pgdb: migrate hopper: %w", err)
 	}
 	return migrateApp(ctx, pool, m.FS, logger)
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/parallelworks/hopper/hoppermigrate"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/parallelworks/foundation/pgdb"
@@ -42,22 +41,38 @@ func TestMigrateKeepsEverythingInTheSchema(t *testing.T) {
 		t.Fatalf("concurrent migrate: %v", err)
 	}
 
-	for _, table := range []string{"widgets", "goose_db_version", "hopper_jobs", "hopper_periodic"} {
+	for _, table := range []string{"widgets", "goose_db_version"} {
 		var where string
 		err := pool.QueryRow(ctx,
 			"SELECT table_schema FROM information_schema.tables WHERE table_name = $1 AND table_schema = ANY($2)",
-			table, []string{schema, "public", "hopper"}).Scan(&where)
+			table, []string{schema, "public"}).Scan(&where)
 		if err != nil {
 			t.Errorf("table %s: %v", table, err)
 		} else if where != schema {
 			t.Errorf("table %s is in schema %s, want %s", table, where, schema)
 		}
 	}
-	if v, err := hoppermigrate.Version(ctx, pgdb.HopperDriver(pool)); err != nil || v != hoppermigrate.Latest() {
-		t.Errorf("hopper version = %d, %v; want %d", v, err, hoppermigrate.Latest())
+	var n int
+	if err := pool.QueryRow(ctx,
+		"SELECT count(*) FROM information_schema.tables WHERE table_schema = $1", schema).Scan(&n); err != nil || n != 2 {
+		t.Errorf("schema has %d tables (%v); want only the app table and migration history", n, err)
 	}
 	if _, err := pool.Exec(ctx, "INSERT INTO widgets VALUES (1, 'a')"); err != nil {
 		t.Errorf("app table unreachable through the pool: %v", err)
+	}
+}
+
+func TestMigrateWithoutMigrationsCreatesEmptySchema(t *testing.T) {
+	pool := pgdbtest.Migrated(t, urlEnv, pgdb.Migrations{})
+	schema := pgdb.Schema(pool)
+	var current string
+	if err := pool.QueryRow(t.Context(), "SELECT current_schema()").Scan(&current); err != nil || current != schema {
+		t.Fatalf("current schema = %q, %v; want %q", current, err, schema)
+	}
+	var n int
+	if err := pool.QueryRow(t.Context(),
+		"SELECT count(*) FROM information_schema.tables WHERE table_schema = $1", schema).Scan(&n); err != nil || n != 0 {
+		t.Errorf("schema has %d tables (%v); want an empty schema", n, err)
 	}
 }
 

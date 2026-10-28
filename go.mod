@@ -9,7 +9,6 @@ godebug fips140=only
 require (
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/parallelworks/hopper v0.6.0
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/quasilyte/go-ruleguard v0.4.5
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23

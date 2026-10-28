@@ -62,7 +62,7 @@ func Open(tb testing.TB, urlEnv, params string) *pgxpool.Pool {
 	return pool
 }
 
-// Migrated is Open with hopper's tables and m applied.
+// Migrated is Open with m applied.
 func Migrated(tb testing.TB, urlEnv string, m pgdb.Migrations) *pgxpool.Pool {
 	tb.Helper()
 	pool := Open(tb, urlEnv, "")
