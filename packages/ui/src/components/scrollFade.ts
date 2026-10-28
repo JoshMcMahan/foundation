@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 
 /** Which ends of a sideways scroller hide some of its content, kept up to date as it
- *  scrolls or resizes. */
+ *  scrolls, resizes or settles. */
 export type HiddenEnds = { start: boolean; end: boolean }
 const NO_ENDS: HiddenEnds = { start: false, end: false }
 
@@ -29,12 +29,19 @@ export function useHiddenEnds(active: boolean) {
   })
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el || !active || typeof ResizeObserver === 'undefined') {
+    if (!el || !active) {
       return
     }
-    const observer = new ResizeObserver(() => measure())
-    observer.observe(el)
-    return () => observer.disconnect()
+    const update = () => measure()
+    // Something inside that eases into place, such as a tab row's underline after the tabs
+    // narrow, can run past the end until it settles, and settling resizes nothing observed.
+    el.addEventListener('transitionend', update)
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update)
+    observer?.observe(el)
+    return () => {
+      el.removeEventListener('transitionend', update)
+      observer?.disconnect()
+    }
   }, [active])
   return { ref, ends, onScroll: measureNow }
 }
