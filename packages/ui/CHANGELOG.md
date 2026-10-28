@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.102.0](https://github.com/parallelworks/foundation/compare/ui-v0.101.1...ui-v0.102.0) (2026-10-28)
+
+
+### Features
+
+* **ui:** a step that runs another workflow can name its saved inputs or yours ([#538](https://github.com/parallelworks/foundation/issues/538)) ([ffec384](https://github.com/parallelworks/foundation/commit/ffec384dcbdaa5487ffe9365dab495209763309e))
+
+
+### Bug Fixes
+
+* **ui:** a control in a required Field says it's required ([#567](https://github.com/parallelworks/foundation/issues/567)) ([51ff546](https://github.com/parallelworks/foundation/commit/51ff5465925116d47a0f22e220aa596e39976f1b))
+* **ui:** a tab row drops its fade and arrow once its tabs narrow to fit ([#563](https://github.com/parallelworks/foundation/issues/563)) ([3a14e06](https://github.com/parallelworks/foundation/commit/3a14e06401c4017fdeb458ec5b1f7d587535c8dd))
+* **ui:** every keyboard focus ring is the theme's focus color ([#565](https://github.com/parallelworks/foundation/issues/565)) ([fda3345](https://github.com/parallelworks/foundation/commit/fda334515f0a49c73f644904c6601eb9b295ee51))
+
 ## [0.101.1](https://github.com/parallelworks/foundation/compare/ui-v0.101.0...ui-v0.101.1) (2026-10-28)
 
 
