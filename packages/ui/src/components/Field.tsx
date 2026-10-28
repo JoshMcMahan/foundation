@@ -38,6 +38,8 @@ interface ControlContextValue {
   /** The id the Field was given, for its control to take. None for a group, whose options are
    *  each their own control. */
   givenId: string | undefined
+  /** The Field marks its control required. Not in a group, whose options aren't each required. */
+  required: boolean
   /** Called by a control the label names by id rather than by `for`; returns its release. */
   claimLabel: () => () => void
 }
@@ -60,6 +62,13 @@ export function useFieldControl(): FieldControlProps | null {
  *  itself. */
 export function useFieldControlId(id: string | undefined): string | undefined {
   return id ?? use(ControlContext)?.givenId
+}
+
+/** Whether a control of this package placed in a Field is required, for it to carry
+ *  `aria-required`: the Field's asterisk is hidden from assistive technology, so the control says
+ *  so itself. Never in a group, whose options aren't each required. */
+export function useFieldRequired(): true | undefined {
+  return use(ControlContext)?.required || undefined
 }
 
 /** The surrounding Field's control props for a control that isn't a Base UI one, such as a
@@ -99,6 +108,7 @@ export interface FieldProps {
   error?: ReactNode
   /** Marks the control invalid without a message, for one shown elsewhere. */
   invalid?: boolean | undefined
+  /** Ends the label in an asterisk, and the control says it's required. */
   required?: boolean | undefined
   disabled?: boolean | undefined
   /** `stacked` puts the label above the control. `inline` puts it in a column to the left, as a
@@ -287,7 +297,13 @@ export function Field({
     setLabelledBy((n) => n + 1)
     return () => setLabelledBy((n) => n - 1)
   }, [])
-  const controlContext = { control, labelId, givenId: group ? undefined : ownId, claimLabel }
+  const controlContext = {
+    control,
+    labelId,
+    givenId: group ? undefined : ownId,
+    required: required && !group,
+    claimLabel,
+  }
 
   const inline = layout === 'inline'
   // In a row of fields, the label and the control take the row's two tracks, the label at the

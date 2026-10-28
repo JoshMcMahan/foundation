@@ -1,7 +1,7 @@
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
 import { cx } from '../cx'
 import { CheckIcon, MinusIcon } from '../icons'
-import { useFieldControlId } from './Field'
+import { useFieldControlId, useFieldRequired } from './Field'
 import { focusOutline } from './fieldBox'
 
 export { CheckboxGroup } from '@base-ui/react/checkbox-group'
@@ -17,10 +17,12 @@ export interface CheckboxProps extends Omit<BaseCheckbox.Root.Props, 'className'
  *  stays focusable, so a tooltip can say what grants it. */
 export function Checkbox({ className, ...props }: CheckboxProps) {
   const id = useFieldControlId(props.id)
+  const required = useFieldRequired()
   return (
     <BaseCheckbox.Root
       {...props}
       id={id}
+      aria-required={props['aria-required'] ?? required}
       className={cx(
         // The control edge holds 3:1 against the page, so an empty box still shows.
         'flex size-4 shrink-0 items-center justify-center rounded border border-(--theme-border-strong) bg-(--theme-input-bg) text-(--theme-accent-text) cursor-pointer transition-colors motion-reduce:transition-none',

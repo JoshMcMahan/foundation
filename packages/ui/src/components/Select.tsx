@@ -9,7 +9,7 @@ import {
   pickerHintClassName,
   pickerItemClassName,
 } from './comboboxItems'
-import { useFieldControl, useFieldControlId } from './Field'
+import { useFieldControl, useFieldControlId, useFieldRequired } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelListClassName, positionerClassName } from './floating'
 import { OptionDescription } from './OptionDescription'
@@ -96,6 +96,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   const uid = useId()
   const inField = useFieldControl() !== null
   const id = useFieldControlId(rootProps.id)
+  const fieldRequired = useFieldRequired()
   const content = (width ?? (inField ? 'fill' : 'content')) === 'content'
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   // Disabled with a reason, the field is read-only and shut instead, which keeps it focusable.
@@ -108,7 +109,7 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
     'aria-labelledby': labelledBy,
     'aria-describedby': cx(describedBy, explained && reasonId) || undefined,
     'aria-invalid': invalid || undefined,
-    'aria-required': required || undefined,
+    'aria-required': required || fieldRequired,
     'aria-disabled': explained || undefined,
     onKeyDown,
   }

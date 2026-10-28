@@ -3,7 +3,13 @@ import type { InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } from
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { cx } from '../cx'
-import { Field, type FieldControlProps, RevealToggle, useFieldControlId } from './Field'
+import {
+  Field,
+  type FieldControlProps,
+  RevealToggle,
+  useFieldControlId,
+  useFieldRequired,
+} from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 
 interface FramedProps {
@@ -115,6 +121,7 @@ export function Input({
   const [revealed, setRevealed] = useState(false)
   const secret = type === 'password'
   const id = useFieldControlId(props.id)
+  const required = useFieldRequired()
   return framed({ label, hint, help, description, error, size }, props, (control) => {
     // Base UI's input, which a Field around it names, describes and marks as it does Base UI's
     // own controls.
@@ -123,6 +130,7 @@ export function Input({
         ref={ref}
         {...props}
         id={id}
+        aria-required={props['aria-required'] ?? required}
         {...joined(control, props)}
         type={secret && revealed ? 'text' : type}
         className={cx(fieldBox({ size }), mono && 'font-mono', secret && 'pr-9', className)}
@@ -207,6 +215,7 @@ export function Textarea({
   )
   const masked = secret && !revealed
   const id = useFieldControlId(props.id)
+  const required = useFieldRequired()
   return framed({ label, hint, help, description, error, size }, props, (control) => {
     const textarea = (
       <BaseInput
@@ -221,6 +230,7 @@ export function Textarea({
         })}
         {...(props as InputHTMLAttributes<HTMLInputElement>)}
         id={id}
+        aria-required={props['aria-required'] ?? required}
         {...joined(control, props)}
         onInput={(event) => {
           resize?.()
