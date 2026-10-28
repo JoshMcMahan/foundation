@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.100.1](https://github.com/parallelworks/foundation/compare/ui-v0.100.0...ui-v0.100.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **ui:** a filter bar's margin holds with no chip when the list's controls share its line ([#551](https://github.com/parallelworks/foundation/issues/551)) ([39f15f8](https://github.com/parallelworks/foundation/commit/39f15f8a41cb5c2db3ff00b4483d62fde1d0982c))
+
 ## [0.100.0](https://github.com/parallelworks/foundation/compare/ui-v0.99.0...ui-v0.100.0) (2026-10-27)
 
 
