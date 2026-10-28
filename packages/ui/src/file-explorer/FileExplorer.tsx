@@ -1566,7 +1566,7 @@ export default function FileExplorer({
                   <button
                     type="button"
                     aria-label={common.collapse}
-                    className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-link)"
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-focus)"
                     onClick={collapseAll}
                   >
                     <CollapseIcon className="h-3.5 w-3.5" />

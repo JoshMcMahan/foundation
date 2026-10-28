@@ -172,7 +172,7 @@ export function FileRow({
         // so a following arrow key continues from there, but a mouse click should
         // not draw a focus ring. :focus-visible is the browser's own distinction.
         active &&
-          'group-focus-visible/grid:ring-1 group-focus-visible/grid:ring-inset group-focus-visible/grid:ring-(--theme-link)',
+          'group-focus-visible/grid:ring-1 group-focus-visible/grid:ring-inset group-focus-visible/grid:ring-(--theme-focus)',
         'cursor-pointer',
         href && STRETCHED_LINK_ROW,
       )}

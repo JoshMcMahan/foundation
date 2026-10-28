@@ -78,3 +78,22 @@ describe('stacking', () => {
     expect([...used].filter((layer) => !defined.has(layer))).toEqual([])
   })
 })
+
+describe('focus rings', () => {
+  const code = sources.filter(([file]) => !/\.(test|stories)\.tsx?$/.test(file))
+
+  // The focus color is solved to 3:1 on every surface, and a host that themes focus sets it once.
+  // The link color is solved for text and the accent is picked for a button's fill, which may be
+  // too light to show, so a ring in either looks unlike every other control's, or barely shows.
+  // An invalid field's ring keeps the error color.
+  it('draw keyboard focus in the focus color', () => {
+    const found = code.flatMap(([file, source]) =>
+      (
+        source.match(
+          /[^\s'"`]*focus[^\s'"`]*:(?:outline|ring|border)-\(--theme-(?!focus\)|error\))[\w-]+\)/g,
+        ) ?? []
+      ).map((ring) => `${file}: ${ring}`),
+    )
+    expect(found).toEqual([])
+  })
+})

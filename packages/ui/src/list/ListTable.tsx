@@ -60,7 +60,7 @@ export const StretchRowLinkContext = createContext(false)
  *  this itself; a row whose link is elsewhere, such as a run's number before
  *  its workflow's name, gives its own link this class and `data-row-link`. */
 export const STRETCHED_LINK =
-  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-link)"
+  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-focus)"
 
 /** The row a `STRETCHED_LINK` covers: its box, with the row's other controls
  *  raised above the link so they keep their own clicks. A checkbox is a

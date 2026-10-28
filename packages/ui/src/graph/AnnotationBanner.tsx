@@ -111,7 +111,7 @@ export function AnnotationBanner({ executedJobs }: AnnotationBannerProps) {
         className={cx(
           'flex w-full items-center gap-3 px-4 py-2.5 text-left',
           'transition-colors hover:bg-(--theme-hover) motion-reduce:transition-none',
-          'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-link)',
+          'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus)',
           expanded && 'border-b border-(--theme-border)',
         )}
       >

@@ -230,7 +230,7 @@ function CrumbLabel({ crumb, wrap = false }: { crumb: Breadcrumb; wrap?: boolean
   )
 }
 const crumbLink =
-  'rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-link)'
+  'rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-focus)'
 
 function Separator() {
   return (
