@@ -506,19 +506,19 @@ describe('Row actions lane', () => {
     return screen.getByRole('columnheader')
   }
 
-  it('claims no width with a mouse when its only action is a menu shown on hover', () => {
-    expect(header(false)).toHaveClass('pointer-fine:w-0!')
+  it('narrows to the menu button with a mouse when its only action is a menu shown on hover', () => {
+    expect(header(false)).toHaveClass('pointer-fine:w-10!')
   })
 
   it('keeps its width when the actions always show', () => {
-    expect(header(true)).not.toHaveClass('pointer-fine:w-0!')
+    expect(header(true)).not.toHaveClass('pointer-fine:w-10!')
   })
 
   it('keeps its width for pinned buttons', () => {
-    expect(header(false, 2)).not.toHaveClass('pointer-fine:w-0!')
+    expect(header(false, 2)).not.toHaveClass('pointer-fine:w-10!')
   })
 
-  it('floats the hover menu over the row end, shown while hovered', () => {
+  it('keeps the hover menu in a lane of its own, shown while hovered', () => {
     render(
       <Table>
         <tbody>
@@ -534,11 +534,13 @@ describe('Row actions lane', () => {
       </Table>,
     )
     const menu = screen.getByRole('button', { name: 'More actions' })
-    expect(menu.closest('td')).toHaveClass('pointer-fine:w-0!')
+    expect(menu.closest('td')).toHaveClass('pointer-fine:w-10!')
     expect(menu.parentElement).toHaveClass(
       'pointer-fine:opacity-0',
       'pointer-fine:group-hover:opacity-100',
     )
+    // Nothing runs under the menu, so nothing fades out behind it.
+    expect(menu.parentElement).not.toHaveClass('pointer-fine:bg-linear-to-l')
   })
 })
 
@@ -682,7 +684,7 @@ describe('cells keep to their column', () => {
     expect(text).toHaveAttribute('data-overflow-only')
   })
 
-  it('lets the actions lane reach past its cell, where a floating ⋯ sits over the last column', () => {
+  it('lets the actions lane’s buttons reach past its cell', () => {
     render(
       <table>
         <tbody>
@@ -837,8 +839,8 @@ describe('trailing controls with a locked last column', () => {
       </UIProvider>,
     )
     const lane = screen.getAllByRole('cell').at(-1)
-    expect(lane).not.toHaveClass('pointer-fine:w-0!')
-    expect(screen.getAllByRole('columnheader').at(-1)).not.toHaveClass('pointer-fine:w-0!')
+    expect(lane).not.toHaveClass('pointer-fine:w-10!')
+    expect(screen.getAllByRole('columnheader').at(-1)).not.toHaveClass('pointer-fine:w-10!')
   })
 
   it('lines the ⋯ up at the top of a stacked row, with the controls that stay beside the stack', () => {
@@ -885,17 +887,17 @@ describe('trailing controls by the last column’s alignment', () => {
         <LastColumn align="end" />
       </UIProvider>,
     )
-    expect(screen.getAllByRole('cell').at(-1)).not.toHaveClass('pointer-fine:w-0!')
-    expect(screen.getAllByRole('columnheader').at(-1)).not.toHaveClass('pointer-fine:w-0!')
+    expect(screen.getAllByRole('cell').at(-1)).not.toHaveClass('pointer-fine:w-10!')
+    expect(screen.getAllByRole('columnheader').at(-1)).not.toHaveClass('pointer-fine:w-10!')
   })
 
-  it('floats the ⋯ over a text column’s blank end', () => {
+  it('keeps the ⋯ in a narrow lane after a text column', () => {
     render(
       <UIProvider>
         <LastColumn />
       </UIProvider>,
     )
-    expect(screen.getAllByRole('cell').at(-1)).toHaveClass('pointer-fine:w-0!')
-    expect(screen.getAllByRole('columnheader').at(-1)).toHaveClass('pointer-fine:w-0!')
+    expect(screen.getAllByRole('cell').at(-1)).toHaveClass('pointer-fine:w-10!')
+    expect(screen.getAllByRole('columnheader').at(-1)).toHaveClass('pointer-fine:w-10!')
   })
 })

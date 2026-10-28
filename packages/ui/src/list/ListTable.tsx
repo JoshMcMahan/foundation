@@ -286,12 +286,12 @@ const ACTIONS_CELL_PAD_PX = 28
 /** Width the trailing actions column reserves for `count` always-visible
  * buttons plus the hover `⋯` trigger. */
 /** The lane of a row whose only action is a `⋯` shown on hover. With a mouse
- *  it claims no width: the `⋯` floats over the row's end while hovered, so
- *  the last column ends at the list's edge as the first starts at it, and the
- *  lane's 4px makes up that column's padding to the edge's 16px. On a touch
- *  screen, where the `⋯` always shows, the lane keeps its width. */
+ *  it is just wide enough for the `⋯` and the edge's 16px, so the last column
+ *  ends where the lane begins and long text there is cut off before the
+ *  button rather than running under it. On a touch screen, where the `⋯`
+ *  always shows, the lane keeps its full width. */
 export const FLOATING_ACTIONS_LANE =
-  'pointer-fine:w-0! pointer-fine:min-w-0! pointer-fine:pl-0! pointer-fine:pr-1!'
+  'pointer-fine:w-10! pointer-fine:min-w-10! pointer-fine:pl-0! pointer-fine:pr-1!'
 
 export function actionsColumnWidth(count: number): number {
   const buttons = count + 1

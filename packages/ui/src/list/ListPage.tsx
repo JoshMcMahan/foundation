@@ -506,10 +506,9 @@ export function ListRow({
     )
   })
 
-  // A row whose only action is a `⋯` shown on hover floats it over its end
-  // instead of keeping a lane for it (see ListActionsHeader).
-  // Not over a locked column, such as a delete button's, or an end-aligned one, such as a
-  // runtime, whose value it would cover: there it keeps its lane after the column.
+  // A row whose only action is a `⋯` shown on hover keeps a narrow lane for it, just the
+  // button's width (see FLOATING_ACTIONS_LANE). After a locked column, such as a delete
+  // button's, or an end-aligned one, such as a runtime, it keeps the full lane.
   const floating =
     !alwaysShowActions && !(pinnedActions && pinnedActions.length > 0) && !reservesLane
 
@@ -567,7 +566,6 @@ export function ListRow({
        * menu. Buttons are absolutely positioned so toggling them never changes
        * row height. */}
       {showActions && (
-        // Visible: a floating `⋯` reaches over the last column's end.
         <Table.Item
           className={cx('relative overflow-visible py-2.5', floating && FLOATING_ACTIONS_LANE)}
         >
@@ -577,13 +575,10 @@ export function ListRow({
               // Where columns stack under the name, the row's controls line up at its top, with
               // the name's first line and any column that stays beside the stack.
               stacked.length > 0 && '@max-[36rem]:items-start @max-[36rem]:pt-2',
-              // Over the last column's end, on the row's hover color, so its value
-              // gives way to the menu only while the row is hovered or focused.
+              // In its own lane, shown while the row is hovered or focused.
               floating &&
                 !menuActive &&
                 'pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100',
-              floating &&
-                'pointer-fine:bg-linear-to-l pointer-fine:from-(--theme-hover) pointer-fine:from-70% pointer-fine:to-transparent pointer-fine:pl-6',
             )}
           >
             {/* Below ~44rem pinned buttons collapse into `⋯` (even with "always
