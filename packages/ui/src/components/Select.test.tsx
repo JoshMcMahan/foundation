@@ -31,7 +31,59 @@ function Chip({ initial = 'ask' }: { initial?: string }) {
   )
 }
 
+const teams: SelectItem<string>[] = [
+  { value: '', label: 'All teams' },
+  { value: 'PLAT', label: 'Platform engineering' },
+  { value: 'MOB', label: 'Mobile apps' },
+]
+
+// The trigger's shown text, not the hidden labels that size it, and whether it reads as a
+// placeholder.
+function shownText(name: string) {
+  const trigger = screen.getByRole('combobox', { name })
+  const shown = [...trigger.querySelectorAll('span')].find(
+    (span) =>
+      !span.closest('[aria-hidden="true"]') && span.children.length === 0 && span.textContent,
+  )
+  if (!shown) {
+    throw new Error('nothing shown')
+  }
+  return {
+    text: shown.textContent,
+    placeholder:
+      shown.closest(
+        '[class~="text-(--theme-placeholder)"], [data-placeholder][class~="data-placeholder:text-(--theme-placeholder)"]',
+      ) !== null,
+  }
+}
+
 describe('Select', () => {
+  it.each(['content', 'fill'] as const)(
+    'shows a chosen option whose value is empty as a choice, not a placeholder (%s)',
+    (width) => {
+      render(
+        <Select aria-label="Team" items={teams} value="" width={width} placeholder="Pick a team" />,
+      )
+      expect(shownText('Team')).toEqual({ text: 'All teams', placeholder: false })
+    },
+  )
+
+  it.each(['content', 'fill'] as const)(
+    'shows the placeholder, in its color, for a value no option has (%s)',
+    (width) => {
+      render(
+        <Select
+          aria-label="Team"
+          items={teams.slice(1)}
+          value=""
+          width={width}
+          placeholder="Pick a team"
+        />,
+      )
+      expect(shownText('Team')).toEqual({ text: 'Pick a team', placeholder: true })
+    },
+  )
+
   it('shows the selected label in its own trigger', () => {
     render(<Select aria-label="Mode" items={modes} defaultValue="auto" />)
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent('Auto')

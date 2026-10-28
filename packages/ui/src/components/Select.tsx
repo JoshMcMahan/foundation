@@ -153,7 +153,8 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
             <BaseSelect.Value
               placeholder={placeholder}
               className={cx(
-                'truncate data-placeholder:text-(--theme-placeholder)',
+                'truncate',
+                rootProps.multiple && 'data-placeholder:text-(--theme-placeholder)',
                 // Every label stacks in one cell, so the field is as wide as the longest one
                 // and keeps its width as the choice changes.
                 content && !rootProps.multiple && 'grid',
@@ -162,28 +163,34 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
               {rootProps.multiple
                 ? (values: Value[]) =>
                     values.length > 0 ? values.map(labelOf).join(', ') : placeholder
-                : content
-                  ? (value: Value | null) => (
+                : (value: Value | null) => {
+                    // An option whose value is empty, such as "All teams" for '', is still a
+                    // choice and reads as one; only a value no option has shows the placeholder.
+                    const label = labelOf(value as Value)
+                    const shown = label ?? (
+                      <span className="text-(--theme-placeholder)">{placeholder}</span>
+                    )
+                    return content ? (
                       <>
-                        <span className="col-start-1 row-start-1 truncate">
-                          {(value === null ? undefined : labelOf(value)) ?? placeholder}
-                        </span>
+                        <span className="col-start-1 row-start-1 truncate">{shown}</span>
                         {[placeholder, ...items.map((item) => item.label)].map(
-                          (label, index) =>
-                            label && (
+                          (text, index) =>
+                            text && (
                               <span
                                 // biome-ignore lint/suspicious/noArrayIndexKey: labels may repeat; their order is fixed
                                 key={index}
                                 aria-hidden="true"
                                 className="invisible col-start-1 row-start-1 h-0 overflow-hidden whitespace-nowrap"
                               >
-                                {label}
+                                {text}
                               </span>
                             ),
                         )}
                       </>
+                    ) : (
+                      shown
                     )
-                  : undefined}
+                  }}
             </BaseSelect.Value>
             <BaseSelect.Icon className="shrink-0 text-(--theme-muted-text-color)">
               <ChevronDownIcon aria-hidden="true" />
