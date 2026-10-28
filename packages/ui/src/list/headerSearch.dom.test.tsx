@@ -20,7 +20,7 @@ function layOut(barWidth: number) {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
     this: HTMLElement,
   ) {
-    return this.classList.contains('h-12') ? barWidth : 0
+    return this.classList.contains('min-h-12') ? barWidth : 0
   })
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
     const el = this as HTMLElement
@@ -31,7 +31,7 @@ function layOut(barWidth: number) {
       width = 100
     } else if (el.parentElement?.dataset['headerSearch'] !== undefined) {
       width = search(el)
-    } else if (el.parentElement?.classList.contains('h-12') && !el.querySelector('nav')) {
+    } else if (el.parentElement?.classList.contains('min-h-12') && !el.querySelector('nav')) {
       const shown = [...el.querySelectorAll('[data-header-action]')].filter(
         (item) => !item.hasAttribute('hidden'),
       ).length

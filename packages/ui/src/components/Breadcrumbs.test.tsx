@@ -83,6 +83,40 @@ describe('Breadcrumbs', () => {
     )
   })
 
+  it('keeps the parent only while the whole last crumb fits beside it', () => {
+    tooWide()
+    // Measured at natural width, the parent is 100px wide and the last crumb `last`.
+    const layOut = (last: number) =>
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        const copy = this.parentElement
+        if (!copy?.classList.contains('w-max')) {
+          return { width: 0 } as DOMRect
+        }
+        return { width: this === copy.lastElementChild ? last : 100 } as DOMRect
+      })
+    // The "…" (48px), the parent, a 6px gap and the last crumb fill the 300px.
+    layOut(146)
+    const { unmount } = render(<Breadcrumbs crumbs={folders} onSelect={() => {}} />)
+    expect(screen.getByRole('button', { name: '2026' })).toBeInTheDocument()
+    unmount()
+
+    layOut(147)
+    render(<Breadcrumbs crumbs={folders} onSelect={() => {}} />)
+    expect(screen.queryByRole('button', { name: '2026' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Show full path' }))
+    expect(screen.getByRole('menuitem', { name: '2026' })).toBeInTheDocument()
+  })
+
+  it('folds the parent of a trail of two that doesn’t fit', () => {
+    tooWide()
+    render(<Breadcrumbs crumbs={[{ label: 'Clusters', href: '/clusters' }, { label: 'gpu-a' }]} />)
+    expect(screen.queryByRole('link', { name: 'Clusters' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Show full path' }))
+    expect(screen.getByRole('menuitem', { name: 'Clusters' })).toBeInTheDocument()
+  })
+
   it('fits again when an item joins its row', async () => {
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(250)
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300)

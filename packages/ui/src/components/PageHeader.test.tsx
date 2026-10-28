@@ -532,7 +532,7 @@ describe('actions too wide for their bar', () => {
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
       this: HTMLElement,
     ) {
-      return this.classList.contains('h-12') ? 360 : 0
+      return this.classList.contains('min-h-12') ? 360 : 0
     })
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
       this: Element,

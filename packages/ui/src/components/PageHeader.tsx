@@ -291,7 +291,8 @@ function HeaderLayout({
         ref={setRow}
         className={cx(
           'relative flex items-center justify-between gap-4 border-b border-(--theme-border) px-4',
-          compact ? 'h-8' : 'h-12',
+          // A minimum: a page's long name wraps and grows the bar.
+          compact ? 'min-h-8' : 'min-h-12',
         )}
       >
         {/* Grows to the room the actions leave, so the trail can measure it. */}
@@ -342,7 +343,7 @@ function HeaderLayout({
 const ROW_GAP = 16
 const LEAD_GAP = 8
 // The least of the trail worth keeping beside the actions: the page's name,
-// truncated, with a folded "…" before it.
+// wrapped, with a folded "…" before it.
 const TRAIL_MIN_WIDTH = 160
 // Below this width the bar folds the actions' labels to their icons
 // (`@max-md`), so an action has one width folded and another not.

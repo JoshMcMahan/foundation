@@ -138,10 +138,9 @@ export const InPlace: Story = {
 }
 
 /** A trail too wide for its room folds all but the parent into a menu; a crumb
- *  with nowhere to go shows there disabled. The last crumb truncates only once
- *  nothing else can go, with the full name on hover. */
+ *  with nowhere to go shows there disabled. */
 export const Folded: Story = {
-  args: { crumbs: LONG_TRAIL, width: 420 },
+  args: { crumbs: LONG_TRAIL, width: 540 },
   render: (args) => <Trail {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -156,6 +155,24 @@ export const Folded: Story = {
       body.getByRole('menuitem', { name: 'Research computing division' }),
     ).toHaveAttribute('aria-disabled', 'true')
     await userEvent.keyboard('{Escape}')
+  },
+}
+
+/** Where the last crumb can't fit whole beside the parent, the parent folds
+ *  too. A last crumb still too wide wraps as the page's heading, which can't
+ *  take focus to show a tooltip; turn off `heading` to see it truncate, with
+ *  its full name on hover. */
+export const LongName: Story = {
+  args: { crumbs: LONG_TRAIL, heading: true, width: 300 },
+  render: (args) => <Trail {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await waitFor(() => expect(canvas.queryByRole('link', { name: 'Cloud accounts' })).toBeNull())
+    const name = canvasElement.querySelector<HTMLElement>('[aria-current="page"]')
+    await expect(name).toHaveTextContent('production-us-east-gpu-reservations-2026-q4')
+    if (args.heading && name) {
+      await expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth)
+    }
   },
 }
 

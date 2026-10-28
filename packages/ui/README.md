@@ -232,8 +232,9 @@ A page declares its header in one place, and the shell shows it:
   `h1`. An empty label, such as a name still loading, shows a placeholder. The
   trail is a list in a `nav` landmark named by the strings' `breadcrumb`. A
   trail too wide for its bar folds its ancestors into a "…" menu of links
-  (named by `showFullPath`), keeping the parent when it fits beside the page's
-  name; the name truncates last, with the full name on hover. The bar draws it
+  (named by `showFullPath`), keeping the parent when the page's whole name fits
+  beside it. A name still too long wraps, and the bar grows past its 48px to
+  fit, so the whole name reads on a phone without a tooltip. The bar draws it
   with `Breadcrumbs`, which renders the same trail anywhere else: in a flex
   row it takes the room the row's other items leave it, and elsewhere its
   container's width. `current="location"` marks a place within the page, such
