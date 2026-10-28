@@ -176,7 +176,7 @@ function Header({
           onClick={onSort}
           // In a right-aligned column the mark leads, so the title still lines up with the values.
           className={cx(
-            'group/sort -mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) in-[.text-right]:flex-row-reverse',
+            'group/sort -mx-1 -my-1 inline-flex cursor-pointer py-1 align-middle items-center gap-1 rounded px-1 text-inherit [text-transform:inherit] hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) in-[.text-right]:flex-row-reverse',
             sortClassName,
           )}
         >

@@ -504,7 +504,7 @@ export default function MonacoEditor({
       data-read-only={readOnly ? '' : undefined}
       className={cx(
         'relative rounded border border-(--theme-border)',
-        'focus-within:border-(--theme-accent) focus-within:ring-1 focus-within:ring-(--theme-accent)',
+        'focus-within:border-(--theme-focus) focus-within:ring-1 focus-within:ring-(--theme-focus)',
         // Monaco has no option to hide the cursor; the selection still shows where the keys are.
         'data-read-only:[&_.cursors-layer]:hidden data-disabled:[&_.view-lines]:opacity-60',
         className,

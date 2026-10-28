@@ -187,7 +187,7 @@ export function FormCodePanel({
             type="button"
             onClick={handleCopy}
             aria-label={copied ? t.copied : t.copy}
-            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-md border border-(--theme-border) px-2.5 py-1.5 text-sm text-(--theme-app) transition-colors duration-150 hover:bg-(--theme-hover) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme-link)"
+            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-md border border-(--theme-border) px-2.5 py-1.5 text-sm text-(--theme-app) transition-colors duration-150 hover:bg-(--theme-hover) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme-focus)"
           >
             {copied ? (
               <CheckIcon className="text-(--theme-success)" />

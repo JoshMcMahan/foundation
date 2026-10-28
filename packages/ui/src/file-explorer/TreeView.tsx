@@ -661,7 +661,7 @@ const TreeRowItem = memo(function TreeRowItem({
     className: cx(
       'group relative flex items-center gap-1.5 pr-2 py-1 rounded-md cursor-pointer',
       'transition-colors duration-150',
-      'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-(--theme-link)',
+      'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-(--theme-focus)',
       isSelected
         ? 'bg-(--theme-accent)/15 font-medium'
         : dragActive

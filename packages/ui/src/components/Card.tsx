@@ -128,7 +128,7 @@ export function Card({
         padding === undefined ? sizePadding[size] : paddingClasses[padding],
         divided && 'divide-y divide-(--theme-border)',
         pressable &&
-          'cursor-pointer text-left text-inherit no-underline transition-[background-color,box-shadow,border-color] duration-150 hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-link) motion-reduce:transition-none',
+          'cursor-pointer text-left text-inherit no-underline transition-[background-color,box-shadow,border-color] duration-150 hover:shadow-(--theme-shadow-lg) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus) motion-reduce:transition-none',
         pressable &&
           (fillTint
             ? 'hover:bg-[color-mix(in_oklab,var(--card-tone)_11%,var(--theme-panel-hover))]'

@@ -202,7 +202,7 @@ export function ListSortMenu<T>({ view, className }: { view: ListView<T>; classN
       <Menu.Trigger
         aria-label={sortedBy(ascending ? 'ascending' : 'descending')}
         className={cx(
-          '-mx-1 -my-1 inline-flex max-w-full cursor-pointer items-center gap-1 rounded px-1 py-1 align-middle text-inherit hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-link) data-popup-open:text-(--theme-app)',
+          '-mx-1 -my-1 inline-flex max-w-full cursor-pointer items-center gap-1 rounded px-1 py-1 align-middle text-inherit hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-(--theme-focus) data-popup-open:text-(--theme-app)',
           className,
         )}
       >
