@@ -278,6 +278,7 @@ export const GRAPH_EDITOR_STRINGS = {
     run: 'Commands',
     uses: 'Workflow or action',
     with: 'Inputs',
+    configuration: 'Saved inputs',
     cleanup: 'Cleanup commands',
     ignoreErrors: 'Keep going if it fails',
     earlyCancel: 'Stop if any job fails',
@@ -368,6 +369,8 @@ export const GRAPH_EDITOR_STRINGS = {
     view: 'Edit these settings in the form, or as the YAML the workflow stores. Changes carry over when you switch.',
     with: 'The values passed to the workflow or action this step runs.',
     withInputs: 'The inputs that workflow asks for, by the names its form uses.',
+    configuration:
+      'Run the workflow with one of its saved inputs, or one of yours for it. An input set below takes its own value instead.',
     stepIf:
       'Leave empty to run once the steps before it succeed. Pick a choice from the list, such as always or only after a failure, or type your own condition.',
     stepTimeout:

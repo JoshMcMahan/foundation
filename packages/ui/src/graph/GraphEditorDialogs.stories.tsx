@@ -1,5 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useWorkflowEditing } from '../components/Provider'
+import * as parser from '@parallelworks/workflow-parser'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
+import { UIProvider, useWorkflowEditing } from '../components/Provider'
+import { TEST_ACTIONS } from '../test/actions'
 import { asRecord } from './editorFields'
 import { JobDialog, StepDialog } from './GraphEditorDialogs'
 import type { SettingsView } from './settingsViews'
@@ -58,7 +60,44 @@ const STEP_KINDS = `jobs:
           remoteHost: login.example.com
           jumpNodeHost: bastion.example.com
           disconnect-timeout: 30
+      - name: deploy to staging
+        uses: workflow/deploy
+        with:
+          $configuration: staging
+          replicas: 2
 `
+
+// The workflow a step reads under withDeployWorkflow, with two configurations it can name, beside
+// saved inputs of the reader's own.
+const DEPLOY = {
+  configurations: {
+    staging: { inputs: { region: 'us-east', replicas: 1 } },
+    production: { inputs: { region: 'us-west', replicas: 3 } },
+  },
+  on: {
+    execute: {
+      inputs: {
+        region: { type: 'string', label: 'Region' },
+        replicas: { type: 'number', label: 'Replicas' },
+      },
+    },
+  },
+  jobs: { main: { steps: [{ run: './deploy.sh' }] } },
+}
+
+const engine = { ...parser.createWorkflowEngine(), editing: parser }
+const withDeployWorkflow: Decorator = (Story) => (
+  <UIProvider
+    engine={engine}
+    data={{
+      workflowActions: TEST_ACTIONS,
+      resolveWorkflowJson: () => Promise.resolve(DEPLOY),
+      resolveSavedInputs: () => Promise.resolve(['nightly']),
+    }}
+  >
+    <Story />
+  </UIProvider>
+)
 
 function Dialog({
   source,
@@ -142,4 +181,10 @@ export const EditSubworkflowStep: StoryObj<typeof meta> = {
 /** A step that runs on another host, reached through a jump host. */
 export const EditRemoteHostStep: StoryObj<typeof meta> = {
   render: ({ view }) => <Dialog source={STEP_KINDS} job="build" step={2} view={view} />,
+}
+
+/** A step that runs a workflow with one of its saved inputs, setting one input itself. */
+export const EditConfiguredSubworkflowStep: StoryObj<typeof meta> = {
+  decorators: [withDeployWorkflow],
+  render: ({ view }) => <Dialog source={STEP_KINDS} job="build" step={3} view={view} />,
 }

@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { dumpYaml } from '@parallelworks/workflow-parser'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { UIProvider, type WorkflowJsonRef } from '../components/Provider'
 import type { GraphEdit } from '../editing'
 import { STEP_YAML_PATH } from '../editor/settingsYaml'
+import { mockListLayout } from '../test/layout'
 import { GRAPH_EDITOR_STRINGS } from './editorStrings'
 import { JobDialog, StepDialog } from './GraphEditorDialogs'
 import type { Json } from './records'
@@ -166,6 +167,13 @@ describe('step dialog', () => {
 })
 
 describe('a subworkflow step’s inputs', () => {
+  // The configuration list is virtual, and jsdom measures its scroller as empty, so it draws no rows.
+  let restoreLayout: () => void
+  beforeAll(() => {
+    restoreLayout = mockListLayout()
+  })
+  afterAll(() => restoreLayout())
+
   const SIZER = {
     on: {
       execute: {
@@ -216,6 +224,120 @@ describe('a subworkflow step’s inputs', () => {
     expect(names).toContain('sizer')
     expect(names).not.toContain('si')
     expect(names).not.toContain('siz')
+  })
+
+  const CONFIGURED = {
+    ...SIZER,
+    configurations: { small: { inputs: { note: 'small' } }, large: { inputs: { note: 'large' } } },
+  }
+
+  it('offers the workflow’s configurations and writes the one picked beside the inputs', async () => {
+    const workflow = {
+      jobs: {
+        build: {
+          steps: [{ uses: 'workflow/sizer', with: { $configuration: 'small', note: 'kept' } }],
+        },
+      },
+    }
+    const { onEdit } = openStep(
+      workflow,
+      'build',
+      0,
+      withResolver(() => Promise.resolve(CONFIGURED)),
+    )
+    expect(screen.queryByText(t.notActionInput)).toBeNull()
+    await screen.findByLabelText('Note')
+    const configuration = screen.getByRole('combobox', { name: t.fields.configuration })
+    expect(configuration).toHaveValue('small')
+    // The typed name filters what's offered, so both show once it's cleared.
+    fireEvent.change(configuration, { target: { value: '' } })
+    const field = configuration.closest('[data-testid="combobox"]') as HTMLElement
+    fireEvent.click(within(field).getByTestId('combobox-button'))
+    expect(await screen.findByRole('option', { name: 'small' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'large' }))
+    save()
+    expect(onEdit).toHaveBeenCalledWith({
+      type: 'updateStep',
+      job: 'build',
+      index: 0,
+      set: { with: { $configuration: 'large', note: 'kept' } },
+      unset: [],
+    })
+  })
+
+  const offered = async (savedInputs: (ref: WorkflowJsonRef) => Promise<string[]>) => {
+    const workflow = { jobs: { build: { steps: [{ uses: 'marketplace/sizer@v2', with: {} }] } } }
+    openStep(workflow, 'build', 0, (dialog) => (
+      <UIProvider
+        data={{
+          resolveWorkflowJson: () => Promise.resolve(CONFIGURED),
+          resolveSavedInputs: savedInputs,
+        }}
+      >
+        {dialog}
+      </UIProvider>
+    ))
+    await screen.findByLabelText('Note')
+    const configuration = screen.getByRole('combobox', { name: t.fields.configuration })
+    const field = configuration.closest('[data-testid="combobox"]') as HTMLElement
+    fireEvent.click(within(field).getByTestId('combobox-button'))
+    await screen.findByRole('option', { name: 'large' })
+    return screen.getAllByRole('option').map((option) => option.textContent)
+  }
+
+  it('offers the reader’s own saved inputs for the workflow after its own, each once', async () => {
+    const savedInputs = vi.fn(() => Promise.resolve(['mine', 'small']))
+    expect(await offered(savedInputs)).toEqual(['small', 'large', 'mine'])
+    expect(savedInputs).toHaveBeenCalledWith({ kind: 'marketplace', slug: 'sizer', version: 'v2' })
+  })
+
+  it('still offers the workflow’s saved inputs when the reader’s can’t be listed', async () => {
+    expect(await offered(() => Promise.reject(new Error('offline')))).toEqual(['small', 'large'])
+  })
+
+  it('takes a configuration named by an expression, but not text that names none', async () => {
+    const workflow = {
+      jobs: {
+        build: { steps: [{ uses: 'marketplace/sizer', with: { $configuration: 'two words' } }] },
+      },
+    }
+    const { onEdit } = openStep(
+      workflow,
+      'build',
+      0,
+      withResolver(() => Promise.resolve(CONFIGURED)),
+    )
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText(t.fields.configuration), {
+      target: { value: '${{ inputs.size }}' },
+    })
+    save()
+    expect(onEdit).toHaveBeenCalledWith({
+      type: 'updateStep',
+      job: 'build',
+      index: 0,
+      set: { with: { $configuration: '${{ inputs.size }}' } },
+      unset: [],
+    })
+  })
+
+  it('refuses a configuration on a built-in action', () => {
+    const workflow = {
+      jobs: {
+        build: {
+          steps: [
+            {
+              uses: 'example/checkout',
+              with: { repo: 'r', branch: 'main', $configuration: 'small' },
+            },
+          ],
+        },
+      },
+    }
+    openStep(workflow, 'build', 0)
+    expect(screen.getAllByText(t.notActionInput).length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText(t.fields.configuration)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 })
 

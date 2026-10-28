@@ -874,6 +874,8 @@ export interface UIData {
     options?: { refreshInterval?: number },
   ) => RunFileResult
   resolveWorkflowJson?: (ref: WorkflowJsonRef) => Promise<unknown>
+  /** The names of the reader's own saved inputs for a workflow, which a step can name too. */
+  resolveSavedInputs?: (ref: WorkflowJsonRef) => Promise<string[]>
   /** The built-in actions a workflow step can use, for the editor's step form. */
   workflowActions?: Record<string, WorkflowAction>
   resolveSecretVariables?: () => Promise<string[]>
@@ -1727,6 +1729,10 @@ export function useWorkflowJsonResolver(): UIData['resolveWorkflowJson'] {
 
 export function useRepoSuggestions(): UIData['repoSuggestions'] {
   return useContext(DataContext).repoSuggestions
+}
+
+export function useSavedInputsResolver(): UIData['resolveSavedInputs'] {
+  return useContext(DataContext).resolveSavedInputs
 }
 
 const NO_ACTIONS: Record<string, WorkflowAction> = {}

@@ -4,6 +4,7 @@ import { IconButton } from '../components/IconButton'
 import { Input, Textarea } from '../components/Input'
 import {
   useRepoSuggestions,
+  useSavedInputsResolver,
   useWorkflowActions,
   useWorkflowEditing,
   useWorkflowJsonResolver,
@@ -36,7 +37,13 @@ import { useGraphEditorStrings, useInputsEditorStrings } from './editorStrings'
 import { FixButtons, LintScope, useFieldLint, useFieldProblems } from './fieldProblems'
 import { type InputSource, refSuggestions, ValueOrInputField } from './inputRefs'
 import { SuggestionInput } from './SuggestionInput'
-import { DEFAULT_GITLAB_HOST, DEFAULT_REPO_YAML, loadUsesInputs, splitAtRef } from './usesInputs'
+import {
+  DEFAULT_GITLAB_HOST,
+  DEFAULT_REPO_YAML,
+  loadUsesTarget,
+  splitAtRef,
+  type UsesTarget,
+} from './usesInputs'
 
 type WithSpec = WorkflowActionInput
 /** The built-in actions a step can use, by `uses` value, as the host lists them. */
@@ -51,10 +58,19 @@ const GITLAB_INPUTS: WithSpec[] = [
   ...REPO_INPUTS,
   { key: '$host', kind: 'text', label: '$host', description: '' },
 ]
+// Any workflow a step runs takes it; the step's own inputs are laid over the configuration's.
+const CONFIGURATION: WithSpec = {
+  key: '$configuration',
+  kind: 'text',
+  label: '$configuration',
+  description: '',
+}
+const CONFIGURATION_NAME = /^[a-zA-Z0-9_-]{1,255}$/
 
 const allSpecs = (actions: WorkflowActions) => [
   ...Object.values(actions).flatMap((action) => action.inputs),
   ...GITLAB_INPUTS,
+  CONFIGURATION,
 ]
 
 /** Every `with` key the step dialog writes for `actions`, for a schema coverage test. */
@@ -69,7 +85,7 @@ export function withFields(actions: WorkflowActions): string[] {
   ]
 }
 
-// Inputs a subworkflow takes; `$` keys belong to the repository forms only.
+// Inputs a subworkflow takes; its `$` keys have fields of their own.
 const INPUT_KEY = /^[a-zA-Z0-9_-]+$/
 
 type UsesKind = 'action' | 'github' | 'gitlab' | 'subworkflow' | 'other'
@@ -87,16 +103,20 @@ export function usesKind(uses: string, actions: WorkflowActions): UsesKind {
   return /^(marketplace|workflow)\//.test(uses) ? 'subworkflow' : 'other'
 }
 
-/** Named inputs for `uses`: an action's own, or a repository form's `$` keys. */
+/** Named inputs for `uses`: an action's own, or the `$` keys a workflow of that kind takes. */
 function specsFor(uses: string, actions: WorkflowActions): WithSpec[] {
-  const kind = usesKind(uses, actions)
-  return kind === 'action'
-    ? (actions[uses]?.inputs ?? [])
-    : kind === 'github'
-      ? REPO_INPUTS
-      : kind === 'gitlab'
-        ? GITLAB_INPUTS
-        : []
+  switch (usesKind(uses, actions)) {
+    case 'action':
+      return actions[uses]?.inputs ?? []
+    case 'github':
+      return [...REPO_INPUTS, CONFIGURATION]
+    case 'gitlab':
+      return [...GITLAB_INPUTS, CONFIGURATION]
+    case 'subworkflow':
+      return [CONFIGURATION]
+    default:
+      return []
+  }
 }
 
 export interface WithDraft {
@@ -244,6 +264,14 @@ export function withError(
     }
     if (spec.kind === 'number' && value !== undefined && typeof value !== 'number') {
       return t.common.invalidNumber
+    }
+    if (
+      spec === CONFIGURATION &&
+      typeof value === 'string' &&
+      !CONFIGURATION_NAME.test(value) &&
+      !EXPRESSION.test(value)
+    ) {
+      return t.common.invalidName
     }
     if (
       spec.kind === 'choice' &&
@@ -541,28 +569,29 @@ export function UsesPicker({
   )
 }
 
-/** The inputs of the workflow a step uses, fetched the way the YAML editor's completions are. */
-function useSubworkflowInputs(uses: string, draft: WithDraft): Json | null {
+/** What the workflow a step uses takes, fetched the way the YAML editor's completions are. */
+function useSubworkflowTarget(uses: string, draft: WithDraft): UsesTarget | null {
   const editing = useWorkflowEditing()
   const resolve = useWorkflowJsonResolver()
   const repos = useRepoSuggestions()
-  const [inputs, setInputs] = useState<Json | null>(null)
+  const savedInputs = useSavedInputsResolver()
+  const [target, setTarget] = useState<UsesTarget | null>(null)
   const yamlPath = String(draft.values['text:$yaml'] ?? '') || DEFAULT_REPO_YAML
   const host = String(draft.values['text:$host'] ?? '') || DEFAULT_GITLAB_HOST
   useEffect(() => {
     let live = true
-    setInputs(null)
+    setTarget(null)
     // Read once typing pauses, not for every keystroke in the workflow's name or path.
     const timer = window.setTimeout(() => {
-      loadUsesInputs(editing, uses, { yamlPath, host }, { resolve, repos })
+      loadUsesTarget(editing, uses, { yamlPath, host }, { resolve, repos, savedInputs })
         .then((loaded) => {
           if (live) {
-            setInputs(loaded)
+            setTarget(loaded)
           }
         })
         .catch(() => {
           if (live) {
-            setInputs(null)
+            setTarget(null)
           }
         })
     }, 300)
@@ -570,8 +599,8 @@ function useSubworkflowInputs(uses: string, draft: WithDraft): Json | null {
       live = false
       window.clearTimeout(timer)
     }
-  }, [editing, uses, resolve, repos, yamlPath, host])
-  return inputs
+  }, [editing, uses, resolve, repos, savedInputs, yamlPath, host])
+  return target
 }
 
 /** The step's `with`: an action's own inputs, or a subworkflow's by name. */
@@ -597,8 +626,8 @@ export function WithEditor({
   const kind = usesKind(uses, actions)
   const extras = extraKeys(uses, actions, original, draft)
   const references = refSuggestions(source)
-  const subworkflow = useSubworkflowInputs(uses, draft)
-  const known = subworkflow ? Object.entries(subworkflow).filter(([key]) => key !== '$meta') : []
+  const target = useSubworkflowTarget(uses, draft)
+  const known = target ? Object.entries(target.inputs).filter(([key]) => key !== '$meta') : []
   const knownKeys = new Set(known.map(([key]) => key))
   // A list or object typed as JSON is written as one; anything else as the text typed.
   const setRow = (key: string, value: string) => {
@@ -655,6 +684,18 @@ export function WithEditor({
               onChange={onChange}
             />
           ))}
+          {specsFor(uses, actions).includes(CONFIGURATION) && (
+            <SuggestedInput
+              label={t.fields.configuration}
+              yamlKey={CONFIGURATION.key}
+              description={t.help.configuration}
+              value={String(draft.values[slot(CONFIGURATION)] ?? '')}
+              suggestions={target?.configurations ?? []}
+              onChange={(value) =>
+                onChange({ ...draft, values: { ...draft.values, [slot(CONFIGURATION)]: value } })
+              }
+            />
+          )}
           {kind !== 'action' && (
             <>
               {known.map(([key, raw]) => {
