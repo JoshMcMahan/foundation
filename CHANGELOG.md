@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.0](https://github.com/parallelworks/foundation/compare/v0.15.0...v0.16.0) (2026-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pgdb:** remove bundled job queue integration ([#566](https://github.com/parallelworks/foundation/issues/566))
+
+### Code Refactoring
+
+* **pgdb:** remove bundled job queue integration ([#566](https://github.com/parallelworks/foundation/issues/566)) ([7c31bdf](https://github.com/parallelworks/foundation/commit/7c31bdfed3d9af193fb9537f0e672dd710e71659))
+
 ## [0.15.0](https://github.com/parallelworks/foundation/compare/v0.14.1...v0.15.0) (2026-10-21)
 
 
