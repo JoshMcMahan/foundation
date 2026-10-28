@@ -123,6 +123,12 @@ export function ListRowActionsProvider({
 // The name cell's own top padding, so the value lines up with the name.
 const STAYS_BESIDE_STACK = '@max-[36rem]:align-top @max-[36rem]:pt-2.5'
 
+// Where a narrow list stacks or drops the other columns, the name's column takes what the row's
+// checkbox, its `⋯` and any column left beside it don't, over a share a host gives it for wider
+// lists, such as `w-[22%]` on its header or cells. Kept to that share, the list's spare width
+// would go to the fixed columns, and open up between the checkbox and the name.
+const NAME_FILLS_NARROW = '@max-[36rem]:w-auto!'
+
 export interface ListPageProps {
   /** Reaches past the host's content padding (`p-4`) to the container's
    *  edges, for a host whose page container is padded. A list runs edge to
@@ -476,6 +482,7 @@ export function ListRow({
     // a total, sits on the name's line rather than floating mid-row.
     const cls = cx(
       columnClasses[i],
+      i === 0 && NAME_FILLS_NARROW,
       i > 0 && stacked.length > 0 && !columnStacks[i] && STAYS_BESIDE_STACK,
     )
     const after = i === 0 ? under : undefined
@@ -1039,9 +1046,10 @@ export function ListColumns<T>({ view }: { view: ListView<T> }) {
   // Below the medium width the stacked columns' headers give way, and the low ones' drop, so the
   // header that sorts by one is gone: the name's header says what the list is sorted by instead,
   // and changes it.
-  const sortMenu =
-    view.orderBys.length > 0 &&
-    view.visibleColumns.some((col, i) => view.columnStacks[i] || col.priority !== undefined)
+  const narrowDrops = view.visibleColumns.some(
+    (col, i) => view.columnStacks[i] || col.priority !== undefined,
+  )
+  const sortMenu = view.orderBys.length > 0 && narrowDrops
   return (
     <>
       {view.visibleColumns.map((col, i) => {
@@ -1057,6 +1065,7 @@ export function ListColumns<T>({ view }: { view: ListView<T> }) {
               view.columnClasses[i],
               // A share takes the width its tier gives it, as narrower lists drop columns.
               widths[i] && SHARE_WIDTH,
+              i === 0 && narrowDrops && NAME_FILLS_NARROW,
               // listTableProps collapses the header row when it holds this marker.
               !view.showColumnHeaders && HEADERS_OFF,
             )}

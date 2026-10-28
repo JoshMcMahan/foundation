@@ -679,3 +679,207 @@ export const SessionsWithErrors: StoryObj = {
     }
   },
 }
+
+interface HostWorkspace {
+  id: string
+  name: string
+  owner: string
+  organization: string
+  image: string
+  state: 'running' | 'pending'
+  created: string
+}
+
+const HOST_WORKSPACES: HostWorkspace[] = [
+  {
+    id: 'ws-1',
+    name: 'workspace-mlopez',
+    owner: 'mlopez',
+    organization: 'research',
+    image: 'v7.4.2',
+    state: 'running',
+    created: '3 days ago',
+  },
+  {
+    id: 'ws-2',
+    name: 'workspace-akhan',
+    owner: 'akhan',
+    organization: 'research',
+    image: 'v7.4.2',
+    state: 'running',
+    created: '5 hours ago',
+  },
+  {
+    id: 'ws-3',
+    name: 'workspace-jchen-gpu-notebooks',
+    owner: 'jchen',
+    organization: 'platform',
+    image: 'v7.3.9',
+    state: 'pending',
+    created: '2 min ago',
+  },
+]
+
+/** A workspaces list as a host builds it: a checkbox before the columns, and the name's header
+ *  with a share of the list as its own class at every width, as `w-[22%]`, rather than as
+ *  `ColumnDef.width`. Every other column stacks under the name on a phone. */
+function HostWorkspacesDemo() {
+  const goTo = useListNavigate()
+  const { openMenu } = useContextMenu()
+  const view = useListView<HostWorkspace>({
+    storageKey: 'workshop-host-workspaces',
+    columns: [
+      {
+        key: 'name',
+        label: 'Name',
+        headerClassName: 'py-2 w-[22%]',
+        alwaysVisible: true,
+        orderBy: 'name',
+      },
+      { key: 'icon', label: 'Icon', inline: true },
+      { key: 'owner', label: 'Owner', headerClassName: 'py-2 w-[14%]', orderBy: 'owner' },
+      { key: 'organization', label: 'Organization', headerClassName: 'py-2 w-[12%]' },
+      { key: 'image', label: 'Image', headerClassName: 'py-2 w-[20%]' },
+      { key: 'status', label: 'Status', headerClassName: 'py-2' },
+      { key: 'created', label: 'Created', headerClassName: 'py-2' },
+    ],
+    orderBys: [
+      { value: 'name', label: 'Name', compare: (a, b) => a.name.localeCompare(b.name) },
+      { value: 'owner', label: 'Owner', compare: (a, b) => a.owner.localeCompare(b.owner) },
+    ],
+    isFavorite: () => false,
+    actions: [
+      { key: 'view', label: 'View owner', defaultPinned: true },
+      { key: 'kill', label: 'Kill' },
+    ],
+  })
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const toggle = (id: string) =>
+    setSelected((was) => {
+      const next = new Set(was)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  return (
+    <ListPage view={view} total={HOST_WORKSPACES.length} matches={HOST_WORKSPACES.length}>
+      <Table {...listTableProps}>
+        <ListSelectAllHeader
+          selected={selected.size}
+          total={HOST_WORKSPACES.length}
+          onToggle={() =>
+            setSelected(
+              selected.size === HOST_WORKSPACES.length
+                ? new Set()
+                : new Set(HOST_WORKSPACES.map((x) => x.id)),
+            )
+          }
+        />
+        <ListColumns view={view} />
+        {HOST_WORKSPACES.map((x) => (
+          <ListRow
+            key={x.id}
+            href={null}
+            items={[{ label: 'Kill', onClick: () => {} }]}
+            goTo={goTo}
+            openMenu={openMenu}
+            selected={selected.has(x.id)}
+            selectionActive={selected.size > 0}
+            onRowSelect={() => toggle(x.id)}
+            pinnedActions={[
+              { key: 'view', label: 'View owner', icon: <ExternalLinkIcon />, href: '#owner' },
+            ]}
+            leading={
+              <Table.Item className="py-2.5">
+                <RowSelectCheckbox
+                  checked={selected.has(x.id)}
+                  label={x.name}
+                  onToggle={() => toggle(x.id)}
+                />
+              </Table.Item>
+            }
+          >
+            <NameCell
+              icon={view.isVisible('icon') ? <InstanceIcon /> : undefined}
+              name={x.name}
+              href={null}
+            />
+            {view.isVisible('owner') && (
+              <Table.Item className="py-2.5">
+                <ListCellText>{x.owner}</ListCellText>
+              </Table.Item>
+            )}
+            {view.isVisible('organization') && (
+              <Table.Item className="py-2.5">
+                <ListCellText>{x.organization}</ListCellText>
+              </Table.Item>
+            )}
+            {view.isVisible('image') && (
+              <Table.Item className="py-2.5">
+                <ListCellText>{x.image}</ListCellText>
+              </Table.Item>
+            )}
+            {view.isVisible('status') && (
+              <Table.Item className="py-2.5">
+                {/* Waiting is an unlit lamp; amber is for something that needs attention. */}
+                <StatusLabel
+                  className="text-[13px]"
+                  variant={x.state === 'running' ? 'success' : 'muted'}
+                  off={x.state !== 'running'}
+                >
+                  {x.state === 'running' ? 'Running' : 'Pending'}
+                </StatusLabel>
+              </Table.Item>
+            )}
+            {view.isVisible('created') && (
+              <Table.Item className="py-2.5">
+                <ListCellText>{x.created}</ListCellText>
+              </Table.Item>
+            )}
+          </ListRow>
+        ))}
+      </Table>
+    </ListPage>
+  )
+}
+
+/** On a phone the name's column takes the width the checkbox and the row's `⋯` leave, whatever
+ *  share the host's own class gives it at wider widths, so the checkbox sits as far from the
+ *  icon as the icon from the name, and the list's spare width isn't a gap between them. */
+async function expectCheckboxBesideIcon(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  const row = canvas.getByText('workspace-jchen-gpu-notebooks').closest('tr') as HTMLElement
+  const box = within(row).getByRole('checkbox').getBoundingClientRect()
+  const icon = (row.querySelector('td svg') as SVGElement).getBoundingClientRect()
+  const name = within(row).getByText('workspace-jchen-gpu-notebooks').getBoundingClientRect()
+  await expect(icon.left - box.right).toBeGreaterThan(0)
+  await expect(icon.left - box.right).toBeLessThanOrEqual(name.left - icon.left)
+}
+
+/** A host's workspaces list at desktop width: the name keeps the host's 22%. */
+export const HostWidthClass: StoryObj = {
+  render: () => <HostWorkspacesDemo />,
+  play: async ({ canvasElement }) => {
+    await expectCheckboxBesideIcon(canvasElement)
+    const header = within(canvasElement).getByRole('columnheader', { name: /Name/ })
+    const table = header.closest('table') as HTMLElement
+    // Allow for the header's min-width floor on a narrow canvas.
+    if (table.getBoundingClientRect().width * 0.22 >= 200) {
+      await expect(
+        Math.abs(header.getBoundingClientRect().width - table.getBoundingClientRect().width * 0.22),
+      ).toBeLessThan(2)
+    }
+  },
+}
+
+/** The same list on a 390px phone: the other columns stack under the name, and the name's
+ *  column takes the rest of the row rather than its 22%. */
+export const HostWidthClassPhone: StoryObj = {
+  render: () => (
+    <div style={{ width: 390, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <HostWorkspacesDemo />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectCheckboxBesideIcon(canvasElement)
+  },
+}

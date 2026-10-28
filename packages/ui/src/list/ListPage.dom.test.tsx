@@ -592,6 +592,13 @@ describe('ListColumns on a phone', () => {
 
   const sortMenu = () => screen.getByRole('button', { name: /^Sorted by/ })
 
+  it('gives the name the rest of the row where the other columns stack under it', () => {
+    render(<SortableList />)
+    // Over any share a host's class gives it at wider widths.
+    expect(header('Name')).toHaveClass('@max-[36rem]:w-auto!')
+    expect(header('Nodes')).not.toHaveClass('@max-[36rem]:w-auto!')
+  })
+
   it('says what the list is sorted by and which way in the name’s header', () => {
     render(<SortableList />)
     fireEvent.click(within(header('Nodes')).getByRole('button'))
