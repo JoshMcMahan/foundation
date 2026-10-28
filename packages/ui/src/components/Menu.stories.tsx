@@ -1,3 +1,4 @@
+import { Menu } from '@base-ui/react/menu'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
@@ -27,7 +28,8 @@ import {
   useContextMenu,
   useOpenMenu,
 } from './ContextMenu'
-import type { MenuSize } from './Menu'
+import { Input } from './Input'
+import { MenuItem, MenuPopup, type MenuSize } from './Menu'
 import { type MenuEntry, type MenuSearch, menuDivider } from './MenuEntries'
 
 const meta: Meta = {
@@ -703,4 +705,23 @@ export const SharedMenu: StoryObj = {
     await userEvent.click(button)
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   },
+}
+
+export const PopupRole: StoryObj<{ role: 'menu' | 'dialog' }> = {
+  args: { role: 'dialog' },
+  argTypes: { role: { control: 'inline-radio', options: ['menu', 'dialog'] } },
+  render: ({ role }) => (
+    <Menu.Root>
+      <Menu.Trigger className={triggerClassName} aria-haspopup={role}>
+        Open panel
+      </Menu.Trigger>
+      <MenuPopup role={role} label="Filter value" className="w-64">
+        {role === 'dialog' ? (
+          <Input autoFocus aria-label="Filter value" placeholder="Type a value" />
+        ) : (
+          <MenuItem>Choose a value</MenuItem>
+        )}
+      </MenuPopup>
+    </Menu.Root>
+  ),
 }

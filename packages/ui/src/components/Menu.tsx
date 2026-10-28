@@ -35,6 +35,8 @@ const MenuLookContext = createContext<MenuLook>({ size: 'md', themeClassName: un
 
 export interface MenuPopupProps {
   children: ReactNode
+  /** An embedded editor uses dialog semantics instead of a list of menu choices. */
+  role?: 'menu' | 'dialog' | undefined
   /** On this popup alone, such as a wider floor: `min-w-64`. */
   className?: string | undefined
   side?: BaseMenu.Positioner.Props['side']
@@ -63,6 +65,7 @@ export interface MenuPopupProps {
 /** The portal, positioner and popup every menu needs. */
 export function MenuPopup({
   children,
+  role = 'menu',
   className,
   side = 'bottom',
   align = 'start',
@@ -93,6 +96,7 @@ export function MenuPopup({
           className={positionerClassName}
         >
           <BaseMenu.Popup
+            role={role}
             data-size={look.size}
             aria-label={label}
             className={cx(

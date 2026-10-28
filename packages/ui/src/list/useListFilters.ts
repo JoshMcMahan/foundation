@@ -5,6 +5,7 @@ import {
   applyFilterList,
   type FilterField,
   type FilterOperator,
+  type FilterOption,
   fieldOperators,
   fromStored,
   isComplete,
@@ -53,6 +54,8 @@ export interface ListFilters {
   fields: readonly FilterField<any>[]
   /** Fields whose values also show as toggles above the chips. */
   quick: readonly QuickFilter[]
+  /** Loaded option names shared by the menu and chips. */
+  optionLabels: Map<string, Map<string, FilterOption>>
   /** The filters in effect, in the order they were added. */
   active: readonly ActiveFilter[]
   /** The chips to show: the filters in effect, then one being added that has no value yet. */
@@ -81,7 +84,7 @@ export interface ListFilters {
   editRequest: FilterEditRequest | null
   requestEdit: (field: string, part?: FilterEditRequest['part']) => void
   clearEditRequest: (id: number) => void
-  /** Set by a mounted chip row, so the Filter menu knows a new chip has somewhere to show. */
+  /** Whether a chip row is mounted. */
   barMounted: boolean
   registerBar: () => () => void
 }
@@ -341,6 +344,7 @@ export function useListFilters<T>({
     write([...defaultFilters])
   }, [defaultFilters, write, setDraft])
 
+  const [optionLabels] = useState(() => new Map<string, Map<string, FilterOption>>())
   const [bars, setBars] = useState(0)
   const registerBar = useCallback(() => {
     setBars((n) => n + 1)
@@ -364,6 +368,7 @@ export function useListFilters<T>({
   return {
     fields,
     quick,
+    optionLabels,
     active,
     chips,
     draft: draft?.filter.field ?? null,

@@ -1,20 +1,12 @@
 import { Menu } from '@base-ui/react/menu'
 import { Toggle } from '@base-ui/react/toggle'
-import { useState } from 'react'
 import { IconButton } from '../components/IconButton'
 import { InfoTip } from '../components/InfoTip'
-import {
-  MenuCheckboxItem,
-  MenuPopup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSubmenuTrigger,
-} from '../components/Menu'
+import { MenuPopup, MenuRadioItem, MenuSeparator } from '../components/Menu'
 import { Popover } from '../components/Popover'
 import { useStrings } from '../components/Provider'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
-import { useQueryMatch } from '../components/search'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import {
@@ -26,7 +18,7 @@ import {
   SortUpIcon,
 } from '../icons'
 import { AddFilterMenu } from './ListFilterBar'
-import { DEFAULT_ORDER, type FilterFacet, isLocked, type ListView } from './listView'
+import { DEFAULT_ORDER, isLocked, type ListView } from './listView'
 import type { ListFilters } from './useListFilters'
 
 /** A toggle pill, for the Display panel's column and pinned-action pickers. */
@@ -276,8 +268,7 @@ function OptionSelect({
 }
 
 /** The toolbar's Filter button, which F presses. Beside a chip row (`ListFilterBar`, which
- *  `ListPage` shows), it opens the Add filter menu: picking a field adds its chip and opens its
- *  value picker there. Without one, it keeps a submenu of values for each facet. On a page that
+ *  `ListPage` shows), it opens the Add filter menu with a value picker beside each field. On a page that
  *  lays out its own chip row, pass it as the bar's `end`, which centers it on the chips' first
  *  line however they wrap; set beside the bar in a row of the page's own, it sits above them. */
 export function ListFilterMenu<T>({
@@ -290,7 +281,7 @@ export function ListFilterMenu<T>({
   filters?: ListFilters | undefined
   label?: string
 }) {
-  const { common, filters: t } = useStrings()
+  const { filters: t } = useStrings()
   const state = filters ?? view?.filterState
   if (!state || state.fields.length === 0) {
     return null
@@ -305,107 +296,5 @@ export function ListFilterMenu<T>({
       shortcut="f"
     />
   )
-  if (state.barMounted) {
-    return <AddFilterMenu filters={state} trigger={button} align="end" />
-  }
-  if (!view || view.facets.length === 0) {
-    return null
-  }
-  return (
-    <Menu.Root>
-      <Menu.Trigger render={button} />
-      <MenuPopup align="end" className="w-56">
-        <div className="flex items-center justify-between px-3 py-1">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-(--theme-muted-text-color)">
-            {common.filter}
-          </span>
-          {active && (
-            <Menu.Item
-              closeOnClick={false}
-              onClick={view.clearFilters}
-              className="cursor-pointer text-[12px] text-(--theme-muted-text-color) outline-none data-highlighted:text-(--theme-app)"
-            >
-              {common.clear}
-            </Menu.Item>
-          )}
-        </div>
-        {view.facets.map((facet) => (
-          <FacetSubmenu key={facet.key} view={view} facet={facet} />
-        ))}
-      </MenuPopup>
-    </Menu.Root>
-  )
-}
-
-function FacetSubmenu<T>({ view, facet }: { view: ListView<T>; facet: FilterFacet<T> }) {
-  const strings = useStrings()
-  const matches = useQueryMatch()
-  const [query, setQuery] = useState('')
-  const selected = view.filters[facet.key] ?? []
-  const needle = query.trim()
-  // A checked option stays listed while typing, so it can still be unchecked.
-  const options = needle
-    ? facet.options.filter((o) => selected.includes(o.value) || matches(needle, o.label))
-    : facet.options
-  const rows = options.map((option) => {
-    const checked = selected.includes(option.value)
-    return (
-      <MenuCheckboxItem
-        key={option.value}
-        checked={checked}
-        closeOnClick={false}
-        onCheckedChange={() =>
-          view.setFacetValues(
-            facet.key,
-            checked ? selected.filter((v) => v !== option.value) : [...selected, option.value],
-          )
-        }
-      >
-        {option.icon}
-        {option.label}
-      </MenuCheckboxItem>
-    )
-  })
-  const submenu = (
-    <Menu.SubmenuRoot>
-      <MenuSubmenuTrigger>
-        {facet.label}
-        {selected.length > 0 && (
-          <span className="ml-auto text-[11px] text-(--theme-muted-text-color)">
-            {selected.length}
-          </span>
-        )}
-      </MenuSubmenuTrigger>
-      {/* Toward the page, since the Filter button sits at the end of the strip. */}
-      <MenuPopup side="inline-start">
-        {facet.searchable ? (
-          <>
-            <div className="sticky top-0 z-[1] border-b border-(--theme-border) bg-(--theme-app-bg) px-3 pb-1.5 pt-0.5">
-              <Menu.Input
-                placeholder={strings.list.searchOptions}
-                aria-label={strings.list.searchOptions}
-                className="w-full bg-transparent text-[13px] text-(--theme-app) outline-none placeholder:text-(--theme-placeholder)"
-              />
-            </div>
-            <Menu.List>{rows}</Menu.List>
-          </>
-        ) : (
-          rows
-        )}
-        {options.length === 0 && (
-          <div className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
-            {strings.dropdown.noOptionsFound}
-          </div>
-        )}
-      </MenuPopup>
-    </Menu.SubmenuRoot>
-  )
-  // The facet filters its own options, keeping the checked ones in view.
-  return facet.searchable ? (
-    <Menu.FilterProvider filter={null} value={query} onValueChange={setQuery}>
-      {submenu}
-    </Menu.FilterProvider>
-  ) : (
-    submenu
-  )
+  return <AddFilterMenu filters={state} trigger={button} align="end" />
 }

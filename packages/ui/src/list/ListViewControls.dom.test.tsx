@@ -86,12 +86,13 @@ describe('the filter menu', () => {
     expect(screen.queryAllByRole('menuitemcheckbox')).toHaveLength(0)
   })
 
-  it('counts what a facet has checked and clears it all', () => {
+  it('counts active facets and clears a selection by unticking it', () => {
     render(<Harness />)
     openOwnerFacet()
     fireEvent.click(option('bob') as HTMLElement)
-    expect(screen.getByRole('menuitem', { name: /^Owner\s*1$/ })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }))
+    expect(screen.getByRole('button', { name: 'Filter, 1 on' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Clear' })).toBeNull()
+    fireEvent.click(option('bob') as HTMLElement)
     expect(screen.getByRole('menuitem', { name: 'Owner' })).toBeInTheDocument()
   })
 })

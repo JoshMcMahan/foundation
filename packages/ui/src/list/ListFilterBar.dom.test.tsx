@@ -3,9 +3,8 @@ import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { UIProvider } from '../components/Provider'
-import { mockListLayout } from '../test/layout'
 import { memoryStorage } from '../test/storage'
-import type { ActiveFilter } from './filterModel'
+import type { ActiveFilter, FilterField, FilterOption } from './filterModel'
 import { ListFilterBar } from './ListFilterBar'
 import { ListPage } from './ListPage'
 import { ListFilterMenu } from './ListViewControls'
@@ -83,13 +82,11 @@ describe('the filter row', () => {
     expect(screen.queryByRole('group', { name: 'Active filters' })).not.toBeInTheDocument()
   })
 
-  it('adds a filter from the Filter button: its chip appears and its values open on it', async () => {
+  it('chooses values beside their field without creating a draft chip', async () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Owner' }))
-    const chip = await screen.findByRole('group', { name: /Owner/ })
-    expect(chip).toBeInTheDocument()
-    await nextFrame()
+    expect(screen.queryByRole('group', { name: /Owner/ })).not.toBeInTheDocument()
     fireEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'bob' }))
     expect(rows()).toBe('bob')
     expect(screen.getByRole('group', { name: 'Owner is bob' })).toBeInTheDocument()
@@ -97,8 +94,6 @@ describe('the filter row', () => {
   })
 
   it('searches a long list of people, Enter taking the first match, chosen ones kept listed', async () => {
-    // jsdom has no layout, so the virtual list would measure its scroller as empty.
-    mockListLayout()
     render(<Harness searchable />)
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Owner' }))
@@ -107,14 +102,21 @@ describe('the filter row', () => {
     search.focus()
     fireEvent.input(search, { target: { value: 'car' }, inputType: 'insertText' })
     await waitFor(() =>
-      expect(screen.getByRole('option', { name: 'carol' })).toHaveAttribute('data-highlighted'),
+      expect(screen.getByRole('menuitemcheckbox', { name: 'carol' })).toHaveAttribute(
+        'data-highlighted',
+      ),
     )
     fireEvent.keyDown(search, { key: 'Enter' })
     await waitFor(() => expect(rows()).toBe('carol'))
     fireEvent.input(search, { target: { value: 'bo' }, inputType: 'insertText' })
-    expect(await screen.findByRole('option', { name: 'bob' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'carol' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.queryByRole('option', { name: 'alice' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'bob' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'carol' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    expect(screen.queryByRole('menuitemcheckbox', { name: 'alice' })).not.toBeInTheDocument()
+    fireEvent.keyDown(search, { key: 'Enter' })
+    await waitFor(() => expect(rows()).toBe('bob,carol'))
     vi.restoreAllMocks()
   })
 
@@ -247,7 +249,7 @@ describe('a condition worded by count', () => {
     )
   }
 
-  it('reads "is" on a chip just added, before any value is chosen', async () => {
+  it('reads "is" after a single value is chosen from the menu', async () => {
     render(
       <UIProvider strings={byCount}>
         <Single />
@@ -255,6 +257,7 @@ describe('a condition worded by count', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Priority' }))
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'High' }))
     const chip = await screen.findByRole('group', { name: /^Priority/ })
     expect(within(chip).getByText('is')).toBeInTheDocument()
     expect(within(chip).queryByText('is any of')).toBeNull()
@@ -457,7 +460,7 @@ describe('a narrow row', () => {
     )
   }
 
-  it('puts Clear in the + menu rather than on a line of its own', async () => {
+  it('keeps Clear on the bar when space is tight', async () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width: 300,
     } as DOMRect)
@@ -468,9 +471,7 @@ describe('a narrow row', () => {
       return this.hasAttribute('data-filter-clear') ? 40 : 0
     })
     render(<Narrow />)
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull())
-    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Clear' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
     await waitFor(() => expect(screen.getByTestId('active').textContent).toBe(''))
     vi.restoreAllMocks()
   })
@@ -571,8 +572,8 @@ describe('a narrow row', () => {
       expect(screen.getByRole('button', { name: '+1 filter' })).toBeInTheDocument(),
     )
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Filter' })).toBeNull())
-    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull()
-    // The sheet still offers both.
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument()
+    // The sheet also offers both.
     fireEvent.click(screen.getByRole('button', { name: '+1 filter' }))
     const sheet = await screen.findByRole('dialog')
     expect(within(sheet).getByRole('button', { name: 'Filter' })).toBeInTheDocument()
@@ -770,5 +771,173 @@ describe('a narrow row with required and pinned fields', () => {
     )
     expect(shown).toEqual(['Organization', 'Time', 'Group'])
     vi.restoreAllMocks()
+  })
+})
+
+describe('editing values inside the filter menu', () => {
+  function MenuHarness({
+    fields,
+    initial = [],
+  }: {
+    fields: FilterField[]
+    initial?: ActiveFilter[]
+  }) {
+    const [value, onChange] = useState<ActiveFilter[]>(initial)
+    const filters = useListFilters({
+      storageKey: 'in-menu',
+      fields,
+      remember: false,
+      store: { value, onChange },
+    })
+    return (
+      <>
+        <ListFilterMenu filters={filters} />
+        <ListFilterBar filters={filters} />
+        <output data-testid="active">{JSON.stringify(filters.active)}</output>
+      </>
+    )
+  }
+  const active = () => JSON.parse(screen.getByTestId('active').textContent ?? '[]')
+  const openField = (name: string) => {
+    fireEvent.click(screen.getAllByRole('button', { name: /^Filter(?:,|$)/ })[0]!)
+    fireEvent.click(screen.getByRole('menuitem', { name }))
+  }
+  const status: FilterField = {
+    key: 'status',
+    label: 'Status',
+    kind: 'enum',
+    options: [
+      { value: 'running', label: 'Running' },
+      { value: 'stopped', label: 'Stopped' },
+    ],
+  }
+
+  it('keeps multi-select open, preserves its condition, and removes the last selection', async () => {
+    render(
+      <MenuHarness
+        fields={[status]}
+        initial={[{ field: 'status', op: 'isNot', values: ['running'] }]}
+      />,
+    )
+    openField('Status')
+    const stopped = await screen.findByRole('menuitemcheckbox', { name: 'Stopped' })
+    fireEvent.click(stopped)
+    expect(active()).toEqual([{ field: 'status', op: 'isNot', values: ['running', 'stopped'] }])
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Running' }))
+    fireEvent.click(stopped)
+    expect(active()).toEqual([])
+    expect(stopped).toBeInTheDocument()
+    expect(document.querySelector('[data-filter-chip]')).toBeNull()
+  })
+
+  it('closes a single-value menu after choosing and edits it from the menu again', async () => {
+    render(<MenuHarness fields={[{ ...status, multiple: false }]} />)
+    openField('Status')
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Running' }))
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    openField('Status')
+    expect(await screen.findByRole('menuitemradio', { name: 'Running' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Stopped' }))
+    expect(active()).toEqual([{ field: 'status', op: 'is', values: ['stopped'] }])
+  })
+
+  it('chooses both boolean values without applying anything just by opening', async () => {
+    render(<MenuHarness fields={[{ key: 'overdue', label: 'Overdue', kind: 'boolean' }]} />)
+    openField('Overdue')
+    expect(active()).toEqual([])
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'No' }))
+    expect(active()).toEqual([{ field: 'overdue', op: 'is', values: ['false'] }])
+  })
+
+  it('keeps text through rerenders and cursor movement, and commits it with Enter', async () => {
+    const fields: FilterField[] = [{ key: 'title', label: 'Title', kind: 'text' }]
+    const { rerender } = render(<MenuHarness fields={fields} />)
+    openField('Title')
+    expect(await screen.findByRole('dialog', { name: 'Title' })).toBeInTheDocument()
+    const input = await screen.findByRole('textbox', { name: 'Title' })
+    fireEvent.change(input, { target: { value: '  Search results  ' } })
+    rerender(<MenuHarness fields={[...fields]} />)
+    fireEvent.keyDown(input, { key: 'ArrowLeft' })
+    expect(input).toHaveValue('  Search results  ')
+    expect(input).toBeInTheDocument()
+    expect(active()).toEqual([])
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(active()).toEqual([{ field: 'title', op: 'contains', values: ['Search results'] }])
+  })
+
+  it('chooses a date preset beside its field', async () => {
+    render(<MenuHarness fields={[{ key: 'due', label: 'Due', kind: 'date' }]} />)
+    openField('Due')
+    fireEvent.click(await screen.findByRole('button', { name: 'Last 7 days' }))
+    expect(active()).toEqual([{ field: 'due', op: 'is', values: ['-7d'] }])
+  })
+
+  it('chooses a presence-only condition without inventing a value', async () => {
+    render(
+      <MenuHarness
+        fields={[{ key: 'due', label: 'Due', kind: 'date', operators: ['isSet', 'isNotSet'] }]}
+      />,
+    )
+    openField('Due')
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'is set' }))
+    expect(active()).toEqual([{ field: 'due', op: 'isSet', values: [] }])
+  })
+
+  it('discards a new text value on Escape without creating a chip', async () => {
+    render(<MenuHarness fields={[{ key: 'title', label: 'Title', kind: 'text' }]} />)
+    openField('Title')
+    const input = await screen.findByRole('textbox', { name: 'Title' })
+    fireEvent.change(input, { target: { value: 'Discard this' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Title' })).toBeNull())
+    expect(active()).toEqual([])
+    expect(document.querySelector('[data-filter-chip]')).toBeNull()
+  })
+
+  it('keeps remotely loaded names in the chip and aborts a dismissed search', async () => {
+    const calls: {
+      query: string
+      signal: AbortSignal
+      resolve: (options: readonly FilterOption[]) => void
+    }[] = []
+    const loadOptions = (query: string, signal: AbortSignal) =>
+      new Promise<readonly FilterOption[]>((resolve) => calls.push({ query, signal, resolve }))
+    render(<MenuHarness fields={[{ key: 'owner', label: 'Owner', kind: 'people', loadOptions }]} />)
+    openField('Owner')
+    expect(await screen.findByText('Loading…')).toBeInTheDocument()
+    await act(async () => calls[0]!.resolve([{ value: 'u-1', label: 'Maya Okafor' }]))
+    fireEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Maya Okafor' }))
+    expect(screen.getByRole('group', { name: 'Owner is Maya Okafor' })).toBeInTheDocument()
+    const search = screen.getByRole('searchbox', { name: 'Search options…' })
+    fireEvent.change(search, { target: { value: 'Jonas' } })
+    const last = calls.at(-1)!
+    expect(last.query).toBe('Jonas')
+    fireEvent.keyDown(search, { key: 'Escape' })
+    await waitFor(() => expect(last.signal.aborted).toBe(true))
+    expect(active()).toEqual([{ field: 'owner', op: 'is', values: ['u-1'] }])
+  })
+
+  it('searches fields independently from their values', async () => {
+    render(
+      <MenuHarness
+        fields={[
+          status,
+          ...Array.from(
+            { length: 8 },
+            (_, i): FilterField => ({ key: `field${i}`, label: `Field ${i}`, kind: 'text' }),
+          ),
+        ]}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+    const search = screen.getByRole('searchbox', { name: 'Filter by…' })
+    fireEvent.change(search, { target: { value: 'Status' } })
+    expect(screen.queryByRole('menuitem', { name: 'Field 0' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Status' }))
+    fireEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Running' }))
+    expect(active()).toEqual([{ field: 'status', op: 'is', values: ['running'] }])
   })
 })

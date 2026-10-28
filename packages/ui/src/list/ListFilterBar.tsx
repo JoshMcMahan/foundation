@@ -20,6 +20,7 @@ import {
   MenuPopup,
   MenuRadioItem,
   MenuSeparator,
+  MenuSubmenuTrigger,
 } from '../components/Menu'
 import { Popover } from '../components/Popover'
 import { useLocale, useStrings } from '../components/Provider'
@@ -34,6 +35,7 @@ import {
   type FilterOperator,
   type FilterOption,
   fieldOperators,
+  isComplete,
   isDatePreset,
   isMultiple,
   operatorCount,
@@ -61,6 +63,15 @@ function Divider() {
 }
 
 type Strings = ReturnType<typeof useStrings>['filters']
+
+function optionLabels(filters: ListFilters, field: Field) {
+  let seen = filters.optionLabels.get(field.key)
+  if (!seen) {
+    seen = new Map<string, FilterOption>()
+    filters.optionLabels.set(field.key, seen)
+  }
+  return seen
+}
 
 /** The labels a filter's values show, and their icons. */
 function valueParts(
@@ -137,7 +148,7 @@ export function FilterChip({
   const strings = useStrings()
   const t = strings.filters
   // Labels of options loaded from the server, so a chosen one keeps its name.
-  const [seen] = useState(() => new Map<string, FilterOption>())
+  const seen = optionLabels(filters, field)
   const [open, setOpen] = useState<'field' | 'operator' | 'value' | null>(null)
   // Opened by a request rather than its own button: focus comes back to the chip on close,
   // not to wherever the request came from.
@@ -445,6 +456,7 @@ interface PickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   trigger: ReactElement
+  submenu?: boolean | undefined
 }
 
 function ValuePicker(props: PickerProps) {
@@ -458,6 +470,98 @@ function ValuePicker(props: PickerProps) {
     default:
       return <OptionValuePicker {...props} />
   }
+}
+
+function PickerMenu({
+  open,
+  onOpenChange,
+  trigger,
+  submenu,
+  children,
+  header,
+  className,
+  editor = false,
+  label,
+}: Pick<PickerProps, 'open' | 'onOpenChange' | 'trigger' | 'submenu'> & {
+  children: ReactNode
+  header?: ReactNode
+  className?: string
+  editor?: boolean
+  label?: string
+}) {
+  const Root = submenu ? Menu.SubmenuRoot : Menu.Root
+  return (
+    <Root open={open} onOpenChange={onOpenChange}>
+      {submenu ? (
+        <MenuSubmenuTrigger aria-haspopup={editor ? 'dialog' : 'menu'}>
+          {trigger}
+        </MenuSubmenuTrigger>
+      ) : (
+        <Menu.Trigger render={trigger} />
+      )}
+      <MenuPopup
+        side={submenu ? 'inline-end' : 'bottom'}
+        className={className}
+        header={header}
+        role={editor ? 'dialog' : 'menu'}
+        label={label}
+      >
+        {children}
+      </MenuPopup>
+    </Root>
+  )
+}
+
+function PickerPopover({
+  children,
+  className,
+  ...props
+}: PickerProps & {
+  children: ReactNode
+  className: string
+}) {
+  const content = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!props.open || !props.submenu) return
+    const frame = requestAnimationFrame(() => {
+      if (!content.current?.contains(document.activeElement)) {
+        content.current?.querySelector<HTMLElement>('input, button')?.focus()
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [props.open, props.submenu])
+  return props.submenu ? (
+    <PickerMenu {...props} className={className} editor label={props.field.label}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: embedded editors own typing and arrow keys */}
+      <div
+        ref={content}
+        className="[&_[data-outside]]:opacity-100"
+        onKeyDown={(event) => {
+          if (
+            event.key !== 'Escape' &&
+            event.target instanceof HTMLElement &&
+            event.target.closest('input, button, [role="grid"]')
+          ) {
+            event.stopPropagation()
+          }
+        }}
+      >
+        {children}
+      </div>
+    </PickerMenu>
+  ) : (
+    <Popover
+      aria-label={props.field.label}
+      trigger={props.trigger}
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      align="start"
+      initialFocus="first-control"
+      className={className}
+    >
+      {children}
+    </Popover>
+  )
 }
 
 /** Options from the server for what is typed, while the picker is open. */
@@ -498,6 +602,7 @@ function OptionValuePicker({
   open,
   onOpenChange,
   trigger,
+  submenu,
 }: PickerProps) {
   const strings = useStrings()
   const matches = useQueryMatch()
@@ -511,17 +616,19 @@ function OptionValuePicker({
     field.searchable ?? (Boolean(field.loadOptions) || (field.options?.length ?? 0) > 8)
   const needle = query.trim()
   const selected = filter.values
-  // A chosen option stays listed while typing, so it can still be unticked; chosen values the
-  // options no longer hold are listed first, under their remembered names.
+  // Keep chosen values available to untick, but let Enter take a match for the search.
   const missing = selected
     .filter((v) => !loaded.options.some((o) => o.value === v))
     .map((v): FilterOption => seen.get(v) ?? { value: v, label: field.valueLabel?.(v) ?? v })
-  const all = [...missing, ...loaded.options]
+  const all = [...loaded.options, ...missing]
+  const matchesOption = (option: FilterOption) =>
+    matches(needle, option.label, option.description, option.group)
   const options =
     needle && !field.loadOptions
-      ? all.filter(
-          (o) => selected.includes(o.value) || matches(needle, o.label, o.description, o.group),
-        )
+      ? [
+          ...all.filter(matchesOption),
+          ...all.filter((o) => selected.includes(o.value) && !matchesOption(o)),
+        ]
       : all
   const set = (values: string[]) => filters.update(filter.field, { values })
 
@@ -589,7 +696,7 @@ function OptionValuePicker({
       {rows}
     </Menu.RadioGroup>
   )
-  if (searchable) {
+  if (searchable && !submenu) {
     return (
       <SearchablePicker
         options={options}
@@ -609,18 +716,45 @@ function OptionValuePicker({
       />
     )
   }
-  return (
-    <Menu.Root open={open} onOpenChange={onOpenChange}>
-      <Menu.Trigger render={trigger} />
-      <MenuPopup className="w-max min-w-56 max-w-[min(28rem,var(--available-width))]">
-        {list}
-        {!loaded.loading && options.length === 0 && (
-          <div className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
-            {strings.dropdown.noOptionsFound}
-          </div>
-        )}
-      </MenuPopup>
-    </Menu.Root>
+  const menu = (
+    <PickerMenu
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next)
+        if (!next) setQuery('')
+      }}
+      trigger={trigger}
+      submenu={submenu}
+      className="w-64 max-w-[min(28rem,var(--available-width))]"
+      header={
+        searchable ? (
+          <Menu.Input
+            placeholder={strings.list.searchOptions}
+            aria-label={strings.list.searchOptions}
+            className="w-full bg-transparent text-[13px] outline-none placeholder:text-(--theme-placeholder)"
+          />
+        ) : undefined
+      }
+    >
+      {searchable ? <Menu.List>{list}</Menu.List> : list}
+      {loaded.loading && (
+        <div role="status" className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
+          {strings.common.loading}
+        </div>
+      )}
+      {!loaded.loading && options.length === 0 && (
+        <div className="px-3 py-1.5 text-[13px] text-(--theme-muted-text-color)">
+          {strings.dropdown.noOptionsFound}
+        </div>
+      )}
+    </PickerMenu>
+  )
+  return searchable ? (
+    <Menu.FilterProvider autoHighlight filter={null} value={query} onValueChange={setQuery}>
+      {menu}
+    </Menu.FilterProvider>
+  ) : (
+    menu
   )
 }
 
@@ -698,27 +832,29 @@ function SearchablePicker({
 
 const COUNT = new Intl.NumberFormat()
 
-function BooleanValuePicker({ filters, filter, open, onOpenChange, trigger }: PickerProps) {
+function BooleanValuePicker(props: PickerProps) {
+  const { filters, filter } = props
   const t = useStrings().filters
   return (
-    <Menu.Root open={open} onOpenChange={onOpenChange}>
-      <Menu.Trigger render={trigger} />
-      <MenuPopup>
-        <Menu.RadioGroup
-          value={filter.values[0] ?? 'true'}
-          onValueChange={(v: string) => filters.update(filter.field, { values: [v] })}
-        >
-          <MenuRadioItem value="true">{t.yes}</MenuRadioItem>
-          <MenuRadioItem value="false">{t.no}</MenuRadioItem>
-        </Menu.RadioGroup>
-      </MenuPopup>
-    </Menu.Root>
+    <PickerMenu {...props}>
+      <Menu.RadioGroup
+        value={filter.values[0] ?? null}
+        onValueChange={(v: string) => filters.update(filter.field, { values: [v] })}
+      >
+        <MenuRadioItem value="true">{t.yes}</MenuRadioItem>
+        <MenuRadioItem value="false">{t.no}</MenuRadioItem>
+      </Menu.RadioGroup>
+    </PickerMenu>
   )
 }
 
-function DateValuePicker({ filters, filter, field, open, onOpenChange, trigger }: PickerProps) {
+function DateValuePicker(props: PickerProps) {
+  const { filters, filter, field, onOpenChange } = props
   const t = useStrings().filters
   const [custom, setCustom] = useState(false)
+  useEffect(() => {
+    if (!props.open) setCustom(false)
+  }, [props.open])
   const [first, second] = filter.values
   const choosePreset = (preset: string) => {
     filters.update(filter.field, { op: 'is', values: [preset] })
@@ -727,18 +863,14 @@ function DateValuePicker({ filters, filter, field, open, onOpenChange, trigger }
   const showCalendar = custom || filter.op !== 'is' || (first !== undefined && !isDatePreset(first))
   const range = filter.op === 'between' || (custom && filter.op === 'is')
   return (
-    <Popover
-      aria-label={t.changeValue('')}
-      trigger={trigger}
-      open={open}
+    <PickerPopover
+      {...props}
       onOpenChange={(next) => {
         onOpenChange(next)
         if (!next) {
           setCustom(false)
         }
       }}
-      align="start"
-      initialFocus="first-control"
       className="p-0"
     >
       {filter.op === 'is' && (
@@ -799,28 +931,24 @@ function DateValuePicker({ filters, filter, field, open, onOpenChange, trigger }
             }}
           />
         ))}
-    </Popover>
+    </PickerPopover>
   )
 }
 
-function TextValuePicker({ filters, filter, field, open, onOpenChange, trigger }: PickerProps) {
+function TextValuePicker(props: PickerProps) {
+  const { filters, filter, field, open, onOpenChange } = props
   const t = useStrings().filters
-  const [text, setText] = useState(filter.values[0] ?? '')
+  const value = filter.values[0] ?? ''
+  const [text, setText] = useState(value)
   useEffect(() => {
     if (open) {
-      setText(filter.values[0] ?? '')
+      setText(value)
     }
-  }, [open, filter.values])
+  }, [open, value])
   return (
-    <Popover
-      aria-label={field.label}
-      trigger={trigger}
-      open={open}
-      onOpenChange={onOpenChange}
-      align="start"
-      className="w-64 p-2"
-    >
+    <PickerPopover {...props} className="w-64 p-2">
       <Input
+        autoFocus={props.submenu}
         size="sm"
         aria-label={field.label}
         placeholder={t.textPlaceholder}
@@ -835,7 +963,7 @@ function TextValuePicker({ filters, filter, field, open, onOpenChange, trigger }
           }
         }}
       />
-    </Popover>
+    </PickerPopover>
   )
 }
 
@@ -849,52 +977,93 @@ export interface AddFilterMenuProps {
   align?: 'start' | 'end'
 }
 
-/** The fields a filter can be added on. Picking one adds its chip and opens its value picker
- *  there; a field already in use opens its chip's picker. */
+function FilterMenuField({ filters, field }: { filters: ListFilters; field: Field }) {
+  const t = useStrings().filters
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState<ActiveFilter | null>(null)
+  const active = filters.chips.find((f) => f.field === field.key)
+  const operators = fieldOperators(field)
+  const defaultOp = operators.find((op) => op !== 'isSet' && op !== 'isNotSet')
+  const current = pending ?? active ?? { field: field.key, op: defaultOp ?? 'is', values: [] }
+  const filter =
+    current.op === 'isSet' || current.op === 'isNotSet'
+      ? { ...current, op: defaultOp ?? 'is' }
+      : current
+  const trigger = (
+    <>
+      {field.icon && (
+        <span className="flex shrink-0 text-(--theme-muted-text-color) [&_svg]:size-3.5">
+          {field.icon}
+        </span>
+      )}
+      <span className="min-w-0 flex-1 truncate">{field.label}</span>
+      {filters.active.some((f) => f.field === field.key) && (
+        <CheckIcon aria-hidden="true" className="size-3.5 shrink-0 opacity-80" />
+      )}
+    </>
+  )
+  if (!defaultOp) {
+    return (
+      <PickerMenu open={open} onOpenChange={setOpen} trigger={trigger} submenu>
+        <Menu.RadioGroup
+          value={active?.op ?? null}
+          onValueChange={(op: FilterOperator) => filters.add(field.key, op)}
+        >
+          {operators.map((op) => (
+            <MenuRadioItem key={op} value={op}>
+              {t.operator(op, 1)}
+            </MenuRadioItem>
+          ))}
+        </Menu.RadioGroup>
+      </PickerMenu>
+    )
+  }
+  return (
+    <ValuePicker
+      filters={{
+        ...filters,
+        update: (key, patch) => {
+          const next = { ...filter, ...patch }
+          setPending(next)
+          if (isComplete(next)) {
+            filters.update(key, { op: next.op, values: next.values })
+          } else if (next.values.length === 0) {
+            filters.remove(key)
+          }
+        },
+      }}
+      filter={filter}
+      field={field}
+      seen={optionLabels(filters, field)}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setPending(null)
+      }}
+      submenu
+      trigger={trigger}
+    />
+  )
+}
+
+/** Fields with their value pickers alongside, keeping a complete edit in the menu. */
 export function AddFilterMenu({ filters, trigger, align = 'start' }: AddFilterMenuProps) {
   const strings = useStrings()
   const t = strings.filters
   const matches = useQueryMatch()
   const [query, setQuery] = useState('')
-  // The field picked, begun once the menu has closed and handed focus back.
-  const picked = useRef<string | null>(null)
-  const used = new Set(filters.active.map((f) => f.field))
   const searchable = filters.fields.length > 8
   const needle = query.trim()
   const fields = needle ? filters.fields.filter((f) => matches(needle, f.label)) : filters.fields
-  const removable = filters.active.some(
-    (f) => !filters.fields.find((x) => x.key === f.field)?.required,
-  )
-  const resetting = filters.hasDefaults
-  const showClear = resetting ? !filters.isDefault : removable
-  const rows = fields.map((f) => (
-    <MenuItem
-      key={f.key}
-      onClick={() => {
-        picked.current = f.key
-      }}
-    >
-      {f.icon && (
-        <span className="flex shrink-0 text-(--theme-muted-text-color) [&_svg]:size-3.5">
-          {f.icon}
-        </span>
-      )}
-      <span className="min-w-0 flex-1 truncate">{f.label}</span>
-      {used.has(f.key) && <CheckIcon aria-hidden="true" className="size-3.5 shrink-0 opacity-80" />}
-    </MenuItem>
+  const showReset = filters.hasDefaults && !filters.isDefault
+  const rows = fields.map((field) => (
+    <FilterMenuField key={field.key} filters={filters} field={field} />
   ))
   const menu = (
     <Menu.Root
       onOpenChange={(next) => {
         if (!next) {
           setQuery('')
-        }
-      }}
-      onOpenChangeComplete={(next) => {
-        const key = picked.current
-        picked.current = null
-        if (!next && key) {
-          filters.begin(key)
         }
       }}
     >
@@ -923,19 +1092,17 @@ export function AddFilterMenu({ filters, trigger, align = 'start' }: AddFilterMe
           </div>
         )}
         {/* Last, so Enter on the first item a key opened the menu to never empties the list. */}
-        {showClear && (
+        {showReset && (
           <>
             <MenuSeparator />
-            <MenuItem onClick={resetting ? filters.reset : filters.clear}>
-              {resetting ? strings.common.reset : strings.common.clear}
-            </MenuItem>
+            <MenuItem onClick={filters.reset}>{strings.common.reset}</MenuItem>
           </>
         )}
       </MenuPopup>
     </Menu.Root>
   )
   return searchable ? (
-    <Menu.FilterProvider filter={null} value={query} onValueChange={setQuery}>
+    <Menu.FilterProvider autoHighlight filter={null} value={query} onValueChange={setQuery}>
       {menu}
     </Menu.FilterProvider>
   ) : (
@@ -1169,7 +1336,7 @@ export interface ListFilterBarProps {
 }
 
 /** The chips that say what narrows a list, under its toolbar: one per filter, each editable in
- *  place, then "+ Filter" and Clear (or Reset, where the page has default filters). It shows
+ *  place, then "+" and right-aligned Clear (or Reset, where the page has default filters). It shows
  *  only while a filter is on or a field is required. At phone width it stops at two lines and
  *  a "+n filters" chip opens the rest in a sheet.
  *
@@ -1316,9 +1483,6 @@ function FilterRow({
   const [narrow, setNarrow] = useState(false)
   const [width, setWidth] = useState(0)
   const [limit, setLimit] = useState<number | null>(null)
-  // Clear (or Reset) left out of a narrow row rather than stranded on a line of its own; the +
-  // menu holds it too.
-  const [clearFolded, setClearFolded] = useState(false)
   // "+" left out of a narrow row rather than leading a line of its own; the "+n filters" sheet
   // offers it, and Clear, in its footer.
   const [addFolded, setAddFolded] = useState(false)
@@ -1358,7 +1522,6 @@ function FilterRow({
   // biome-ignore lint/correctness/useExhaustiveDependencies: width and the chips are what restart the fit
   useLayoutEffect(() => {
     setLimit(null)
-    setClearFolded(false)
     setAddFolded(false)
   }, [width, chipKeys, narrow])
 
@@ -1370,7 +1533,7 @@ function FilterRow({
     }
     const tops = new Set<number>()
     for (const child of el.children) {
-      if (!(child as HTMLElement).hasAttribute('data-filter-clear')) {
+      if (!(child as HTMLElement).hasAttribute('data-filter-actions')) {
         tops.add(Math.round((child as HTMLElement).offsetTop))
       }
     }
@@ -1402,14 +1565,9 @@ function FilterRow({
         return
       }
     }
-    // Clear keeps to the line "+" ends, or goes into its menu.
-    const clear = el.querySelector<HTMLElement>('[data-filter-clear]')
-    if (add && clear && Math.round(clear.offsetTop) > Math.round(add.offsetTop)) {
-      setClearFolded(true)
-    }
   })
 
-  // Focus moves on from a chip Backspace removed: to the next chip, else to "+ Filter".
+  // Focus moves on from a chip Backspace removed: to the next chip, else to "+".
   useEffect(() => {
     if (focusAt === null || !row.current) {
       return
@@ -1457,22 +1615,31 @@ function FilterRow({
       {resetting ? strings.common.reset : strings.common.clear}
     </button>
   )
-  const addButton = (narrow: boolean) => (
+  const addButton = (
     <AddFilterMenu
       filters={filters}
       trigger={
         <button
           type="button"
           data-filter-add=""
-          // On a narrow row it is the + alone, so the chips and Clear keep to fewer lines.
-          aria-label={narrow ? t.addFilter : undefined}
-          className={buttonClasses({ variant: 'ghost', size: 'sm', iconOnly: narrow })}
+          aria-label={t.addFilter}
+          className={buttonClasses({ variant: 'ghost', size: 'sm', iconOnly: true })}
         >
           <AddIcon aria-hidden="true" />
-          {!narrow && t.addFilter}
         </button>
       }
     />
+  )
+  const actions = (clearButton || trailing) && (
+    <div
+      data-filter-actions=""
+      data-filter-trailing={trailing ? '' : undefined}
+      className="ml-auto flex shrink-0 items-center gap-1.5"
+      style={trailingReach ? { marginRight: -trailingReach } : undefined}
+    >
+      {clearButton}
+      {trailing}
+    </div>
   )
   const drawer = (
     <Drawer
@@ -1482,8 +1649,8 @@ function FilterRow({
       width={400}
       footer={
         <div className="flex w-full items-center gap-1.5">
-          {addButton(false)}
-          {clearButton}
+          {addButton}
+          {clearButton && <div className="ml-auto">{clearButton}</div>}
         </div>
       }
     >
@@ -1539,17 +1706,8 @@ function FilterRow({
           {t.overflow(overflow)}
         </button>
       )}
-      {!(narrow && addFolded) && addButton(narrow)}
-      {!(narrow && (clearFolded || addFolded)) && clearButton}
-      {trailing && (
-        <div
-          data-filter-trailing=""
-          className="ml-auto flex items-center gap-1.5"
-          style={trailingReach ? { marginRight: -trailingReach } : undefined}
-        >
-          {trailing}
-        </div>
-      )}
+      {!(narrow && addFolded) && addButton}
+      {actions}
       {!hasQuick && drawer}
     </div>
   )
@@ -1565,12 +1723,7 @@ function FilterRow({
         onMore={() => setSheet(true)}
         end={
           // With no chip, the row's end still clears the toggles and holds the trailing slot.
-          empty && (
-            <>
-              {clearButton}
-              {trailing && <div className="ml-auto flex items-center gap-1.5">{trailing}</div>}
-            </>
-          )
+          empty && actions
         }
       />
       {chipRow}
