@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.101.0](https://github.com/parallelworks/foundation/compare/ui-v0.100.1...ui-v0.101.0) (2026-10-28)
+
+
+### Features
+
+* **ui:** choose filter values directly from the filter menu ([#558](https://github.com/parallelworks/foundation/issues/558)) ([d3c8559](https://github.com/parallelworks/foundation/commit/d3c85591ee847c177c72010a631b7027c01ef355))
+* **ui:** secret safe and secret safe migration icons ([#557](https://github.com/parallelworks/foundation/issues/557)) ([86ef864](https://github.com/parallelworks/foundation/commit/86ef864afaecb51dc2a5c30293570555d59f98eb))
+
+
+### Bug Fixes
+
+* **ui:** a page's name too long for its header wraps and grows the bar instead of truncating, its ancestors folding first ([#549](https://github.com/parallelworks/foundation/issues/549)) ([a95af8d](https://github.com/parallelworks/foundation/commit/a95af8d37c67fa1f2d2a4ae7579dd47896f10d02))
+* **ui:** a select's chosen option reads as a choice even when its value is empty ([#555](https://github.com/parallelworks/foundation/issues/555)) ([ee579d3](https://github.com/parallelworks/foundation/commit/ee579d38042566a63c8964b13fd3c6d114172ff0))
+* **ui:** long text in a list row's last column ends before its More actions button ([#553](https://github.com/parallelworks/foundation/issues/553)) ([8a08959](https://github.com/parallelworks/foundation/commit/8a08959e68b234d7c96253b03af0953be97c4a47))
+* **ui:** on a phone, a list's name takes the rest of the row whatever width a host gives its column ([#554](https://github.com/parallelworks/foundation/issues/554)) ([84df9be](https://github.com/parallelworks/foundation/commit/84df9be3634eb471d3ca0e497c3fe82ebcdd85df))
+
 ## [0.100.1](https://github.com/parallelworks/foundation/compare/ui-v0.100.0...ui-v0.100.1) (2026-10-28)
 
 
