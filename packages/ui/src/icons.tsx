@@ -653,6 +653,12 @@ export const ScriptIcon = /* @__PURE__ */ drawn(
 export const SearchIcon = /* @__PURE__ */ drawn(
   'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10ZM14 14l-3.5-3.5',
 )
+export const SecretSafeIcon = /* @__PURE__ */ drawn(
+  'M8 1.75 13 3.5v4c0 3-2.15 5.25-5 6.75-2.85-1.5-5-3.75-5-6.75v-4ZM8 4.9l2.25.8v1.85c0 1.45-.95 2.55-2.25 3.3-1.3-.75-2.25-1.85-2.25-3.3V5.7Z',
+)
+export const SecretSafeMigrationIcon = /* @__PURE__ */ drawn(
+  'M8 1.75 13 3.5v4c0 3-2.15 5.25-5 6.75-2.85-1.5-5-3.75-5-6.75v-4ZM8 4.75v5M6 8l2 2 2-2',
+)
 export const SendIcon = /* @__PURE__ */ drawn(
   'M14.25 1.75 10 14.25 7.5 8.5 1.75 6ZM14.25 1.75 7.5 8.5',
 )
