@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.101.1](https://github.com/parallelworks/foundation/compare/ui-v0.101.0...ui-v0.101.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **ui:** a control in a Field given an id takes it, so its label names it ([#560](https://github.com/parallelworks/foundation/issues/560)) ([df9665a](https://github.com/parallelworks/foundation/commit/df9665a50c88abd4cbd4b33f738253c6800e2db9))
+
 ## [0.101.0](https://github.com/parallelworks/foundation/compare/ui-v0.100.1...ui-v0.101.0) (2026-10-28)
 
 
