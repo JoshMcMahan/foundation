@@ -197,4 +197,23 @@ describe('a line row too wide for its space', () => {
       }
     }
   })
+
+  it('drops the fade and arrow once the current tab’s underline settles inside the row', () => {
+    const { rerender } = render(<Tabs label="Views" items={items} defaultValue="settings" />)
+    const list = screen.getByRole('tablist')
+    // The current tab narrows, such as when a web font loads: the tabs fit, but the underline
+    // still runs past them as it eases to the narrower tab.
+    let scrollWidth = 303
+    Object.defineProperties(list, {
+      clientWidth: { value: 300 },
+      scrollWidth: { get: () => scrollWidth },
+    })
+    rerender(<Tabs label="Views" items={items} defaultValue="settings" />)
+    expect(document.querySelector('[data-scroll-arrow="end"]')).toBeInTheDocument()
+    scrollWidth = 300
+    const underline = list.lastElementChild as HTMLElement
+    fireEvent.transitionEnd(underline)
+    expect(document.querySelector('[data-scroll-arrow="end"]')).not.toBeInTheDocument()
+    expect(list.style.maskImage).toBe('')
+  })
 })
