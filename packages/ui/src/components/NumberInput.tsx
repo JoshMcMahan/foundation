@@ -1,7 +1,7 @@
 import { NumberField } from '@base-ui/react/number-field'
 import { cx } from '../cx'
 import { ChevronDownIcon, ChevronUpIcon } from '../icons'
-import { useFieldControlId } from './Field'
+import { useFieldControlId, useFieldRequired } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 
 export interface NumberInputProps
@@ -48,6 +48,7 @@ export function NumberInput({
   ...rootProps
 }: NumberInputProps) {
   const id = useFieldControlId(rootProps.id)
+  const fieldRequired = useFieldRequired()
   return (
     <NumberField.Root
       {...rootProps}
@@ -64,7 +65,7 @@ export function NumberInput({
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
-          aria-required={ariaRequired || undefined}
+          aria-required={ariaRequired || fieldRequired}
           data-1p-ignore
           className={cx(
             'h-full w-full min-w-0 bg-transparent tabular-nums outline-none',

@@ -1,7 +1,7 @@
 import { OTPField } from '@base-ui/react/otp-field'
 import { useId } from 'react'
 import { cx } from '../cx'
-import { useFieldControlId } from './Field'
+import { useFieldControlId, useFieldRequired } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { useStrings } from './Provider'
 
@@ -43,6 +43,7 @@ export function OneTimeCodeInput({
   const t = useStrings().oneTimeCode
   const labelId = useId()
   const id = useFieldControlId(rootProps.id)
+  const fieldRequired = useFieldRequired()
   return (
     <OTPField.Root
       length={length}
@@ -68,7 +69,7 @@ export function OneTimeCodeInput({
               ? { 'aria-labelledby': labelId }
               : {})}
           {...(ariaInvalid && { 'aria-invalid': true })}
-          {...(ariaRequired && { 'aria-required': true })}
+          {...((ariaRequired || fieldRequired) && { 'aria-required': true })}
           autoFocus={autoFocus && index === 0}
           className={cx(
             fieldBox({ size }),
