@@ -35,6 +35,9 @@ export interface FieldControlProps {
 interface ControlContextValue {
   control: FieldControlProps
   labelId: string
+  /** The id the Field was given, for its control to take. None for a group, whose options are
+   *  each their own control. */
+  givenId: string | undefined
   /** Called by a control the label names by id rather than by `for`; returns its release. */
   claimLabel: () => () => void
 }
@@ -50,6 +53,13 @@ export const FieldRowContext = createContext(false)
  *  own children. Null outside a Field. */
 export function useFieldControl(): FieldControlProps | null {
   return use(ControlContext)?.control ?? null
+}
+
+/** The id for a control of this package placed in a Field: its own, or else the one the Field
+ *  was given, which the label's `for` points at. Otherwise Base UI ties the label to the control
+ *  itself. */
+export function useFieldControlId(id: string | undefined): string | undefined {
+  return id ?? use(ControlContext)?.givenId
 }
 
 /** The surrounding Field's control props for a control that isn't a Base UI one, such as a
@@ -114,8 +124,8 @@ export interface FieldProps {
   id?: string | undefined
   className?: string | undefined
   /** The control, or a function that places the control props on it. Any control of this
-   *  package, such as Input, Select, Combobox, NumberInput, Switch or DatePicker, takes its label,
-   *  description and invalid state from the Field on its own; a native element needs the
+   *  package, such as Input, Select, Combobox, NumberInput, Switch or DatePicker, takes its id,
+   *  label, description and invalid state from the Field on its own; a native element needs the
    *  function. A value shown but not edited goes in a `FieldValue`. */
   children: ReactNode | ((control: FieldControlProps) => ReactNode)
 }
@@ -277,7 +287,7 @@ export function Field({
     setLabelledBy((n) => n + 1)
     return () => setLabelledBy((n) => n - 1)
   }, [])
-  const controlContext = { control, labelId, claimLabel }
+  const controlContext = { control, labelId, givenId: group ? undefined : ownId, claimLabel }
 
   const inline = layout === 'inline'
   // In a row of fields, the label and the control take the row's two tracks, the label at the

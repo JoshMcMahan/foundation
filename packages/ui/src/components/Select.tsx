@@ -9,7 +9,7 @@ import {
   pickerHintClassName,
   pickerItemClassName,
 } from './comboboxItems'
-import { useFieldControl } from './Field'
+import { useFieldControl, useFieldControlId } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { panelClassName, panelListClassName, positionerClassName } from './floating'
 import { OptionDescription } from './OptionDescription'
@@ -95,12 +95,15 @@ export function Select<Value, Multiple extends boolean | undefined = false>({
   const portal = usePopupContainer()
   const uid = useId()
   const inField = useFieldControl() !== null
+  const id = useFieldControlId(rootProps.id)
   const content = (width ?? (inField ? 'fill' : 'content')) === 'content'
   const labelOf = (value: Value) => items.find((item) => Object.is(item.value, value))?.label
   // Disabled with a reason, the field is read-only and shut instead, which keeps it focusable.
   const explained = Boolean(rootProps.disabled && disabledReason)
   const reasonId = `${uid}reason`
   const triggerProps = {
+    // On the trigger, which the label names; the root's id doesn't reach it.
+    id,
     'aria-label': ariaLabel,
     'aria-labelledby': labelledBy,
     'aria-describedby': cx(describedBy, explained && reasonId) || undefined,

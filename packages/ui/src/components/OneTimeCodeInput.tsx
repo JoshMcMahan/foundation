@@ -1,6 +1,7 @@
 import { OTPField } from '@base-ui/react/otp-field'
 import { useId } from 'react'
 import { cx } from '../cx'
+import { useFieldControlId } from './Field'
 import { type FieldBoxSize, fieldBox } from './fieldBox'
 import { useStrings } from './Provider'
 
@@ -41,11 +42,13 @@ export function OneTimeCodeInput({
 }: OneTimeCodeInputProps) {
   const t = useStrings().oneTimeCode
   const labelId = useId()
+  const id = useFieldControlId(rootProps.id)
   return (
     <OTPField.Root
       length={length}
       aria-label={ariaLabel}
       {...rootProps}
+      id={id}
       className={cx('flex items-center', size === 'sm' ? 'gap-1' : 'gap-2', className)}
     >
       {/* The first box takes the field's label rather than an aria-label of its own, so a
