@@ -250,6 +250,33 @@ export const Multiple: StoryObj<FieldArgs> = {
   render: (args) => <MultipleDemo {...args} />,
 }
 
+/** A report's user filter searches names without offering to save or fill credentials. */
+export const UserFilter: StoryObj<FieldArgs> = {
+  args: { placeholder: 'All users' },
+  render: (args) => (
+    <Combobox
+      multiple
+      aria-label="User"
+      items={['alice', 'bob', 'carol']}
+      disabled={args.disabled}
+      aria-invalid={args.invalid}
+      placeholder={args.placeholder}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('combobox', { name: 'User' })
+    await expect(input).toHaveAttribute('data-1p-ignore')
+    if (args.disabled) {
+      return
+    }
+    await userEvent.type(input, 'bob')
+    await userEvent.click(await screen.findByRole('option', { name: 'bob' }))
+    await expect(canvas.getByText('bob')).toBeVisible()
+    await expect(input).toHaveValue('')
+  },
+}
+
 function UnlistedDemo(args: FieldArgs) {
   const [value, setValue] = useState<{ name: string } | null>({ name: 'retired-cluster' })
   return (

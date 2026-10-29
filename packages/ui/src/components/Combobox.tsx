@@ -459,6 +459,7 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
       aria-invalid={ariaInvalid || undefined}
       aria-required={ariaRequired || required || fieldRequired}
       autoComplete="off"
+      data-1p-ignore
       className={trigger ? popupInputClassName : inputClassName(size)}
     />
   )
