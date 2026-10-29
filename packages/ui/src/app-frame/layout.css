@@ -189,8 +189,10 @@
     justify-content: flex-end;
     padding: 4px 4px 0;
   }
+  /* Room for a focused brand link's outline (2px at a 2px offset), which the brand's hidden
+     overflow would otherwise cut off at the top, under the drawer's close button. */
   .pw-frame-drawer .pw-frame-brand {
-    padding-top: 0;
+    padding-top: 4px;
   }
   .pw-app-frame[data-mobile] .pw-frame-toggle {
     min-height: 44px;
