@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { ariaKeyShortcuts } from '../components/Kbd'
+import { UIProvider } from '../components/Provider'
 import { memoryStorage } from '../test/storage'
 import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 
@@ -116,6 +118,28 @@ describe('list search field', () => {
     fireEvent.change(getInput(), { target: { value: 'alpha' } })
     fireEvent.keyDown(document.body, { key: 'Escape' })
     expect(getInput()).toHaveValue('alpha')
+  })
+})
+
+describe('list search shortcuts', () => {
+  it('opens on / and on ⌘F', () => {
+    render(<Harness />)
+    fireEvent.keyDown(document.body, { key: '/' })
+    expect(getInput()).toBeInTheDocument()
+  })
+
+  it('leaves / alone while single-key shortcuts are off, and still opens on ⌘F', () => {
+    render(
+      <UIProvider characterKeyShortcuts={false}>
+        <Harness />
+      </UIProvider>,
+    )
+    const button = screen.getByRole('button', { name: 'Search' })
+    expect(button).toHaveAttribute('aria-keyshortcuts', ariaKeyShortcuts('Mod+F'))
+    fireEvent.keyDown(document.body, { key: '/' })
+    expect(screen.queryByPlaceholderText('Filter')).toBeNull()
+    fireEvent.keyDown(document.body, { key: 'f', metaKey: true })
+    expect(getInput()).toBeInTheDocument()
   })
 })
 

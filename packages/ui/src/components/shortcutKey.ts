@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useCharacterKeyShortcuts } from './Provider'
 
 // Where a letter is the reader's input, not a page shortcut: text fields and
 // editors, dialogs over the page, and widgets whose typeahead moves to the item
@@ -32,12 +33,14 @@ export function isTextEntryContext(target: EventTarget | null): boolean {
   return Boolean(el.closest?.(KEYS_ARE_INPUT))
 }
 
-/** Calls `onPress` on a single key, such as F to filter, unless the key goes to a text field. */
+/** Calls `onPress` on a single key, such as F to filter, unless the key goes to a text field or
+ *  UIProvider's `characterKeyShortcuts` is off. */
 export function useShortcutKey(key: string | undefined, onPress: () => void) {
   const press = useRef(onPress)
   press.current = onPress
+  const on = useCharacterKeyShortcuts()
   useEffect(() => {
-    if (!key) {
+    if (!key || !on) {
       return
     }
     const onKey = (e: KeyboardEvent) => {
@@ -57,5 +60,5 @@ export function useShortcutKey(key: string | undefined, onPress: () => void) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [key])
+  }, [key, on])
 }

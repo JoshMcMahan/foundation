@@ -16,7 +16,12 @@ import { createPortal } from 'react-dom'
 import { buttonClasses } from '../components/buttonClasses'
 import { HeaderActionsFitContext } from '../components/headerActionsFit'
 import { ariaKeyShortcuts } from '../components/Kbd'
-import { useLocale, usePersistedState, useStrings } from '../components/Provider'
+import {
+  useCharacterKeyShortcuts,
+  useLocale,
+  usePersistedState,
+  useStrings,
+} from '../components/Provider'
 import { isTextEntryContext } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
@@ -25,8 +30,10 @@ import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
 const NO_TERMS: string[] = []
 
-/** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active). */
+/** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active).
+ *  `/` is off too while UIProvider's `characterKeyShortcuts` is. */
 export function useListSearch(enabled = true, storageKey?: string) {
+  const slash = useCharacterKeyShortcuts()
   const [filter, setFilter] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [storedTerms, setStoredTerms] = usePersistedState<string[]>(
@@ -53,14 +60,14 @@ export function useListSearch(enabled = true, storageKey?: string) {
       if ((e.key === 'f' || e.key === 'F') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setSearchOpen(true)
-      } else if (e.key === '/') {
+      } else if (e.key === '/' && slash) {
         e.preventDefault()
         setSearchOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [enabled])
+  }, [enabled, slash])
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => {
@@ -320,14 +327,15 @@ function SearchButton({
   active: boolean
   onOpen: () => void
 }) {
+  const slash = useCharacterKeyShortcuts()
   return (
-    <Tooltip content={label} shortcut="/">
+    <Tooltip content={label} shortcut={slash ? '/' : 'Mod+F'}>
       <button
         ref={ref}
         type="button"
         onClick={onOpen}
         aria-label={name}
-        aria-keyshortcuts={`/ ${ariaKeyShortcuts('Mod+F')}`}
+        aria-keyshortcuts={slash ? `/ ${ariaKeyShortcuts('Mod+F')}` : ariaKeyShortcuts('Mod+F')}
         className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
       >
         <SearchIcon />

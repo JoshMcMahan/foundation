@@ -38,6 +38,9 @@ export interface PaginationProps {
    *  current and the last page (5 steps), and where even those won't fit, to
    *  the current page and the count: "5 / 12". */
   pageNumbers?: boolean | { max?: number | undefined } | undefined
+  /** Names the pager for assistive technology, such as "Pages of users", so pagers on one page
+   *  tell apart; the strings' "Pagination" by default. */
+  label?: string | undefined
   className?: string | undefined
 }
 
@@ -76,6 +79,7 @@ export function Pagination({
   onPageSizeChange,
   summary,
   pageNumbers = false,
+  label,
   className,
 }: PaginationProps) {
   const t = useStrings().list
@@ -98,7 +102,7 @@ export function Pagination({
   const position = summary ?? (known ? t.pager(start, end, pastCap ? end : total, pastCap) : null)
   return (
     <nav
-      aria-label={t.pagination}
+      aria-label={label ?? t.pagination}
       // A slim line under a list, so a list in a card spends its height on rows.
       // Its own width picks how many page numbers show (see `pageNumbers`).
       className={cx(
@@ -108,7 +112,10 @@ export function Pagination({
     >
       {/* Takes the bar's free space, so the position truncates only when the bar runs out. */}
       <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-(--theme-muted-text-color)">
-        {position && <span className="truncate">{position}</span>}
+        {/* Read out as it changes, so a step says where it landed. */}
+        <span aria-live="polite" className="truncate empty:hidden">
+          {position}
+        </span>
         {showSizes && (
           <Select
             aria-label={t.perPage}
@@ -235,6 +242,8 @@ function PageStep({
       />
     )
   }
+  // At either end the step stays focusable but does nothing, so the press that reached the end
+  // doesn't drop focus to the page.
   return (
     <IconButton
       variant="outline"
@@ -242,8 +251,8 @@ function PageStep({
       className={STEP_TOUCH}
       icon={icon}
       label={label}
-      disabled={!enabled}
-      onClick={() => onPageChange?.(to)}
+      aria-disabled={!enabled || undefined}
+      onClick={() => enabled && onPageChange?.(to)}
     />
   )
 }

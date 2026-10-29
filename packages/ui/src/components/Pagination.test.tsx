@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import { Pagination, pageSteps } from './Pagination'
 import { UIProvider, type UIStrings } from './Provider'
 
@@ -15,7 +16,7 @@ it('shows where the page sits and steps to the next', () => {
 it('shows a capped total as a floor and keeps paging past it', () => {
   render(<Pagination page={200} pageSize={50} total={10000} hasNext onPageChange={() => {}} />)
   expect(screen.getByText('10001–10050 of 10050+')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Next' })).not.toHaveAttribute('aria-disabled')
 })
 
 it('passes a translated pager the floor as a number and flags it', () => {
@@ -46,8 +47,55 @@ it('pages a list with no total by whether more follow, under its own summary', (
     />,
   )
   expect(screen.getByText('Runs since Monday')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Previous' })).toHaveAttribute('aria-disabled', 'true')
+  expect(screen.getByRole('button', { name: 'Next' })).not.toHaveAttribute('aria-disabled')
+})
+
+it('keeps focus on a step that reaches the end, which then does nothing', () => {
+  const onPageChange = vi.fn()
+  function Pager() {
+    const [page, setPage] = useState(1)
+    return (
+      <Pagination
+        page={page}
+        pageSize={50}
+        total={120}
+        onPageChange={(to) => {
+          onPageChange(to)
+          setPage(to)
+        }}
+      />
+    )
+  }
+  render(<Pager />)
+  const next = screen.getByRole('button', { name: 'Next' })
+  next.focus()
+  fireEvent.click(next)
+  expect(screen.getByRole('button', { name: 'Next' })).toBe(next)
+  expect(next).toHaveFocus()
+  expect(next).toHaveAttribute('aria-disabled', 'true')
+  expect(next).not.toBeDisabled()
+  fireEvent.click(next)
+  expect(onPageChange).toHaveBeenCalledTimes(1)
+})
+
+it('is named by its label, so two pagers on a page tell apart', () => {
+  render(
+    <>
+      <Pagination label="Pages of users" page={0} pageSize={50} total={120} />
+      <Pagination label="Pages of groups" page={0} pageSize={50} total={120} />
+    </>,
+  )
+  expect(screen.getByRole('navigation', { name: 'Pages of users' })).toBeInTheDocument()
+  expect(screen.getByRole('navigation', { name: 'Pages of groups' })).toBeInTheDocument()
+})
+
+it('reads out where a step lands', () => {
+  const { rerender } = render(<Pagination page={0} pageSize={50} total={120} />)
+  const position = screen.getByText('1–50 of 120')
+  expect(position).toHaveAttribute('aria-live', 'polite')
+  rerender(<Pagination page={1} pageSize={50} total={120} />)
+  expect(position).toHaveTextContent('51–100 of 120')
 })
 
 it('makes pages links when the address names them', () => {
@@ -59,7 +107,7 @@ it('makes pages links when the address names them', () => {
 it('stays visible while more rows follow a total that fits one page', () => {
   render(<Pagination page={0} pageSize={50} total={50} hasNext onPageChange={() => {}} />)
   expect(screen.getByText('1–50 of 50+')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Next' })).not.toHaveAttribute('aria-disabled')
 })
 
 it('renders nothing for a single page with no more rows', () => {

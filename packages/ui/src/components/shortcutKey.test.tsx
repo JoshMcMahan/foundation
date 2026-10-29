@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest'
 import { fireEvent, render } from '@testing-library/react'
+import { IconButton } from './IconButton'
+import { UIProvider } from './Provider'
 import { useShortcutKey } from './shortcutKey'
 
 function Page({ onPress, children }: { onPress: () => void; children?: React.ReactNode }) {
@@ -52,5 +55,18 @@ describe('useShortcutKey', () => {
     fireEvent.keyDown(document.body, { key: 'f', repeat: true })
     fireEvent.keyDown(document.body, { key: 'f', metaKey: true })
     expect(onPress).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet while UIProvider turns single-key shortcuts off', () => {
+    const onPress = vi.fn()
+    render(
+      <UIProvider characterKeyShortcuts={false}>
+        <Page onPress={onPress} />
+        <IconButton icon={null} label="Filter" shortcut="f" />
+      </UIProvider>,
+    )
+    fireEvent.keyDown(document.body, { key: 'f' })
+    expect(onPress).not.toHaveBeenCalled()
+    expect(document.querySelector('[aria-label="Filter"]')).not.toHaveAttribute('aria-keyshortcuts')
   })
 })

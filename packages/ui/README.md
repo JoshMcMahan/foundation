@@ -60,6 +60,14 @@ even for a one-word name. The host sets the tints with `--avatar-person`,
 edge `--avatar-agent-ring`. An agent's avatar (`kind="agent"`) is a rounded
 square under either coloring, so its shape and not only its color sets it apart.
 
+A few controls take a single key from anywhere on the page: F opens a list's
+filter menu and / its search. Speech input can press them by accident, so WCAG
+2.1.4 asks for a way to turn them off. Give people a setting for it and pass
+`characterKeyShortcuts={false}` while it's off: the keys stop working and the
+tooltips and `aria-keyshortcuts` stop offering them. Shortcuts with a modifier,
+such as ⌘F, stay. `useCharacterKeyShortcuts()` reads it, for a host's own
+single-key shortcuts.
+
 A run's warnings and the workflow editor's problems may carry a problem `code`, `params` and
 `type`, as a server's problem details do. Bind `data.useProblemMessage` to `useCodeMessage` from
 `@parallelworks/problem/react`, and they read in the app's language: the message at

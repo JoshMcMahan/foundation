@@ -74,7 +74,11 @@ export function SearchInput({
         <button
           type="button"
           aria-label={common.clearSearch}
-          onClick={() => onValueChange('')}
+          onClick={(e) => {
+            // The button goes with the text, so focus goes back to the box rather than to the page.
+            e.currentTarget.parentElement?.querySelector('input')?.focus()
+            onValueChange('')
+          }}
           className="absolute right-1 flex size-6 cursor-pointer items-center justify-center rounded text-(--theme-muted-text-color) hover:text-(--theme-app)"
         >
           <CloseIcon aria-hidden="true" className="size-3" />

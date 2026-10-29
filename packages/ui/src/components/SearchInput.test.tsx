@@ -32,6 +32,17 @@ describe('SearchInput', () => {
     expect(box).toHaveValue('')
   })
 
+  it('hands focus back to the box when its clear button goes', () => {
+    render(<Search />)
+    const box = screen.getByRole('searchbox')
+    fireEvent.change(box, { target: { value: 'nightly' } })
+    const clear = screen.getByRole('button', { name: 'Clear search' })
+    clear.focus()
+    fireEvent.click(clear)
+    expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull()
+    expect(box).toHaveFocus()
+  })
+
   it('empties on Escape before Escape reaches what holds it', () => {
     const onEscape = vi.fn()
     render(<Search onEscape={onEscape} />)
