@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"regexp"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -92,7 +93,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, m Migrations) (err error) 
 	defer func() {
 		err = errors.Join(err, conn.Close(context.WithoutCancel(ctx)))
 	}()
-	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", key); err != nil {
+	if err := acquireMigrationLock(ctx, conn, key); err != nil {
 		return fmt.Errorf("pgdb: acquire migration lock: %w", err)
 	}
 	defer func() {
@@ -106,6 +107,27 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, m Migrations) (err error) 
 		return fmt.Errorf("pgdb: create schema %s: %w", schema, err)
 	}
 	return migrateApp(ctx, pool, m.FS, logger)
+}
+
+func acquireMigrationLock(ctx context.Context, conn *pgx.Conn, key int64) error {
+	// A blocking lock statement holds a snapshot that concurrent index builds
+	// must wait for. Finish each statement before waiting to retry.
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		var acquired bool
+		if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", key).Scan(&acquired); err != nil {
+			return err
+		}
+		if acquired {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tick.C:
+		}
+	}
 }
 
 func migrateApp(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, logger *slog.Logger) error {
