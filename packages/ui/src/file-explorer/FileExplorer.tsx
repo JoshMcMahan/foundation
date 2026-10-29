@@ -108,6 +108,7 @@ import type { ExplorerObject, TreeNode, TStorage, UploadNode } from './lib/types
 import {
   calculateUploadNodesTotalSize,
   createTreeBuilder,
+  exceededTransferLimit,
   getDirectoryNameError,
   getDirectoryObjectPath,
   getNodeChildren,
@@ -497,6 +498,8 @@ export default function FileExplorer({
     targetPath: string
     uploadNodes: UploadNode[]
     totalSize: number
+    skipped: UploadNode[]
+    transferLimit?: number | undefined
   } | null>(null)
   const [waitForUpload, setWaitForUpload] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -841,7 +844,6 @@ export default function FileExplorer({
     }
 
     let uploadNodes: UploadNode[] = []
-    let totalSize = 0
 
     if (waitForUpload) {
       toast.warning(t.messages.waitForCurrentUpload)
@@ -859,23 +861,31 @@ export default function FileExplorer({
     if (isDirectoryUploadSupported) {
       const prepareData = await getUploadNodesFromDataTransferItems(files as DataTransferItemList)
       uploadNodes = prepareData.uploadNodes
-      totalSize = prepareData.totalSize
     } else {
       uploadNodes = Array.from(files as FileList).map((file) => ({
         name: file.name,
         file,
         relativePath: file.name,
       }))
-      totalSize = calculateUploadNodesTotalSize(uploadNodes)
     }
 
+    queueUpload(targetPath, targetStorageId, uploadNodes)
+    setWaitForUpload(false)
+  }
+
+  const queueUpload = (targetPath: string, storageId: string | undefined, nodes: UploadNode[]) => {
+    const transferLimit = findStorage(storageId)?.transferLimitBytes
+    const fits = (node: UploadNode) =>
+      transferLimit === undefined || node.file.size <= transferLimit
+    const uploadNodes = nodes.filter(fits)
     setPendingUpload({
       targetPath,
       uploadNodes,
-      totalSize,
+      totalSize: calculateUploadNodesTotalSize(uploadNodes),
+      skipped: nodes.filter((node) => !fits(node)),
+      transferLimit,
     })
     setUploadModalOpen(true)
-    setWaitForUpload(false)
   }
 
   const hasFolderSelected = (): boolean => {
@@ -1121,10 +1131,16 @@ export default function FileExplorer({
       })
     }
     if (isFile) {
+      const transferLimit = exceededTransferLimit(node, storage)
       actions.push({
         key: 'download',
         label: common.download,
         icon: <DownloadIcon />,
+        disabled: transferLimit !== undefined,
+        disabledReason:
+          transferLimit === undefined
+            ? undefined
+            : t.messages.transferLimitExceeded(formatBytes(transferLimit)),
         onClick: () => downloadNode(node),
       })
       if (nodeCanShare) {
@@ -1389,13 +1405,7 @@ export default function FileExplorer({
       file,
       relativePath: file.webkitRelativePath || file.name,
     }))
-    const totalSize = calculateUploadNodesTotalSize(uploadNodes)
-    setPendingUpload({
-      targetPath: selectedNode.path,
-      uploadNodes,
-      totalSize,
-    })
-    setUploadModalOpen(true)
+    queueUpload(selectedNode.path, selectedNode.storageId, uploadNodes)
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -1551,6 +1561,32 @@ export default function FileExplorer({
   }
 
   const downloadCommandText = generateDownloadCommand()
+  const downloadBlockedLimit = getFilesToDownload()
+    .map((node) => exceededTransferLimit(node, findStorage(node.storageId)))
+    .find((limit) => limit !== undefined)
+  const downloadBlockedReason =
+    downloadBlockedLimit === undefined
+      ? undefined
+      : t.messages.transferLimitExceeded(formatBytes(downloadBlockedLimit))
+  const downloadTrigger = (
+    <Menu.Trigger
+      aria-label={common.download}
+      className={buttonClasses({
+        variant: selectedNode?.type === 'file' ? 'primary' : 'outline',
+        size: 'sm',
+      })}
+      disabled={
+        (checkedItems.size === 0 && selectedNode?.type !== 'file') ||
+        hasFolderSelected() ||
+        !selectedNode?.storageId ||
+        downloadBlockedReason !== undefined
+      }
+    >
+      <DownloadIcon />
+      <span className="hidden @4xl:inline">{common.download}</span>
+      <ChevronDownIcon />
+    </Menu.Trigger>
+  )
 
   return (
     <div className="w-full h-full flex relative">
@@ -1754,24 +1790,15 @@ export default function FileExplorer({
                     )}
 
                     <Menu.Root>
-                      <Tooltip content={common.download} side="bottom">
-                        <Menu.Trigger
-                          aria-label={common.download}
-                          className={buttonClasses({
-                            variant: selectedNode.type === 'file' ? 'primary' : 'outline',
-                            size: 'sm',
-                          })}
-                          disabled={
-                            (checkedItems.size === 0 && selectedNode.type !== 'file') ||
-                            hasFolderSelected() ||
-                            !selectedNode.storageId
-                          }
-                        >
-                          <DownloadIcon />
-                          <span className="hidden @4xl:inline">{common.download}</span>
-                          <ChevronDownIcon />
-                        </Menu.Trigger>
-                      </Tooltip>
+                      {downloadBlockedReason === undefined ? (
+                        <Tooltip content={common.download} side="bottom">
+                          {downloadTrigger}
+                        </Tooltip>
+                      ) : (
+                        <Tooltip key="blocked" content={downloadBlockedReason} side="bottom">
+                          <span className="inline-flex">{downloadTrigger}</span>
+                        </Tooltip>
+                      )}
                       <MenuPopup align="end" className="w-72">
                         <MenuItem onClick={handleDownload}>{t.chrome.downloadFromBrowser}</MenuItem>
                         {downloadCommand && downloadCommandText && (
@@ -2115,13 +2142,28 @@ export default function FileExplorer({
         description={t.confirmUpload.text(pendingUpload?.targetPath || t.confirmUpload.defaultPath)}
         confirmLabel={t.confirmUpload.confirm}
         onConfirm={handleUpload}
-        confirmDisabled={pendingUpload ? isUploadSizeExceeded(pendingUpload.totalSize) : false}
+        confirmDisabled={
+          pendingUpload
+            ? pendingUpload.uploadNodes.length === 0 ||
+              isUploadSizeExceeded(pendingUpload.totalSize)
+            : false
+        }
       >
         <div className="text-sm flex flex-col gap-2 mt-2 text-left">
           {/* An indented tree of folders and files, not a flat list. */}
           <div className="max-h-40 overflow-auto theme-muted-panel py-1 pl-3">
             {pendingUpload?.uploadNodes && renderUploadNodes(pendingUpload.uploadNodes)}
           </div>
+          {pendingUpload?.transferLimit !== undefined && pendingUpload.skipped.length > 0 && (
+            <Callout
+              tone="warning"
+              title={t.confirmUpload.skippedOverLimit(formatBytes(pendingUpload.transferLimit))}
+            >
+              <div className="max-h-24 overflow-auto">
+                {renderUploadNodes(pendingUpload.skipped)}
+              </div>
+            </Callout>
+          )}
           <div>
             <span className="font-semibold">{t.confirmUpload.target}</span>{' '}
             {pendingUpload?.targetPath || t.confirmUpload.noPath}

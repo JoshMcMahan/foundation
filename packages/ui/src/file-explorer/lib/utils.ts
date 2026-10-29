@@ -518,3 +518,13 @@ export function getUploadSessionETA(
     shouldUpdateETA: false,
   }
 }
+
+export function exceededTransferLimit(
+  node: TreeNode,
+  storage: TStorage | null | undefined,
+): number | undefined {
+  const limit = storage?.transferLimitBytes
+  return limit !== undefined && typeof node.size === 'number' && node.size > limit
+    ? limit
+    : undefined
+}

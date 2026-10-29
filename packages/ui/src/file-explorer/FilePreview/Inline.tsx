@@ -3,6 +3,7 @@ import { useStrings } from '../../components/Provider'
 import { formatBytes } from '../../format'
 import { ExpandIcon } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
+import { exceededTransferLimit } from '../lib/utils'
 import { getPreviewKind } from './previewType'
 import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
@@ -44,7 +45,9 @@ export function FilePreviewInline({
           urlLoading={loading}
           urlError={error}
           storage={storage}
-          onDownload={() => onDownload(node)}
+          onDownload={
+            exceededTransferLimit(node, storage) === undefined ? () => onDownload(node) : undefined
+          }
         />
       </div>
       <div className="flex shrink-0 items-center justify-between gap-3 border-t theme-border px-4 py-2.5">

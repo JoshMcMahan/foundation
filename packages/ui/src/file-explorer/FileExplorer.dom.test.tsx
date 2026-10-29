@@ -765,6 +765,50 @@ describe('FileExplorer write without delete', () => {
   })
 })
 
+describe('FileExplorer transfer limit', () => {
+  const capped = { ...storage, canUpload: true, transferLimitBytes: 1024 }
+
+  it('disables download for a file above the limit and names the limit', async () => {
+    const script = scriptedStorage({
+      ...PAGES,
+      'a/': [[file('a/small.txt', 1024), file('a/big.bin', 2048)]],
+    })
+    render(explorer(FOLDER_A, script, [capped]))
+    await act(async () => {})
+
+    fireEvent.contextMenu(await findTreeItem('big.bin'))
+    const download = await screen.findByRole('menuitem', { name: /^Download/ })
+    expect(download).toHaveAttribute('aria-disabled', 'true')
+    expect(download).toHaveAccessibleName(expect.stringContaining('1 KB'))
+
+    fireEvent.keyDown(download, { key: 'Escape' })
+    fireEvent.contextMenu(await findTreeItem('small.txt'))
+    expect(await screen.findByRole('menuitem', { name: 'Download' })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+  })
+
+  it('skips files above the limit from an upload and lists them', async () => {
+    const { container } = render(explorer(FOLDER_A, scriptedStorage(), [capped]))
+    await act(async () => {})
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, {
+      target: {
+        files: [new File(['x'.repeat(10)], 'ok.txt'), new File(['x'.repeat(2048)], 'huge.bin')],
+      },
+    })
+
+    const notice = await screen.findByText(/1 KB limit/)
+    const followsNotice = (node: Node) =>
+      notice.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING
+    expect(followsNotice(screen.getByText('huge.bin'))).toBeTruthy()
+    expect(followsNotice(screen.getByText('ok.txt'))).toBeFalsy()
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled()
+  })
+})
+
 describe('FileExplorer landmarks and names', () => {
   it("names the folder's trail and marks the open folder", async () => {
     await renderExplorer(FOLDER_A)

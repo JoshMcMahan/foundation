@@ -406,6 +406,7 @@ export interface UIStrings {
     messages: {
       noWriteAccess: string
       uploadsUnsupported: string
+      transferLimitExceeded: (limit: string) => string
       noFilesForDownload: string
       downloadLinkFailed: string
       fileLinkFailed: string
@@ -476,6 +477,7 @@ export interface UIStrings {
       sizeLimitTitle: string
       sizeLimitBody: (total: string, max: string) => string
       sizeLimitHint: string
+      skippedOverLimit: (limit: string) => string
     }
     confirmDelete: {
       title: string
@@ -1349,6 +1351,8 @@ const DEFAULTS: UIProviderValue = {
       messages: {
         noWriteAccess: 'You do not have write access to this storage.',
         uploadsUnsupported: 'Uploads are not supported for this storage.',
+        transferLimitExceeded: (limit: string) =>
+          `Larger than the ${limit} limit for one download or upload here.`,
         noFilesForDownload: 'No files selected for download.',
         downloadLinkFailed: 'Failed to generate download link',
         fileLinkFailed: 'Failed to generate file link',
@@ -1423,6 +1427,8 @@ const DEFAULTS: UIProviderValue = {
         sizeLimitBody: (total: string, max: string) =>
           `The total upload size (${total}) exceeds the maximum allowed limit of ${max}.`,
         sizeLimitHint: 'Please reduce the number of files or upload them in smaller batches.',
+        skippedOverLimit: (limit: string) =>
+          `Larger than the ${limit} limit for one upload here, so these are skipped:`,
       },
       confirmDelete: {
         title: 'Confirm delete',

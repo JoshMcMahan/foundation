@@ -30,6 +30,7 @@ export type TStorage = {
   canShare?: boolean | undefined
   canManageAccess?: boolean | undefined
   previewLimits?: Partial<PreviewLimits> | undefined
+  transferLimitBytes?: number | undefined
   rootPath?: string | undefined
 }
 

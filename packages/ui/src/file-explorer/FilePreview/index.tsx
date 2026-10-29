@@ -16,6 +16,7 @@ import {
   ZoomOutIcon,
 } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
+import { exceededTransferLimit } from '../lib/utils'
 import { getPreviewKind, type PreviewKind } from './previewType'
 import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
@@ -93,6 +94,7 @@ export function FilePreview({
   if (!node) {
     return null
   }
+  const transferLimit = exceededTransferLimit(node, storage)
 
   const kind = getPreviewKind(node)
   const showZoom = kind === 'image'
@@ -135,8 +137,13 @@ export function FilePreview({
         />
         <IconButton
           size="md"
-          label={common.download}
+          label={
+            transferLimit === undefined
+              ? common.download
+              : t.messages.transferLimitExceeded(formatBytes(transferLimit))
+          }
           icon={<DownloadIcon />}
+          disabled={transferLimit !== undefined}
           onClick={() => onDownload(node)}
         />
         <IconButton size="md" label={common.close} icon={<CloseIcon />} onClick={onClose} />
@@ -217,7 +224,7 @@ export function FilePreview({
         urlError={urlError}
         zoom={zoom}
         storage={storage}
-        onDownload={() => onDownload(node)}
+        onDownload={transferLimit === undefined ? () => onDownload(node) : undefined}
       />
     </div>
   )
