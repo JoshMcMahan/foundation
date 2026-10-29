@@ -77,6 +77,17 @@ describe('list search term chips', () => {
     expect(screen.queryByText('beta')).not.toBeInTheDocument()
   })
 
+  it('hands focus to the box when a chip goes', () => {
+    render(<Harness storageKey="test-list" />)
+    openSearch()
+    typeAndEnter('alpha')
+    const remove = screen.getByLabelText('Remove filter alpha')
+    remove.focus()
+    fireEvent.click(remove)
+    expect(screen.queryByLabelText('Remove filter alpha')).toBeNull()
+    expect(getInput()).toHaveFocus()
+  })
+
   it('clears all chips and closes with the clear button', () => {
     render(<Harness storageKey="test-list" />)
     openSearch()
@@ -122,10 +133,19 @@ describe('list search field', () => {
 })
 
 describe('list search shortcuts', () => {
-  it('opens on / and on ⌘F', () => {
+  it.each([
+    ['/', { key: '/' }],
+    ['⌘F', { key: 'f', metaKey: true }],
+  ])('opens on %s', (_, keys) => {
     render(<Harness />)
-    fireEvent.keyDown(document.body, { key: '/' })
+    fireEvent.keyDown(document.body, keys)
     expect(getInput()).toBeInTheDocument()
+  })
+
+  it('leaves / alone with a modifier, which is another shortcut', () => {
+    render(<Harness />)
+    fireEvent.keyDown(document.body, { key: '/', ctrlKey: true })
+    expect(screen.queryByPlaceholderText('Filter')).toBeNull()
   })
 
   it('leaves / alone while single-key shortcuts are off, and still opens on ⌘F', () => {

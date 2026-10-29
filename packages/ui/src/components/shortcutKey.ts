@@ -33,14 +33,21 @@ export function isTextEntryContext(target: EventTarget | null): boolean {
   return Boolean(el.closest?.(KEYS_ARE_INPUT))
 }
 
+/** The key, or none while UIProvider's `characterKeyShortcuts` is off and it is a character key,
+ *  which speech input can press. A named key such as Escape isn't one, so it stays. */
+export function useOfferedShortcut(key: string | undefined): string | undefined {
+  const characterKeys = useCharacterKeyShortcuts()
+  return characterKeys || (key !== undefined && key.length > 1) ? key : undefined
+}
+
 /** Calls `onPress` on a single key, such as F to filter, unless the key goes to a text field or
- *  UIProvider's `characterKeyShortcuts` is off. */
-export function useShortcutKey(key: string | undefined, onPress: () => void) {
+ *  `useOfferedShortcut` drops it. */
+export function useShortcutKey(shortcut: string | undefined, onPress: () => void) {
   const press = useRef(onPress)
   press.current = onPress
-  const on = useCharacterKeyShortcuts()
+  const key = useOfferedShortcut(shortcut)
   useEffect(() => {
-    if (!key || !on) {
+    if (!key) {
       return
     }
     const onKey = (e: KeyboardEvent) => {
@@ -60,5 +67,5 @@ export function useShortcutKey(key: string | undefined, onPress: () => void) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [key, on])
+  }, [key])
 }

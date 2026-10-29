@@ -3,8 +3,7 @@ import { cx } from '../cx'
 import { AppLink, type AppLinkProps } from './AppLink'
 import { type ButtonSize, type ButtonVariant, buttonClasses } from './buttonClasses'
 import { ariaKeyShortcuts } from './Kbd'
-import { useCharacterKeyShortcuts } from './Provider'
-import { useShortcutKey } from './shortcutKey'
+import { useOfferedShortcut, useShortcutKey } from './shortcutKey'
 import { Tooltip } from './Tooltip'
 
 interface IconButtonOwnProps {
@@ -46,8 +45,7 @@ export function IconButton({
   ref,
   ...props
 }: IconButtonProps) {
-  // With single-key shortcuts off, the key is neither pressed nor offered.
-  const shortcut = useCharacterKeyShortcuts() ? givenShortcut : undefined
+  const shortcut = useOfferedShortcut(givenShortcut)
   const button = useRef<HTMLElement | null>(null)
   const setButton = useCallback(
     (node: HTMLButtonElement & HTMLAnchorElement) => {

@@ -59,14 +59,31 @@ describe('useShortcutKey', () => {
 
   it('stays quiet while UIProvider turns single-key shortcuts off', () => {
     const onPress = vi.fn()
+    const onClick = vi.fn()
     render(
       <UIProvider characterKeyShortcuts={false}>
         <Page onPress={onPress} />
-        <IconButton icon={null} label="Filter" shortcut="f" />
+        <IconButton icon={null} label="Filter" shortcut="f" onClick={onClick} />
       </UIProvider>,
     )
     fireEvent.keyDown(document.body, { key: 'f' })
     expect(onPress).not.toHaveBeenCalled()
+    expect(onClick).not.toHaveBeenCalled()
     expect(document.querySelector('[aria-label="Filter"]')).not.toHaveAttribute('aria-keyshortcuts')
+  })
+
+  it('keeps a named key, such as Escape, while single-key shortcuts are off', () => {
+    const onPress = vi.fn()
+    function Escape() {
+      useShortcutKey('Escape', onPress)
+      return null
+    }
+    render(
+      <UIProvider characterKeyShortcuts={false}>
+        <Escape />
+      </UIProvider>,
+    )
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(onPress).toHaveBeenCalledTimes(1)
   })
 })
