@@ -28,13 +28,16 @@ function Demo(args: AppFrameProps) {
     <AppFrame
       {...args}
       navigationKey={active}
-      brand={({ expanded }) => (
-        <strong
-          style={{ display: 'block', padding: '6px 0', textAlign: expanded ? 'start' : 'center' }}
-        >
-          {expanded ? 'Workspace' : 'W'}
-        </strong>
-      )}
+      brand={
+        args.brand ??
+        (({ expanded }) => (
+          <strong
+            style={{ display: 'block', padding: '6px 0', textAlign: expanded ? 'start' : 'center' }}
+          >
+            {expanded ? 'Workspace' : 'W'}
+          </strong>
+        ))
+      }
       navigation={
         <nav aria-label="Main navigation">
           {[
@@ -350,6 +353,26 @@ export const MobileOpen: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Open navigation' }))
     await expect(canvas.getByRole('dialog', { name: 'Main navigation' })).toBeVisible()
+  },
+}
+/** A brand that links home, as most apps' does, shows its whole focus ring in the drawer. */
+export const MobileBrandLink: Story = {
+  ...Mobile,
+  args: {
+    ...Mobile.args,
+    brand: (
+      <a href="#home" style={{ display: 'block', padding: '6px 0', fontWeight: 600 }}>
+        Workspace
+      </a>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Open navigation' }))
+    const drawer = canvas.getByRole('dialog', { name: 'Main navigation' })
+    await expect(drawer).toBeVisible()
+    await userEvent.tab()
+    await expect(within(drawer).getByRole('link', { name: 'Workspace' })).toHaveFocus()
   },
 }
 export const MobileBanner: Story = {
