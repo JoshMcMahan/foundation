@@ -92,6 +92,7 @@ const preview: Preview = {
     mode: 'preset',
   },
   parameters: {
+    docs: { codePanel: true },
     controls: { expanded: true },
     options: { storySort: { order: ['Introduction', 'UI', 'Chat'] } },
   },
