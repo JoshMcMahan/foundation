@@ -5,7 +5,7 @@ packages that several applications use the same way.
 
 | Package | What it is |
 | --- | --- |
-| [`logctx`](logctx) (Go) | Carries a structured logger through a context, preserving its handler and attributes |
+| [`logctx`](logctx) (Go) | Carries and enriches a structured logger through a context, preserving its handler and parent scope |
 | [`problem`](problem) (Go) | RFC 9457 problem details with stable, localizable codes, and the pages their type URIs resolve to |
 | [`problem/humaproblem`](problem/humaproblem) (Go) | Makes [huma](https://huma.rocks) produce problems, including for request validation |
 | [`problem/problemtest`](problem/problemtest) (Go) | Checks that a web app's catalog has a message for every code |

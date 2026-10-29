@@ -20,3 +20,19 @@ func FromContext(ctx context.Context) *slog.Logger {
 	}
 	return slog.Default()
 }
+
+// With enriches a child context's logger while preserving the parent's logger.
+func With(ctx context.Context, args ...any) context.Context {
+	if len(args) == 0 {
+		return ctx
+	}
+	return WithContext(ctx, FromContext(ctx).With(args...))
+}
+
+// WithGroup groups subsequent attributes without regrouping existing ones.
+func WithGroup(ctx context.Context, name string) context.Context {
+	if name == "" {
+		return ctx
+	}
+	return WithContext(ctx, FromContext(ctx).WithGroup(name))
+}
