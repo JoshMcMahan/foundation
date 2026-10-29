@@ -4,7 +4,7 @@ Biome rules for React apps localized with `use-intl`: text a person reads comes 
 
 - `ui-text.json` (`@parallelworks/lint/biome`): turns on Biome's [`style/noJsxLiterals`](https://biomejs.dev/linter/rules/no-jsx-literals/) as an error, allowing separators such as `·`, `/`, `—` and `→`, the dotted ellipses `···` and `⋯`, and their HTML entities. It catches JSX text: `<p>Hello</p>`.
 - `ui-text.grit`: a Biome plugin for what that rule leaves out:
-  - string children in braces: `{'Hello'}`, `` {`Welcome ${name}`} ``
+  - string children in braces: `{'Hello'}`, ``{`Welcome ${name}`}``
   - display props: `label`, `title`, `placeholder`, `alt`, `tooltip`, `description`, `text`, `message`, `hint`, the `aria-*` text attributes, and any prop named for what it shows, such as `submitLabel`, `emptyText`, `errorMessage` or `namePlaceholder` (example placeholders such as `https://example.com` or `localhost` are fine)
   - display properties of objects, as in column, option and form definitions: `{ label: 'Name' }`, `{ header: 'Status' }`, `{ description: '...' }` (CSS class strings such as `'mb-1 flex'` and sample values such as `'1Gi'` or `'user@example.com'` are fine)
   - toasts: `toast('Saved')`, `toast.success(...)`, `.info`, `.warning`, `.error`, `.loading`
@@ -29,8 +29,12 @@ Biome resolves a plugin's path from the config that lists it, so the app names t
 Text that must stay as is, such as a product name or a code sample, takes Biome's own suppression with a reason:
 
 ```tsx
-{/* biome-ignore lint/style/noJsxLiterals: product name */}
-<span>ACTIVATE Platform</span>
-{/* biome-ignore lint/plugin: product name */}
-<Logo alt='ACTIVATE Platform' />
+{
+  /* biome-ignore lint/style/noJsxLiterals: product name */
+}
+;<span>ACTIVATE Platform</span>
+{
+  /* biome-ignore lint/plugin: product name */
+}
+;<Logo alt="ACTIVATE Platform" />
 ```

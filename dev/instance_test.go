@@ -156,7 +156,10 @@ func TestDevStopsWhenItsCheckoutIsDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	select {
-	case <-done:
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("dev kept running after its checkout was deleted")
 	}

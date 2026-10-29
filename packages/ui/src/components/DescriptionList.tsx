@@ -272,7 +272,7 @@ function CopyValue({
   const button = useRef<HTMLButtonElement>(null)
   const shown = () => {
     const value = button.current?.closest('dd')?.querySelector<HTMLElement>('[data-value]')
-    // innerText keeps the line breaks the reader sees between lines of a value.
+    // biome-ignore lint/performance/useDomNodeTextContent: copying preserves the rendered line breaks
     return value?.innerText ?? value?.textContent ?? ''
   }
   return (

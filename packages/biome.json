@@ -7,7 +7,7 @@
     "root": ".."
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/lint/fixtures"]
+    "includes": ["**", "!**/dist", "!**/lint/fixtures", "!**/CHANGELOG.md", "!pnpm-lock.yaml"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -32,7 +32,9 @@
       "a11y": {
         "noLabelWithoutControl": {
           "level": "error",
-          "options": { "inputComponents": ["Checkbox", "Radio", "Switch"] }
+          "options": {
+            "inputComponents": ["Checkbox", "Radio", "Switch"]
+          }
         }
       }
     }
@@ -47,6 +49,16 @@
           },
           "suspicious": {
             "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.tsx", "**/*.stories.tsx", "ui/src/ai/stories/**", "ui/src/test/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }

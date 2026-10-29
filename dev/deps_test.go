@@ -40,7 +40,12 @@ func TestServicesWaitForWhatTheyDependOn(t *testing.T) {
 	done := make(chan error, 1)
 	// Naming web alone brings db, which it depends on.
 	go func() { done <- s.run(ctx, "web") }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 
 	eventually(t, "web to wait for db", func() bool { return stateOf(s.statuses(), "web") == stateWaiting })
 	time.Sleep(300 * time.Millisecond)
@@ -164,7 +169,12 @@ func TestServicesWaitForOneThatRunsOnceToFinish(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- s.run(ctx, "web") }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 
 	eventually(t, "seed to fail and retry", func() bool { return stateOf(s.statuses(), "seed") == stateExited })
 	if stateOf(s.statuses(), "web") != stateWaiting {

@@ -6,7 +6,7 @@ import { Avatar } from './Avatar'
 import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
 import { Combobox, type ComboboxItem } from './Combobox'
-import { DatePicker } from './DatePicker'
+import { Calendar, DatePicker } from './DatePicker'
 import { Field } from './Field'
 import { fieldBox } from './fieldBox'
 import { Textarea, TitleInput } from './Input'
@@ -453,6 +453,26 @@ export const DateChip: StoryObj = {
     await userEvent.clear(box)
     await userEvent.type(box, `${thisYear + 1}-02-03{Enter}`)
     await waitFor(() => expect(screen.queryByRole('grid')).not.toBeInTheDocument())
+  },
+}
+
+function CalendarNavigationDemo() {
+  const [day, setDay] = useState<Date | undefined>(new Date(2026, 9, 15))
+  return <Calendar mode="single" selected={day} onSelect={setDay} />
+}
+
+/** The same navigation icons serve a standalone month and the date field's popup. */
+export const CalendarNavigation: StoryObj = {
+  render: () => <CalendarNavigationDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const next = canvas.getByRole('button', { name: 'Next month' })
+    const icon = next.querySelector('svg')
+    await userEvent.click(next)
+    await expect(canvas.getByRole('grid')).toHaveAccessibleName('November 2026')
+    await expect(next.querySelector('svg')).toBe(icon)
+    await userEvent.click(canvas.getByRole('button', { name: 'Previous month' }))
+    await expect(canvas.getByRole('grid')).toHaveAccessibleName('October 2026')
   },
 }
 

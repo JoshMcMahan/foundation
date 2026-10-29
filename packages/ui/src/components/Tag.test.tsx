@@ -6,7 +6,9 @@ import { normalizeTags, Tag, TagList } from './Tag'
 describe('Tag', () => {
   it('shows a color dot, hidden from screen readers', () => {
     const { container } = render(<Tag color="#e5484d">bug</Tag>)
-    expect(container.querySelector('[aria-hidden="true"]')).toHaveStyle({ background: '#e5484d' })
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveStyle({
+      backgroundColor: '#e5484d',
+    })
     expect(screen.getByText('bug')).toBeInTheDocument()
   })
 

@@ -29,6 +29,7 @@ import type { IconProps, IconType } from './icons'
 
 /** A one-color logo in the text's color, at the text's size. */
 function brand(viewBox: string, ...paths: string[]): IconType {
+  // biome-ignore lint/correctness/noComponentHookFactories: the factory runs at module initialization, preserving component identity
   function Icon({
     title,
     size = '1em',

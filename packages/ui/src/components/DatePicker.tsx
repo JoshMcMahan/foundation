@@ -49,6 +49,16 @@ export interface DatePickerProps {
   align?: 'start' | 'end' | undefined
 }
 
+function CalendarChevron({ orientation }: { orientation?: string | undefined }) {
+  return orientation === 'left' ? (
+    <ChevronLeftIcon aria-hidden="true" />
+  ) : (
+    <ChevronRightIcon aria-hidden="true" />
+  )
+}
+
+const calendarComponents = { Chevron: CalendarChevron }
+
 const pad = (n: number) => String(n).padStart(2, '0')
 const toDay = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
@@ -313,14 +323,7 @@ export function DatePicker({
                 labelGrid: (month) => caption.format(month),
                 labelWeekday: (date) => longWeekday.format(date),
               }}
-              components={{
-                Chevron: ({ orientation }) =>
-                  orientation === 'left' ? (
-                    <ChevronLeftIcon aria-hidden="true" />
-                  ) : (
-                    <ChevronRightIcon aria-hidden="true" />
-                  ),
-              }}
+              components={calendarComponents}
             />
             {!required && day && (
               <div className="flex justify-end border-t border-(--theme-border) px-3 py-2">
@@ -443,14 +446,7 @@ export function Calendar({ min, max, defaultMonth, autoFocus = false, ...props }
         labelGrid: (month) => caption.format(month),
         labelWeekday: (date) => longWeekday.format(date),
       }}
-      components={{
-        Chevron: ({ orientation }) =>
-          orientation === 'left' ? (
-            <ChevronLeftIcon aria-hidden="true" />
-          ) : (
-            <ChevronRightIcon aria-hidden="true" />
-          ),
-      }}
+      components={calendarComponents}
     />
   )
 }

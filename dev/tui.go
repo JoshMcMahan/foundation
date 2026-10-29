@@ -70,8 +70,7 @@ func runTUI(ctx context.Context, cfg Config, names []string, ext extension) erro
 	}()
 	if _, err := p.Run(); err != nil {
 		cancel()
-		<-runErr
-		return err
+		return errors.Join(err, <-runErr)
 	}
 	return m.err
 }

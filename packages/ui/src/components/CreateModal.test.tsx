@@ -304,7 +304,7 @@ describe('CreateModal fields with help', () => {
   })
 })
 
-describe('CreateModal name', () => {
+describe('CreateModal multiline name', () => {
   it('wraps a long name as one value: a pasted line break joins the lines, Enter submits', async () => {
     const onSubmit = vi.fn(() => Promise.resolve(true))
     render(

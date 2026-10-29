@@ -94,16 +94,16 @@ try {
         type: 'module',
         dependencies: {
           '@parallelworks/ui': `file:./${tarball}`,
-          'react-hook-form': '7.90.0',
-          react: '19.2.8',
-          'react-dom': '19.2.8',
+          'react-hook-form': '7.91.0',
+          react: '19.3.1',
+          'react-dom': '19.3.1',
           // Matches the compiler the repo builds with, so the consumer check
-          // exercises the same resolution behaviour as our own type checks.
+          // exercises the same resolution behavior as our own type checks.
           typescript: '7.0.2',
           // React is a peer dependency, so a TypeScript consumer brings its own
           // React types — the package must not pin them for them.
-          '@types/react': '19.2.17',
-          '@types/react-dom': '19.2.3',
+          '@types/react': '19.3.0',
+          '@types/react-dom': '19.3.0',
           // Optional peer: installed in the fixture so the editor entrypoint
           // type-resolves; consumers without it simply skip that subpath.
           'monaco-editor': MONACO_EDITOR_VERSION,

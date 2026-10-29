@@ -211,6 +211,7 @@ export function TreeView({
       // The tree view pattern's keys: Up and Down step, Right enters an open
       // folder, Left goes to the parent, Home and End jump to the ends. Rows
       // toggle open and closed in dispatchRowKey before anything lands here.
+      // biome-ignore-start lint/correctness/noComponentHookFactories: these key handlers return data, not React components
       const pick: Partial<Record<string, (index: number) => TreeRow | undefined>> = {
         ArrowDown: (i) => stepRow(rows, i, 1),
         ArrowUp: (i) => stepRow(rows, i, -1),
@@ -219,6 +220,7 @@ export function TreeView({
         Home: () => edgeRow(rows, 'first'),
         End: () => edgeRow(rows, 'last'),
       }
+      // biome-ignore-end lint/correctness/noComponentHookFactories: these key handlers return data, not React components
       const target = pick[e.key]
       if (target) {
         e.preventDefault()

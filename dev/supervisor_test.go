@@ -52,7 +52,12 @@ func TestControlDrivesARunningDev(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- Up(ctx, cfg, slog.New(slog.DiscardHandler), io.Discard) }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 
 	status := func() []status {
 		t.Helper()
@@ -125,7 +130,12 @@ func TestTUIKeysDriveServices(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- s.run(ctx) }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 	eventually(t, "web to run", func() bool { return stateOf(s.statuses(), "web") == stateRunning })
 
 	m := &model{sup: s, ctx: ctx, cancel: cancel, name: "shop"}
@@ -226,7 +236,12 @@ func TestServicesLearnWhereToOpenThem(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- s.run(ctx) }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 
 	urlOf := func(name string) string {
 		for _, st := range s.statuses() {
@@ -268,7 +283,12 @@ func TestViewShowsStartupProgress(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- s.run(ctx) }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 
 	m := &model{sup: s, ctx: ctx, cancel: cancel}
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 12})

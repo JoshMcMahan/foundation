@@ -68,7 +68,10 @@ func TestViewAttachesToARunningDev(t *testing.T) {
 		cmd()
 	}
 	select {
-	case <-done:
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
 	case <-time.After(30 * time.Second):
 		t.Fatal("Q did not stop dev")
 	}

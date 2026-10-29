@@ -35,7 +35,12 @@ func TestARunningDevSwitchesProfiles(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- Up(ctx, cfg, slog.New(slog.DiscardHandler), io.Discard) }()
-	t.Cleanup(func() { cancel(); <-done })
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	})
 	eventually(t, "x on profile a", func() bool {
 		s, err := control(t.Context(), cfg, controlRequest{Command: "status"})
 		return err == nil && stateOf(s, "x") == stateRunning

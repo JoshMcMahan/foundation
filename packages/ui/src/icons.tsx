@@ -20,6 +20,7 @@ const STROKE_WIDTH = 1.5
 /** A glyph drawn as one path on the 16px grid, in the text's size and color by
  *  default, so a class such as `size-4` or a parent's font size sets it. */
 function drawn(d: string, defaults?: IconProps): IconType {
+  // biome-ignore lint/correctness/noComponentHookFactories: the factory runs at module initialization, preserving component identity
   function Icon({
     title,
     children,
@@ -877,6 +878,7 @@ function StatusSvg({
 /** A solid `shape` with `mark` cut out of it. The mask's id is the instance's own, so two on a
  *  page never borrow each other's. */
 function knockedOut(shape: string, mark: string): IconType {
+  // biome-ignore lint/correctness/noComponentHookFactories: the factory runs at module initialization, preserving component identity
   function Icon({ children, color = 'currentColor', ...props }: IconProps) {
     const id = `status-mask-${useId().replace(/[^\w-]/g, '')}`
     return (

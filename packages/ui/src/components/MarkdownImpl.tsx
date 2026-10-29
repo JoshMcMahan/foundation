@@ -152,6 +152,7 @@ function textOf(children: unknown): string {
 // inline code and diagrams stay the renderer's own. Until the diagram plugin
 // has loaded, a diagram's fence shows as its code.
 function makeCode(controls: CodeControls, diagrams: boolean) {
+  // biome-ignore lint/correctness/noComponentHookFactories: memoized by the renderer for its configuration
   return function MarkdownCode(props: CodeProps) {
     const incomplete = useIsCodeFenceIncomplete()
     const language = props.className?.match(LANGUAGE)?.[1] ?? ''
@@ -171,6 +172,7 @@ function makeCode(controls: CodeControls, diagrams: boolean) {
           controls.download === null ? undefined : `${controls.download}.${extensionFor(language)}`
         }
         lineNumbers={NO_LINE_NUMBERS.test(metastring) ? false : undefined}
+        // biome-ignore lint/complexity/useMathMinMax: missing metadata parses as NaN and must fall back to 1
         startLine={start >= 1 ? start : 1}
         maxHeight={400}
         streaming={incomplete}
