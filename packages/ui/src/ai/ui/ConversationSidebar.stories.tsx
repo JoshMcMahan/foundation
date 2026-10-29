@@ -173,45 +173,36 @@ export const RailLinks: StoryObj<{ collapsed: boolean; fill: boolean; links: boo
   },
 }
 
+type InDrawerStoryArgs = { open: boolean }
+
+function InDrawerExample(args: InDrawerStoryArgs) {
+  const [open, setOpen] = useState(args.open)
+  return (
+    <div
+      style={{ position: 'relative', overflow: 'hidden', width: 390, height: '100dvh' }}
+      className="bg-(--theme-panel-bg)"
+    >
+      <div className="p-2">
+        <SidebarToggle
+          collapsed={!open}
+          onToggle={() => setOpen(!open)}
+          openLabel="Open sidebar"
+          closeLabel="Close sidebar"
+        />
+      </div>
+      <Drawer {...sidebarDrawerProps} open={open} onClose={() => setOpen(false)} aria-label="Tasks">
+        <TaskSidebar tasks={TASKS} startCollapsed={false} fill onToggle={() => setOpen(false)} />
+      </Drawer>
+    </div>
+  )
+}
+
 // A host composing its own list puts it in a Drawer with sidebarDrawerProps on a
 // narrow screen: the drawer covers its positioned container, a tap outside,
 // Escape or a swipe to the left closes it, and the list fills it.
-export const InDrawer: StoryObj<{ open: boolean }> = {
+export const InDrawer: StoryObj<InDrawerStoryArgs> = {
   args: { open: true },
-  render: (args) => {
-    const Phone = () => {
-      const [open, setOpen] = useState(args.open)
-      return (
-        <div
-          style={{ position: 'relative', overflow: 'hidden', width: 390, height: '100dvh' }}
-          className="bg-(--theme-panel-bg)"
-        >
-          <div className="p-2">
-            <SidebarToggle
-              collapsed={!open}
-              onToggle={() => setOpen(!open)}
-              openLabel="Open sidebar"
-              closeLabel="Close sidebar"
-            />
-          </div>
-          <Drawer
-            {...sidebarDrawerProps}
-            open={open}
-            onClose={() => setOpen(false)}
-            aria-label="Tasks"
-          >
-            <TaskSidebar
-              tasks={TASKS}
-              startCollapsed={false}
-              fill
-              onToggle={() => setOpen(false)}
-            />
-          </Drawer>
-        </div>
-      )
-    }
-    return <Phone key={String(args.open)} />
-  },
+  render: (args) => <InDrawerExample {...args} key={String(args.open)} />,
 }
 
 export const Rail: StoryObj = {

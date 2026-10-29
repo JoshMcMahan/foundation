@@ -32,10 +32,49 @@ function useStoryAdapter() {
   return useMemo(() => makeStaticAdapter({ summaries: makeSummaries({ count: 12 }) }), [])
 }
 
+type InlineStoryArgs = { sidebar: 'reader' | SidebarState }
+
+function InlineExample(args: InlineStoryArgs) {
+  const adapter = useStoryAdapter()
+  const [sidebar, setSidebar] = useState<SidebarState>(
+    args.sidebar === 'reader' ? 'expanded' : args.sidebar,
+  )
+  const control = args.sidebar === 'reader' ? undefined : { sidebar, onSidebarChange: setSidebar }
+  return (
+    <StoryChat adapter={adapter} conversationId="conv-1" sidebarControl={control}>
+      <Frame>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {control && (
+            <div className="flex items-center gap-2 border-b theme-border px-3 py-2 text-sm">
+              <span className="theme-muted-text">Host header</span>
+              {(['expanded', 'collapsed', 'hidden'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSidebar(s)}
+                  className="rounded border theme-border px-2 py-0.5"
+                  aria-pressed={sidebar === s}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <ChatLayout>
+              <ChatEmptyState />
+            </ChatLayout>
+          </div>
+        </div>
+      </Frame>
+    </StoryChat>
+  )
+}
+
 // The column beside the thread. 'reader' leaves the state to the reader's
 // toggle; any other value is a host that owns it, and a host that hides the
 // list brings it back from its own header.
-export const Inline: StoryObj<{ sidebar: 'reader' | SidebarState }> = {
+export const Inline: StoryObj<InlineStoryArgs> = {
   args: { sidebar: 'reader' },
   argTypes: {
     sidebar: {
@@ -44,52 +83,39 @@ export const Inline: StoryObj<{ sidebar: 'reader' | SidebarState }> = {
       description: 'ChatProvider `sidebar`: who owns the state, and what the host set',
     },
   },
-  render: (args) => {
-    const Host = () => {
-      const adapter = useStoryAdapter()
-      const [sidebar, setSidebar] = useState<SidebarState>(
-        args.sidebar === 'reader' ? 'expanded' : args.sidebar,
-      )
-      const control =
-        args.sidebar === 'reader' ? undefined : { sidebar, onSidebarChange: setSidebar }
-      return (
-        <StoryChat adapter={adapter} conversationId="conv-1" sidebarControl={control}>
-          <Frame>
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {control && (
-                <div className="flex items-center gap-2 border-b theme-border px-3 py-2 text-sm">
-                  <span className="theme-muted-text">Host header</span>
-                  {(['expanded', 'collapsed', 'hidden'] as const).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSidebar(s)}
-                      className="rounded border theme-border px-2 py-0.5"
-                      aria-pressed={sidebar === s}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div style={{ flex: 1, minHeight: 0 }}>
-                <ChatLayout>
-                  <ChatEmptyState />
-                </ChatLayout>
-              </div>
-            </div>
-          </Frame>
-        </StoryChat>
-      )
-    }
-    return <Host key={args.sidebar} />
-  },
+  render: (args) => <InlineExample {...args} key={args.sidebar} />,
+}
+
+type DrawerStoryArgs = { drawerOpen: boolean; drawerToggle: boolean }
+
+function DrawerExample(args: DrawerStoryArgs) {
+  const adapter = useStoryAdapter()
+  const [drawerOpen, setDrawerOpen] = useState(args.drawerOpen)
+  const [side, setSide] = useState<Side>('chats')
+  return (
+    <StoryChat
+      adapter={adapter}
+      conversationId="conv-1"
+      sidebarControl={{ drawerOpen, onDrawerOpenChange: setDrawerOpen }}
+    >
+      <Frame width={390}>
+        <ChatLayout
+          sidebarMode="drawer"
+          drawerToggle={args.drawerToggle}
+          sidebarTop={() => <StorySwitch form="list" side={side} onSide={setSide} />}
+          drawerBar={<StorySwitch form="bar" side={side} onSide={setSide} />}
+        >
+          <ChatEmptyState />
+        </ChatLayout>
+      </Frame>
+    </StoryChat>
+  )
 }
 
 // A phone: the thread takes the full width and the list opens over it from
 // the toggle. A tap outside, Escape or picking a conversation closes it. The
 // host's switch between lists stays beside the toggle while the drawer is shut.
-export const Drawer: StoryObj<{ drawerOpen: boolean; drawerToggle: boolean }> = {
+export const Drawer: StoryObj<DrawerStoryArgs> = {
   args: { drawerOpen: true, drawerToggle: true },
   argTypes: {
     drawerOpen: { control: 'boolean', description: 'Open on first render' },
@@ -98,58 +124,34 @@ export const Drawer: StoryObj<{ drawerOpen: boolean; drawerToggle: boolean }> = 
       description: 'ChatLayout `drawerToggle`: false when the host header opens the drawer',
     },
   },
-  render: (args) => {
-    const Phone = () => {
-      const adapter = useStoryAdapter()
-      const [drawerOpen, setDrawerOpen] = useState(args.drawerOpen)
-      const [side, setSide] = useState<Side>('chats')
-      return (
-        <StoryChat
-          adapter={adapter}
-          conversationId="conv-1"
-          sidebarControl={{ drawerOpen, onDrawerOpenChange: setDrawerOpen }}
-        >
-          <Frame width={390}>
-            <ChatLayout
-              sidebarMode="drawer"
-              drawerToggle={args.drawerToggle}
-              sidebarTop={() => <StorySwitch form="list" side={side} onSide={setSide} />}
-              drawerBar={<StorySwitch form="bar" side={side} onSide={setSide} />}
-            >
-              <ChatEmptyState />
-            </ChatLayout>
-          </Frame>
-        </StoryChat>
-      )
-    }
-    return <Phone key={`${args.drawerOpen}-${args.drawerToggle}`} />
-  },
+  render: (args) => <DrawerExample {...args} key={`${args.drawerOpen}-${args.drawerToggle}`} />,
+}
+
+type AutoStoryArgs = { width: number; drawerBelowPx: number; sidebarMode: SidebarMode }
+
+function AutoExample(args: AutoStoryArgs) {
+  const adapter = useStoryAdapter()
+  return (
+    <StoryChat adapter={adapter} conversationId="conv-1">
+      <Frame width={args.width}>
+        <ChatLayout sidebarMode={args.sidebarMode} drawerBelowPx={args.drawerBelowPx}>
+          <ChatEmptyState />
+        </ChatLayout>
+      </Frame>
+    </StoryChat>
+  )
 }
 
 // 'auto' follows the width the chat is given, not the window's: narrow the
 // frame past drawerBelowPx and the column becomes a drawer.
-export const Auto: StoryObj<{ width: number; drawerBelowPx: number; sidebarMode: SidebarMode }> = {
+export const Auto: StoryObj<AutoStoryArgs> = {
   args: { width: 600, drawerBelowPx: DRAWER_BELOW_PX, sidebarMode: 'auto' },
   argTypes: {
     width: { control: { type: 'range', min: 320, max: 1440, step: 10 } },
     drawerBelowPx: { control: { type: 'range', min: 400, max: 1200, step: 10 } },
     sidebarMode: { control: 'inline-radio', options: ['inline', 'drawer', 'auto'] },
   },
-  render: (args) => {
-    const Sized = () => {
-      const adapter = useStoryAdapter()
-      return (
-        <StoryChat adapter={adapter} conversationId="conv-1">
-          <Frame width={args.width}>
-            <ChatLayout sidebarMode={args.sidebarMode} drawerBelowPx={args.drawerBelowPx}>
-              <ChatEmptyState />
-            </ChatLayout>
-          </Frame>
-        </StoryChat>
-      )
-    }
-    return <Sized />
-  },
+  render: (args) => <AutoExample {...args} />,
 }
 
 type Side = 'chats' | 'tasks'
@@ -210,28 +212,27 @@ function StorySwitch({
   )
 }
 
+function HostTopExample() {
+  const adapter = useStoryAdapter()
+  const [side, setSide] = useState<Side>('chats')
+  return (
+    <StoryChat adapter={adapter} conversationId="conv-1">
+      <Frame>
+        <ChatLayout
+          sidebarActions={false}
+          sidebarTop={({ collapsed }) => (
+            <StorySwitch form={collapsed ? 'rail' : 'list'} side={side} onSide={setSide} />
+          )}
+        >
+          <ChatEmptyState />
+        </ChatLayout>
+      </Frame>
+    </StoryChat>
+  )
+}
+
 // A host that lists more than chats puts its own switch above the list. It is
 // told when the list is the rail, so it can shrink to icons there.
 export const HostTop: StoryObj = {
-  render: () => {
-    const Host = () => {
-      const adapter = useStoryAdapter()
-      const [side, setSide] = useState<Side>('chats')
-      return (
-        <StoryChat adapter={adapter} conversationId="conv-1">
-          <Frame>
-            <ChatLayout
-              sidebarActions={false}
-              sidebarTop={({ collapsed }) => (
-                <StorySwitch form={collapsed ? 'rail' : 'list'} side={side} onSide={setSide} />
-              )}
-            >
-              <ChatEmptyState />
-            </ChatLayout>
-          </Frame>
-        </StoryChat>
-      )
-    }
-    return <Host />
-  },
+  render: () => <HostTopExample />,
 }

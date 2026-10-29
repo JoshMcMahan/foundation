@@ -1374,3 +1374,15 @@ When using `AppFrameNavItem`, also import
 `@parallelworks/ui/app-frame.css` import includes both stylesheets and continues
 to work without changes. Use either the combined import or the two separate
 imports; there is no need to load both forms.
+
+## Developing stories and tests
+
+Define story components at module scope and pass preview arguments as props.
+Update adapters and other memoized values through their hook dependencies.
+Use an explicit `key` only when a fixture intentionally needs a fresh start.
+
+The component-factory lint rule stays enabled for components, stories, and
+preview helpers. Tests may define a local fixture once for a render result;
+rerenders must reuse that same component type. Shared form test helpers suppress
+only those fixture declarations. Module-initialized icon factories and copying
+rendered text retain their documented exceptions.

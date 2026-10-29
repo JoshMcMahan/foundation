@@ -31,6 +31,57 @@ describe('Markdown mermaid', () => {
       expect(container.querySelector('[data-streamdown="mermaid-block"]')).toBeInTheDocument(),
     )
   })
+
+  it('keeps an existing code block mounted when a diagram arrives', async () => {
+    const code = '```javascript\nconst value = 1\n```'
+    const { container, rerender } = render(<Markdown>{code}</Markdown>)
+    await waitFor(() => expect(container.querySelector('[data-code-block]')).not.toBeNull())
+    const block = container.querySelector('[data-code-block]')
+
+    rerender(<Markdown>{`${code}\n\n${chart}`}</Markdown>)
+    await waitFor(() =>
+      expect(container.querySelector('[data-streamdown="mermaid-block"]')).toBeInTheDocument(),
+    )
+    expect(container.querySelector('[data-code-block]')).toBe(block)
+  })
+})
+
+describe('Markdown renderer identity', () => {
+  it('preserves code scrolling and link focus when controls change', async () => {
+    const text = '[Documentation](https://example.com/docs)\n\n```javascript\nconst value = 1\n```'
+    const { container, rerender } = render(<Markdown>{text}</Markdown>)
+    const link = await screen.findByRole('link', { name: /Documentation/ })
+    await waitFor(() => expect(container.querySelector('[data-code-block]')).not.toBeNull())
+    const block = container.querySelector('[data-code-block]')!
+    const scroll = block.querySelector('pre')!.parentElement!
+    scroll.scrollTop = 120
+    link.focus()
+
+    rerender(<Markdown controls={false}>{text}</Markdown>)
+
+    expect(container.querySelector('[data-code-block]')).toBe(block)
+    expect(block.querySelector('pre')!.parentElement).toBe(scroll)
+    expect(scroll.scrollTop).toBe(120)
+    expect(screen.getByRole('link', { name: /Documentation/ })).toBe(link)
+    expect(link).toHaveFocus()
+  })
+})
+
+describe('Markdown code line numbers', () => {
+  it.each([
+    ['', 1],
+    ['startLine=0', 1],
+    ['startLine=7', 7],
+    ['startLine=invalid', 1],
+  ] as const)('starts a fence with metadata %j at line %i', async (metadata, first) => {
+    const { container } = render(
+      <Markdown>{`\`\`\`javascript ${metadata}\nconst value = 1\nconst next = 2\n\`\`\``}</Markdown>,
+    )
+    await waitFor(() => expect(container.querySelector('[data-code-block] code')).not.toBeNull())
+    expect(container.querySelector('[data-code-block] code')).toHaveStyle({
+      counterReset: `line ${first - 1}`,
+    })
+  })
 })
 
 describe('Markdown httpsImagesOnly', () => {

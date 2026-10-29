@@ -1,9 +1,9 @@
 // Parameterized mock builders for the Storybook workshop. Every story drives
 // these through Storybook args so polish work can be exercised against any
 // state without a backend; new features add a factory (or a factory knob)
-// here and a story that calls it. See ../../.storybook/CONTRIBUTING.md.
+// here and a story that calls it. See ../../../README.md#developing-stories-and-tests.
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ChatAdapter, ChatToolOption, StreamHandlers } from '../adapter/types'
 import type { ComposerPastes, PasteUploadResult } from '../components/usePasteCards'
 import { ChatProvider, type ChatProviderProps } from '../core/ChatProvider'
@@ -861,35 +861,36 @@ export function pasteIntoComposer(canvasElement: HTMLElement, text: string) {
 
 // ---- Provider harness ------------------------------------------------------
 
+const StoryNavigationContext = createContext<((id: string | null) => void) | undefined>(undefined)
+
 /** A chat link that stays inside Storybook; external targets open in a new tab. */
-function storyChatLink(onNavigate?: (id: string | null) => void) {
-  return function StoryChatLink({ target, className, title, onClick, children }: ChatLinkProps) {
-    if (target.kind === 'external') {
-      return (
-        <a href={target.href} target="_blank" rel="noreferrer" className={className} title={title}>
-          {children}
-        </a>
-      )
-    }
+function StoryChatLink({ target, className, title, onClick, children }: ChatLinkProps) {
+  const onNavigate = useContext(StoryNavigationContext)
+  if (target.kind === 'external') {
     return (
-      <a
-        href={target.kind === 'conversation' ? `#${target.id}` : `#${target.kind}`}
-        className={className}
-        title={title}
-        onClick={(e) => {
-          e.preventDefault()
-          onClick?.(e)
-          if (target.kind === 'conversation') {
-            onNavigate?.(target.id)
-          } else if (target.kind === 'newChat') {
-            onNavigate?.(null)
-          }
-        }}
-      >
+      <a href={target.href} target="_blank" rel="noreferrer" className={className} title={title}>
         {children}
       </a>
     )
   }
+  return (
+    <a
+      href={target.kind === 'conversation' ? `#${target.id}` : `#${target.kind}`}
+      className={className}
+      title={title}
+      onClick={(e) => {
+        e.preventDefault()
+        onClick?.(e)
+        if (target.kind === 'conversation') {
+          onNavigate?.(target.id)
+        } else if (target.kind === 'newChat') {
+          onNavigate?.(null)
+        }
+      }}
+    >
+      {children}
+    </a>
+  )
 }
 
 const noopNavigation = {
@@ -923,10 +924,7 @@ export function StoryChat({
   children: ReactNode
 }) {
   const resolved = useMemo(() => adapter ?? makeStaticAdapter(), [adapter])
-  const resolvedConfig = useMemo(
-    () => ({ LinkComponent: storyChatLink(onNavigate), ...config }),
-    [config, onNavigate],
-  )
+  const resolvedConfig = useMemo(() => ({ LinkComponent: StoryChatLink, ...config }), [config])
   const navigation = useMemo(
     () =>
       onNavigate
@@ -938,16 +936,18 @@ export function StoryChat({
     [onNavigate],
   )
   return (
-    <ChatProvider
-      adapter={resolved}
-      currentUser={storyUser}
-      navigation={navigation}
-      activeConversationId={conversationId}
-      config={resolvedConfig}
-      {...sidebarControl}
-    >
-      {children}
-    </ChatProvider>
+    <StoryNavigationContext value={onNavigate}>
+      <ChatProvider
+        adapter={resolved}
+        currentUser={storyUser}
+        navigation={navigation}
+        activeConversationId={conversationId}
+        config={resolvedConfig}
+        {...sidebarControl}
+      >
+        {children}
+      </ChatProvider>
+    </StoryNavigationContext>
   )
 }
 

@@ -162,27 +162,26 @@ export const Narrow: StoryObj<Args> = {
   ),
 }
 
+function InAFieldExample(args: Args) {
+  const [value, setValue] = useState<Status[]>(['queued'])
+  return (
+    <div className="max-w-md">
+      <Field group label="Notify me about" description="Runs in any of these states.">
+        <ToggleGroup
+          options={STATUSES.map(({ count: _, ...option }) => option)}
+          value={value}
+          onValueChange={setValue}
+          size={args.size}
+          disabled={args.disabled}
+        />
+      </Field>
+    </div>
+  )
+}
+
 /** Inside a `Field group`, the legend names the options, so `label` is left out. */
 export const InAField: StoryObj<Args> = {
-  render: (args) => {
-    const Demo = () => {
-      const [value, setValue] = useState<Status[]>(['queued'])
-      return (
-        <div className="max-w-md">
-          <Field group label="Notify me about" description="Runs in any of these states.">
-            <ToggleGroup
-              options={STATUSES.map(({ count: _, ...option }) => option)}
-              value={value}
-              onValueChange={setValue}
-              size={args.size}
-              disabled={args.disabled}
-            />
-          </Field>
-        </div>
-      )
-    }
-    return <Demo />
-  },
+  render: (args) => <InAFieldExample {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('group', { name: 'Notify me about' })).toBeInTheDocument()

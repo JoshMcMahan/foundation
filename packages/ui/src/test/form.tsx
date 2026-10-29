@@ -10,6 +10,7 @@ export function renderInForm(
   values: FormValues = {},
 ): RenderResult & { form: UseFormReturn<FormValues> } {
   let form: UseFormReturn<FormValues> | undefined
+  // biome-ignore lint/correctness/noComponentHookFactories: created once for this render result, whose rerenders reuse it
   function Harness({ children }: { children: ReactNode }) {
     form = useForm<FormValues>({ defaultValues: values })
     return <FormProvider {...form}>{children}</FormProvider>
@@ -30,6 +31,7 @@ export function renderDynamicForm(ui: ReactElement<DynamicFormProps>): Omit<
   rerender: (next: ReactElement<DynamicFormProps>) => void
 } {
   let form: UseFormReturn<FormValues> | undefined
+  // biome-ignore lint/correctness/noComponentHookFactories: created once for this render result, whose rerenders reuse it
   function Host({ element }: { element: ReactElement<DynamicFormProps> }) {
     form = useForm<FormValues>()
     return cloneElement(element, { form })

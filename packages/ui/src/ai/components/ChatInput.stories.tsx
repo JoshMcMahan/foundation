@@ -66,29 +66,28 @@ export const Idle: StoryObj<{ disabled: boolean; placeholder: string }> = {
   ),
 }
 
+function ToolbarExample() {
+  const adapter = useMemo(() => makeStaticAdapter({ attachments: true }), [])
+  return (
+    <StoryChat adapter={adapter}>
+      <div>
+        <ChatInput
+          onSend={send}
+          conversationId="conv-toolbar"
+          settingsLeft={<ConnectToolsLink />}
+          settingsRight={<ComposerControls />}
+        />
+      </div>
+    </StoryChat>
+  )
+}
+
 // The box as a thread docks it: attach on the left of its toolbar, the model
 // and send on the right, and the surface's own links under it. The play opens
 // the attach tray inside the box.
 export const Toolbar: StoryObj<{ attachOpen: boolean }> = {
   args: { attachOpen: false },
-  render: () => {
-    const Composer = () => {
-      const adapter = useMemo(() => makeStaticAdapter({ attachments: true }), [])
-      return (
-        <StoryChat adapter={adapter}>
-          <div>
-            <ChatInput
-              onSend={send}
-              conversationId="conv-toolbar"
-              settingsLeft={<ConnectToolsLink />}
-              settingsRight={<ComposerControls />}
-            />
-          </div>
-        </StoryChat>
-      )
-    }
-    return <Composer />
-  },
+  render: () => <ToolbarExample />,
   play: async ({ canvasElement, args }) => {
     if (args.attachOpen) {
       canvasElement.querySelector<HTMLButtonElement>('button[aria-expanded]')?.click()
@@ -162,17 +161,55 @@ export const AgentComposer: StoryObj<{
   ),
 }
 
+type SharedProvidersStoryArgs = {
+  pickerOpen: boolean
+  listProviders: boolean
+  unreachable: boolean
+}
+
+function SharedProvidersExample(args: SharedProvidersStoryArgs) {
+  const adapter = useMemo(
+    () =>
+      makeStaticAdapter({
+        providers: [
+          { id: 'p-1', name: 'gateway', user: 'alice', cspKind: 'openai', status: 'active' },
+          { id: 'p-2', name: 'gateway', user: 'bob', cspKind: 'openai', status: 'active' },
+          { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
+        ],
+        listProviders: args.listProviders,
+        unreachableSessions: args.unreachable
+          ? [
+              { name: 'gpu-box', owner: 'alice' },
+              { name: 'build-01', owner: 'alice' },
+            ]
+          : [],
+        allocations: [
+          { name: 'research', total: 500, used: 123.4 },
+          { name: 'teaching', total: 100 },
+        ],
+      }),
+    [args.unreachable, args.listProviders],
+  )
+  return (
+    <StoryChat adapter={adapter}>
+      <div>
+        <ChatInput
+          onSend={send}
+          conversationId="conv-shared-providers"
+          settingsRight={<ComposerControls targetSession="alice:gpu-box" />}
+        />
+      </div>
+    </StoryChat>
+  )
+}
+
 // Alice's own provider and one Bob shared with her carry the same name; the
 // picker names Bob as the owner of his. The organization's provider has no
 // owner to name, and picking its model shows the allocation it bills. An
 // adapter that lists models only gets the same labels from each model's
 // owner. Sessions that did not answer head the list with their status. The
 // play opens the picker.
-export const SharedProviders: StoryObj<{
-  pickerOpen: boolean
-  listProviders: boolean
-  unreachable: boolean
-}> = {
+export const SharedProviders: StoryObj<SharedProvidersStoryArgs> = {
   args: { pickerOpen: true, listProviders: true, unreachable: true },
   argTypes: {
     listProviders: {
@@ -181,44 +218,9 @@ export const SharedProviders: StoryObj<{
     },
     unreachable: { control: 'boolean', description: 'Two sessions are not responding' },
   },
-  render: (args) => {
-    const Composer = () => {
-      const adapter = useMemo(
-        () =>
-          makeStaticAdapter({
-            providers: [
-              { id: 'p-1', name: 'gateway', user: 'alice', cspKind: 'openai', status: 'active' },
-              { id: 'p-2', name: 'gateway', user: 'bob', cspKind: 'openai', status: 'active' },
-              { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
-            ],
-            listProviders: args.listProviders,
-            unreachableSessions: args.unreachable
-              ? [
-                  { name: 'gpu-box', owner: 'alice' },
-                  { name: 'build-01', owner: 'alice' },
-                ]
-              : [],
-            allocations: [
-              { name: 'research', total: 500, used: 123.4 },
-              { name: 'teaching', total: 100 },
-            ],
-          }),
-        [],
-      )
-      return (
-        <StoryChat adapter={adapter}>
-          <div>
-            <ChatInput
-              onSend={send}
-              conversationId="conv-shared-providers"
-              settingsRight={<ComposerControls targetSession="alice:gpu-box" />}
-            />
-          </div>
-        </StoryChat>
-      )
-    }
-    return <Composer key={`${args.listProviders}${args.unreachable}`} />
-  },
+  render: (args) => (
+    <SharedProvidersExample {...args} key={`${args.listProviders}${args.unreachable}`} />
+  ),
   play: async ({ canvasElement, args }) => {
     if (!args.pickerOpen) {
       return
@@ -230,6 +232,41 @@ export const SharedProviders: StoryObj<{
   },
 }
 
+function AllocationsExample() {
+  const adapter = useMemo(
+    () =>
+      makeStaticAdapter({
+        providers: [
+          { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
+        ],
+        allocations: [
+          {
+            name: 'archive',
+            total: 200,
+            used: 200,
+            description: 'Budget spent · 200.00 / 200.00 USD',
+            disabled: true,
+          },
+          { name: 'research', total: 500, used: 123.4, description: '123.40 / 500.00 USD' },
+          { name: 'research-gpu', total: 900, used: 610, description: '610.00 / 900.00 USD' },
+          { name: 'teaching', total: 100, description: '0.00 / 100.00 USD' },
+        ],
+      }),
+    [],
+  )
+  return (
+    <StoryChat adapter={adapter}>
+      <div>
+        <ChatInput
+          onSend={send}
+          conversationId="conv-allocations"
+          settingsRight={<ComposerControls />}
+        />
+      </div>
+    </StoryChat>
+  )
+}
+
 // An organization model bills an allocation, and the picker searches them by
 // name. The play opens the picker and types `search` into it.
 export const Allocations: StoryObj<{ pickerOpen: boolean; search: string }> = {
@@ -237,43 +274,7 @@ export const Allocations: StoryObj<{ pickerOpen: boolean; search: string }> = {
   argTypes: {
     search: { control: 'text', description: 'Typed into the open picker' },
   },
-  render: () => {
-    const Composer = () => {
-      const adapter = useMemo(
-        () =>
-          makeStaticAdapter({
-            providers: [
-              { id: 'p-3', name: 'shared-pool', user: 'org', cspKind: 'other', status: 'active' },
-            ],
-            allocations: [
-              {
-                name: 'archive',
-                total: 200,
-                used: 200,
-                description: 'Budget spent · 200.00 / 200.00 USD',
-                disabled: true,
-              },
-              { name: 'research', total: 500, used: 123.4, description: '123.40 / 500.00 USD' },
-              { name: 'research-gpu', total: 900, used: 610, description: '610.00 / 900.00 USD' },
-              { name: 'teaching', total: 100, description: '0.00 / 100.00 USD' },
-            ],
-          }),
-        [],
-      )
-      return (
-        <StoryChat adapter={adapter}>
-          <div>
-            <ChatInput
-              onSend={send}
-              conversationId="conv-allocations"
-              settingsRight={<ComposerControls />}
-            />
-          </div>
-        </StoryChat>
-      )
-    }
-    return <Composer />
-  },
+  render: () => <AllocationsExample />,
   play: async ({ canvasElement, args }) => {
     if (!args.pickerOpen) {
       return
@@ -287,18 +288,42 @@ export const Allocations: StoryObj<{ pickerOpen: boolean; search: string }> = {
   },
 }
 
-// The composer's + once the adapter lists tools of its own: Add files, and
-// Tools, whose submenu switches each tool for the requests that follow, with
-// the link to connect more at its foot. Past six tools, Tools opens a modal
-// that searches them. Without tools the + opens the attachments panel directly
-// and the link sits under the composer. The play opens the menu.
-export const ToolsMenu: StoryObj<{
+type ToolsMenuStoryArgs = {
   menuOpen: boolean
   listsTools: boolean
   manyTools: boolean
   attachments: boolean
   connectTools: boolean
-}> = {
+}
+
+function ToolsMenuExample(args: ToolsMenuStoryArgs) {
+  const adapter = useMemo(
+    () =>
+      makeStaticAdapter({
+        attachments: args.attachments,
+        ...(args.listsTools ? { tools: args.manyTools ? makeManyTools() : makeTools() } : {}),
+      }),
+    [args.listsTools, args.attachments, args.manyTools],
+  )
+  const config = useMemo(
+    () => (args.connectTools ? { extraLinks: { connectTools: '#connect-tools' } } : {}),
+    [args.connectTools],
+  )
+  return (
+    <StoryChat adapter={adapter} config={config}>
+      <div>
+        <ChatInput onSend={send} conversationId="conv-tools" settingsLeft={<ConnectToolsLink />} />
+      </div>
+    </StoryChat>
+  )
+}
+
+// The composer's + once the adapter lists tools of its own: Add files, and
+// Tools, whose submenu switches each tool for the requests that follow, with
+// the link to connect more at its foot. Past six tools, Tools opens a modal
+// that searches them. Without tools the + opens the attachments panel directly
+// and the link sits under the composer. The play opens the menu.
+export const ToolsMenu: StoryObj<ToolsMenuStoryArgs> = {
   args: {
     menuOpen: true,
     listsTools: true,
@@ -312,38 +337,12 @@ export const ToolsMenu: StoryObj<{
     attachments: { control: 'boolean', description: 'The adapter stores attachments' },
     connectTools: { control: 'boolean', description: 'Host sets extraLinks.connectTools' },
   },
-  render: (args) => {
-    const Composer = () => {
-      const adapter = useMemo(
-        () =>
-          makeStaticAdapter({
-            attachments: args.attachments,
-            ...(args.listsTools ? { tools: args.manyTools ? makeManyTools() : makeTools() } : {}),
-          }),
-        [],
-      )
-      const config = useMemo(
-        () => (args.connectTools ? { extraLinks: { connectTools: '#connect-tools' } } : {}),
-        [],
-      )
-      return (
-        <StoryChat adapter={adapter} config={config}>
-          <div>
-            <ChatInput
-              onSend={send}
-              conversationId="conv-tools"
-              settingsLeft={<ConnectToolsLink />}
-            />
-          </div>
-        </StoryChat>
-      )
-    }
-    return (
-      <Composer
-        key={`${args.listsTools}${args.manyTools}${args.attachments}${args.connectTools}`}
-      />
-    )
-  },
+  render: (args) => (
+    <ToolsMenuExample
+      {...args}
+      key={`${args.listsTools}${args.manyTools}${args.attachments}${args.connectTools}`}
+    />
+  ),
   play: async ({ canvasElement, args }) => {
     if (!args.menuOpen || !args.listsTools) {
       return
@@ -388,38 +387,38 @@ export const NarrowToolbar: StoryObj<{ width: number; usage: boolean }> = {
   ),
 }
 
+type LargePastesStoryArgs = { inlineMaxBytes: number; uploadMs: number }
+
+function LargePastesExample(args: LargePastesStoryArgs) {
+  const { inlineMaxBytes, uploadMs } = args
+  const pastes = useMemo(
+    () =>
+      makeComposerPastes({
+        inlineMaxBytes,
+        uploadMs,
+        outcomes: ['saved', 'saving', 'refused'],
+      }),
+    [uploadMs, inlineMaxBytes],
+  )
+  return (
+    <StoryChat>
+      <div>
+        <ChatInput onSend={send} conversationId="conv-pastes" pastes={pastes} />
+      </div>
+    </StoryChat>
+  )
+}
+
 // Text over inlineMaxBytes becomes a card. The play pastes three logs: the
 // host saves the first, is still saving the second and refuses the third.
 // Pastes of your own are saved.
-export const LargePastes: StoryObj<{ inlineMaxBytes: number; uploadMs: number }> = {
+export const LargePastes: StoryObj<LargePastesStoryArgs> = {
   args: { inlineMaxBytes: 4_000, uploadMs: 600 },
   argTypes: {
     inlineMaxBytes: { control: { type: 'range', min: 1_000, max: 64_000, step: 1_000 } },
     uploadMs: { control: { type: 'range', min: 0, max: 5_000, step: 100 } },
   },
-  render: (args) => {
-    const Composer = () => {
-      const { inlineMaxBytes, uploadMs } = args
-      const pastes = useMemo(
-        () =>
-          makeComposerPastes({
-            inlineMaxBytes,
-            uploadMs,
-            outcomes: ['saved', 'saving', 'refused'],
-          }),
-        // Composer is rebuilt whenever the story's args change.
-        [],
-      )
-      return (
-        <StoryChat>
-          <div>
-            <ChatInput onSend={send} conversationId="conv-pastes" pastes={pastes} />
-          </div>
-        </StoryChat>
-      )
-    }
-    return <Composer />
-  },
+  render: (args) => <LargePastesExample {...args} />,
   play: async ({ canvasElement }) => {
     for (const lines of [412, 1_280, 96]) {
       pasteIntoComposer(canvasElement, makePasteText(lines))

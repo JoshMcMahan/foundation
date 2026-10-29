@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, waitFor, within } from 'storybook/test'
+import { useState } from 'react'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { Button } from './Button'
 import Markdown from './Markdown'
 
 const meta: Meta<typeof Markdown> = {
@@ -8,6 +10,7 @@ const meta: Meta<typeof Markdown> = {
   argTypes: {
     httpsImagesOnly: { control: 'boolean' },
     compact: { control: 'boolean' },
+    controls: { control: 'object' },
   },
 }
 export default meta
@@ -91,6 +94,55 @@ export const MermaidDiagram: StoryObj<typeof Markdown> = {
 
 export const HttpsImagesOnly: StoryObj<typeof Markdown> = {
   args: { children: IMAGES, httpsImagesOnly: true },
+}
+
+const LONG_CODE = [
+  '```javascript',
+  ...Array.from({ length: 48 }, (_, index) => `const step${index + 1} = ${index + 1}`),
+  '```',
+].join('\n')
+
+function CodeBlockStateExample() {
+  const [controls, setControls] = useState(true)
+  const [diagram, setDiagram] = useState(false)
+  return (
+    <div className="max-w-2xl p-6">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={() => setControls((value) => !value)}>
+          {controls ? 'Hide code controls' : 'Show code controls'}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => setDiagram((value) => !value)}>
+          {diagram ? 'Remove diagram' : 'Add diagram'}
+        </Button>
+      </div>
+      <Markdown controls={controls}>{`${LONG_CODE}${diagram ? `\n\n${DIAGRAM}` : ''}`}</Markdown>
+    </div>
+  )
+}
+
+/** Changing controls or adding a diagram preserves the reader's place in existing code. */
+export const CodeBlockState: StoryObj = {
+  render: () => <CodeBlockStateExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await waitFor(() => expect(canvasElement.querySelector('[data-code-block]')).not.toBeNull())
+    const block = canvasElement.querySelector('[data-code-block]')
+    const scroll = block?.querySelector('pre')?.parentElement
+    if (!block || !scroll) {
+      throw new Error('The code block did not render')
+    }
+    scroll.scrollTop = 140
+    scroll.dispatchEvent(new Event('scroll'))
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide code controls' }))
+    await expect(canvasElement.querySelector('[data-code-block]')).toBe(block)
+    await expect(scroll.scrollTop).toBe(140)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add diagram' }))
+    await waitFor(() =>
+      expect(canvasElement.querySelector('[data-streamdown="mermaid-block"]')).not.toBeNull(),
+    )
+    await expect(canvasElement.querySelector('[data-code-block]')).toBe(block)
+    await expect(scroll.scrollTop).toBe(140)
+  },
 }
 
 /** Inline and display math in light mode. */

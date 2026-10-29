@@ -33,6 +33,17 @@ const ROW_PAD_FILE = 28
 export const TREE_ROW_HEIGHT = 30
 const TREE_SKELETON_HEIGHT = 64
 
+const rowForKey: Partial<
+  Record<string, (rows: readonly TreeRow[], index: number) => TreeRow | undefined>
+> = {
+  ArrowDown: (rows, index) => stepRow(rows, index, 1),
+  ArrowUp: (rows, index) => stepRow(rows, index, -1),
+  ArrowRight: firstChildRow,
+  ArrowLeft: parentRow,
+  Home: (rows) => edgeRow(rows, 'first'),
+  End: (rows) => edgeRow(rows, 'last'),
+}
+
 function rowHeight(row: TreeRow): number {
   return row.kind === 'skeleton' ? TREE_SKELETON_HEIGHT : TREE_ROW_HEIGHT
 }
@@ -211,20 +222,10 @@ export function TreeView({
       // The tree view pattern's keys: Up and Down step, Right enters an open
       // folder, Left goes to the parent, Home and End jump to the ends. Rows
       // toggle open and closed in dispatchRowKey before anything lands here.
-      // biome-ignore-start lint/correctness/noComponentHookFactories: these key handlers return data, not React components
-      const pick: Partial<Record<string, (index: number) => TreeRow | undefined>> = {
-        ArrowDown: (i) => stepRow(rows, i, 1),
-        ArrowUp: (i) => stepRow(rows, i, -1),
-        ArrowRight: (i) => firstChildRow(rows, i),
-        ArrowLeft: (i) => parentRow(rows, i),
-        Home: () => edgeRow(rows, 'first'),
-        End: () => edgeRow(rows, 'last'),
-      }
-      // biome-ignore-end lint/correctness/noComponentHookFactories: these key handlers return data, not React components
-      const target = pick[e.key]
+      const target = rowForKey[e.key]
       if (target) {
         e.preventDefault()
-        move(node, target)
+        move(node, (index) => target(rows, index))
       }
     },
     [move, onPreviewFile, rows],

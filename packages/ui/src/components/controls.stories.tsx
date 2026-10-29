@@ -36,83 +36,82 @@ const VARIANTS: ButtonVariant[] = [
 ]
 const SIZES: ButtonSize[] = ['xs', 'sm', 'md', 'lg']
 
+function ButtonsExample() {
+  const [pressed, setPressed] = useState(true)
+  return (
+    <div className="flex flex-col gap-6 p-8 text-sm">
+      <div className="max-w-full overflow-x-auto">
+        <table className="border-separate border-spacing-x-4 border-spacing-y-2">
+          <tbody>
+            {VARIANTS.map((variant) => (
+              <tr key={variant}>
+                <th
+                  scope="row"
+                  className="whitespace-nowrap pr-2 text-left font-medium theme-muted-text"
+                >
+                  {variant}
+                </th>
+                {SIZES.map((size) => (
+                  <td key={size}>
+                    <Button variant={variant} size={size} icon={<AddIcon />}>
+                      Create
+                    </Button>
+                  </td>
+                ))}
+                {SIZES.map((size) => (
+                  <td key={`${size}-icon`}>
+                    <IconButton variant={variant} size={size} label="Add" icon={<AddIcon />} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={pressed}
+          onClick={() => setPressed((on) => !on)}
+        >
+          Show hidden
+        </Button>
+        <Button variant="primary" size="sm" loading>
+          Saving
+        </Button>
+        <Button variant="primary" size="sm" disabled>
+          Unavailable
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled
+          focusableWhenDisabled
+          aria-label="Delete, which needs write access"
+        >
+          Delete
+        </Button>
+        <Button variant="ghost" size="sm" href="#docs">
+          Read the docs
+        </Button>
+      </div>
+      <div className="max-w-sm">
+        <MethodButton
+          label="Single sign-on"
+          description="Use your organization identity provider"
+          href="/sso"
+        />
+      </div>
+    </div>
+  )
+}
+
 /** The one button look: each variant at each size, its icon-only square, and
  *  the states every button shares. Hovered, a button rises a pixel on a soft
  *  shadow and settles back while pressed. */
 export const Buttons: StoryObj = {
-  render: () => {
-    const Demo = () => {
-      const [pressed, setPressed] = useState(true)
-      return (
-        <div className="flex flex-col gap-6 p-8 text-sm">
-          <div className="max-w-full overflow-x-auto">
-            <table className="border-separate border-spacing-x-4 border-spacing-y-2">
-              <tbody>
-                {VARIANTS.map((variant) => (
-                  <tr key={variant}>
-                    <th
-                      scope="row"
-                      className="whitespace-nowrap pr-2 text-left font-medium theme-muted-text"
-                    >
-                      {variant}
-                    </th>
-                    {SIZES.map((size) => (
-                      <td key={size}>
-                        <Button variant={variant} size={size} icon={<AddIcon />}>
-                          Create
-                        </Button>
-                      </td>
-                    ))}
-                    {SIZES.map((size) => (
-                      <td key={`${size}-icon`}>
-                        <IconButton variant={variant} size={size} label="Add" icon={<AddIcon />} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              aria-pressed={pressed}
-              onClick={() => setPressed((on) => !on)}
-            >
-              Show hidden
-            </Button>
-            <Button variant="primary" size="sm" loading>
-              Saving
-            </Button>
-            <Button variant="primary" size="sm" disabled>
-              Unavailable
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled
-              focusableWhenDisabled
-              aria-label="Delete, which needs write access"
-            >
-              Delete
-            </Button>
-            <Button variant="ghost" size="sm" href="#docs">
-              Read the docs
-            </Button>
-          </div>
-          <div className="max-w-sm">
-            <MethodButton
-              label="Single sign-on"
-              description="Use your organization identity provider"
-              href="/sso"
-            />
-          </div>
-        </div>
-      )
-    }
-    return <Demo />
-  },
+  render: () => <ButtonsExample />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const toggle = canvas.getByRole('button', { name: 'Show hidden' })

@@ -199,37 +199,36 @@ export const HeadingInBody: Story = {
   },
 }
 
+function TitleActionsExample() {
+  const [favorite, setFavorite] = useState(false)
+  return (
+    <PageHeader
+      breadcrumbs={[{ label: 'Runs', href: '/runs' }, { label: 'nightly-benchmark' }]}
+      titleActions={
+        <>
+          <PageHeaderAction
+            icon={favorite ? FavoriteIcon : FavoriteOutlineIcon}
+            iconOnly
+            label="Favorite"
+            pressed={favorite}
+            onClick={() => setFavorite((f) => !f)}
+          />
+          <PageHeaderAction icon={EditIcon} iconOnly label="Rename" onClick={() => {}} />
+          <PageHeaderMenu items={BUCKET_MENU} label="Run actions" />
+        </>
+      }
+    />
+  )
+}
+
 /** Toggles beside the title keep the page's state: they render in the page's
  *  tree, though they show in the shell's bar. */
 export const TitleActions: Story = {
-  render: () => {
-    function Page() {
-      const [favorite, setFavorite] = useState(false)
-      return (
-        <PageHeader
-          breadcrumbs={[{ label: 'Runs', href: '/runs' }, { label: 'nightly-benchmark' }]}
-          titleActions={
-            <>
-              <PageHeaderAction
-                icon={favorite ? FavoriteIcon : FavoriteOutlineIcon}
-                iconOnly
-                label="Favorite"
-                pressed={favorite}
-                onClick={() => setFavorite((f) => !f)}
-              />
-              <PageHeaderAction icon={EditIcon} iconOnly label="Rename" onClick={() => {}} />
-              <PageHeaderMenu items={BUCKET_MENU} label="Run actions" />
-            </>
-          }
-        />
-      )
-    }
-    return (
-      <Shell>
-        <Page />
-      </Shell>
-    )
-  },
+  render: () => (
+    <Shell>
+      <TitleActionsExample />
+    </Shell>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const favorite = canvas.getByRole('button', { name: 'Favorite' })
@@ -431,40 +430,39 @@ export const ActionVariants: Story = {
   },
 }
 
+function WithToolbarExample() {
+  const [range, setRange] = useState('7d')
+  return (
+    <>
+      <PageHeader
+        breadcrumbs={[{ label: 'Usage' }]}
+        toolbar={
+          <div className="flex items-center justify-end py-1.5">
+            <SegmentedControl
+              label="Time range"
+              value={range}
+              onValueChange={setRange}
+              options={[
+                { value: '24h', label: '24h' },
+                { value: '7d', label: '7 days' },
+                { value: '30d', label: '30 days' },
+              ]}
+            />
+          </div>
+        }
+      />
+      <p className="m-0">Showing {range}.</p>
+    </>
+  )
+}
+
 /** A row under the bar for controls that change what the page shows. */
 export const WithToolbar: Story = {
-  render: () => {
-    function Page() {
-      const [range, setRange] = useState('7d')
-      return (
-        <>
-          <PageHeader
-            breadcrumbs={[{ label: 'Usage' }]}
-            toolbar={
-              <div className="flex items-center justify-end py-1.5">
-                <SegmentedControl
-                  label="Time range"
-                  value={range}
-                  onValueChange={setRange}
-                  options={[
-                    { value: '24h', label: '24h' },
-                    { value: '7d', label: '7 days' },
-                    { value: '30d', label: '30 days' },
-                  ]}
-                />
-              </div>
-            }
-          />
-          <p className="m-0">Showing {range}.</p>
-        </>
-      )
-    }
-    return (
-      <Shell>
-        <Page />
-      </Shell>
-    )
-  },
+  render: () => (
+    <Shell>
+      <WithToolbarExample />
+    </Shell>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: '30 days' }))
@@ -587,50 +585,47 @@ export const LayoutAndPage: Story = {
   },
 }
 
+function NavigationExample() {
+  const Link = useLink()
+  const [page, setPage] = useState<'list' | 'detail'>('list')
+  const link = 'text-(--theme-link) hover:underline'
+  return page === 'list' ? (
+    <>
+      <PageHeader
+        breadcrumbs={[{ label: 'Buckets' }]}
+        actions={<PageHeaderAddButton label="New bucket" word="create" onClick={() => {}} />}
+      />
+      <Link
+        href="/storage/buckets/training-data"
+        className={link}
+        onClick={() => setPage('detail')}
+      >
+        Open training-data
+      </Link>
+    </>
+  ) : (
+    <>
+      <PageHeader
+        breadcrumbs={BUCKET_TRAIL}
+        actions={
+          <PageHeaderAction icon={TrashIcon} label="Delete" destructive onClick={() => {}} />
+        }
+      />
+      <Link href="/storage/buckets" className={link} onClick={() => setPage('list')}>
+        Back to buckets
+      </Link>
+    </>
+  )
+}
+
 /** Moving between pages swaps the whole header before paint: no trail or
  *  action of the page left behind. */
 export const Navigation: Story = {
-  render: () => {
-    // Links through the host's link, as a page would; the story's link routes
-    // by the click rather than leaving the story.
-    function App() {
-      const Link = useLink()
-      const [page, setPage] = useState<'list' | 'detail'>('list')
-      const link = 'text-(--theme-link) hover:underline'
-      return page === 'list' ? (
-        <>
-          <PageHeader
-            breadcrumbs={[{ label: 'Buckets' }]}
-            actions={<PageHeaderAddButton label="New bucket" word="create" onClick={() => {}} />}
-          />
-          <Link
-            href="/storage/buckets/training-data"
-            className={link}
-            onClick={() => setPage('detail')}
-          >
-            Open training-data
-          </Link>
-        </>
-      ) : (
-        <>
-          <PageHeader
-            breadcrumbs={BUCKET_TRAIL}
-            actions={
-              <PageHeaderAction icon={TrashIcon} label="Delete" destructive onClick={() => {}} />
-            }
-          />
-          <Link href="/storage/buckets" className={link} onClick={() => setPage('list')}>
-            Back to buckets
-          </Link>
-        </>
-      )
-    }
-    return (
-      <Shell>
-        <App />
-      </Shell>
-    )
-  },
+  render: () => (
+    <Shell>
+      <NavigationExample />
+    </Shell>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('link', { name: 'Open training-data' }))

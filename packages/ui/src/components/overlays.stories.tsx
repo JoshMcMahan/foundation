@@ -185,38 +185,37 @@ export const DrawerUnderTopBar: StoryObj = {
   },
 }
 
+function DrawerContainedExample() {
+  const [open, setOpen] = useState(true)
+  return (
+    <div
+      style={{ position: 'relative', overflow: 'hidden', width: 390, height: 480 }}
+      className="border border-(--theme-border)"
+    >
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => setOpen(true)}>
+          Open list
+        </Button>
+      </div>
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Conversations"
+        side="left"
+        width="min(20rem, 85%)"
+        modal="trap-focus"
+        contained
+      >
+        <p className="text-sm">Covers only the panel it sits in.</p>
+      </Drawer>
+    </div>
+  )
+}
+
 /** Inside an embedded panel: it covers the panel, not the window. */
 export const DrawerContained: StoryObj = {
   name: 'Drawer, contained',
-  render: () => {
-    const Panel = () => {
-      const [open, setOpen] = useState(true)
-      return (
-        <div
-          style={{ position: 'relative', overflow: 'hidden', width: 390, height: 480 }}
-          className="border border-(--theme-border)"
-        >
-          <div className="p-4">
-            <Button variant="ghost" onClick={() => setOpen(true)}>
-              Open list
-            </Button>
-          </div>
-          <Drawer
-            open={open}
-            onClose={() => setOpen(false)}
-            title="Conversations"
-            side="left"
-            width="min(20rem, 85%)"
-            modal="trap-focus"
-            contained
-          >
-            <p className="text-sm">Covers only the panel it sits in.</p>
-          </Drawer>
-        </div>
-      )
-    }
-    return <Panel />
-  },
+  render: () => <DrawerContainedExample />,
 }
 
 type PopoverArgs = Pick<

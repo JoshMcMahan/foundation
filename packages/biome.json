@@ -7,12 +7,13 @@
     "root": ".."
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/lint/fixtures", "!**/CHANGELOG.md", "!pnpm-lock.yaml"]
+    "includes": ["**", "!**/dist", "!**/lint/fixtures"]
   },
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "includes": ["**", "!**/CHANGELOG.md", "!pnpm-lock.yaml"]
   },
   "javascript": {
     "formatter": {
@@ -54,7 +55,7 @@
       }
     },
     {
-      "includes": ["**/*.test.tsx", "**/*.stories.tsx", "ui/src/ai/stories/**", "ui/src/test/**"],
+      "includes": ["**/*.test.tsx"],
       "linter": {
         "rules": {
           "correctness": {

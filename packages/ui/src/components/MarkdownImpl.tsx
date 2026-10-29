@@ -7,7 +7,16 @@ import { math } from '@streamdown/math'
 // once markdown renders. The build keeps this a bare import of the katex
 // package, so the host's bundler resolves the fonts relative to that sheet.
 import 'katex/dist/katex.min.css'
-import { type ComponentType, type HTMLAttributes, useEffect, useMemo, useState } from 'react'
+import {
+  type AnchorHTMLAttributes,
+  type ComponentType,
+  createContext,
+  type HTMLAttributes,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   type ControlsConfig,
   defaultComponents,
@@ -78,6 +87,12 @@ interface CodeControls {
   /** The file's name without its extension, or null for no download button. */
   download: string | null
 }
+
+const CodeContext = createContext<CodeControls & { diagrams: boolean }>({
+  copy: true,
+  download: 'file',
+  diagrams: false,
+})
 
 // The renderer's own reading of `controls`: on unless turned off, as a whole,
 // for code, or per button.
@@ -151,34 +166,36 @@ function textOf(children: unknown): string {
 // A fenced block renders as the CodeBlock a page uses, so the two can't drift;
 // inline code and diagrams stay the renderer's own. Until the diagram plugin
 // has loaded, a diagram's fence shows as its code.
-function makeCode(controls: CodeControls, diagrams: boolean) {
-  // biome-ignore lint/correctness/noComponentHookFactories: memoized by the renderer for its configuration
-  return function MarkdownCode(props: CodeProps) {
-    const incomplete = useIsCodeFenceIncomplete()
-    const language = props.className?.match(LANGUAGE)?.[1] ?? ''
-    if (!('data-block' in props) || (diagrams && language === 'mermaid')) {
-      return <DefaultCode {...props} />
-    }
-    const meta = props.node?.properties?.['metastring']
-    const metastring = typeof meta === 'string' ? meta : ''
-    const start = Number.parseInt(metastring.match(START_LINE)?.[1] ?? '', 10)
-    return (
-      <CodeBlock
-        className="my-3.5"
-        code={textOf(props.children)}
-        language={language}
-        copy={controls.copy}
-        filename={
-          controls.download === null ? undefined : `${controls.download}.${extensionFor(language)}`
-        }
-        lineNumbers={NO_LINE_NUMBERS.test(metastring) ? false : undefined}
-        // biome-ignore lint/complexity/useMathMinMax: missing metadata parses as NaN and must fall back to 1
-        startLine={start >= 1 ? start : 1}
-        maxHeight={400}
-        streaming={incomplete}
-      />
-    )
+function MarkdownCode(props: CodeProps) {
+  const { copy, download, diagrams } = useContext(CodeContext)
+  const incomplete = useIsCodeFenceIncomplete()
+  const language = props.className?.match(LANGUAGE)?.[1] ?? ''
+  if (!('data-block' in props) || (diagrams && language === 'mermaid')) {
+    return <DefaultCode {...props} />
   }
+  const meta = props.node?.properties?.['metastring']
+  const metastring = typeof meta === 'string' ? meta : ''
+  const start = Number.parseInt(metastring.match(START_LINE)?.[1] ?? '1', 10)
+  return (
+    <CodeBlock
+      className="my-3.5"
+      code={textOf(props.children)}
+      language={language}
+      copy={copy}
+      filename={download === null ? undefined : `${download}.${extensionFor(language)}`}
+      lineNumbers={NO_LINE_NUMBERS.test(metastring) ? false : undefined}
+      startLine={Math.max(1, start)}
+      maxHeight={400}
+      streaming={incomplete}
+    />
+  )
+}
+
+function MarkdownLink({
+  node: _node,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & ExtraProps) {
+  return <ExternalLink {...props} className={cx('link wrap-break-word', props.className)} />
 }
 
 const TABLE_ROW = /^\s*\|/
@@ -230,35 +247,36 @@ export default function MarkdownImpl({
     }
   }, [needsMermaid])
   const plugins = needsMermaid && pluginsWithMermaid ? pluginsWithMermaid : basePlugins
-  // Built once per controls setting: the renderer re-renders every block when a
-  // component changes identity.
   const { copy, download } = codeControls(controls)
   const diagrams = plugins === pluginsWithMermaid
-  const code = useMemo(() => makeCode({ copy, download }, diagrams), [copy, download, diagrams])
+  // Configuration changes must update mounted blocks without replacing their type.
+  const codeConfig = useMemo(() => ({ copy, download, diagrams }), [copy, download, diagrams])
+  const renderers = useMemo(
+    () => ({ code: MarkdownCode, a: MarkdownLink, ...components }),
+    [components],
+  )
   return (
-    <div
-      className={cx('markdown whitespace-normal text-start w-full', compact && 'markdown-compact')}
-    >
-      <Streamdown
-        mode={isStreaming ? 'streaming' : 'static'}
-        isAnimating={isStreaming ?? false}
-        {...(isStreaming ? ({ caret: 'block', className: 'markdown-streaming' } as const) : {})}
-        {...(controls ? { controls } : {})}
-        plugins={plugins}
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={httpsImagesOnly ? httpsImagesRehypePlugins : rehypePlugins}
-        shikiTheme={CODE_THEMES}
-        components={{
-          code,
-          a: ({ node, ...props }) => (
-            <ExternalLink {...props} className={cx('link wrap-break-word', props.className)} />
-          ),
-          // The host's overrides win per tag, `a` included.
-          ...components,
-        }}
+    <CodeContext value={codeConfig}>
+      <div
+        className={cx(
+          'markdown whitespace-normal text-start w-full',
+          compact && 'markdown-compact',
+        )}
       >
-        {(isStreaming ? withoutUnfinishedTable(children || '') : children) || ''}
-      </Streamdown>
-    </div>
+        <Streamdown
+          mode={isStreaming ? 'streaming' : 'static'}
+          isAnimating={isStreaming ?? false}
+          {...(isStreaming ? ({ caret: 'block', className: 'markdown-streaming' } as const) : {})}
+          {...(controls === undefined ? {} : { controls })}
+          plugins={plugins}
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={httpsImagesOnly ? httpsImagesRehypePlugins : rehypePlugins}
+          shikiTheme={CODE_THEMES}
+          components={renderers}
+        >
+          {(isStreaming ? withoutUnfinishedTable(children || '') : children) || ''}
+        </Streamdown>
+      </div>
+    </CodeContext>
   )
 }
