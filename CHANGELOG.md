@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/parallelworks/foundation/compare/v0.16.0...v0.17.0) (2026-10-29)
+
+
+### Features
+
+* **logctx:** contextual logger enrichment ([#571](https://github.com/parallelworks/foundation/issues/571)) ([195ec72](https://github.com/parallelworks/foundation/commit/195ec7267cc5568208949cf8861edc847c781cd1))
+* **logctx:** contextual structured logging ([#569](https://github.com/parallelworks/foundation/issues/569)) ([7cfefd7](https://github.com/parallelworks/foundation/commit/7cfefd765b7a3989c80f9628477943a844a4b946))
+
+
+### Bug Fixes
+
+* **pgdb:** prevent startup hangs during concurrent index migrations ([#572](https://github.com/parallelworks/foundation/issues/572)) ([460ac4e](https://github.com/parallelworks/foundation/commit/460ac4e0e2786d3b11cdc8a9768230b2106ef9fe))
+
 ## [0.16.0](https://github.com/parallelworks/foundation/compare/v0.15.0...v0.16.0) (2026-10-28)
 
 
