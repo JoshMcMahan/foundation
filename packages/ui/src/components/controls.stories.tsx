@@ -733,9 +733,9 @@ export const PaginationAtTheEnd: StoryObj = {
     await userEvent.click(next)
     await expect(next).toHaveFocus()
     await expect(next).toHaveAttribute('aria-disabled', 'true')
-    await expect(
-      within(canvas.getByRole('navigation')).getByRole('status'),
-    ).toHaveTextContent('401–420 of 420')
+    await expect(within(canvas.getByRole('navigation')).getByRole('status')).toHaveTextContent(
+      '401–420 of 420',
+    )
   },
 }
 
