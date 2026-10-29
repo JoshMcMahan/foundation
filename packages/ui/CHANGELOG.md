@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.103.0](https://github.com/parallelworks/foundation/compare/ui-v0.102.0...ui-v0.103.0) (2026-10-29)
+
+
+### Features
+
+* **ui:** file explorer transfer limit for downloads and uploads ([#577](https://github.com/parallelworks/foundation/issues/577)) ([fe6f393](https://github.com/parallelworks/foundation/commit/fe6f393e32975ad54358dad7dcc02395b87e620f))
+
+
+### Bug Fixes
+
+* **ui:** a drawer's brand link shows its whole focus ring ([#578](https://github.com/parallelworks/foundation/issues/578)) ([7406068](https://github.com/parallelworks/foundation/commit/7406068bb6f169811cd46b44685c7362485a139d))
+* **ui:** a list's single-key shortcuts can be turned off, and its pager and search box keep focus ([#576](https://github.com/parallelworks/foundation/issues/576)) ([353ebfd](https://github.com/parallelworks/foundation/commit/353ebfdc60d3b3f44d730e116a387721b8ad7278))
+* **ui:** preserve state across renderer and story updates ([#574](https://github.com/parallelworks/foundation/issues/574)) ([9c2c328](https://github.com/parallelworks/foundation/commit/9c2c328c6083408d0073db7944fde7a0c96737b3))
+
 ## [0.102.0](https://github.com/parallelworks/foundation/compare/ui-v0.101.1...ui-v0.102.0) (2026-10-28)
 
 
