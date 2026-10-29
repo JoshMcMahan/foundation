@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { IconButton } from '../components/IconButton'
 import { Pagination } from '../components/Pagination'
 import { Popover } from '../components/Popover'
+import { UIProvider } from '../components/Provider'
 import { InfoIcon } from '../icons'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { ListSearchControl, useListSearch } from './listSearch'
@@ -95,9 +97,38 @@ function ControlsDemo({ searchable }: { searchable: boolean }) {
   )
 }
 
-export const Controls: StoryObj<{ searchable: boolean }> = {
-  args: { searchable: true },
-  render: (args) => <ControlsDemo searchable={args.searchable} />,
+export const Controls: StoryObj<{ searchable: boolean; characterKeyShortcuts: boolean }> = {
+  args: { searchable: true, characterKeyShortcuts: true },
+  argTypes: {
+    characterKeyShortcuts: {
+      description:
+        "UIProvider: F opens the filter menu and / the search. Off, only the search's ⌘F works.",
+    },
+  },
+  render: (args) => (
+    <UIProvider characterKeyShortcuts={args.characterKeyShortcuts}>
+      <ControlsDemo searchable={args.searchable} />
+    </UIProvider>
+  ),
+}
+
+/** With single-key shortcuts off, F and / do nothing and the buttons stop offering them. */
+export const ControlsWithoutSingleKeyShortcuts: StoryObj<{
+  searchable: boolean
+  characterKeyShortcuts: boolean
+}> = {
+  ...Controls,
+  args: { searchable: true, characterKeyShortcuts: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /^Filter/ })).not.toHaveAttribute(
+      'aria-keyshortcuts',
+    )
+    await userEvent.keyboard('f/')
+    // The filter menu would open in a layer over the page, outside the story's canvas.
+    await expect(within(document.body).queryByRole('menu')).toBeNull()
+    await expect(canvas.queryByPlaceholderText('Search clusters')).toBeNull()
+  },
 }
 
 export const CappedPager: StoryObj = {

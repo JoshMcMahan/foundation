@@ -266,6 +266,7 @@ export {
   type UIStringOverrides,
   type UIStrings,
   useAvatarColoring,
+  useCharacterKeyShortcuts,
   useLocale,
   useNavigation,
   useOptionalWorkflowEngine,

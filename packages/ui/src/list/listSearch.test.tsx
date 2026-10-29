@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { ariaKeyShortcuts } from '../components/Kbd'
+import { UIProvider } from '../components/Provider'
 import { memoryStorage } from '../test/storage'
 import { ListCount, ListSearchControl, useListSearch } from './listSearch'
 
@@ -75,6 +77,17 @@ describe('list search term chips', () => {
     expect(screen.queryByText('beta')).not.toBeInTheDocument()
   })
 
+  it('hands focus to the box when a chip goes', () => {
+    render(<Harness storageKey="test-list" />)
+    openSearch()
+    typeAndEnter('alpha')
+    const remove = screen.getByLabelText('Remove filter alpha')
+    remove.focus()
+    fireEvent.click(remove)
+    expect(screen.queryByLabelText('Remove filter alpha')).toBeNull()
+    expect(getInput()).toHaveFocus()
+  })
+
   it('clears all chips and closes with the clear button', () => {
     render(<Harness storageKey="test-list" />)
     openSearch()
@@ -116,6 +129,37 @@ describe('list search field', () => {
     fireEvent.change(getInput(), { target: { value: 'alpha' } })
     fireEvent.keyDown(document.body, { key: 'Escape' })
     expect(getInput()).toHaveValue('alpha')
+  })
+})
+
+describe('list search shortcuts', () => {
+  it.each([
+    ['/', { key: '/' }],
+    ['⌘F', { key: 'f', metaKey: true }],
+  ])('opens on %s', (_, keys) => {
+    render(<Harness />)
+    fireEvent.keyDown(document.body, keys)
+    expect(getInput()).toBeInTheDocument()
+  })
+
+  it('leaves / alone with a modifier, which is another shortcut', () => {
+    render(<Harness />)
+    fireEvent.keyDown(document.body, { key: '/', ctrlKey: true })
+    expect(screen.queryByPlaceholderText('Filter')).toBeNull()
+  })
+
+  it('leaves / alone while single-key shortcuts are off, and still opens on ⌘F', () => {
+    render(
+      <UIProvider characterKeyShortcuts={false}>
+        <Harness />
+      </UIProvider>,
+    )
+    const button = screen.getByRole('button', { name: 'Search' })
+    expect(button).toHaveAttribute('aria-keyshortcuts', ariaKeyShortcuts('Mod+F'))
+    fireEvent.keyDown(document.body, { key: '/' })
+    expect(screen.queryByPlaceholderText('Filter')).toBeNull()
+    fireEvent.keyDown(document.body, { key: 'f', metaKey: true })
+    expect(getInput()).toBeInTheDocument()
   })
 })
 

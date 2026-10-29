@@ -1703,6 +1703,7 @@ const LocaleContext = createContext<string | undefined>(undefined)
 export type AvatarColoring = 'name' | 'kind'
 
 const AvatarColoringContext = createContext<AvatarColoring>('name')
+const CharacterKeyShortcutsContext = createContext(true)
 
 export function useStrings(): UIStrings {
   return useContext(StringsContext)
@@ -1717,6 +1718,11 @@ export function useLocale(): string | undefined {
 /** How the host colors avatars, UIProvider's `avatarColoring`. */
 export function useAvatarColoring(): AvatarColoring {
   return useContext(AvatarColoringContext)
+}
+
+/** Whether single-key shortcuts are on, UIProvider's `characterKeyShortcuts`. */
+export function useCharacterKeyShortcuts(): boolean {
+  return useContext(CharacterKeyShortcutsContext)
 }
 
 export function useNavigation(): UINavigation {
@@ -1907,6 +1913,10 @@ export interface UIProviderProps {
    *  share one tint and agents another, set by `--avatar-person` and `--avatar-agent` (see
    *  `Avatar`). */
   avatarColoring?: AvatarColoring | undefined
+  /** Whether a single key, such as F to filter or / to search a list, works from anywhere on the
+   *  page (the default). Give people a setting that turns them off, as WCAG 2.1.4 asks, since a
+   *  speech input user's words can press them. Shortcuts with a modifier, such as ⌘F, stay on. */
+  characterKeyShortcuts?: boolean | undefined
   children: React.ReactNode
 }
 
@@ -1938,6 +1948,7 @@ export function UIProvider({
   nonce,
   locale,
   avatarColoring = 'name',
+  characterKeyShortcuts = true,
   children,
 }: UIProviderProps) {
   // A loader is the first one passed: an inline arrow is a new function each render, and each
@@ -1977,15 +1988,17 @@ export function UIProvider({
             <EngineContext value={engine}>
               <LocaleContext value={locale}>
                 <AvatarColoringContext value={avatarColoring}>
-                  {/* Base UI hides a select's or scroll area's own scrollbar with an
-                    inline <style>, which a same-origin style policy blocks and
-                    reports. theme.css ships that rule instead. */}
-                  <CSPProvider nonce={nonce} disableStyleElements>
-                    <TooltipProvider>
-                      <ContextMenuProvider>{children}</ContextMenuProvider>
-                    </TooltipProvider>
-                    <Toaster />
-                  </CSPProvider>
+                  <CharacterKeyShortcutsContext value={characterKeyShortcuts}>
+                    {/* Base UI hides a select's or scroll area's own scrollbar with an
+                      inline <style>, which a same-origin style policy blocks and
+                      reports. theme.css ships that rule instead. */}
+                    <CSPProvider nonce={nonce} disableStyleElements>
+                      <TooltipProvider>
+                        <ContextMenuProvider>{children}</ContextMenuProvider>
+                      </TooltipProvider>
+                      <Toaster />
+                    </CSPProvider>
+                  </CharacterKeyShortcutsContext>
                 </AvatarColoringContext>
               </LocaleContext>
             </EngineContext>

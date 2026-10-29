@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useCharacterKeyShortcuts } from './Provider'
 
 // Where a letter is the reader's input, not a page shortcut: text fields and
 // editors, dialogs over the page, and widgets whose typeahead moves to the item
@@ -32,10 +33,19 @@ export function isTextEntryContext(target: EventTarget | null): boolean {
   return Boolean(el.closest?.(KEYS_ARE_INPUT))
 }
 
-/** Calls `onPress` on a single key, such as F to filter, unless the key goes to a text field. */
-export function useShortcutKey(key: string | undefined, onPress: () => void) {
+/** The key, or none while UIProvider's `characterKeyShortcuts` is off and it is a character key,
+ *  which speech input can press. A named key such as Escape isn't one, so it stays. */
+export function useOfferedShortcut(key: string | undefined): string | undefined {
+  const characterKeys = useCharacterKeyShortcuts()
+  return characterKeys || (key !== undefined && key.length > 1) ? key : undefined
+}
+
+/** Calls `onPress` on a single key, such as F to filter, unless the key goes to a text field or
+ *  `useOfferedShortcut` drops it. */
+export function useShortcutKey(shortcut: string | undefined, onPress: () => void) {
   const press = useRef(onPress)
   press.current = onPress
+  const key = useOfferedShortcut(shortcut)
   useEffect(() => {
     if (!key) {
       return

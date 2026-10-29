@@ -16,8 +16,13 @@ import { createPortal } from 'react-dom'
 import { buttonClasses } from '../components/buttonClasses'
 import { HeaderActionsFitContext } from '../components/headerActionsFit'
 import { ariaKeyShortcuts } from '../components/Kbd'
-import { useLocale, usePersistedState, useStrings } from '../components/Provider'
-import { isTextEntryContext } from '../components/shortcutKey'
+import {
+  useCharacterKeyShortcuts,
+  useLocale,
+  usePersistedState,
+  useStrings,
+} from '../components/Provider'
+import { isTextEntryContext, useShortcutKey } from '../components/shortcutKey'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { formatInteger } from '../format'
@@ -25,7 +30,8 @@ import { CloseIcon, RemoveIcon, SearchIcon } from '../icons'
 
 const NO_TERMS: string[] = []
 
-/** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active). */
+/** Pass `enabled: false` to suspend the global ⌘F/`/` hijack (e.g. when search isn't shown and browser Find should stay active).
+ *  `/` is off too while UIProvider's `characterKeyShortcuts` is. */
 export function useListSearch(enabled = true, storageKey?: string) {
   const [filter, setFilter] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -53,9 +59,6 @@ export function useListSearch(enabled = true, storageKey?: string) {
       if ((e.key === 'f' || e.key === 'F') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setSearchOpen(true)
-      } else if (e.key === '/') {
-        e.preventDefault()
-        setSearchOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -63,6 +66,7 @@ export function useListSearch(enabled = true, storageKey?: string) {
   }, [enabled])
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
+  useShortcutKey(enabled ? '/' : undefined, openSearch)
   const closeSearch = useCallback(() => {
     setSearchOpen(false)
     setFilter('')
@@ -215,7 +219,11 @@ export function ListSearchControl({
             <span className="truncate">{term}</span>
             <button
               type="button"
-              onClick={() => search.removeTerm(term)}
+              onClick={() => {
+                // The button goes with its term, so focus goes to the box rather than to the page.
+                search.inputRef.current?.focus()
+                search.removeTerm(term)
+              }}
               aria-label={list.removeSearchTerm(term)}
               className="shrink-0 rounded p-0.5 text-(--theme-muted-text-color) hover:text-(--theme-app) transition-colors"
             >
@@ -320,14 +328,15 @@ function SearchButton({
   active: boolean
   onOpen: () => void
 }) {
+  const slash = useCharacterKeyShortcuts()
   return (
-    <Tooltip content={label} shortcut="/">
+    <Tooltip content={label} shortcut={slash ? '/' : 'Mod+F'}>
       <button
         ref={ref}
         type="button"
         onClick={onOpen}
         aria-label={name}
-        aria-keyshortcuts={`/ ${ariaKeyShortcuts('Mod+F')}`}
+        aria-keyshortcuts={`${slash ? '/ ' : ''}${ariaKeyShortcuts('Mod+F')}`}
         className={buttonClasses({ variant: 'outline', size: 'sm', iconOnly: true })}
       >
         <SearchIcon />

@@ -3,7 +3,7 @@ import { cx } from '../cx'
 import { AppLink, type AppLinkProps } from './AppLink'
 import { type ButtonSize, type ButtonVariant, buttonClasses } from './buttonClasses'
 import { ariaKeyShortcuts } from './Kbd'
-import { useShortcutKey } from './shortcutKey'
+import { useOfferedShortcut, useShortcutKey } from './shortcutKey'
 import { Tooltip } from './Tooltip'
 
 interface IconButtonOwnProps {
@@ -18,7 +18,8 @@ interface IconButtonOwnProps {
    *  is only seen, so say what it means in `label` too, such as "Filters (2 on)". */
   dot?: boolean
   /** A single key, such as F, that presses the button from anywhere on the page
-   *  outside a text field. Also shown in the tooltip. */
+   *  outside a text field. Also shown in the tooltip. Off with UIProvider's
+   *  `characterKeyShortcuts`. */
   shortcut?: string | undefined
 }
 
@@ -39,11 +40,12 @@ export function IconButton({
   size = 'sm',
   pressed,
   dot = false,
-  shortcut,
+  shortcut: givenShortcut,
   className,
   ref,
   ...props
 }: IconButtonProps) {
+  const shortcut = useOfferedShortcut(givenShortcut)
   const button = useRef<HTMLElement | null>(null)
   const setButton = useCallback(
     (node: HTMLButtonElement & HTMLAnchorElement) => {

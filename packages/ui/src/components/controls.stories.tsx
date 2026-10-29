@@ -659,10 +659,12 @@ function PaginationDemo({
   known,
   sizes,
   numbers,
+  label,
 }: {
   known: boolean
   sizes: boolean
   numbers: boolean
+  label: string
 }) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -674,6 +676,7 @@ function PaginationDemo({
       {...(known ? { total: 420 } : { hasNext: page < 4, summary: `Runs from page ${page + 1}` })}
       onPageChange={setPage}
       pageNumbers={numbers}
+      label={label || undefined}
       {...(sizes ? { onPageSizeChange: setPageSize } : {})}
     />
   )
@@ -682,23 +685,57 @@ function PaginationDemo({
 /** Where a page sits in the list, with previous and next. Without a total, a
  *  list that only knows whether more follow says what the page covers itself.
  *  `pageNumbers` numbers the pages between them, for a list read out of order. */
-export const PaginationStory: StoryObj<{ known: boolean; sizes: boolean; numbers: boolean }> = {
+export const PaginationStory: StoryObj<{
+  known: boolean
+  sizes: boolean
+  numbers: boolean
+  label: string
+}> = {
   name: 'Pagination',
-  args: { known: true, sizes: true, numbers: false },
+  args: { known: true, sizes: true, numbers: false, label: 'Pages of runs' },
   argTypes: {
     known: { description: 'The list knows its total.' },
     sizes: { description: 'Offers page sizes.' },
     numbers: { description: 'Numbers the pages; needs a total.' },
+    label: { description: 'Names the pager, so pagers on one page tell apart.' },
   },
   render: (args) => <PaginationDemo {...args} />,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     if (args.known) {
-      const position = canvas.getByText('101–150 of 420')
+      const position = canvas.getByText('101–150 of 420', { selector: '.truncate' })
       // With room to spare, the position shows in full.
       await expect(position.scrollWidth).toBeLessThanOrEqual(position.clientWidth)
     }
+  },
+}
+
+/** On the last page Next stays where focus left it, read as unavailable, so the press that
+ *  reached the end doesn't drop focus to the page; the position says where it landed. */
+export const PaginationAtTheEnd: StoryObj = {
+  name: 'Pagination at the end',
+  render: function Render() {
+    const [page, setPage] = useState(7)
+    return (
+      <Pagination
+        className="max-w-2xl border-t border-(--theme-border)"
+        page={page}
+        pageSize={50}
+        total={420}
+        onPageChange={setPage}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const next = canvas.getByRole('button', { name: 'Next' })
+    await userEvent.click(next)
+    await expect(next).toHaveFocus()
+    await expect(next).toHaveAttribute('aria-disabled', 'true')
+    await expect(within(canvas.getByRole('navigation')).getByRole('status')).toHaveTextContent(
+      '401–420 of 420',
+    )
   },
 }
 
