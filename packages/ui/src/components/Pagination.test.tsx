@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { Pagination, pageSteps } from './Pagination'
 import { UIProvider, type UIStrings } from './Provider'
@@ -90,12 +90,28 @@ it('is named by its label, so two pagers on a page tell apart', () => {
   expect(screen.getByRole('navigation', { name: 'Pages of groups' })).toBeInTheDocument()
 })
 
-it('reads out where a step lands', () => {
-  const { rerender } = render(<Pagination page={0} pageSize={50} total={120} />)
-  const position = screen.getByText('1–50 of 120')
-  expect(position).toHaveAttribute('aria-live', 'polite')
-  rerender(<Pagination page={1} pageSize={50} total={120} />)
-  expect(position).toHaveTextContent('51–100 of 120')
+it('reads out where a step or a page size lands, then clears it', () => {
+  vi.useFakeTimers()
+  try {
+    const { rerender } = render(<Pagination page={0} pageSize={50} total={120} />)
+    const status = screen.getByRole('status')
+    expect(status).toBeEmptyDOMElement()
+    rerender(<Pagination page={1} pageSize={50} total={120} />)
+    expect(status).toHaveTextContent('51–100 of 120')
+    rerender(<Pagination page={0} pageSize={100} total={120} />)
+    expect(status).toHaveTextContent('1–100 of 120')
+    act(() => vi.advanceTimersByTime(7000))
+    expect(status).toBeEmptyDOMElement()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it('stays quiet when only the total changes, as a list polls', () => {
+  const { rerender } = render(<Pagination page={1} pageSize={50} total={120} />)
+  rerender(<Pagination page={1} pageSize={50} total={121} />)
+  expect(screen.getByText('51–100 of 121')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toBeEmptyDOMElement()
 })
 
 it('makes pages links when the address names them', () => {

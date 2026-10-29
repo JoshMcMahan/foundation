@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { cx } from '../cx'
 import { formatInteger } from '../format'
 import { ChevronLeftIcon, ChevronRightIcon, MoreIcon } from '../icons'
@@ -96,10 +96,26 @@ export function Pagination({
   const smallest = Math.min(...pageSizes)
   // Also keep the size picker when a larger size is what hid paging, so it can be reset.
   const showSizes = !!onPageSizeChange && ((known && total > smallest) || pageSize > smallest)
+  const position = summary ?? (known ? t.pager(start, end, pastCap ? end : total, pastCap) : null)
+  // Read out where a new page or page size lands. A total that changes on its own, as a list
+  // polls or narrows, stays quiet: the list's count says that.
+  const [landed, setLanded] = useState({ page, pageSize })
+  const [said, setSaid] = useState<ReactNode>(null)
+  if (landed.page !== page || landed.pageSize !== pageSize) {
+    setLanded({ page, pageSize })
+    setSaid(position)
+  }
+  // Cleared once heard, so reading through the page doesn't meet the position twice.
+  useEffect(() => {
+    if (said === null) {
+      return
+    }
+    const clear = setTimeout(() => setSaid(null), SAID_FOR_MS)
+    return () => clearTimeout(clear)
+  }, [said])
   if (!hasPrevious && !hasMore && !showSizes) {
     return null
   }
-  const position = summary ?? (known ? t.pager(start, end, pastCap ? end : total, pastCap) : null)
   return (
     <nav
       aria-label={label ?? t.pagination}
@@ -112,9 +128,9 @@ export function Pagination({
     >
       {/* Takes the bar's free space, so the position truncates only when the bar runs out. */}
       <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-(--theme-muted-text-color)">
-        {/* Read out as it changes, so a step says where it landed. */}
-        <span aria-live="polite" className="truncate empty:hidden">
-          {position}
+        {position && <span className="truncate">{position}</span>}
+        <span role="status" className="sr-only">
+          {said}
         </span>
         {showSizes && (
           <Select
@@ -256,6 +272,8 @@ function PageStep({
     />
   )
 }
+
+const SAID_FOR_MS = 7000
 
 // Steps are 24px, small enough to keep the bar slim; on a touch screen they
 // grow to 32px, which the bar still holds, so a finger finds them.

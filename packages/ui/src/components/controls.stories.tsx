@@ -704,7 +704,7 @@ export const PaginationStory: StoryObj<{
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     if (args.known) {
-      const position = canvas.getByText('101–150 of 420')
+      const position = canvas.getByText('101–150 of 420', { selector: '.truncate' })
       // With room to spare, the position shows in full.
       await expect(position.scrollWidth).toBeLessThanOrEqual(position.clientWidth)
     }
@@ -733,7 +733,9 @@ export const PaginationAtTheEnd: StoryObj = {
     await userEvent.click(next)
     await expect(next).toHaveFocus()
     await expect(next).toHaveAttribute('aria-disabled', 'true')
-    await expect(canvas.getByText('401–420 of 420')).toHaveAttribute('aria-live', 'polite')
+    await expect(
+      within(canvas.getByRole('navigation')).getByRole('status'),
+    ).toHaveTextContent('401–420 of 420')
   },
 }
 
