@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.104.0](https://github.com/parallelworks/foundation/compare/ui-v0.103.1...ui-v0.104.0) (2026-10-30)
+
+
+### Features
+
+* **ui:** a still run graph, each job tinted by its status, to preview in a hover card ([#585](https://github.com/parallelworks/foundation/issues/585)) ([37dafe9](https://github.com/parallelworks/foundation/commit/37dafe9747361b10643afadb73d251939e2a9b50))
+
+
+### Bug Fixes
+
+* **ui:** explorer panes overlap on phones ([#586](https://github.com/parallelworks/foundation/issues/586)) ([21643cc](https://github.com/parallelworks/foundation/commit/21643ccb1aa3f78660701d1f443a75f8a03a9dbb))
+
 ## [0.103.1](https://github.com/parallelworks/foundation/compare/ui-v0.103.0...ui-v0.103.1) (2026-10-30)
 
 
