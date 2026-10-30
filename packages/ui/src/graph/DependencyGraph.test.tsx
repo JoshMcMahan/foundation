@@ -324,6 +324,19 @@ describe('DependencyGraph view bar', () => {
   })
 })
 
+describe('DependencyGraph still', () => {
+  it('draws the jobs in their statuses, with nothing around the graph or in it to press', () => {
+    const { container } = render(<DependencyGraph run={run} still />)
+    // Once: there is no job list beside the graph.
+    expect(screen.getAllByText('Build')).toHaveLength(1)
+    expect(container.querySelector('[data-status="completed"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-tone="success"]')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset view' })).not.toBeInTheDocument()
+    expect(panZoom.props).toMatchObject({ disabled: true })
+    expect(container.querySelector('[inert]')).toContainElement(screen.getByText('Build'))
+  })
+})
+
 describe('DependencyGraph sidebar', () => {
   const subRun = {
     id: 'r',

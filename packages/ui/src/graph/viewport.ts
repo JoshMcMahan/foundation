@@ -125,6 +125,37 @@ export function fitView(
   return { x: x - bounds.minX * scale, y: shownTop - bounds.minY * scale, scale }
 }
 
+/** A still graph's view, its width across the panel's and no taller than `maxHeight`, centered
+ *  across with `padding` around it, and the height of the panel it leaves: the graph's at that
+ *  view. */
+export function fitStill(
+  bounds: Bounds,
+  width: number,
+  maxHeight: number,
+  padding = 12,
+): { view: View; height: number } | null {
+  const graphWidth = bounds.maxX - bounds.minX
+  const graphHeight = bounds.maxY - bounds.minY
+  if (graphWidth <= 0 || graphHeight <= 0 || width <= 0) {
+    return null
+  }
+  const scale = clampScale(
+    Math.min(
+      (width - padding * 2) / graphWidth,
+      (maxHeight - padding * 2) / graphHeight,
+      FIT_MAX_SCALE,
+    ),
+  )
+  return {
+    view: {
+      x: (width - graphWidth * scale) / 2 - bounds.minX * scale,
+      y: padding - bounds.minY * scale,
+      scale,
+    },
+    height: Math.min(maxHeight, Math.ceil(graphHeight * scale + padding * 2)),
+  }
+}
+
 /** The first fit of a panel that then shrinks to its graph: from the corner of the panel as it
  *  will be, so the graph stays where it first shows. `heightAt` is the panel's height after it
  *  shrinks to the graph at a view. */

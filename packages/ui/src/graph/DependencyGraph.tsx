@@ -100,6 +100,7 @@ import {
   FIT_MAX_SCALE,
   fitMargin,
   fitShrinking,
+  fitStill,
   fitView,
   intoReach,
   intoView,
@@ -1195,10 +1196,31 @@ function graphBounds(content: HTMLElement): Bounds | null {
   return bounds
 }
 
+// Applies a view on the DOM for this paint, without the library's async delay, and tells the
+// library after the paint so it doesn't overwrite it.
+function showNow(container: HTMLElement, transform: ReactZoomPanPinchContentRef, view: View) {
+  const wrapperEl = container.querySelector<HTMLElement>('.react-transform-component')
+  if (wrapperEl) {
+    wrapperEl.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
+  }
+  requestAnimationFrame(() => transform.setTransform(view.x, view.y, view.scale, 0))
+}
+
 // A panel narrower than this is a phone's, where a fit of a whole run would be too small to read.
 const NARROW_PANEL_PX = 640
 // The widest a preview's pane is when it runs the graph down the pane: a phone's.
 const TALL_PANEL_MAX_PX = 480
+const STILL_MAX_HEIGHT = 240
+// A still graph tints each job in its status's tone, so the status still shows where the graph is
+// drawn too small to read. A job's tint fills its box, top to bottom.
+const STILL_TINTS = cx(
+  '[&_.dag-fade]:overflow-hidden [&_.dag-fade]:py-0 [&_[data-tone]]:py-4',
+  '[&_[data-tone=success]]:bg-(--theme-success)/20',
+  '[&_[data-tone=info]]:bg-(--theme-info)/20',
+  '[&_[data-tone=warning]]:bg-(--theme-warning)/20',
+  '[&_[data-tone=error]]:bg-(--theme-error)/20',
+  '[&_[data-tone=muted]]:bg-(--theme-muted-panel-bg)',
+)
 
 // On a phone, past the host's `p-4` to the container's edges, with no side borders or corners.
 const BLEED_CLASSES = 'max-sm:-mx-4 max-sm:w-auto max-sm:rounded-none max-sm:border-x-0'
@@ -1250,6 +1272,8 @@ export default function DependencyGraph({
   onCloseLog,
   stickySidebar,
   bleed = false,
+  still = false,
+  maxHeight = STILL_MAX_HEIGHT,
 }: {
   run: GraphRun
   preview?: boolean
@@ -1275,6 +1299,12 @@ export default function DependencyGraph({
   /** On a phone, the jobs' panel, graph or list, reaches past the host's content padding (`p-4`) to
    *  the container's edges, without side borders or corners, so a job's row has the screen's width. */
   bleed?: boolean | undefined
+  /** A run's graph to glance at, as in a hover card: its jobs in their statuses, fitted to the
+   *  panel's width, the panel as tall as the graph up to `maxHeight`, with nothing around the graph
+   *  and nothing in it to pan, zoom or press. */
+  still?: boolean | undefined
+  /** The tallest a still graph's panel grows, in pixels. */
+  maxHeight?: number | undefined
 }) {
   const engine = useWorkflowEngine()
   // Animation timing constant (seconds) — controls line draw, dot transitions, and stagger delay
@@ -1335,7 +1365,7 @@ export default function DependencyGraph({
       setContainerEl(el)
       topObserverRef.current?.disconnect()
       topObserverRef.current = null
-      if (!el || preview) {
+      if (!el || preview || still) {
         return
       }
       const measure = () => {
@@ -1356,7 +1386,7 @@ export default function DependencyGraph({
         topObserverRef.current = ro
       }
     },
-    [preview],
+    [preview, still],
   )
   const containerHeight = topOffset !== null ? Math.max(windowSize.h - topOffset - 16, 160) : null
   // On a phone a run's graph runs down the screen, its ranks as rows, so scrolling follows the work
@@ -1365,7 +1395,10 @@ export default function DependencyGraph({
   // graph takes the pane's height rather than a strip across its top. A pane beside an editor on a
   // wider screen keeps the graph running across.
   const [tallPanel, setTallPanel] = useState(false)
-  const runsDown = !editor && (preview ? fill && tallPanel : windowSize.w < NARROW_PANEL_PX)
+  const runsDown =
+    !editor && !still && (preview ? fill && tallPanel : windowSize.w < NARROW_PANEL_PX)
+  // A still graph's panel is as tall as the graph at its fit, which sets both.
+  const [stillHeight, setStillHeight] = useState<number | null>(null)
 
   // The panel is only as tall as the graph, up to that cap, so a small graph
   // leaves no empty box above the step summaries under it. The transform
@@ -1387,7 +1420,7 @@ export default function DependencyGraph({
     // A new panel (back from the tree view) gets a new initial view.
     fitViewRef.current = null
     fitted.current = false
-    if (!container || fixedHeight) {
+    if (!container || fixedHeight || still) {
       return
     }
     let raf = 0
@@ -1413,7 +1446,7 @@ export default function DependencyGraph({
       observer.disconnect()
       cancelAnimationFrame(raf)
     }
-  }, [containerEl, fixedHeight])
+  }, [containerEl, fixedHeight, still])
 
   const { common, dag: dagStrings } = useStrings()
   const locale = useLocale()
@@ -1650,6 +1683,16 @@ export default function DependencyGraph({
       if (!container || !content || !transform || !bounds) {
         return
       }
+      if (still) {
+        const frame = container.offsetHeight - container.clientHeight
+        const fit = fitStill(bounds, container.clientWidth, maxHeight - frame)
+        if (!fit) {
+          return
+        }
+        showNow(container, transform, fit.view)
+        setStillHeight(fit.height + frame)
+        return
+      }
       const showing =
         shown.current && performance.now() - shown.current.at < HOLD_MS
           ? shown.current.keys.flatMap((key) => runRowOf(key) ?? [])
@@ -1751,15 +1794,9 @@ export default function DependencyGraph({
         transform.setTransform(view.x, view.y, view.scale, animationMs, 'easeOut')
         return
       }
-      // Apply transform directly to the DOM for instant update (no library async delay)
-      const wrapperEl = container.querySelector<HTMLElement>('.react-transform-component')
-      if (wrapperEl) {
-        wrapperEl.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
-      }
-      // Tell the library after paint so it doesn't overwrite our direct DOM change
-      requestAnimationFrame(() => transform.setTransform(view.x, view.y, view.scale, 0))
+      showNow(container, transform, view)
     },
-    [nodeOf, editor, runRowOf, preview, runsDown, fill, fixedHeight],
+    [nodeOf, editor, runRowOf, preview, runsDown, fill, fixedHeight, still, maxHeight],
   )
 
   // Boxes open and close over CSS transitions, so a fit before they end measures them mid-way:
@@ -1994,6 +2031,19 @@ export default function DependencyGraph({
       cancelAnimationFrame(raf)
     }
   }, [fill, containerEl, fitGraph])
+
+  // A still graph refits as it or its panel changes size, such as when its font loads, before the
+  // change paints.
+  useEffect(() => {
+    const graph = graphContentRef.current?.firstElementChild
+    if (!still || !containerEl || !graph || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(() => fitGraph())
+    observer.observe(containerEl)
+    observer.observe(graph)
+    return () => observer.disconnect()
+  }, [still, containerEl, fitGraph])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a resized window or a re-rooted graph re-fits the view.
   useEffect(() => {
@@ -2274,9 +2324,11 @@ export default function DependencyGraph({
     />
   )
 
+  // A preview or a still graph is the graph alone.
+  const bare = preview || still
   const graph = (
     <div className={cx('flex flex-col lg:flex-row w-full', fill && 'h-full')}>
-      {!preview && (
+      {!bare && (
         <div
           ref={setSidebarEl}
           className={cx(
@@ -2309,10 +2361,8 @@ export default function DependencyGraph({
           <div className="mx-4 mb-4 overflow-y-auto">{summarySidebar}</div>
         </div>
       )}
-      <div
-        className={cx(preview ? 'w-full' : 'flex-1 min-w-0 mt-2', 'h-full flex flex-col gap-y-2')}
-      >
-        {!preview && (
+      <div className={cx(bare ? 'w-full' : 'flex-1 min-w-0 mt-2', 'h-full flex flex-col gap-y-2')}>
+        {!bare && (
           <div className="panel w-full border rounded-lg px-4 py-2 flex flex-wrap items-center gap-x-16 gap-y-2">
             <div className="flex flex-col">
               <div className="text-xs">{dagStrings.workflow}</div>
@@ -2373,15 +2423,15 @@ export default function DependencyGraph({
             )}
           </div>
         )}
-        {!preview && (
+        {!bare && (
           <RunWarningsList
             warnings={warnings}
             rootJobs={rootJobs}
             onShow={canShowWarnings ? showWarning : undefined}
           />
         )}
-        {!preview && <AnnotationBanner executedJobs={jobs} />}
-        {viewMode === 'tree' && !preview ? (
+        {!bare && <AnnotationBanner executedJobs={jobs} />}
+        {viewMode === 'tree' && !bare ? (
           <div className={cx('panel w-full border', bleed && BLEED_CLASSES)}>
             <TreeView
               jobs={jobs}
@@ -2399,20 +2449,23 @@ export default function DependencyGraph({
               removeBorder ? 'border-none' : 'border',
               bleed && BLEED_CLASSES,
               editor && 'outline-none',
+              still && STILL_TINTS,
             )}
             style={{
-              height:
-                fixedHeight ??
-                (fitHeight !== null
-                  ? `${Math.min(fitHeight, fitCap)}px`
-                  : containerHeight !== null
-                    ? `${containerHeight}px`
-                    : '62vh'),
-              minHeight: fitHeight !== null && !fixedHeight ? fitFloor : 160,
+              height: still
+                ? `${stillHeight ?? maxHeight}px`
+                : (fixedHeight ??
+                  (fitHeight !== null
+                    ? `${Math.min(fitHeight, fitCap)}px`
+                    : containerHeight !== null
+                      ? `${containerHeight}px`
+                      : '62vh')),
+              minHeight: still ? 0 : fitHeight !== null && !fixedHeight ? fitFloor : 160,
             }}
           >
             <TransformWrapper
               ref={transformRef}
+              disabled={still}
               minScale={MIN_SCALE}
               maxScale={MAX_SCALE}
               initialScale={FIT_MAX_SCALE}
@@ -2434,48 +2487,51 @@ export default function DependencyGraph({
             >
               {() => (
                 <>
-                  <div
-                    ref={viewBarRef}
-                    className="absolute z-10 top-2 right-2 flex max-w-[calc(100%-1rem)] flex-col items-end gap-y-1"
-                  >
-                    <GraphViewControls
-                      history={
-                        executedJobsPath.length > 1
-                          ? {
-                              back:
-                                executedJobsPathIdx + 1 < executedJobsPath.length
-                                  ? () => {
-                                      resetGraph()
-                                      setExecutedJobsPathIdx(executedJobsPathIdx + 1)
-                                    }
-                                  : undefined,
-                              forward:
-                                executedJobsPathIdx > 0
-                                  ? () => {
-                                      resetGraph()
-                                      setExecutedJobsPathIdx(executedJobsPathIdx - 1)
-                                    }
-                                  : undefined,
-                            }
-                          : undefined
-                      }
-                      expand={
-                        hasExpandable
-                          ? {
-                              label: allExpanded ? common.collapseAll : common.expandAll,
-                              onClick: toggleExpandAll,
-                            }
-                          : undefined
-                      }
-                      onReset={resetView}
-                      onZoom={(direction) => zoomBy(direction * ZOOM_STEP)}
-                      zoomedAll={zoomedAll}
-                    />
-                  </div>
+                  {!still && (
+                    <div
+                      ref={viewBarRef}
+                      className="absolute z-10 top-2 right-2 flex max-w-[calc(100%-1rem)] flex-col items-end gap-y-1"
+                    >
+                      <GraphViewControls
+                        history={
+                          executedJobsPath.length > 1
+                            ? {
+                                back:
+                                  executedJobsPathIdx + 1 < executedJobsPath.length
+                                    ? () => {
+                                        resetGraph()
+                                        setExecutedJobsPathIdx(executedJobsPathIdx + 1)
+                                      }
+                                    : undefined,
+                                forward:
+                                  executedJobsPathIdx > 0
+                                    ? () => {
+                                        resetGraph()
+                                        setExecutedJobsPathIdx(executedJobsPathIdx - 1)
+                                      }
+                                    : undefined,
+                              }
+                            : undefined
+                        }
+                        expand={
+                          hasExpandable
+                            ? {
+                                label: allExpanded ? common.collapseAll : common.expandAll,
+                                onClick: toggleExpandAll,
+                              }
+                            : undefined
+                        }
+                        onReset={resetView}
+                        onZoom={(direction) => zoomBy(direction * ZOOM_STEP)}
+                        zoomedAll={zoomedAll}
+                      />
+                    </div>
+                  )}
                   <TransformComponent>
                     <ConnectorClockContext value={clock}>
                       <div
                         ref={graphContentRef}
+                        inert={still}
                         className="flex relative mr-[8000px]"
                         style={{ minHeight: 4000 }}
                       >
@@ -2512,7 +2568,7 @@ export default function DependencyGraph({
             {editorOverlays}
           </div>
         )}
-        {!preview && (
+        {!bare && (
           <StepSummaries
             runSlug={runSlug}
             jobs={rootJobs}
