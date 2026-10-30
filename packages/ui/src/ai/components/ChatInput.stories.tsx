@@ -355,6 +355,51 @@ export const ToolsMenu: StoryObj<ToolsMenuStoryArgs> = {
   },
 }
 
+const openToolsDialog = async (canvasElement: HTMLElement) => {
+  await userEvent.click(await within(canvasElement).findByRole('button', { name: /^Tools/ }))
+  return screen.findByRole('dialog', { name: 'Tools' })
+}
+
+export const ToolsDialog: StoryObj<ToolsMenuStoryArgs> = {
+  ...ToolsMenu,
+  args: { ...ToolsMenu.args, manyTools: true, attachments: false },
+  play: async ({ canvasElement }) => {
+    const dialog = await openToolsDialog(canvasElement)
+    await waitFor(() => expect(within(dialog).getByRole('searchbox')).toHaveFocus())
+  },
+}
+
+export const ToolsDialogApprovals: StoryObj<ToolsMenuStoryArgs> = {
+  ...ToolsDialog,
+  play: async ({ canvasElement }) => {
+    const dialog = await openToolsDialog(canvasElement)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Asks first' }))
+    await expect(within(dialog).getAllByRole('switch')).toHaveLength(
+      makeManyTools().filter((tool) => tool.asksFirst).length,
+    )
+  },
+}
+
+export const ToolsDialogLookups: StoryObj<ToolsMenuStoryArgs> = {
+  ...ToolsDialog,
+  play: async ({ canvasElement }) => {
+    const dialog = await openToolsDialog(canvasElement)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Lookups' }))
+    await expect(within(dialog).getAllByRole('switch')).toHaveLength(
+      makeManyTools().filter((tool) => !tool.asksFirst).length,
+    )
+  },
+}
+
+export const ToolsDialogEmpty: StoryObj<ToolsMenuStoryArgs> = {
+  ...ToolsDialog,
+  play: async ({ canvasElement }) => {
+    const dialog = await openToolsDialog(canvasElement)
+    await userEvent.type(within(dialog).getByRole('searchbox'), 'no-such-tool')
+    await expect(within(dialog).getByText('No tools match')).toBeVisible()
+  },
+}
+
 // A phone-width composer with a host's usage meter: the meter gives way, the
 // model name truncates, and send stays inside the box.
 export const NarrowToolbar: StoryObj<{ width: number; usage: boolean }> = {

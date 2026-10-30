@@ -1,6 +1,7 @@
 import { Menu } from '@base-ui/react/menu'
-import { type ComponentPropsWithRef, type ReactNode, useId, useState } from 'react'
+import { type ComponentPropsWithRef, type ReactNode, useId, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
+import { dialogFooterClassName } from '../../components/dismiss'
 import { panelItemClassName } from '../../components/floating'
 import {
   MenuItem,
@@ -9,8 +10,9 @@ import {
   MenuSeparator,
   MenuSubmenuTrigger,
 } from '../../components/Menu'
-import { Modal } from '../../components/Modal'
+import { Modal, ModalDescription, ModalTitle } from '../../components/Modal'
 import { SearchInput } from '../../components/SearchInput'
+import { SegmentedControl } from '../../components/SegmentedControl'
 import { Switch } from '../../components/Switch'
 import { useQueryMatch } from '../../components/search'
 import { useNarrow } from '../../components/useNarrow'
@@ -164,10 +166,10 @@ function ToolsModalRow({
   const descriptionId = useId()
   return (
     <li>
-      <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-(--theme-hover)">
+      <label className="flex cursor-pointer items-center gap-4 rounded-md px-3 py-3 hover:bg-(--theme-hover)">
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline text-sm">
-            {tool.label}
+          <span className="flex flex-wrap items-baseline gap-y-0.5 text-sm">
+            <span className="font-medium wrap-anywhere">{tool.label}</span>
             <AsksFirst tool={tool} />
           </span>
           {tool.description && (
@@ -180,6 +182,7 @@ function ToolsModalRow({
           size="sm"
           checked={enabled}
           onCheckedChange={onChange}
+          aria-label={tool.label}
           {...(tool.description ? { 'aria-describedby': descriptionId } : {})}
         />
       </label>
@@ -202,14 +205,26 @@ function ToolsModal({
   const t = strings.composerMenu
   const matches = useQueryMatch()
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | 'lookups' | 'approval'>('all')
+  const listRef = useRef<HTMLDivElement>(null)
   const needle = query.trim()
-  const shown = needle
-    ? listed.filter((tool) => matches(needle, tool.label, tool.description, tool.id))
-    : listed
+  const shown = listed.filter(
+    (tool) =>
+      (filter === 'all' || (filter === 'approval' ? tool.asksFirst : !tool.asksFirst)) &&
+      (!needle || matches(needle, tool.label, tool.description, tool.id)),
+  )
   const allOn = shown.every((tool) => enabledToolIds.includes(tool.id))
+  const enabled = listed.filter((tool) => enabledToolIds.includes(tool.id)).length
+  const filtered = filter !== 'all' || needle.length > 0
+  const resetScroll = () => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0
+    }
+  }
   const close = () => {
     onClose()
     setQuery('')
+    setFilter('all')
   }
 
   let footerStart: ReactNode = <span />
@@ -229,26 +244,48 @@ function ToolsModal({
     <Modal
       open={open}
       onClose={close}
-      size="md"
-      title={t.tools}
-      description={t.toolsDescription}
-      footer={
-        <>
-          {footerStart}
-          <Button variant="primary" onClick={close}>
-            {t.done}
-          </Button>
-        </>
-      }
+      size="lg"
+      align="center"
+      className="flex h-[min(640px,calc(100dvh-4rem))] max-h-full flex-col max-sm:h-[min(640px,calc(100dvh-1rem))]"
     >
-      <div className="flex items-center gap-2">
-        <SearchInput
-          value={query}
-          onValueChange={setQuery}
-          placeholder={t.searchTools}
-          label={t.searchTools}
-          className="flex-1"
-        />
+      <div className="flex shrink-0 flex-col gap-4 px-4 pt-4 pb-3">
+        <div>
+          <ModalTitle className="m-0 text-lg font-semibold">{t.tools}</ModalTitle>
+          <ModalDescription className="m-0 mt-1.5 text-sm theme-muted-text">
+            {t.toolsDescription}
+          </ModalDescription>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <SearchInput
+            value={query}
+            onValueChange={(value) => {
+              setQuery(value)
+              resetScroll()
+            }}
+            placeholder={t.searchTools}
+            label={t.searchTools}
+            className="min-w-0 flex-1"
+          />
+          <SegmentedControl
+            label={t.tools}
+            fill="narrow"
+            value={filter}
+            onValueChange={(value) => {
+              setFilter(value)
+              resetScroll()
+            }}
+            options={[
+              { value: 'all', label: t.allTools },
+              { value: 'lookups', label: t.lookups },
+              { value: 'approval', label: t.asksFirst },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-y border-(--theme-border) px-4 py-2">
+        <span role="status" className="text-xs tabular-nums theme-muted-text">
+          {t.toolsEnabled(enabled, listed.length)}
+        </span>
         {shown.length > 0 && (
           <Button
             variant="ghost"
@@ -259,24 +296,38 @@ function ToolsModal({
               }
             }}
           >
-            {allOn ? t.turnAllOff : t.turnAllOn}
+            {filtered
+              ? allOn
+                ? t.turnShownOff
+                : t.turnShownOn
+              : allOn
+                ? t.turnAllOff
+                : t.turnAllOn}
           </Button>
         )}
       </div>
-      {shown.length > 0 ? (
-        <ul className="-mx-2 mt-3 flex flex-col">
-          {shown.map((tool) => (
-            <ToolsModalRow
-              key={tool.id}
-              tool={tool}
-              enabled={enabledToolIds.includes(tool.id)}
-              onChange={(enabled) => setToolEnabled(tool.id, enabled)}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p className="m-0 py-8 text-center text-sm theme-muted-text">{t.noToolsMatch}</p>
-      )}
+      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-1">
+        {shown.length > 0 ? (
+          <ul className="m-0 flex list-none flex-col p-0">
+            {shown.map((tool) => (
+              <ToolsModalRow
+                key={tool.id}
+                tool={tool}
+                enabled={enabledToolIds.includes(tool.id)}
+                onChange={(enabled) => setToolEnabled(tool.id, enabled)}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="m-0 px-3 py-8 text-center text-sm theme-muted-text">{t.noToolsMatch}</p>
+        )}
+      </div>
+      <div className={dialogFooterClassName}>
+        {footerStart}
+        <Button variant="primary" onClick={close}>
+          {t.done}
+        </Button>
+      </div>
     </Modal>
   )
 }

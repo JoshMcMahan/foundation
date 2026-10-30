@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.103.1](https://github.com/parallelworks/foundation/compare/ui-v0.103.0...ui-v0.103.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **ui:** a run's graph opens in its corner instead of jumping there at the next update ([#583](https://github.com/parallelworks/foundation/issues/583)) ([afc2d3c](https://github.com/parallelworks/foundation/commit/afc2d3c0091675c5a9e04ae634863a5f576e1b6d))
+* **ui:** dropdown searches trigger credential prompts ([#579](https://github.com/parallelworks/foundation/issues/579)) ([b61f8ee](https://github.com/parallelworks/foundation/commit/b61f8eec98b400ff365c7a8b31702de5fcfeb987))
+* **ui:** show authored source in Storybook ([#582](https://github.com/parallelworks/foundation/issues/582)) ([2d43516](https://github.com/parallelworks/foundation/commit/2d435164f123e17deb76bc47afe2349b0b21c3fa))
+* **ui:** tools dialog is oversized and off-center ([#584](https://github.com/parallelworks/foundation/issues/584)) ([17b5bfb](https://github.com/parallelworks/foundation/commit/17b5bfb8d26728e39cecfc92bb438d0422b4ff09))
+
 ## [0.103.0](https://github.com/parallelworks/foundation/compare/ui-v0.102.0...ui-v0.103.0) (2026-10-29)
 
 

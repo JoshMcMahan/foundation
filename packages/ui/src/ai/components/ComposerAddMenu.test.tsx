@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ChatToolOption } from '../adapter/types'
 import { makeManyTools, makeStaticAdapter, makeTools, StoryChat } from '../stories/harness'
 import { defaultChatStrings } from '../strings'
@@ -133,11 +133,11 @@ describe('the composer + menu', () => {
     })
     const matching = within(modal).getAllByRole('switch')
     expect(matching.length).toBeLessThan(makeManyTools().length)
-    fireEvent.click(within(modal).getByRole('button', { name: 'Turn all off' }))
+    fireEvent.click(within(modal).getByRole('button', { name: 'Disable results' }))
     for (const toggle of within(modal).getAllByRole('switch')) {
       expect(toggle).not.toBeChecked()
     }
-    expect(within(modal).getByRole('button', { name: 'Turn all on' })).toBeInTheDocument()
+    expect(within(modal).getByRole('button', { name: 'Enable results' })).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('aiChat.disabledTools.u-1') ?? '[]')).toHaveLength(
       matching.length,
     )
@@ -148,6 +148,59 @@ describe('the composer + menu', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Tools$/ }))
 
     expect(await screen.findByRole('dialog', { name: 'Tools' })).toBeInTheDocument()
+  })
+
+  it('filters approval tools and only changes the matching tools', async () => {
+    const tools = makeManyTools()
+    const approvals = tools.filter((tool) => tool.asksFirst)
+    renderComposer({ tools })
+    fireEvent.click(await screen.findByRole('button', { name: /^Tools$/ }))
+    const modal = await screen.findByRole('dialog', { name: 'Tools' })
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Asks first' }))
+    expect(within(modal).getAllByRole('switch')).toHaveLength(approvals.length)
+    fireEvent.change(within(modal).getByRole('searchbox'), { target: { value: 'storage' } })
+    expect(within(modal).getAllByRole('switch')).toHaveLength(2)
+    fireEvent.click(within(modal).getByRole('button', { name: 'Disable results' }))
+    expect(JSON.parse(localStorage.getItem('aiChat.disabledTools.u-1') ?? '[]')).toEqual([
+      'create_storage',
+      'destroy_storage',
+    ])
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Lookups' }))
+    const lookup = within(modal).getByRole('switch', { name: 'List storage' })
+    expect(lookup).toBeChecked()
+    expect(lookup).toHaveAccessibleDescription('Names your buckets and disks')
+    expect(within(modal).getByRole('status')).toHaveTextContent(
+      `${tools.length - 2} of ${tools.length} enabled`,
+    )
+  })
+
+  it('recovers from an empty search and resets filters when reopened', async () => {
+    renderComposer({ tools: makeManyTools() })
+    fireEvent.click(await screen.findByRole('button', { name: /^Tools$/ }))
+    const modal = await screen.findByRole('dialog', { name: 'Tools' })
+    const search = within(modal).getByRole('searchbox')
+
+    await waitFor(() => expect(search).toHaveFocus())
+    fireEvent.click(within(modal).getByRole('button', { name: 'Asks first' }))
+    fireEvent.change(search, { target: { value: 'no-such-tool' } })
+    expect(within(modal).getByText('No tools match')).toBeInTheDocument()
+    expect(within(modal).queryByRole('button', { name: 'Disable results' })).toBeNull()
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(search).toHaveValue('')
+    expect(within(modal).getAllByRole('switch')).toHaveLength(
+      makeManyTools().filter((tool) => tool.asksFirst).length,
+    )
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Done' }))
+    fireEvent.click(await screen.findByRole('button', { name: /^Tools$/ }))
+    const reopened = await screen.findByRole('dialog', { name: 'Tools' })
+    expect(within(reopened).getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(reopened).getAllByRole('switch')).toHaveLength(makeManyTools().length)
   })
 
   it('leaves the provider’s tools out of a turn it does not run', async () => {

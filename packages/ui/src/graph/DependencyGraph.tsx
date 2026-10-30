@@ -99,6 +99,7 @@ import {
   enclosing,
   FIT_MAX_SCALE,
   fitMargin,
+  fitShrinking,
   fitStill,
   fitView,
   intoReach,
@@ -345,11 +346,15 @@ function measureFitHeight(
     const view = new DOMMatrixReadOnly(transform)
     viewRef.current = { scale: view.a, offsetY: view.f }
   }
-  const { scale, offsetY } = viewRef.current
   let bottom = 0
   for (const node of nodes) {
     bottom = Math.max(bottom, offsetWithin(node, content).y + node.offsetHeight)
   }
+  return fitHeightAt(bottom, viewRef.current)
+}
+
+// The panel's height with the graph's nodes reaching `bottom` in content space.
+function fitHeightAt(bottom: number, { scale, offsetY }: FitView) {
   return Math.ceil(bottom * scale + offsetY + FIT_PADDING)
 }
 
@@ -1400,11 +1405,21 @@ export default function DependencyGraph({
   // library mounts its content after the first commit, so the observer watches
   // the panel and the measurement retries until the graph is up.
   const [fitHeight, setFitHeight] = useState<number | null>(null)
+  // Running down, the graph takes most of the screen, to pan down through.
+  const fitCap = runsDown
+    ? Math.max(containerHeight ?? 0, windowSize.h * 0.75)
+    : (containerHeight ?? windowSize.h * 0.62)
+  // A run's panel keeps room for its toolbar; a preview has none.
+  const fitFloor = preview ? 0 : 160
+  const fitLimits = useRef({ cap: fitCap, floor: fitFloor })
+  fitLimits.current = { cap: fitCap, floor: fitFloor }
   const fitViewRef = useRef<FitView | null>(null)
+  const fitted = useRef(false)
   useEffect(() => {
     const container = containerEl
     // A new panel (back from the tree view) gets a new initial view.
     fitViewRef.current = null
+    fitted.current = false
     if (!container || fixedHeight || still) {
       return
     }
@@ -1745,15 +1760,33 @@ export default function DependencyGraph({
       const previewFit = preview
         ? { clear: barHeight + VIEW_BAR_OFFSET_PX, center: fill }
         : undefined
-      const view = fitView(
-        bounds,
-        panel,
+      const options =
         narrow || runsDown
           ? { minScale: READABLE_SCALE, width: runsDown, ...(previewFit ?? { top: barHeight }) }
-          : previewFit,
-      )
+          : previewFit
+      // A panel as tall as its graph shrinks to it after its first fit, so that fit keeps the
+      // shrunk panel's margin; with the taller panel's, the graph jumps to it at the next fit.
+      const first = !fixedHeight && animationMs === 0 && !fitted.current
+      const { cap, floor } = fitLimits.current
+      const frame = container.offsetHeight - container.clientHeight
+      const view = first
+        ? fitShrinking(
+            bounds,
+            panel,
+            ({ y, scale }) =>
+              Math.max(floor, Math.min(fitHeightAt(bounds.maxY, { scale, offsetY: y }), cap)) -
+              frame,
+            options,
+          )
+        : fitView(bounds, panel, options)
       if (!view) {
         return
+      }
+      if (first) {
+        // The panel follows this view, not wherever the library's transform started.
+        fitted.current = true
+        fitViewRef.current = { scale: view.scale, offsetY: view.y }
+        setFitHeight(fitHeightAt(bounds.maxY, fitViewRef.current))
       }
       if (animationMs > 0) {
         // Let the library animate the pan/zoom. Nodes and connectors both sit inside
@@ -1763,7 +1796,7 @@ export default function DependencyGraph({
       }
       showNow(container, transform, view)
     },
-    [nodeOf, editor, runRowOf, preview, runsDown, fill, still, maxHeight],
+    [nodeOf, editor, runRowOf, preview, runsDown, fill, fixedHeight, still, maxHeight],
   )
 
   // Boxes open and close over CSS transitions, so a fit before they end measures them mid-way:
@@ -2423,18 +2456,11 @@ export default function DependencyGraph({
                 ? `${stillHeight ?? maxHeight}px`
                 : (fixedHeight ??
                   (fitHeight !== null
-                    ? `${Math.min(
-                        fitHeight,
-                        // Running down, the graph takes most of the screen, to pan down through.
-                        runsDown
-                          ? Math.max(containerHeight ?? 0, windowSize.h * 0.75)
-                          : (containerHeight ?? windowSize.h * 0.62),
-                      )}px`
+                    ? `${Math.min(fitHeight, fitCap)}px`
                     : containerHeight !== null
                       ? `${containerHeight}px`
                       : '62vh')),
-              // A run's panel keeps room for its toolbar; a preview has none.
-              minHeight: still || (preview && fitHeight !== null && !fixedHeight) ? 0 : 160,
+              minHeight: still ? 0 : fitHeight !== null && !fixedHeight ? fitFloor : 160,
             }}
           >
             <TransformWrapper
