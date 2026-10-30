@@ -120,6 +120,37 @@ export function fitView(
   return { x: x - bounds.minX * scale, y: shownTop - bounds.minY * scale, scale }
 }
 
+/** A still graph's view, its width across the panel's and no taller than `maxHeight`, centered
+ *  across with `padding` around it, and the height of the panel it leaves: the graph's at that
+ *  view. */
+export function fitStill(
+  bounds: Bounds,
+  width: number,
+  maxHeight: number,
+  padding = 12,
+): { view: View; height: number } | null {
+  const graphWidth = bounds.maxX - bounds.minX
+  const graphHeight = bounds.maxY - bounds.minY
+  if (graphWidth <= 0 || graphHeight <= 0 || width <= 0) {
+    return null
+  }
+  const scale = clampScale(
+    Math.min(
+      (width - padding * 2) / graphWidth,
+      (maxHeight - padding * 2) / graphHeight,
+      FIT_MAX_SCALE,
+    ),
+  )
+  return {
+    view: {
+      x: (width - graphWidth * scale) / 2 - bounds.minX * scale,
+      y: padding - bounds.minY * scale,
+      scale,
+    },
+    height: Math.min(maxHeight, Math.ceil(graphHeight * scale + padding * 2)),
+  }
+}
+
 /** The least shift that brings [start, end] inside [low, high]; none when it can't all fit, so the view stays. */
 export function intoView(start: number, end: number, low: number, high: number) {
   if (end - start > high - low) {

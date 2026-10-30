@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useStrings, useWorkflowEngine } from '../components/Provider'
-import { RunStatusIcon } from '../components/RunStatusIcon'
+import { RunStatusIcon, runStatusTone } from '../components/RunStatusIcon'
 import type { MatrixGroup, RunStatus } from '../engine'
 import { EditableJobRow } from './editorRows'
 import { GraphNode } from './GraphNode'
@@ -116,7 +116,10 @@ export const MatrixGroupNode = memo(function MatrixGroupNode({
         )}
       </div>
       {!isExpanded && (
-        <div className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1">
+        <div
+          data-tone={runStatusTone(aggStatus)}
+          className="mt-1 border-t border-(--theme-border) pt-1 flex items-center gap-x-1"
+        >
           {!preview && <RunStatusIcon status={aggStatus} />}
           <span>{preview ? t.jobCount(matrixMembers.length) : statusLabel}</span>
           <WarningMark warnings={warnings} />

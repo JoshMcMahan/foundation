@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useNavigation, useSlots, useStrings, useWorkflowEngine } from '../components/Provider'
-import { RunStatusIcon } from '../components/RunStatusIcon'
+import { RunStatusIcon, runStatusTone } from '../components/RunStatusIcon'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { FileTextIcon, OpenInNewGraphIcon, SummaryIcon } from '../icons'
@@ -106,6 +106,7 @@ export function Joblist(
     return (
       <div
         key={`job-${jobName}`}
+        data-tone={runStatusTone(jobStatus)}
         // Jobs that share a box are ruled apart, so two read as two rather than as one name on two
         // lines.
         className={cx(
