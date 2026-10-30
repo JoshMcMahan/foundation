@@ -26,7 +26,8 @@ export interface StatTileLamp {
   /** Unlit, a hollow ring, for a count of something waiting or off, such as pending jobs or idle
    *  nodes. */
   off?: boolean | undefined
-  /** A ping from the lamp, for work under way. It pings only while the count is above zero. */
+  /** A ping from the lamp, three times, for work under way: once the count has loaded and is
+   *  above zero. */
   pulse?: boolean | undefined
   /** An icon in place of the lamp, such as a `RunStatusIcon`. */
   icon?: ReactNode | undefined
@@ -125,8 +126,9 @@ export function StatTile({
   const locale = localeProp ?? providerLocale
   const groupSpan = useContext(PhoneSpanContext)
   const shown = typeof value === 'number' ? formatValue(value, locale, format) : value
-  // A pulse says work is under way; at zero there is none.
-  const pulse = lamp?.pulse === true && !(typeof value === 'number' && value <= 0)
+  // A pulse says work is under way; at zero there is none. It waits for the count, since its
+  // three pings would otherwise be spent on the sketch.
+  const pulse = lamp?.pulse === true && !loading && !(typeof value === 'number' && value <= 0)
   return (
     <Card
       size="fill"

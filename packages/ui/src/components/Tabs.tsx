@@ -58,7 +58,9 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
    *  scroller already pins at the top, such as the page header and a toolbar. */
   sticky?: boolean | undefined
   /** Keeps the panels as tall as the tallest, so changing tabs moves nothing
-   *  below them. Every panel stays mounted, so it suits a few light panels. */
+   *  below them. Every panel stays mounted, so it suits a few light panels. The
+   *  `TabPanel`s share one grid cell, so they must be the children, with no
+   *  element around them and nothing else beside them. */
   steadyHeight?: boolean | undefined
   /** On the tab row. */
   className?: string | undefined
@@ -227,13 +229,12 @@ export function Tabs<Value extends string>({
           {end}
         </div>
       )}
-      {steadyHeight ? (
-        <SteadyHeight.Provider value>
-          <div className="grid">{children}</div>
-        </SteadyHeight.Provider>
-      ) : (
-        children
-      )}
+      {/* Provided either way, so tabs nested in a steady panel don't take on its height. A
+          column of `minmax(0, 1fr)` keeps a wide panel, such as a table that scrolls sideways,
+          from widening every panel past the box. */}
+      <SteadyHeight.Provider value={steadyHeight}>
+        {steadyHeight && children ? <div className="grid grid-cols-1">{children}</div> : children}
+      </SteadyHeight.Provider>
     </BaseTabs.Root>
   )
 }
@@ -293,11 +294,12 @@ export function TabPanel({
       keepMounted={steady || keepMounted}
       // A closed panel keeps its space: invisible, and inert as Base UI makes it, rather than
       // `hidden`, which takes it out of the layout. Spread, since an undefined `hidden` would
-      // replace Base UI's own.
+      // replace Base UI's own. Hidden by `inert`, which Base UI sets as the panel closes, not
+      // `data-hidden`, which waits for its exit to finish while it would show over the open one.
       {...(steady ? { hidden: false } : {})}
       className={cx(
         'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--theme-focus)',
-        steady && '[grid-area:1/1] data-hidden:invisible',
+        steady && '[grid-area:1/1] [&[inert]]:invisible',
         className,
       )}
     >

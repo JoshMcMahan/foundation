@@ -96,6 +96,29 @@ describe('Tabs', () => {
     expect(panel('Settings panel')).not.toHaveAttribute('inert')
   })
 
+  it('leaves tabs inside a steady-height panel to show one panel at a time', () => {
+    render(
+      <Tabs label="Resource" items={items} defaultValue="overview" steadyHeight>
+        <TabPanel value="overview">
+          <Tabs
+            label="Logs"
+            items={[
+              { value: 'out', label: 'Output' },
+              { value: 'err', label: 'Errors' },
+            ]}
+            defaultValue="out"
+          >
+            <TabPanel value="out">Output panel</TabPanel>
+            <TabPanel value="err">Errors panel</TabPanel>
+          </Tabs>
+        </TabPanel>
+        <TabPanel value="settings">Settings panel</TabPanel>
+      </Tabs>,
+    )
+    expect(screen.getByText('Output panel')).toBeVisible()
+    expect(screen.queryByText('Errors panel')).toBeNull()
+  })
+
   it('hides a lone tab, but still shows its panel', () => {
     render(
       <Tabs label="Resource" items={[{ value: 'only', label: 'Only' }]}>

@@ -273,7 +273,8 @@ export function StatusDot({
         <span
           data-ping=""
           className={cx(
-            'absolute inline-flex h-full w-full rounded-full opacity-75 motion-reduce:hidden',
+            // Its last frame holds it at twice the lamp's size, unseen; it takes no pointer there.
+            'pointer-events-none absolute inline-flex h-full w-full rounded-full opacity-75 motion-reduce:hidden',
             PING,
             current ? 'bg-current' : 'bg-(--lamp-from)',
           )}
