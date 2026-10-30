@@ -31,16 +31,19 @@ export function FileTableHeaders({
           <span>{t.chrome.name}</span>
         </div>
       </Table.Header>
-      <Table.Header caps={false} className="w-[14%] py-2">
+      <Table.Header
+        caps={false}
+        className="w-16 px-2 py-2 @min-[40rem]/files:w-[14%] @min-[40rem]/files:px-4"
+      >
         {t.chrome.size}
       </Table.Header>
-      <Table.Header caps={false} className="w-[14%] py-2">
+      <Table.Header caps={false} className="hidden w-[14%] py-2 @min-[40rem]/files:table-cell">
         {t.chrome.type}
       </Table.Header>
-      <Table.Header caps={false} className="w-[22%] py-2">
+      <Table.Header caps={false} className="hidden w-[22%] py-2 @min-[40rem]/files:table-cell">
         {t.chrome.lastModified}
       </Table.Header>
-      <ListActionsHeader actionCount={1} />
+      <ListActionsHeader actionCount={2} />
     </>
   )
 }

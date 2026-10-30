@@ -18,6 +18,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { useContextMenu } from '../components/ContextMenu'
 import { CopyButton, CopyCodeBlock } from '../components/CopyButton'
 import { CreateModal } from '../components/CreateModal'
+import { Drawer } from '../components/Drawer'
 import { InfoTip } from '../components/InfoTip'
 import { keyedByContent } from '../components/keys'
 import { Loader } from '../components/Loader'
@@ -39,6 +40,7 @@ import { Tabs } from '../components/Tabs'
 import { toast } from '../components/Toast'
 import { Tooltip } from '../components/Tooltip'
 import { useCopy } from '../components/useCopy'
+import { useWidth } from '../components/useWidth'
 import { cx } from '../cx'
 import { formatBytes, formatDateTime } from '../format'
 import {
@@ -296,6 +298,15 @@ export default function FileExplorer({
   extraRowActions,
   headerAccessory,
 }: IFileExplorerProps) {
+  const [frame, setFrame] = useState<HTMLDivElement | null>(null)
+  const frameWidth = useWidth(frame)
+  const narrow = !treeOnly && frameWidth !== null && frameWidth < 640
+  const [foldersPath, setFoldersPath] = useState<string | null>(null)
+  useEffect(() => {
+    if (!narrow || foldersPath !== selectedPath) {
+      setFoldersPath(null)
+    }
+  }, [selectedPath, narrow, foldersPath])
   const copySubmenu = useCopySubmenu()
   const t = useStrings().fileExplorer
   const { common } = useStrings()
@@ -1588,53 +1599,87 @@ export default function FileExplorer({
     </Menu.Trigger>
   )
 
-  return (
-    <div className="w-full h-full flex relative">
-      <div className="w-full h-full flex">
-        <TreeFrame treeOnly={treeOnly} sidebarWidth={sidebarWidth} onWidthChange={setSidebarWidth}>
-          {/* File Tree - Left sidebar */}
-          <div className="h-full flex flex-col border-r theme-border bg-(--theme-panel-bg)/60">
-            <div className="flex items-center justify-end h-10 px-3 shrink-0 border-b theme-border">
-              <div className="flex gap-x-0.5">
-                <RefreshButton iconOnly onRefresh={() => handleRefresh()} />
+  const tree = (
+    <TreeFrame
+      treeOnly={treeOnly || narrow}
+      sidebarWidth={sidebarWidth}
+      onWidthChange={setSidebarWidth}
+    >
+      {/* File Tree - Left sidebar */}
+      <div className="h-full flex flex-col border-r theme-border bg-(--theme-panel-bg)/60">
+        <div className="flex items-center justify-end h-10 px-3 shrink-0 border-b theme-border">
+          <div className="flex gap-x-0.5">
+            <RefreshButton iconOnly onRefresh={() => handleRefresh()} />
 
-                <Tooltip content={common.collapse}>
-                  <button
-                    type="button"
-                    aria-label={common.collapse}
-                    className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-focus)"
-                    onClick={collapseAll}
-                  >
-                    <CollapseIcon className="h-3.5 w-3.5" />
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
-
-            {/* Tree Contents Section */}
-            <TreeView
-              rootNodes={rootNodes}
-              parentToChildrenMap={parentToChildrenMap}
-              expandedPaths={expandedPaths}
-              selectedPath={normalizedSelectedPath}
-              loadingPaths={loadingPaths}
-              onToggleExpand={handleToggleExpand}
-              onSelect={(path, node) => {
-                void handleSelectTreeItem(path, node)
-                openFromTree(node)
-              }}
-              pathHref={pathHref}
-              onFollowLink={openFromTree}
-              onDropToFolder={onDropFiles}
-              onContextMenu={openNodeContextMenu}
-              onPreviewFile={openPreview}
-              paging={treePaging}
-            />
+            <Tooltip content={common.collapse}>
+              <button
+                type="button"
+                aria-label={common.collapse}
+                className="inline-flex items-center justify-center h-7 w-7 rounded-md cursor-pointer theme-muted-text hover:theme-text hover:theme-hover transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-(--theme-focus)"
+                onClick={collapseAll}
+              >
+                <CollapseIcon className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
           </div>
-        </TreeFrame>
+        </div>
+
+        {/* Tree Contents Section */}
+        <TreeView
+          rootNodes={rootNodes}
+          parentToChildrenMap={parentToChildrenMap}
+          expandedPaths={expandedPaths}
+          selectedPath={normalizedSelectedPath}
+          loadingPaths={loadingPaths}
+          onToggleExpand={handleToggleExpand}
+          onSelect={(path, node) => {
+            void handleSelectTreeItem(path, node)
+            openFromTree(node)
+          }}
+          pathHref={pathHref}
+          onFollowLink={openFromTree}
+          onDropToFolder={onDropFiles}
+          onContextMenu={openNodeContextMenu}
+          onPreviewFile={openPreview}
+          paging={treePaging}
+        />
+      </div>
+    </TreeFrame>
+  )
+
+  return (
+    <div ref={setFrame} className="@container/files w-full h-full min-w-0 flex relative">
+      <div className="w-full h-full min-w-0 flex">
+        {narrow ? (
+          <Drawer
+            open={foldersPath === selectedPath}
+            onClose={() => setFoldersPath(null)}
+            title={t.chrome.folders}
+            side="left"
+            width={320}
+            padded={false}
+          >
+            {tree}
+          </Drawer>
+        ) : (
+          tree
+        )}
         {/* Details Panel - Right side table */}
         {!treeOnly && (
-          <div className="h-full flex flex-col flex-1 min-w-0">
+          <div className="h-full min-h-0 flex flex-col flex-1 min-w-0">
+            {narrow && (
+              <div className="flex h-10 shrink-0 items-center justify-between border-b theme-border px-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<FolderTreeIcon />}
+                  onClick={() => setFoldersPath(selectedPath)}
+                >
+                  {t.chrome.folders}
+                </Button>
+                <RefreshButton iconOnly onRefresh={() => handleRefresh()} />
+              </div>
+            )}
             {!selectedNode && normalizedSelectedPath ? (
               hydrationStuck ? (
                 <NotFoundPreview
@@ -1663,7 +1708,10 @@ export default function FileExplorer({
                   <Table.Header caps={false} className="py-2" style={{ minWidth: 200 }}>
                     {t.chrome.name}
                   </Table.Header>
-                  <Table.Header caps={false} className="w-[22%] py-2">
+                  <Table.Header
+                    caps={false}
+                    className="hidden w-[22%] py-2 @min-[40rem]/files:table-cell"
+                  >
                     {t.chrome.type}
                   </Table.Header>
                   <Table.Header caps={false} className="w-[22%] py-2">

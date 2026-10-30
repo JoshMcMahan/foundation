@@ -235,7 +235,7 @@ export function FileTable({
     // Keep this a block container and keep h-full off Table's wrapperClassName:
     // either lets Table's own overflow divs become a nested scroller, leaving the
     // virtualizer at scrollTop 0 forever.
-    <div ref={setScrollEl} className="h-full overflow-auto">
+    <div ref={setScrollEl} className="@container/files h-full overflow-auto">
       {/* tabIndex and onKeyDown sit on the <table>, not on the scroll container:
           aria-activedescendant is only honored on the element that actually holds
           focus, so the grid, the cursor attribute and the focus have to be one

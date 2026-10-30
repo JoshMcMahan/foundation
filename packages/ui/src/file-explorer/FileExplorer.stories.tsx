@@ -330,6 +330,18 @@ export const NarrowPane: StoryObj = {
   ),
 }
 
+export const Phone: StoryObj = {
+  render: () => <ExplorerDemo width={390} initialPath="storybook/demo-bucket/results/run-002" />,
+}
+
+export const PhoneFolders: StoryObj = {
+  ...Phone,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole('button', { name: 'Folders' }))
+    await expect(await screen.findByRole('dialog', { name: 'Folders' })).toBeVisible()
+  },
+}
+
 /** A deep folder in a pane too narrow for its whole trail: the trail folds all
  *  but the parent into the "…" menu, and choosing a folder there opens it. */
 export const FoldedTrail: StoryObj = {

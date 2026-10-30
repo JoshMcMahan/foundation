@@ -118,7 +118,7 @@ export function UserRow({
           </span>
         </div>
       </Table.Item>
-      <Table.Item className="py-2.5 text-xs uppercase tracking-wider text-(--theme-muted-text-color)">
+      <Table.Item className="hidden py-2.5 text-xs uppercase @min-[40rem]/files:table-cell tracking-wider text-(--theme-muted-text-color)">
         {t.preview.userType}
       </Table.Item>
       <Table.Item className="py-2.5 tabular-nums text-(--theme-muted-text-color)">
@@ -200,13 +200,13 @@ export function FileRow({
           </div>
         </div>
       </Table.Item>
-      <Table.Item className="truncate py-2.5 text-sm tabular-nums text-(--theme-muted-text-color)">
+      <Table.Item className="truncate px-2 py-2.5 text-sm tabular-nums text-(--theme-muted-text-color) @min-[40rem]/files:px-4">
         {typeof node.size === 'number' ? formatBytes(node.size) : '—'}
       </Table.Item>
-      <Table.Item className="truncate py-2.5 text-xs uppercase tracking-wider text-(--theme-muted-text-color)">
+      <Table.Item className="hidden truncate py-2.5 text-xs uppercase @min-[40rem]/files:table-cell tracking-wider text-(--theme-muted-text-color)">
         {typeLabel}
       </Table.Item>
-      <Table.Item className="truncate py-2.5 text-sm text-(--theme-muted-text-color)">
+      <Table.Item className="hidden truncate py-2.5 text-sm @min-[40rem]/files:table-cell text-(--theme-muted-text-color)">
         {!isDir && modifiedDt?.isValid ? <RelativeTime value={modifiedDt} /> : '—'}
       </Table.Item>
       <Table.Item className="relative py-2.5">
@@ -221,10 +221,10 @@ export function FileRow({
                   onPreview(node)
                 }}
                 className={cx(
-                  'rounded p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-4 [&>svg]:w-4',
+                  'hidden @min-[44rem]/files:inline-flex rounded p-1 text-(--theme-muted-text-color) transition-colors hover:bg-(--theme-muted-panel-bg) hover:text-(--theme-app) [&>svg]:h-4 [&>svg]:w-4',
                   menuActive
                     ? 'opacity-100'
-                    : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                    : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100',
                 )}
               >
                 <PreviewIcon />
