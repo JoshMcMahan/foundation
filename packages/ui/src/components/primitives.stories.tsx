@@ -755,6 +755,21 @@ export const ModalStory: StoryObj<ModalArgs> = {
   },
 }
 
+export const ModalCentered: StoryObj<ModalArgs> = {
+  ...ModalStory,
+  name: 'Modal, centered',
+  args: { ...ModalStory.args, align: 'center' },
+  play: async ({ canvasElement }) => {
+    await openModal(canvasElement)
+    const dialog = await screen.findByRole('dialog', { name: 'Release notes' })
+    await waitFor(() => {
+      const rect = dialog.getBoundingClientRect()
+      expect(Math.abs(rect.x + rect.width / 2 - window.innerWidth / 2)).toBeLessThan(1)
+      expect(Math.abs(rect.y + rect.height / 2 - window.innerHeight / 2)).toBeLessThan(1)
+    })
+  },
+}
+
 /** A body taller than the window scrolls on its own, keeping the title and the footer in view. */
 export const ModalLongBody: StoryObj = {
   name: 'Modal, long body',

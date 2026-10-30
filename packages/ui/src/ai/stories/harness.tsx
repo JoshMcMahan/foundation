@@ -992,6 +992,36 @@ export function makeManyTools(): ChatToolOption[] {
     { id: 'list_workflows', label: 'List workflows', description: 'Workflows you can run' },
     { id: 'list_buckets', label: 'List buckets', description: 'Buckets you can read' },
     { id: 'read_logs', label: 'Read run logs', description: 'The output of a workflow run' },
+    {
+      id: 'start_cluster',
+      label: 'Start a cluster',
+      description: 'Start a cluster that is off',
+      asksFirst: true,
+    },
+    {
+      id: 'stop_cluster',
+      label: 'Stop a cluster',
+      description: 'Stop a running cluster, keeping its disks',
+      asksFirst: true,
+    },
+    {
+      id: 'create_storage',
+      label: 'Create storage',
+      description: 'Save a new disk or file system definition',
+      asksFirst: true,
+    },
+    {
+      id: 'destroy_storage',
+      label: 'Destroy storage',
+      description: 'Delete storage and its data in the cloud',
+      asksFirst: true,
+    },
+    {
+      id: 'cancel_run',
+      label: 'Cancel a run',
+      description: 'Cancel a running workflow run',
+      asksFirst: true,
+    },
   ]
 }
 

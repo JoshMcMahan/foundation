@@ -71,6 +71,11 @@ export interface ChatStrings {
     noToolsMatch: string
     turnAllOn: string
     turnAllOff: string
+    allTools: string
+    lookups: string
+    turnShownOn: string
+    turnShownOff: string
+    toolsEnabled: (enabled: number, total: number) => string
     /** Closes the tools modal; each switch takes effect as it is flipped. */
     done: string
     /** Marks a tool whose calls wait for the reader's approval. */
@@ -409,6 +414,12 @@ export const defaultChatStrings: ChatStrings = {
     noToolsMatch: 'No tools match',
     turnAllOn: 'Turn all on',
     turnAllOff: 'Turn all off',
+    allTools: 'All',
+    lookups: 'Lookups',
+    turnShownOn: 'Enable results',
+    turnShownOff: 'Disable results',
+    toolsEnabled: (enabled, total) =>
+      `${enabled.toLocaleString()} of ${total.toLocaleString()} enabled`,
     done: 'Done',
     asksFirst: 'Asks first',
   },
