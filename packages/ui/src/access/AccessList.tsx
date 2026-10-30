@@ -23,6 +23,7 @@ import {
   type Overlap,
   overlapOf,
   removalOf,
+  replacedHolders,
 } from './model'
 import { PrincipalTile } from './PrincipalPicker'
 import type { AccessStrings } from './strings'
@@ -788,10 +789,8 @@ function replacesHint(
   role: AccessRole,
   t: AccessStrings,
 ): string | undefined {
-  const from = role.singleHolder
-    ? (model.holders.get(role.id) ?? []).filter((holder) => holder.id !== principalId)
-    : []
-  return from.length > 0 ? t.replaces(from.map((holder) => holder.name)) : undefined
+  const from = replacedHolders(model, role.id, [principalId])
+  return from.length > 0 ? t.replaces(from.map((holder) => principalLabel(holder, t))) : undefined
 }
 
 /** A principal's row menu: its role, where each holds one, more roles otherwise, then removal. */

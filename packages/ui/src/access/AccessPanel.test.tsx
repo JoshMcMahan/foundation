@@ -121,6 +121,26 @@ describe('AccessPanel', () => {
     )
   })
 
+  it('says the row’s role didn’t change when taking a role one holds at a time fails', async () => {
+    render(
+      <UIProvider>
+        <AccessPanel
+          resourceName={PROJECT}
+          roles={PROJECT_ROLES}
+          principals={PROJECT_PEOPLE}
+          grants={PROJECT_GRANTS}
+          singleRole
+          onChange={() => Promise.reject(new Error('The server didn’t respond.'))}
+        />
+      </UIProvider>,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Role for Ana Ruiz' }))
+    const lead = await screen.findByRole('option', { name: /^Lead/ })
+    fireEvent.pointerDown(lead)
+    fireEvent.click(lead)
+    expect(await screen.findByText('Couldn’t change Ana Ruiz to Lead')).toBeInTheDocument()
+  })
+
   it('switches who can see it, and says when that fails', async () => {
     const onVisibility = vi
       .fn()

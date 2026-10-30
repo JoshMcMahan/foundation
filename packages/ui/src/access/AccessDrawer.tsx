@@ -264,14 +264,12 @@ function useAccessEditor(
     const principal = seen.get(id) ?? model.principalById.get(id)
     return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
   }
-  const names = (changed: AccessChange) => {
-    const all = [...changed.grant, ...changed.revoke]
-    const principalNames = [...new Set(all.map((grant) => grant.principalId))].map(nameOf)
-    const roleNames = [...new Set(all.map((grant) => grant.roleId))].map(
+  const names = (grants: readonly AccessGrant[]) => ({
+    principalNames: [...new Set(grants.map((grant) => grant.principalId))].map(nameOf),
+    roleNames: [...new Set(grants.map((grant) => grant.roleId))].map(
       (id) => model.roleById.get(id)?.name ?? id,
-    )
-    return { principalNames, roleNames }
-  }
+    ),
+  })
 
   const undo = (done: AccessChange) => {
     Promise.resolve(change.current?.(invert(done))).then(
@@ -291,10 +289,15 @@ function useAccessEditor(
     if (!onChange || (next.grant.length === 0 && next.revoke.length === 0)) {
       return false
     }
-    const { principalNames, roleNames } = names(next)
-    // A role one holds at a time, taken from whoever held it: said as a replacement.
-    const replaced = next.grant.length === 1 ? replacedBy(model, next.grant) : []
-    const swap = replaced.length === 0 && swapped(next)
+    // Named by what it gives, so whoever it takes a role from doesn't read as getting one.
+    const { principalNames, roleNames } = names(next.grant.length > 0 ? next.grant : next.revoke)
+    // A revoked role that is also granted went from its holder to someone else.
+    const granting = new Set(next.grant.map((grant) => grant.roleId))
+    const replaced = next.revoke.filter((revoked) => granting.has(revoked.roleId))
+    const swap = swapped({
+      grant: next.grant,
+      revoke: next.revoke.filter((revoked) => !granting.has(revoked.roleId)),
+    })
     const newRole = model.roleById.get(next.grant[0]?.roleId ?? '')?.name ?? ''
     setSaving(next)
     setFailure(undefined)
@@ -316,11 +319,11 @@ function useAccessEditor(
       setSaving(undefined)
     }
     toast.success(
-      replaced.length > 0
+      replaced.length > 0 && next.grant.length === 1
         ? t.replaced(
             newRole,
             replaced.map((held) => nameOf(held.principalId)),
-            nameOf(next.grant[0]?.principalId ?? ''),
+            principalNames[0] ?? '',
           )
         : swap
           ? t.roleChanged(principalNames[0] ?? '', newRole)

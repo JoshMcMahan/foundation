@@ -276,16 +276,27 @@ export function grantPlan(
   return { grant, held }
 }
 
+/** Whom granting a role one holds at a time to `getting` takes it from: its holders besides
+ *  them. Nobody, for a role many can hold. */
+export function replacedHolders(
+  model: AccessModel,
+  roleId: string,
+  getting: readonly string[],
+): AccessPrincipal[] {
+  return model.roleById.get(roleId)?.singleHolder
+    ? (model.holders.get(roleId) ?? []).filter((holder) => !getting.includes(holder.id))
+    : []
+}
+
 /** What granting takes from others: each role held by one at a time, from whoever holds it
  *  and isn't getting it. */
 export function replacedBy(model: AccessModel, grants: readonly AccessGrant[]): AccessGrant[] {
-  const getting = new Set(grants.map(key))
   return [...new Set(grants.map((grant) => grant.roleId))].flatMap((roleId) =>
-    model.roleById.get(roleId)?.singleHolder
-      ? (model.holders.get(roleId) ?? [])
-          .map((holder) => ({ principalId: holder.id, roleId }))
-          .filter((held) => !getting.has(key(held)))
-      : [],
+    replacedHolders(
+      model,
+      roleId,
+      grants.filter((grant) => grant.roleId === roleId).map((grant) => grant.principalId),
+    ).map((holder) => ({ principalId: holder.id, roleId })),
   )
 }
 

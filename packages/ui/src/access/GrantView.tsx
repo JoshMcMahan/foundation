@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Callout } from '../components/Callout'
 import { Combobox, type ComboboxItem } from '../components/Combobox'
 import { StatusBadge } from '../components/StatusBadge'
-import { type AccessModel, covers, grantPlan, isOwner, key, replacedBy } from './model'
+import { type AccessModel, covers, grantPlan, isOwner, replacedBy, replacedHolders } from './model'
 import {
   type DescribeGroup,
   type DetailsCache,
@@ -101,11 +101,11 @@ export function useGrantView({
       (id) => isOwner(model, id) || (model.held.get(id) ?? []).some((held) => held.id === role.id),
     )
     const coveredBy = chosen.filter((other) => covers(other, role)).map((r) => r.name)
-    const replaces = role.singleHolder
-      ? (model.holders.get(role.id) ?? [])
-          .filter((holder) => !principalIds.includes(holder.id))
-          .map((holder) => principalName(holder.id))
-      : []
+    // Nobody is replaced when everyone picked has it already.
+    const replaces =
+      principalIds.length > 0 && holders.length === principalIds.length
+        ? []
+        : replacedHolders(model, role.id, principalIds).map((holder) => principalName(holder.id))
     const everyoneHas =
       everyone !== undefined && !principalIds.includes(everyone.id) && everyoneHolds(role)
     const hints = [
@@ -158,10 +158,7 @@ export function useGrantView({
             .map((held) => ({ principalId, roleId: held.id })),
         )
       : []
-    const revoke = [...swapped, ...replacing].filter(
-      (held, i, all) => all.findIndex((other) => key(other) === key(held)) === i,
-    )
-    onGrant({ grant: plan.grant, revoke })
+    onGrant({ grant: plan.grant, revoke: [...swapped, ...replacing] })
   }
   const statusId = `${uid}status`
 

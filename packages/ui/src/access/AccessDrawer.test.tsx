@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
+import { UIProvider } from '../components/Provider'
 import {
   ALL_PRINCIPALS,
   applyChange,
@@ -481,17 +482,15 @@ function ProjectHost({
   )
 }
 
-async function openProjectGrant() {
-  await waitFor(() => expect(dialog()).toContainElement(document.activeElement as HTMLElement))
-  fireEvent.click(within(dialog()).getAllByRole('button', { name: 'Grant access' })[0] as Element)
-  return screen.findByRole('combobox', { name: 'People and groups' })
-}
-
 describe('AccessDrawer with a role one holds at a time', () => {
   it('replaces whoever holds a role one holds at a time, saying so first', async () => {
     const onChange = vi.fn(async () => {})
-    render(<ProjectHost onChange={onChange} />)
-    const people = await openProjectGrant()
+    render(
+      <UIProvider>
+        <ProjectHost onChange={onChange} />
+      </UIProvider>,
+    )
+    const people = await openGrant()
     await choose(people, 'Priya Nair')
     const roles = screen.getByRole('combobox', { name: 'Roles' })
     fireEvent.change(roles, { target: { value: 'Lead' } })
@@ -511,11 +510,42 @@ describe('AccessDrawer with a role one holds at a time', () => {
         revoke: [{ principalId: 'u-tom', roleId: 'lead' }],
       }),
     )
+    expect(await screen.findByText('Priya Nair replaced Tom Becker as Lead')).toBeInTheDocument()
+  })
+
+  it('names who gets the role, not whom it replaces, when the grant fails', async () => {
+    render(
+      <ProjectHost
+        onChange={async () => {
+          throw new Error('The server didn’t respond.')
+        }}
+      />,
+    )
+    const people = await openGrant()
+    await choose(people, 'Priya Nair')
+    await choose(screen.getByRole('combobox', { name: 'Roles' }), 'Lead')
+    fireEvent.click(screen.getByRole('button', { name: 'Grant Lead' }))
+    expect(await screen.findByText('Couldn’t grant Lead to Priya Nair')).toBeInTheDocument()
+  })
+
+  it('says only what was granted when the role goes with others', async () => {
+    render(
+      <UIProvider>
+        <ProjectHost />
+      </UIProvider>,
+    )
+    const people = await openGrant()
+    await choose(people, 'Priya Nair')
+    const roles = screen.getByRole('combobox', { name: 'Roles' })
+    await choose(roles, 'Lead')
+    await choose(roles, 'Deputy')
+    fireEvent.click(screen.getByRole('button', { name: 'Grant 2 roles' }))
+    expect(await screen.findByText('Granted Lead and Deputy to Priya Nair')).toBeInTheDocument()
   })
 
   it('won’t grant a role one holds at a time to several at once', async () => {
     render(<ProjectHost />)
-    const people = await openProjectGrant()
+    const people = await openGrant()
     await choose(people, 'Priya Nair')
     await choose(people, 'Jun Kim')
     await choose(screen.getByRole('combobox', { name: 'Roles' }), 'Lead')

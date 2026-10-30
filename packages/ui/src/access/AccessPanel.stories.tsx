@@ -335,9 +335,13 @@ function Project(args: StoryArgs) {
           roles={PROJECT_ROLES}
           principals={PROJECT_PEOPLE}
           grants={grants}
+          singleRole={args.singleRole}
           readOnly={args.readOnly}
           onChange={async (change) => {
             await wait(args.saveDelay)
+            if (args.failSaves) {
+              throw new Error('The server didn’t respond.')
+            }
             setGrants((current) => applyChange(current, change))
           }}
         />
@@ -393,6 +397,20 @@ export const ReplaceSingleHolder: Story = {
     await expect(
       await within(canvasElement).findByText(/for Priya Nair, replacing Tom Becker/),
     ).toBeVisible()
+  },
+}
+
+/** One role each: a row's role list says whom a role one person holds at a time replaces. */
+export const SingleHolderRow: Story = {
+  args: { singleRole: true },
+  render: (args) => <Project {...args} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('combobox', { name: 'Role for Ana Ruiz' }),
+    )
+    await expect(await screen.findByRole('option', { name: /^Lead/ })).toHaveTextContent(
+      'Replaces Tom Becker',
+    )
   },
 }
 
