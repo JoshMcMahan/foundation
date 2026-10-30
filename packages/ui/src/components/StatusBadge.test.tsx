@@ -93,7 +93,7 @@ describe('StatusDot', () => {
   it('is a hollow ring when off, with no ping', () => {
     const { container } = render(<StatusDot off pulse />)
     expect(container.querySelector('[data-lamp]')).toHaveAttribute('data-lamp', 'off')
-    expect(container.querySelector('.animate-ping')).toBeNull()
+    expect(container.querySelector('[data-ping]')).toBeNull()
   })
 
   it('is the badge’s own dot, smaller, and flat on a solid fill', () => {
@@ -114,9 +114,11 @@ describe('StatusDot', () => {
     expect(solid).toHaveClass('bg-current')
   })
 
-  it('keeps its ping when it pulses', () => {
+  it('pings three times when it pulses, then holds still', () => {
     const { container } = render(<StatusDot variant="info" pulse />)
-    expect(container.querySelector('.animate-ping')).toHaveClass('bg-(--lamp-from)')
+    const ping = container.querySelector('[data-ping]')
+    expect(ping).toHaveClass('bg-(--lamp-from)')
+    expect(ping?.className).toMatch(/\banimate-\[ping_\S+_3_forwards\]/)
   })
 
   it('draws an off badge’s dot as the hollow ring', () => {

@@ -77,6 +77,25 @@ describe('Tabs', () => {
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Settings' })).toHaveFocus())
   })
 
+  // Hidden panels leave the layout, so the box would take each panel's height in turn.
+  it('stacks the panels in one cell with a steady height, the closed ones out of sight and reach', async () => {
+    render(
+      <Tabs label="Resource" items={items} defaultValue="overview" steadyHeight>
+        <TabPanel value="overview">Overview panel</TabPanel>
+        <TabPanel value="settings">Settings panel</TabPanel>
+      </Tabs>,
+    )
+    const panel = (text: string) => screen.getByText(text).closest('[role="tabpanel"]')
+    expect(panel('Settings panel')).not.toHaveAttribute('hidden')
+    expect(panel('Settings panel')).toHaveAttribute('data-hidden')
+    expect(panel('Settings panel')).toHaveAttribute('inert')
+    expect(panel('Settings panel')?.parentElement).toBe(panel('Overview panel')?.parentElement)
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+    await waitFor(() => expect(panel('Overview panel')).toHaveAttribute('data-hidden'))
+    expect(panel('Overview panel')).not.toHaveAttribute('hidden')
+    expect(panel('Settings panel')).not.toHaveAttribute('inert')
+  })
+
   it('hides a lone tab, but still shows its panel', () => {
     render(
       <Tabs label="Resource" items={[{ value: 'only', label: 'Only' }]}>

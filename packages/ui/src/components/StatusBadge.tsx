@@ -55,6 +55,10 @@ const LAMP = 'bg-[linear-gradient(var(--lamp-from),var(--lamp-to))] shadow-[0_0_
 // An unlit lamp: a hollow ring in the strong border color, which holds 3:1 in both modes.
 const LAMP_OFF = 'shadow-[inset_0_0_0_1.5px_var(--theme-border-strong)]'
 
+// Three pings, then still: motion that runs on past five seconds beside other content needs a way
+// to stop it (WCAG 2.2.2). The ping starts again only when the lamp starts pulsing.
+const PING = 'animate-[ping_1s_cubic-bezier(0,0,0.2,1)_3_forwards]'
+
 const sizeClasses = {
   sm: 'gap-1 px-1.5 py-px text-[10px] leading-3.5',
   md: 'gap-1.5 px-2 py-0.5 text-[11px] leading-4',
@@ -225,7 +229,8 @@ export interface StatusDotProps
   extends Omit<ComponentPropsWithRef<'span'>, 'children' | 'className'> {
   /** The status's tone. */
   variant?: BadgeVariant | undefined
-  /** A ping that ripples out from the lamp, for something under way; still for reduced motion. */
+  /** A ping that ripples out from the lamp three times, for something under way; still for reduced
+   *  motion. */
   pulse?: boolean | undefined
   /** Unlit: a hollow ring, for a status that is off or not known. */
   off?: boolean | undefined
@@ -266,8 +271,10 @@ export function StatusDot({
     >
       {pulse && !off && (
         <span
+          data-ping=""
           className={cx(
-            'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:hidden',
+            'absolute inline-flex h-full w-full rounded-full opacity-75 motion-reduce:hidden',
+            PING,
             current ? 'bg-current' : 'bg-(--lamp-from)',
           )}
         />

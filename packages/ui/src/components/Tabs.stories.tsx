@@ -8,11 +8,12 @@ interface Args {
   size: 'sm' | 'md'
   fill: boolean | 'narrow'
   counts: boolean
+  steadyHeight: boolean
 }
 
 const meta: Meta<Args> = {
   title: 'UI/Tabs',
-  args: { variant: 'line', size: 'md', fill: false, counts: true },
+  args: { variant: 'line', size: 'md', fill: false, counts: true, steadyHeight: false },
   argTypes: {
     variant: { control: 'inline-radio', options: ['line', 'segmented'] },
     size: { control: 'inline-radio', options: ['sm', 'md'], description: 'Segmented only.' },
@@ -22,6 +23,9 @@ const meta: Meta<Args> = {
       description: 'Segmented only: share the width, or only on a phone with `narrow`.',
     },
     counts: { description: 'Each tab shows how many things it holds.' },
+    steadyHeight: {
+      description: 'The panels keep the tallest one’s height, so a tab change moves nothing below.',
+    },
   },
 }
 export default meta
@@ -92,6 +96,50 @@ export const SmallSegments: StoryObj<Args> = {
       />
     </div>
   ),
+}
+
+/** Two ways to add a dataset in a card, the panels sharing the taller one's height: the note
+ *  under the card stays where it is when the tab changes. Turn `steadyHeight` off to see it move. */
+export const SteadyHeight: StoryObj<Args> = {
+  args: { variant: 'segmented', fill: true, steadyHeight: true },
+  render: ({ variant, size, fill, steadyHeight }) => (
+    <div className="flex max-w-sm flex-col gap-3">
+      <div className="rounded-lg border border-(--theme-border) p-4">
+        <Tabs
+          label="Add a dataset"
+          variant={variant}
+          size={size}
+          fill={fill}
+          steadyHeight={steadyHeight}
+          items={[
+            { value: 'upload', label: 'Upload' },
+            { value: 'link', label: 'Link' },
+          ]}
+        >
+          <TabPanel value="upload" className="pt-4 text-sm">
+            <p>Drop files here, or choose them from your computer.</p>
+            <ul className="mt-2 list-disc ps-5 theme-muted-text">
+              <li>CSV or Parquet</li>
+              <li>Up to 5 GB each</li>
+              <li>Up to 100 files at once</li>
+            </ul>
+          </TabPanel>
+          <TabPanel value="link" className="pt-4 text-sm">
+            <p>Paste the address of a bucket or a public file.</p>
+          </TabPanel>
+        </Tabs>
+      </div>
+      <p className="text-sm theme-muted-text">The dataset is private until you share it.</p>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const note = canvas.getByText(/private until/)
+    const top = note.getBoundingClientRect().top
+    await userEvent.click(canvas.getByRole('tab', { name: 'Link' }))
+    await expect(canvas.getByRole('tab', { name: 'Link' })).toHaveAttribute('aria-selected', 'true')
+    await expect(note.getBoundingClientRect().top).toBe(top)
+  },
 }
 
 const INVENTORY = [
