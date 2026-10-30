@@ -212,6 +212,9 @@ export function Tabs<Value extends string>({
                 segmented
                   ? segmentGroupClassName(layout)
                   : 'relative flex min-w-0 overflow-x-auto rtl:[--fade-end:left]',
+                // The row is a flex box, so a group that fills grows to its width, as a
+                // SegmentedControl's does in a block.
+                segmented && (fill === 'narrow' ? 'max-sm:flex-1' : fill && 'flex-1'),
               )}
             >
               {tabs}

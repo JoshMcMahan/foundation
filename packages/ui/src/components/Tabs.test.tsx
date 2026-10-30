@@ -148,6 +148,15 @@ describe('Tabs', () => {
     expect(screen.getByRole('tab', { name: 'Settings' }).className).toContain('shadow-sm')
   })
 
+  it('grows filling segments to the width of their row', () => {
+    const { rerender } = render(<Tabs label="Views" variant="segmented" fill items={items} />)
+    expect(screen.getByRole('tablist')).toHaveClass('flex-1')
+    rerender(<Tabs label="Views" variant="segmented" fill="narrow" items={items} />)
+    expect(screen.getByRole('tablist')).toHaveClass('max-sm:flex-1')
+    rerender(<Tabs label="Views" variant="segmented" items={items} />)
+    expect(screen.getByRole('tablist')).not.toHaveClass('flex-1')
+  })
+
   it('names icon-only segments by their labels, with tooltips', async () => {
     render(
       <Tabs
