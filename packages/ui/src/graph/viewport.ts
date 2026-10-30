@@ -74,6 +74,8 @@ export interface FitOptions {
   clear?: number | undefined
   /** Centers a graph that fits in the room left, for a panel that doesn't shrink to its graph. */
   center?: boolean | undefined
+  /** The height of a panel once it shrinks to its graph, which sets the margin in its place. */
+  settledHeight?: number | undefined
 }
 
 /** The view that shows all of `bounds` in a panel from its top left, no closer than a fit comes. */
@@ -86,6 +88,7 @@ export function fitView(
     width: byWidth = false,
     clear = 0,
     center = false,
+    settledHeight,
   }: FitOptions = {},
 ): View | null {
   const width = bounds.maxX - bounds.minX
@@ -93,7 +96,9 @@ export function fitView(
   if (width <= 0 || height <= 0) {
     return null
   }
-  const margin = fitMargin(panel)
+  const margin = fitMargin(
+    settledHeight === undefined ? panel : { width: panel.width, height: settledHeight },
+  )
   const fit = Math.min(
     (panel.width - margin * 2) / width,
     byWidth ? FIT_MAX_SCALE : (panel.height - clear - margin * 2) / height,
@@ -118,6 +123,30 @@ export function fitView(
     }
   }
   return { x: x - bounds.minX * scale, y: shownTop - bounds.minY * scale, scale }
+}
+
+/** The first fit of a panel that then shrinks to its graph: from the corner of the panel as it
+ *  will be, so the graph stays where it first shows. `heightAt` is the panel's height after it
+ *  shrinks to the graph at a view. */
+export function fitShrinking(
+  bounds: Bounds,
+  panel: { width: number; height: number },
+  heightAt: (view: View) => number,
+  options: FitOptions = {},
+): View | null {
+  let view = fitView(bounds, panel, options)
+  // Each step moves the margin by 5% of the last change in height, so a few settle it.
+  for (let step = 0; view && step < 4; step++) {
+    const settled = fitView(bounds, panel, { ...options, settledHeight: heightAt(view) })
+    if (
+      !settled ||
+      (settled.x === view.x && settled.y === view.y && settled.scale === view.scale)
+    ) {
+      break
+    }
+    view = settled
+  }
+  return view
 }
 
 /** The least shift that brings [start, end] inside [low, high]; none when it can't all fit, so the view stays. */
