@@ -5,6 +5,7 @@ import { ChevronLeftIcon, ChevronRightIcon, MoreIcon } from '../icons'
 import { AppLink } from './AppLink'
 import { buttonClasses } from './buttonClasses'
 import { IconButton } from './IconButton'
+import { SAID_FOR_MS } from './liveText'
 import { useLocale, useStrings } from './Provider'
 import { Select } from './Select'
 
@@ -272,8 +273,6 @@ function PageStep({
     />
   )
 }
-
-const SAID_FOR_MS = 7000
 
 // Steps are 24px, small enough to keep the bar slim; on a touch screen they
 // grow to 32px, which the bar still holds, so a finger finds them.

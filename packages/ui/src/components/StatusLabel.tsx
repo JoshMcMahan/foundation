@@ -24,7 +24,7 @@ export interface StatusLabelProps
 /** A status: what state something is in, as a lamp or icon and the state's name, in muted text
  *  with no fill. It sits in a status column or under a title, and looks the same for a run, a
  *  resource or an agent. The name says the status, so the lamp or icon is hidden from assistive
- *  technology and the status is not read twice. A long name truncates.
+ *  technology and the status is not read twice. A long name wraps, its lamp beside the first line.
  *
  *  Not for a fixed fact worth noticing, such as "Preview" (a flag: `StatusBadge`), or a label
  *  someone gave it (a `Tag`). See "UI/Badges/Which one". */
@@ -41,18 +41,22 @@ export function StatusLabel({
     <span
       {...rest}
       className={cx(
-        'inline-flex min-w-0 items-center gap-1.5 text-(--theme-muted-text-color)',
+        'inline-flex min-w-0 items-start gap-1.5 text-(--theme-muted-text-color)',
         className,
       )}
     >
+      {/* A line of text tall, so the lamp or icon centers on the name's first line when it wraps. */}
       {icon != null ? (
-        <span aria-hidden="true" className="inline-flex shrink-0 items-center">
+        <span aria-hidden="true" className="inline-flex h-lh shrink-0 items-center">
           {icon}
         </span>
       ) : (
-        <StatusDot variant={variant} off={off} pulse={pulse} className="shrink-0" />
+        <span className="inline-flex h-lh shrink-0 items-center">
+          <StatusDot variant={variant} off={off} pulse={pulse} />
+        </span>
       )}
-      <span className="min-w-0 truncate">{children}</span>
+      {/* Wraps rather than cutting the name off, since the name alone says the state. */}
+      <span className="min-w-0 wrap-break-word">{children}</span>
     </span>
   )
 }

@@ -8,7 +8,9 @@ describe('StatusLabel', () => {
   it('names the state beside a lamp, which is not read twice', () => {
     const { container } = render(<StatusLabel variant="success">Running</StatusLabel>)
     const label = screen.getByText('Running')
-    expect(label).toHaveClass('truncate')
+    // The name alone says the state, so a long one wraps rather than losing its end.
+    expect(label).toHaveClass('wrap-break-word')
+    expect(label).not.toHaveClass('truncate')
     expect(label.parentElement).toHaveClass('text-(--theme-muted-text-color)')
     expect(container.querySelector('[data-lamp]')).toHaveAttribute('data-lamp', 'lit')
     expect(container.querySelector('[data-lamp]')?.parentElement).toHaveAttribute(

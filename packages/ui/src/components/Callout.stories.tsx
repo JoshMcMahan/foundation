@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 import { Button } from './Button'
 import { Callout, type CalloutProps, type CalloutTone } from './Callout'
 
@@ -172,5 +172,30 @@ export const Live: StoryObj = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
     await expect(canvas.getByRole('alert')).toHaveTextContent("Couldn't save")
+  },
+}
+
+/** A warning that arrives after the page loaded fills a status region that was already there
+ *  a moment later, since one added with its words in it is often not read. */
+export const LiveWarning: StoryObj = {
+  render: function Render() {
+    const [blocked, setBlocked] = useState(false)
+    return (
+      <div className="flex max-w-xl flex-col items-start gap-3">
+        <Button onClick={() => setBlocked(true)}>Submit</Button>
+        {blocked && (
+          <Callout tone="warning" live title="Finish 2 steps before you submit">
+            Contact, Review
+          </Callout>
+        )}
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Submit' }))
+    await waitFor(() =>
+      expect(canvas.getByRole('status')).toHaveTextContent('Finish 2 steps before you submit'),
+    )
   },
 }

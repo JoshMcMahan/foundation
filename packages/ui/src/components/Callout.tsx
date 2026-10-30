@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { cx } from '../cx'
 import {
   CloseIcon,
@@ -10,6 +10,7 @@ import {
   WarningIcon,
 } from '../icons'
 import { IconButton } from './IconButton'
+import { SAID_FOR_MS } from './liveText'
 import { useStrings } from './Provider'
 import { type Tone, toneIcon, toneSurface } from './tone'
 
@@ -37,8 +38,9 @@ export interface CalloutProps {
   /** `sm` sits beside a compact control, such as a composer. */
   size?: 'sm' | 'md' | undefined
   /** Announces it as it appears, for a message that arrives after the surface
-   *  has loaded, such as a failed save. A callout that's there from the start
-   *  is read in its place, with the content around it. */
+   *  has loaded, such as a failed save: an error at once, anything else when the
+   *  reader pauses. A callout that's there from the start is read in its place,
+   *  with the content around it. */
   live?: boolean | undefined
   className?: string | undefined
   testId?: string | undefined
@@ -71,6 +73,25 @@ export function Callout({
 }: CalloutProps) {
   const { common } = useStrings()
   const small = size === 'sm'
+  // An alert is read as it's added. A status region is read only when its words change, so a
+  // live callout that isn't an error carries an empty one and fills it a moment after it
+  // appears, then clears it once heard.
+  const polite = live && tone !== 'error'
+  const box = useRef<HTMLDivElement>(null)
+  const [said, setSaid] = useState('')
+  useEffect(() => {
+    if (!polite) {
+      return
+    }
+    // biome-ignore lint/performance/useDomNodeTextContent: innerText keeps the breaks between its lines, so a list's items aren't read as one word
+    const words = box.current?.innerText ?? box.current?.textContent ?? ''
+    const say = setTimeout(() => setSaid(words), SAY_AFTER_MS)
+    const clear = setTimeout(() => setSaid(''), SAY_AFTER_MS + SAID_FOR_MS)
+    return () => {
+      clearTimeout(say)
+      clearTimeout(clear)
+    }
+  }, [polite])
   const Icon = toneIcons[tone]
   const controls = (
     <>
@@ -94,9 +115,9 @@ export function Callout({
   )
   return (
     <div
+      ref={box}
       data-testid={testId}
-      // An error interrupts; anything else waits for the reader to finish.
-      {...(live ? { role: tone === 'error' ? 'alert' : 'status' } : {})}
+      {...(live && !polite ? { role: 'alert' } : {})}
       className={cx(
         'flex items-start',
         toneSurface[tone],
@@ -134,6 +155,15 @@ export function Callout({
           {controls}
         </>
       )}
+      {polite && (
+        <span role="status" className="sr-only">
+          {said}
+        </span>
+      )}
     </div>
   )
 }
+
+// Long enough after the callout appears for assistive technology to have met its empty
+// status region, so filling it is read as a change.
+const SAY_AFTER_MS = 150

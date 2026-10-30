@@ -27,7 +27,7 @@ const TONES: { variant: BadgeVariant; name: string }[] = [
 
 /** A status as a lamp and the state's name: lit in its tone, unlit with `off` for something off
  *  or not known, pinging with `pulse` for something under way, or an icon in place of the lamp.
- *  A long name truncates.
+ *  A long name wraps.
  *  The lamp or icon is hidden from assistive technology, so the status is read once. See
  *  [Which one](?path=/story/ui-badges--which-one). */
 export const Statuses: StoryObj = {
@@ -45,7 +45,7 @@ export const Statuses: StoryObj = {
       <StatusLabel icon={<RunStatusIcon status="warning" label="" />}>Degraded</StatusLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
         <span className="text-(--theme-muted-text-color)" style={{ fontSize: 11 }}>
-          A long name truncates, here in 120px
+          A long name wraps, here in 120px
         </span>
         <div style={{ width: 120, display: 'flex' }}>
           <StatusLabel variant="warning">Waiting for capacity</StatusLabel>
