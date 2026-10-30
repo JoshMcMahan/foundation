@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.105.0](https://github.com/parallelworks/foundation/compare/ui-v0.104.0...ui-v0.105.0) (2026-10-30)
+
+
+### Features
+
+* **ui:** tool presentations can use their message context ([#588](https://github.com/parallelworks/foundation/issues/588)) ([0868cc7](https://github.com/parallelworks/foundation/commit/0868cc73c0b933a1a2e8f63023acb6a168892189))
+
 ## [0.104.0](https://github.com/parallelworks/foundation/compare/ui-v0.103.1...ui-v0.104.0) (2026-10-30)
 
 
