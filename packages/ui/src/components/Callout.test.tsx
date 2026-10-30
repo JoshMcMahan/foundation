@@ -49,6 +49,51 @@ describe('Callout', () => {
     }
   })
 
+  it('says a live warning again when its words change', () => {
+    vi.useFakeTimers()
+    try {
+      const { rerender } = render(
+        <Callout tone="warning" live title="Finish 2 steps before you submit">
+          Contact, Review
+        </Callout>,
+      )
+      act(() => vi.advanceTimersByTime(150))
+      const region = screen.getByRole('status')
+      expect(region).toHaveTextContent('Finish 2 steps before you submit')
+      rerender(
+        <Callout tone="warning" live title="Finish 1 step before you submit">
+          Review
+        </Callout>,
+      )
+      act(() => vi.advanceTimersByTime(150))
+      expect(region).toHaveTextContent('Finish 1 step before you submit')
+      expect(region).not.toHaveTextContent('Finish 2 steps')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('starts empty and says its words once when it goes live again', () => {
+    vi.useFakeTimers()
+    try {
+      const callout = (live: boolean) => (
+        <Callout tone="warning" live={live} title="Finish 2 steps before you submit">
+          Contact
+        </Callout>
+      )
+      const { rerender } = render(callout(true))
+      act(() => vi.advanceTimersByTime(150))
+      rerender(callout(false))
+      rerender(callout(true))
+      const region = screen.getByRole('status')
+      expect(region).toBeEmptyDOMElement()
+      act(() => vi.advanceTimersByTime(150))
+      expect(region.textContent?.match(/Finish 2 steps/g)).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('makes a live error an alert, which is read as it is added', () => {
     render(
       <Callout tone="error" live title="Couldn't save">

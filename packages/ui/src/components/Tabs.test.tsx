@@ -155,6 +155,9 @@ describe('Tabs', () => {
     expect(screen.getByRole('tablist')).toHaveClass('max-sm:flex-1')
     rerender(<Tabs label="Views" variant="segmented" items={items} />)
     expect(screen.getByRole('tablist')).not.toHaveClass('flex-1')
+    // An icon rail stands as a column at its own width; `fill` doesn't widen it.
+    rerender(<Tabs label="Views" variant="segmented" fill iconOnly items={items} />)
+    expect(screen.getByRole('tablist')).not.toHaveClass('flex-1')
   })
 
   it('names icon-only segments by their labels, with tooltips', async () => {

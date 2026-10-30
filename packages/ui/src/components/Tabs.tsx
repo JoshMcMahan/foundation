@@ -58,7 +58,8 @@ export interface TabsProps<Value extends string> extends SegmentLayout {
    *  scroller already pins at the top, such as the page header and a toolbar. */
   sticky?: boolean | undefined
   /** Keeps the panels as tall as the tallest, so changing tabs moves nothing
-   *  below them. Every panel stays mounted, so it suits a few light panels. The
+   *  below them. Every panel stays mounted, so it suits a few light panels, and a
+   *  closed panel's fields still submit, and still validate, with a form around it. The
    *  `TabPanel`s share one grid cell, so they must be the children, with no
    *  element around them and nothing else beside them. */
   steadyHeight?: boolean | undefined
@@ -214,7 +215,9 @@ export function Tabs<Value extends string>({
                   : 'relative flex min-w-0 overflow-x-auto rtl:[--fade-end:left]',
                 // The row is a flex box, so a group that fills grows to its width, as a
                 // SegmentedControl's does in a block.
-                segmented && (fill === 'narrow' ? 'max-sm:flex-1' : fill && 'flex-1'),
+                segmented &&
+                  !layout.iconOnly &&
+                  (fill === 'narrow' ? 'max-sm:flex-1' : fill && 'flex-1'),
               )}
             >
               {tabs}
