@@ -94,7 +94,8 @@ export interface ChatUIConfig {
     toolRenderers?: Record<string, ComponentType<ToolRendererProps>>
     // Words for a host's own tool calls in place of the raw call; a call it
     // returns nothing for is shown as the call itself.
-    toolPresentation?: (part: ToolCallPart) => ToolPresentation | undefined
+    // The transcript supplies its message; an activity label may omit it.
+    toolPresentation?: (part: ToolCallPart, message?: ChatMessage) => ToolPresentation | undefined
   }
   strings?: {
     [S in keyof ChatStrings]?: Partial<ChatStrings[S]>

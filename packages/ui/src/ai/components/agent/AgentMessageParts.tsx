@@ -307,11 +307,19 @@ function RowSummary({ text }: { text: string | undefined }) {
  *  to its full arguments and result. `children` is a host's drawing of the
  *  call, shown under the row in place of the one-line summary, or inside it
  *  when the host names the call. */
-function ToolCallBlock({ part, children }: { part: ToolCallPart; children?: ReactNode }) {
+function ToolCallBlock({
+  part,
+  message,
+  children,
+}: {
+  part: ToolCallPart
+  message: PartRendererProps['message']
+  children?: ReactNode
+}) {
   const { strings, slots } = useChatConfig()
   const t = strings.agentTranscript
   const [expanded, setExpanded] = useState(false)
-  const presentation = slots.toolPresentation?.(part)
+  const presentation = slots.toolPresentation?.(part, message)
   // A named call keeps its drawing behind the row unless the host keeps it
   // open; a call waiting on an answer always shows what it asks.
   const drawingInPanel =
@@ -940,7 +948,7 @@ function PartDispatch(props: PartRendererProps) {
       (p): p is ApprovalPart => p.kind === 'approval' && p.id === part.id,
     )
     return (
-      <ToolCallBlock part={part}>
+      <ToolCallBlock part={part} message={props.message}>
         <Tool
           part={part}
           message={props.message}
@@ -954,6 +962,9 @@ function PartDispatch(props: PartRendererProps) {
   const Override = slots.partRenderers?.[props.part.kind]
   if (Override) {
     return <Override {...props} />
+  }
+  if (part.kind === 'tool_call') {
+    return <ToolCallBlock part={part} message={props.message} />
   }
   return (
     <BuiltinPart
@@ -981,8 +992,6 @@ const BuiltinPart = memo(function BuiltinPart({
       return <TextBlock part={part} isStreaming={isStreaming} />
     case 'reasoning':
       return <ReasoningBlock part={part} isStreaming={isStreaming} />
-    case 'tool_call':
-      return <ToolCallBlock part={part} />
     case 'subagent':
       return <SubagentCard part={part} />
     case 'approval':
@@ -1166,7 +1175,7 @@ function RollupGroup({
       if (m.part.kind !== 'tool_call') {
         continue
       }
-      const rollup = slots.toolPresentation?.(m.part)?.rollup
+      const rollup = slots.toolPresentation?.(m.part, message)?.rollup
       if (!rollup) {
         builtin.push(m.part.name)
         continue
@@ -1182,7 +1191,7 @@ function RollupGroup({
       sentence: clauses.length ? strings.tools.rollup.sentence(clauses) : '',
       allNamed: named.size > 0 && builtin.length === 0,
     }
-  }, [members, slots.toolPresentation, strings.tools])
+  }, [members, message, slots.toolPresentation, strings.tools])
   return (
     <div className="py-1.5 text-sm" data-testid="tool-rollup">
       <Disclosure
@@ -1231,9 +1240,14 @@ function CallGroup({
   const Tool = slots.toolRenderers?.[name]
   const header = toolHeaderFor(name)
   const first = members[0]?.part
-  const presentation = first ? slots.toolPresentation?.(first) : undefined
+  const presentation = first ? slots.toolPresentation?.(first, message) : undefined
   // Named calls fold to their labels and summaries; their drawings open with the row.
-  const drawFolded = Tool && !(presentation && !presentation.open)
+  const drawnFolded = Tool
+    ? members.filter(({ part }) => {
+        const p = slots.toolPresentation?.(part, message)
+        return !p || p.open
+      })
+    : []
   const failed = members.filter((m) => m.part.status === 'error').length
   const status = failed === members.length ? 'error' : 'ok'
   return (
@@ -1269,8 +1283,8 @@ function CallGroup({
         ))}
       </Disclosure>
       {!open &&
-        drawFolded &&
-        members.map(({ part, index }) => {
+        Tool &&
+        drawnFolded.map(({ part, index }) => {
           const args = summarizeToolArgs(header.arg, part.args)
           return (
             // Hidden whole when the host drew nothing for this call.
@@ -1305,11 +1319,11 @@ export default function AgentMessageParts({
         parts,
         (name) => !!toolRenderers?.[name],
         (part) => {
-          const p = toolPresentation?.(part)
+          const p = toolPresentation?.(part, message)
           return !!p?.rollup && !p.open
         },
       ),
-    [parts, toolRenderers, toolPresentation],
+    [parts, message, toolRenderers, toolPresentation],
   )
   const lastIndex = parts.length - 1
   return (

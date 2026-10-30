@@ -841,6 +841,63 @@ describe('host tool presentation', () => {
     expect(screen.getByTestId('cost-table')).toBeVisible()
   })
 
+  it('updates visibility when the surrounding message changes', () => {
+    const estimate = call('a', 'misc-dev')
+    const message = msg([estimate])
+    const toolPresentation = vi.fn((part: ToolCallPart, context?: ChatMessage) => ({
+      label: part.name,
+      open: !context?.parts?.some((p) => p.kind === 'tool_call' && p.name === 'create_resource'),
+    }))
+    const config = resolveChatConfig({ slots: { ...slots(), toolPresentation } })
+    const view = (current: ChatMessage) => (
+      <ChatConfigProvider value={config}>
+        <AgentMessageParts message={current} />
+      </ChatConfigProvider>
+    )
+    const { rerender } = render(view(message))
+    expect(screen.getByTestId('cost-table')).toBeVisible()
+    expect(toolPresentation).toHaveBeenCalledWith(estimate, message)
+
+    const continued = msg([
+      estimate,
+      { ...call('b', 'misc-dev', 'waiting'), name: 'create_resource' },
+    ])
+    rerender(view(continued))
+    expect(toolPresentation).toHaveBeenCalledWith(estimate, continued)
+    expect(screen.queryByTestId('cost-table')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /cost_summary/ }))
+    expect(screen.getByTestId('cost-table')).toBeVisible()
+  })
+
+  it('evaluates visibility for each member of a repeated-call group', () => {
+    const parts = [call('a', 'misc-dev'), call('b', 'grey')]
+    const toolPresentation = vi.fn((part: ToolCallPart, context?: ChatMessage) => ({
+      label: `Checked ${part.id}`,
+      group: () => 'Checked costs twice',
+      open: context?.parts?.[1] === part,
+    }))
+    renderParts(parts, {}, { slots: { ...slots(), toolPresentation } })
+    expect(
+      screen.getAllByTestId('cost-table').filter((node) => !node.closest('[hidden]')),
+    ).toHaveLength(1)
+    for (const part of parts) {
+      expect(toolPresentation).toHaveBeenCalledWith(part, expect.objectContaining({ parts }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: /Checked costs twice/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Checked a/ }))
+    expect(
+      screen.getAllByTestId('cost-table').filter((node) => !node.closest('[hidden]')),
+    ).toHaveLength(2)
+  })
+
+  it('supplies context to presentation callbacks without custom drawings', () => {
+    const parts = [call('a', 'misc-dev')]
+    const toolPresentation = vi.fn(() => ({ label: 'Checked costs' }))
+    renderParts(parts, {}, { slots: { toolPresentation } })
+    expect(screen.getByRole('button', { name: /Checked costs/ })).toBeVisible()
+    expect(toolPresentation).toHaveBeenCalledWith(parts[0], expect.objectContaining({ parts }))
+  })
+
   it('always shows what a call waiting on an answer asks', () => {
     renderParts([call('a', 'misc-dev', 'waiting')], {}, { slots: slots() })
     expect(screen.getByTestId('cost-table')).toBeVisible()

@@ -9,10 +9,11 @@ import {
   makeTodoSnapshot,
   makeToolCallPart,
   makeWriteFilePart,
+  StoryChat,
   useStreamedText,
 } from '../../stories/harness'
 import { defaultChatStrings } from '../../strings'
-import type { ToolCallStatus, ToolDecision } from '../../types'
+import type { ChatMessage, ToolCallPart, ToolCallStatus, ToolDecision } from '../../types'
 import ActivityLine from './ActivityLine'
 import AgentMessageParts from './AgentMessageParts'
 
@@ -64,6 +65,68 @@ export const ToolCall: StoryObj<{
       })}
     />
   ),
+}
+
+function estimatePresentation(part: ToolCallPart, message?: ChatMessage) {
+  return {
+    label: part.name === 'estimate_cost' ? 'Estimated resource cost' : 'Create resource',
+    open:
+      part.name !== 'estimate_cost' ||
+      !message?.parts?.some((p) => p.kind === 'tool_call' && p.name === 'create_resource'),
+  }
+}
+
+export const ContextualResult: StoryObj<{ awaitingApproval: boolean }> = {
+  args: { awaitingApproval: false },
+  argTypes: { awaitingApproval: { control: 'boolean' } },
+  render: ({ awaitingApproval }) => (
+    <StoryChat
+      config={{
+        slots: {
+          toolPresentation: estimatePresentation,
+          toolRenderers: {
+            estimate_cost: () => <p>Estimated running cost: $0.21 per hour.</p>,
+            create_resource: () => (
+              <div className="space-y-2 rounded-md border theme-border p-3">
+                <p>Estimated running cost: $0.21 per hour.</p>
+                <p>Review the resource before allowing creation.</p>
+              </div>
+            ),
+          },
+        },
+      }}
+    >
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: [
+            {
+              ...makeToolCallPart(),
+              id: 'estimate',
+              name: 'estimate_cost',
+              args: '{}',
+              result: '{"hourly":0.21}',
+            },
+            ...(awaitingApproval
+              ? [
+                  {
+                    ...makeToolCallPart({ status: 'waiting' }),
+                    id: 'create',
+                    name: 'create_resource',
+                    args: '{}',
+                  },
+                ]
+              : []),
+          ],
+        })}
+      />
+    </StoryChat>
+  ),
+}
+
+export const ContextualResultBeforeApproval: typeof ContextualResult = {
+  ...ContextualResult,
+  args: { awaitingApproval: true },
 }
 
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
