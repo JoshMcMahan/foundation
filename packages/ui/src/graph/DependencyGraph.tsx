@@ -564,11 +564,16 @@ const skippedBefore = (slots: number[] | undefined, i: number) =>
   (slots?.[i] ?? i) - (i === 0 ? 0 : (slots?.[i - 1] ?? i - 1) + 1)
 
 // Each node's box within a level's wrapper, keyed by its first job, read from the DOM in one pass.
+// Nodes are found within the wrapper, as a page can draw the same run twice, such as in a hover card
+// over the run's own graph.
 function measureBoxes(cols: string[][][], pathPrefix: string, wrapper: HTMLElement, down: boolean) {
+  const nodes = new Map(
+    [...wrapper.querySelectorAll<HTMLElement>('[id^="node_"]')].map((el) => [el.id, el]),
+  )
   const boxes = new Map<string, Box>()
   for (const col of cols) {
     for (const [head] of col) {
-      const el = head === undefined ? null : document.getElementById(`node_${pathPrefix}${head}`)
+      const el = head === undefined ? null : nodes.get(`node_${pathPrefix}${head}`)
       if (head !== undefined && el) {
         const box = { ...offsetWithin(el, wrapper), width: el.offsetWidth }
         boxes.set(head, down ? { ...box, height: el.offsetHeight } : box)
