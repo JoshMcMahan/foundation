@@ -176,6 +176,10 @@ export function Modal({
           align === 'center'
             ? 'items-center py-8 max-sm:py-[max(8px,env(safe-area-inset-bottom))]'
             : 'items-start pt-20 pb-8 sm:pt-[max(14vh,5rem)] max-sm:pb-[max(8px,env(safe-area-inset-bottom))]',
+          // A window too short for the header, an answer and the footer at once, as at 400% zoom,
+          // would squeeze the body to nothing and push the footer out of reach: there the whole
+          // panel scrolls, from the window's top.
+          '[@media(max-height:28rem)]:items-start [@media(max-height:28rem)]:overflow-y-auto [@media(max-height:28rem)]:py-2',
         )}
       >
         <Dialog.Popup
@@ -199,7 +203,7 @@ export function Modal({
             panel && modalPanelClassName,
             size && [sizeClasses[size], 'max-w-full'],
             panel && (size || laidOut) && 'max-sm:w-full',
-            laidOut && 'flex max-h-full flex-col',
+            laidOut && 'flex max-h-full flex-col [@media(max-height:28rem)]:max-h-none',
             'outline-none',
             popupMotion,
             className,
