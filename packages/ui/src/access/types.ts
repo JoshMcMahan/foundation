@@ -17,6 +17,9 @@ export interface AccessRole {
   /** False for a role held here only through somewhere else, such as an organization's
    *  administrator role: it shows where someone holds it, and isn't offered to grant. */
   grantable?: boolean | undefined
+  /** One person or group holds it at a time. Granting it to someone else takes it from whoever
+   *  holds it, in the same change, and the grant form names them first. */
+  singleHolder?: boolean | undefined
 }
 
 /** A permission's name in words, for what someone loses when a role is taken away. */

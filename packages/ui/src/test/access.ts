@@ -291,3 +291,29 @@ export const WORKSPACE_ADMINS = [
   { name: 'Hana Sato' },
   { name: 'Ola Berg' },
 ]
+
+/** A project with one lead at a time and any number of deputies. */
+export const PROJECT = 'ocean-model'
+
+export const PROJECT_ROLES: AccessRole[] = [
+  {
+    id: 'lead',
+    name: 'Lead',
+    description: 'Runs the project. One person at a time.',
+    permissions: ['project:manage', 'project:approve'],
+    singleHolder: true,
+  },
+  {
+    id: 'deputy',
+    name: 'Deputy',
+    description: 'Stands in for the lead.',
+    permissions: ['project:approve'],
+  },
+]
+
+export const PROJECT_PEOPLE: AccessPrincipal[] = PEOPLE.map(({ groupIds: _, ...rest }) => rest)
+
+export const PROJECT_GRANTS: AccessGrant[] = [
+  { principalId: 'u-tom', roleId: 'lead' },
+  { principalId: 'u-ana', roleId: 'deputy' },
+]

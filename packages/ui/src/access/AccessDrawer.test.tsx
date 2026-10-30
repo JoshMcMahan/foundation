@@ -10,6 +10,10 @@ import {
   INHERITED,
   OWNER,
   PERMISSIONS,
+  PROJECT,
+  PROJECT_GRANTS,
+  PROJECT_PEOPLE,
+  PROJECT_ROLES,
   RECENT,
   RESOURCE,
   ROLES,
@@ -23,6 +27,7 @@ import {
   grantPlan,
   overlapOf,
   removalOf,
+  replacedBy,
   warnAboutMisuse,
 } from './model'
 import type { AccessChange, AccessGrant } from './types'
@@ -124,6 +129,20 @@ describe('access model', () => {
       { principalId: 'g-contractors', roleId: 'sudo' },
     ])
     expect(plan.held).toHaveLength(4)
+  })
+
+  it('takes a role one holds at a time from whoever holds it, and nothing else', () => {
+    const m = buildModel({
+      roles: PROJECT_ROLES,
+      principals: PROJECT_PEOPLE,
+      grants: PROJECT_GRANTS,
+    })
+    expect(replacedBy(m, [{ principalId: 'u-priya', roleId: 'lead' }])).toEqual([
+      { principalId: 'u-tom', roleId: 'lead' },
+    ])
+    // Granted to its holder, or a role many hold, it takes nothing.
+    expect(replacedBy(m, [{ principalId: 'u-tom', roleId: 'lead' }])).toEqual([])
+    expect(replacedBy(m, [{ principalId: 'u-priya', roleId: 'deputy' }])).toEqual([])
   })
 
   it('warns about duplicate and unknown ids', () => {
@@ -436,5 +455,72 @@ describe('AccessDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Admin/ }))
     expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Grant access' })).toBeNull()
+  })
+})
+
+/** A project with one lead at a time. */
+function ProjectHost({
+  onChange,
+  ...props
+}: Partial<AccessDrawerProps> & { onChange?: (change: AccessChange) => Promise<unknown> }) {
+  const [grants, setGrants] = useState<AccessGrant[]>(PROJECT_GRANTS)
+  return (
+    <AccessDrawer
+      open
+      onClose={() => {}}
+      resourceName={PROJECT}
+      roles={PROJECT_ROLES}
+      principals={PROJECT_PEOPLE}
+      grants={grants}
+      onChange={async (change) => {
+        await onChange?.(change)
+        setGrants((current) => applyChange(current, change))
+      }}
+      {...props}
+    />
+  )
+}
+
+async function openProjectGrant() {
+  await waitFor(() => expect(dialog()).toContainElement(document.activeElement as HTMLElement))
+  fireEvent.click(within(dialog()).getAllByRole('button', { name: 'Grant access' })[0] as Element)
+  return screen.findByRole('combobox', { name: 'People and groups' })
+}
+
+describe('AccessDrawer with a role one holds at a time', () => {
+  it('replaces whoever holds a role one holds at a time, saying so first', async () => {
+    const onChange = vi.fn(async () => {})
+    render(<ProjectHost onChange={onChange} />)
+    const people = await openProjectGrant()
+    await choose(people, 'Priya Nair')
+    const roles = screen.getByRole('combobox', { name: 'Roles' })
+    fireEvent.change(roles, { target: { value: 'Lead' } })
+    keyDown(roles, 'ArrowDown')
+    const lead = await screen.findByRole('option', { name: /^Lead/ })
+    expect(lead).toHaveTextContent('Replaces Tom Becker')
+    fireEvent.click(lead)
+    if (roles.getAttribute('aria-expanded') === 'true') {
+      keyDown(roles, 'Escape')
+    }
+    const grant = screen.getByRole('button', { name: 'Grant Lead' })
+    expect(grant).toHaveAccessibleDescription('Lead for Priya Nair, replacing Tom Becker')
+    fireEvent.click(grant)
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith({
+        grant: [{ principalId: 'u-priya', roleId: 'lead' }],
+        revoke: [{ principalId: 'u-tom', roleId: 'lead' }],
+      }),
+    )
+  })
+
+  it('won’t grant a role one holds at a time to several at once', async () => {
+    render(<ProjectHost />)
+    const people = await openProjectGrant()
+    await choose(people, 'Priya Nair')
+    await choose(people, 'Jun Kim')
+    await choose(screen.getByRole('combobox', { name: 'Roles' }), 'Lead')
+    const grant = screen.getByRole('button', { name: 'Grant Lead' })
+    expect(grant).toHaveAttribute('aria-disabled', 'true')
+    expect(grant).toHaveAccessibleDescription('Lead goes to one person or group at a time')
   })
 })

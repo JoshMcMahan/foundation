@@ -4,6 +4,10 @@ import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook
 import { ShieldIcon } from '../icons'
 import {
   applyChange,
+  PROJECT,
+  PROJECT_GRANTS,
+  PROJECT_PEOPLE,
+  PROJECT_ROLES,
   WORKSPACE,
   WORKSPACE_ADMINS,
   WORKSPACE_GRANTS,
@@ -317,5 +321,91 @@ export const InDrawer: Story = {
   play: async () => {
     const dialog = await screen.findByRole('dialog')
     await expect(within(dialog).getByRole('group', { name: 'Who can see it' })).toBeVisible()
+  },
+}
+
+/** A project with one lead at a time. */
+function Project(args: StoryArgs) {
+  const [grants, setGrants] = useState<AccessGrant[]>(PROJECT_GRANTS)
+  return (
+    <div className="min-h-screen bg-(--theme-app-bg) px-4 py-8 text-(--theme-app) sm:px-8">
+      <div className="mx-auto max-w-2xl">
+        <AccessPanel
+          resourceName={PROJECT}
+          roles={PROJECT_ROLES}
+          principals={PROJECT_PEOPLE}
+          grants={grants}
+          readOnly={args.readOnly}
+          onChange={async (change) => {
+            await wait(args.saveDelay)
+            setGrants((current) => applyChange(current, change))
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+async function openProjectGrant(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  const [grant] = canvas
+    .getAllByRole('button', { name: 'Grant access' })
+    .filter((b) => b.getClientRects().length > 0)
+  if (grant) {
+    await userEvent.click(grant)
+  }
+  return canvas.findByRole('combobox', { name: 'People and groups' })
+}
+
+async function pickIn(field: HTMLElement, ...names: string[]) {
+  await userEvent.click(field)
+  for (const name of names) {
+    await userEvent.type(field, name)
+    await userEvent.click(await screen.findByRole('option', { name: new RegExp(`^${name}`) }))
+  }
+  if (field.getAttribute('aria-expanded') === 'true') {
+    await userEvent.keyboard('{Escape}')
+  }
+}
+
+/** Lead is a role one person or group holds at a time (`singleHolder`). */
+export const SingleHolder: Story = {
+  args: { singleRole: false },
+  render: (args) => <Project {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^Lead/ }))
+    const tom = await canvas.findByText('Tom Becker')
+    // It opens with an animation.
+    await waitFor(() => expect(tom).toBeVisible())
+  },
+}
+
+/** Granting a role one person holds at a time to someone else replaces its holder, as the role
+ *  list and the line beside Grant say before it's pressed. */
+export const ReplaceSingleHolder: Story = {
+  args: { singleRole: false },
+  render: (args) => <Project {...args} />,
+  play: async ({ canvasElement }) => {
+    const people = await openProjectGrant(canvasElement)
+    await pickIn(people, 'Priya Nair')
+    await pickIn(screen.getByRole('combobox', { name: 'Roles' }), 'Lead')
+    await expect(
+      await within(canvasElement).findByText(/for Priya Nair, replacing Tom Becker/),
+    ).toBeVisible()
+  },
+}
+
+/** A role one person holds at a time, picked for two: Grant says why it can't be pressed. */
+export const SingleHolderForSeveral: Story = {
+  args: { singleRole: false },
+  render: (args) => <Project {...args} />,
+  play: async ({ canvasElement }) => {
+    const people = await openProjectGrant(canvasElement)
+    await pickIn(people, 'Priya Nair', 'Jun Kim')
+    await pickIn(screen.getByRole('combobox', { name: 'Roles' }), 'Lead')
+    await expect(
+      await within(canvasElement).findByText('Lead goes to one person or group at a time'),
+    ).toBeVisible()
   },
 }

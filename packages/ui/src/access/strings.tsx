@@ -200,13 +200,27 @@ export const ACCESS_STRINGS = {
   alreadyHave: (principals: readonly string[]) => `Already granted to ${and(principals)}`,
   alreadyCovered: (roles: readonly string[]) => `Included in ${and(roles)}`,
   everyoneHasIt: 'Already granted to Everyone',
-  /** The footer's account of what pressing Grant does. */
-  grantSummary: (principals: readonly string[], roles: readonly string[]): ReactNode => (
+  /** The footer's account of what pressing Grant does; `replacing` names who loses a role that
+   *  one person or group holds at a time. */
+  grantSummary: (
+    principals: readonly string[],
+    roles: readonly string[],
+    replacing: readonly string[] = [],
+  ): ReactNode => (
     <>
       <strong className="font-medium text-(--theme-app)">{and(roles)}</strong>
       {` for ${and(principals)}`}
+      {replacing.length > 0 && `, replacing ${and(replacing)}`}
     </>
   ),
+  /** On a role's row in the picker, for a role one person or group holds at a time. */
+  replaces: (holders: readonly string[]) => `Replaces ${and(holders)}`,
+  /** Why Grant can't be pressed: a role one holds at a time, picked for several. */
+  oneHolder: (roles: readonly string[]) =>
+    `${and(roles)} ${roles.length === 1 ? 'goes' : 'go'} to one person or group at a time`,
+  /** The toast after a grant that took a role from whoever held it. */
+  replaced: (role: string, from: readonly string[], to: string) =>
+    `${to} replaced ${and(from)} as ${role}`,
   /** Why Grant can't be pressed: everyone picked has every role picked already. */
   nothingToGrant: (principals: readonly string[], roles: readonly string[]) =>
     `${and(principals)} already ${has(principals)} ${and(roles)}`,

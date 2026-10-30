@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Callout } from '../components/Callout'
 import { Combobox, type ComboboxItem } from '../components/Combobox'
 import { StatusBadge } from '../components/StatusBadge'
-import { type AccessModel, covers, grantPlan, isOwner } from './model'
+import { type AccessModel, covers, grantPlan, isOwner, key, replacedBy } from './model'
 import {
   type DescribeGroup,
   type DetailsCache,
@@ -78,6 +78,9 @@ export function useGrantView({
     return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
   }
   const plan = grantPlan(model, principalIds, roleIds)
+  const replacing = replacedBy(model, plan.grant)
+  // A role one holds at a time can't go to several at once.
+  const oneEach = principalIds.length > 1 ? roles.filter((role) => role.singleHolder) : []
   const everyone = model.everyone
   const toEveryone = everyone !== undefined && principalIds.includes(everyone.id)
   const people = everyone?.memberCount
@@ -98,10 +101,16 @@ export function useGrantView({
       (id) => isOwner(model, id) || (model.held.get(id) ?? []).some((held) => held.id === role.id),
     )
     const coveredBy = chosen.filter((other) => covers(other, role)).map((r) => r.name)
+    const replaces = role.singleHolder
+      ? (model.holders.get(role.id) ?? [])
+          .filter((holder) => !principalIds.includes(holder.id))
+          .map((holder) => principalName(holder.id))
+      : []
     const everyoneHas =
       everyone !== undefined && !principalIds.includes(everyone.id) && everyoneHolds(role)
     const hints = [
       holders.length > 0 && t.alreadyHave(holders.map(principalName)),
+      replaces.length > 0 && t.replaces(replaces),
       coveredBy.length > 0 && t.alreadyCovered(coveredBy),
       everyoneHas && t.everyoneHasIt,
     ].filter((hint): hint is string => typeof hint === 'string')
@@ -121,28 +130,37 @@ export function useGrantView({
         ? { text: t.pickPrincipals, ready: false }
         : roleIds.length === 0
           ? { text: t.pickRoles, ready: false }
-          : plan.grant.length === 0
-            ? { text: t.nothingToGrant(principalIds.map(principalName), roleNames), ready: false }
-            : {
-                text: t.grantSummary(
-                  getting,
-                  [...new Set(plan.grant.map((grant) => grant.roleId))].map(
-                    (id) => model.roleById.get(id)?.name ?? id,
-                  ),
-                ),
-                ready: true,
+          : oneEach.length > 0
+            ? {
+                text: t.oneHolder(oneEach.map((role) => role.name)),
+                ready: false,
               }
+            : plan.grant.length === 0
+              ? { text: t.nothingToGrant(principalIds.map(principalName), roleNames), ready: false }
+              : {
+                  text: t.grantSummary(
+                    getting,
+                    [...new Set(plan.grant.map((grant) => grant.roleId))].map(
+                      (id) => model.roleById.get(id)?.name ?? id,
+                    ),
+                    [...new Set(replacing.map((held) => held.principalId))].map(principalName),
+                  ),
+                  ready: true,
+                }
 
   const grant = () => {
     setConfirming(false)
     // Holding one role each, whoever gets the new one gives up the one they had.
-    const revoke = singleRole
+    const swapped = singleRole
       ? [...new Set(plan.grant.map((granted) => granted.principalId))].flatMap((principalId) =>
           (model.held.get(principalId) ?? [])
             .filter((held) => !roleIds.includes(held.id))
             .map((held) => ({ principalId, roleId: held.id })),
         )
       : []
+    const revoke = [...swapped, ...replacing].filter(
+      (held, i, all) => all.findIndex((other) => key(other) === key(held)) === i,
+    )
     onGrant({ grant: plan.grant, revoke })
   }
   const statusId = `${uid}status`

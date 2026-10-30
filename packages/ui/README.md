@@ -677,6 +677,10 @@ import { AccessDrawer, type AccessChange } from '@parallelworks/ui/access'
 - `privileged` roles are labeled in the role picker. Granting anything to
   everyone says how many people it reaches and asks to confirm, with a
   destructive button when a privileged role is among them.
+- A `singleHolder` role is held by one person or group at a time. Granting it
+  to someone else takes it from whoever holds it in the same change: the role
+  picker and the line beside Grant name them first, the toast says who
+  replaced whom, and Undo gives it back. It can't go to several at once.
 - A development build warns about duplicate ids, and grants, inherited grants
   or an owner that name unknown roles or principals.
 

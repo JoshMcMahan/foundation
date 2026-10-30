@@ -42,6 +42,7 @@ import {
   invert,
   key,
   principalsWithAccess,
+  replacedBy,
   warnAboutMisuse,
 } from './model'
 import type { DetailsCache, SearchPrincipals } from './PrincipalPicker'
@@ -259,12 +260,13 @@ function useAccessEditor(
     (typeof errorMessage === 'function' ? errorMessage(error) : errorMessage) || t.failedReason
   const sectionId = (id: string) => `${uid}${arrangement}${id}`
 
+  const nameOf = (id: string) => {
+    const principal = seen.get(id) ?? model.principalById.get(id)
+    return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
+  }
   const names = (changed: AccessChange) => {
     const all = [...changed.grant, ...changed.revoke]
-    const principalNames = [...new Set(all.map((grant) => grant.principalId))].map((id) => {
-      const principal = seen.get(id) ?? model.principalById.get(id)
-      return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
-    })
+    const principalNames = [...new Set(all.map((grant) => grant.principalId))].map(nameOf)
     const roleNames = [...new Set(all.map((grant) => grant.roleId))].map(
       (id) => model.roleById.get(id)?.name ?? id,
     )
@@ -290,7 +292,9 @@ function useAccessEditor(
       return false
     }
     const { principalNames, roleNames } = names(next)
-    const swap = swapped(next)
+    // A role one holds at a time, taken from whoever held it: said as a replacement.
+    const replaced = next.grant.length === 1 ? replacedBy(model, next.grant) : []
+    const swap = replaced.length === 0 && swapped(next)
     const newRole = model.roleById.get(next.grant[0]?.roleId ?? '')?.name ?? ''
     setSaving(next)
     setFailure(undefined)
@@ -312,11 +316,17 @@ function useAccessEditor(
       setSaving(undefined)
     }
     toast.success(
-      swap
-        ? t.roleChanged(principalNames[0] ?? '', newRole)
-        : next.grant.length > 0
-          ? t.granted(principalNames, roleNames)
-          : t.removed(principalNames, roleNames),
+      replaced.length > 0
+        ? t.replaced(
+            newRole,
+            replaced.map((held) => nameOf(held.principalId)),
+            nameOf(next.grant[0]?.principalId ?? ''),
+          )
+        : swap
+          ? t.roleChanged(principalNames[0] ?? '', newRole)
+          : next.grant.length > 0
+            ? t.granted(principalNames, roleNames)
+            : t.removed(principalNames, roleNames),
       { action: { label: t.common.undo, onClick: () => undo(next) } },
     )
     return true
@@ -398,10 +408,14 @@ function useAccessEditor(
   const changeRole = (principalId: string, roleId: string) => {
     const held = (model.held.get(principalId) ?? []).filter((role) => role.id !== roleId)
     const has = (model.held.get(principalId) ?? []).some((role) => role.id === roleId)
+    const grant = has ? [] : [{ principalId, roleId }]
     void save(
       {
-        grant: has ? [] : [{ principalId, roleId }],
-        revoke: held.map((role) => ({ principalId, roleId: role.id })),
+        grant,
+        revoke: [
+          ...held.map((role) => ({ principalId, roleId: role.id })),
+          ...replacedBy(model, grant),
+        ],
       },
       { inGrant: false, principalId },
     )

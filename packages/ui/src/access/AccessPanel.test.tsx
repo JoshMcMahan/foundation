@@ -5,6 +5,10 @@ import { useState } from 'react'
 import { UIProvider } from '../components/Provider'
 import {
   applyChange,
+  PROJECT,
+  PROJECT_GRANTS,
+  PROJECT_PEOPLE,
+  PROJECT_ROLES,
   WORKSPACE,
   WORKSPACE_ADMINS,
   WORKSPACE_GRANTS,
@@ -85,6 +89,35 @@ describe('AccessPanel', () => {
       expect(screen.getByRole('combobox', { name: 'Role for Lin Zhou' })).toHaveTextContent(
         'Viewer',
       ),
+    )
+  })
+
+  it('takes a role one holds at a time from its holder when a row changes to it', async () => {
+    const onChange = vi.fn(() => Promise.resolve())
+    render(
+      <UIProvider>
+        <AccessPanel
+          resourceName={PROJECT}
+          roles={PROJECT_ROLES}
+          principals={PROJECT_PEOPLE}
+          grants={PROJECT_GRANTS}
+          singleRole
+          onChange={onChange}
+        />
+      </UIProvider>,
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Role for Ana Ruiz' }))
+    const lead = await screen.findByRole('option', { name: /^Lead/ })
+    fireEvent.pointerDown(lead)
+    fireEvent.click(lead)
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith({
+        grant: [{ principalId: 'u-ana', roleId: 'lead' }],
+        revoke: [
+          { principalId: 'u-ana', roleId: 'deputy' },
+          { principalId: 'u-tom', roleId: 'lead' },
+        ],
+      }),
     )
   })
 
