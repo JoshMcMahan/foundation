@@ -1389,6 +1389,13 @@ Define story components at module scope and pass preview arguments as props.
 Update adapters and other memoized values through their hook dependencies.
 Use an explicit `key` only when a fixture intentionally needs a fresh start.
 
+The Code panel displays authored story definitions so published builds keep
+readable component names. These snippets are static; Controls still update the
+preview. For composed demos, set `parameters.docs.source.code` from a `?raw`
+source import to include helper components and fixture data with the example.
+Stories can opt into `parameters.docs.source.type: 'dynamic'` when live argument
+substitution is useful.
+
 The component-factory lint rule stays enabled for components, stories, and
 preview helpers. Tests may define a local fixture once for a render result;
 rerenders must reuse that same component type. Shared form test helpers suppress

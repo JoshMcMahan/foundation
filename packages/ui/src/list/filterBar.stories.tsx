@@ -19,6 +19,7 @@ import {
   TagIcon,
   UserIcon,
 } from '../icons'
+import source from './filterBar.stories.tsx?raw'
 import {
   type ActiveFilter,
   decodeFilters,
@@ -37,7 +38,11 @@ import { useListFilters } from './useListFilters'
 
 const meta: Meta = {
   title: 'UI/List/Filters',
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    // Include the helpers and data behind these composed examples.
+    docs: { source: { code: source, language: 'tsx', type: 'code' } },
+  },
 }
 export default meta
 
@@ -219,8 +224,8 @@ function Shell({ children, width }: { children: ReactNode; width?: number | unde
   )
 }
 
-/** An issue list whose filters live in the URL, as a host router would hold them; the link
- *  shown under it updates as chips change, and a plain `?label=bug` link still reads. */
+/** An issue list whose filters live in search params, as a host router would hold them;
+ *  a plain `?label=bug` link still reads. */
 function IssuesDemo({
   link,
   width,
@@ -245,7 +250,6 @@ function IssuesDemo({
     remember: false,
   })
   const rows = filters.apply(ISSUES)
-  const url = decodeURIComponent(search.toString())
   return (
     <Shell width={width}>
       <div className="flex h-12 shrink-0 items-center border-b border-(--theme-border) px-4 text-[16px] font-semibold">
@@ -314,12 +318,6 @@ function IssuesDemo({
           ))}
         </Table>
       </ListPage>
-      <div
-        className="shrink-0 truncate border-t border-(--theme-border) px-4 py-2 font-mono text-[11px] text-(--theme-muted-text-color)"
-        style={{ fontVariantLigatures: 'none' }}
-      >
-        {url ? `?${url}` : '(no filter params)'}
-      </div>
     </Shell>
   )
 }

@@ -92,7 +92,8 @@ const preview: Preview = {
     mode: 'preset',
   },
   parameters: {
-    docs: { codePanel: true },
+    // Runtime JSX uses minified helper names in the published workshop.
+    docs: { codePanel: true, source: { type: 'code' } },
     controls: { expanded: true },
     options: { storySort: { order: ['Introduction', 'UI', 'Chat'] } },
   },
