@@ -38,6 +38,7 @@ import { useParsedOpts } from './useParsedOpts'
 import { atIndex, fieldPath, rowIndexOf } from './utils/fieldPath'
 import { getParentValue } from './utils/getParentValue'
 import { getValueUsingPath } from './utils/getValueUsingPath'
+import { humanizeKey } from './utils/humanizeKey'
 import { shareEqual } from './utils/shareEqual'
 import {
   type FormChecks,
@@ -698,7 +699,8 @@ const FormField = memo(function FormField({
 
   const fieldObj: SchemaField = {
     ...field,
-    label: field.label || fieldName.charAt(0).toUpperCase() + fieldName.slice(1),
+    // A workflow often leaves inputs unlabeled; its key, in words, beats showing `max_nodes`.
+    label: field.label || humanizeKey(fieldName),
     name,
     // explicit field.optional first, implicit field.default second
     optional: resolvedFlag(field.optional) ?? field.default !== undefined,

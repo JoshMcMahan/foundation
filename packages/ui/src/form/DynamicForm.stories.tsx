@@ -84,6 +84,53 @@ export const ClusterSettings: StoryObj<typeof DynamicForm> = {
   },
 }
 
+/** Inputs a workflow left without a `label` are named from their keys in sentence case, acronyms
+ *  kept: `max_nodes` reads "Max nodes", `numGPUs` "Num GPUs". A label the workflow gives wins as
+ *  written. */
+export const UnlabeledInputs: StoryObj<typeof DynamicForm> = {
+  args: {
+    formJSONs: {
+      slurmPartition: { type: 'string', default: 'gpu' },
+      max_nodes: { type: 'number', default: 4, min: 1 },
+      numGPUs: { type: 'number', default: 2 },
+      'scratch-dir': { type: 'string', default: '/scratch/runs' },
+      enableMPI: { type: 'boolean', default: true },
+      walltime: { type: 'duration', default: 7200 },
+      s3_bucket: { type: 'string', label: 'Results bucket (s3://)', default: 's3://results' },
+      slurmOptions: {
+        type: 'object',
+        options: {
+          mail_type: { type: 'string', default: 'END,FAIL' },
+          cpusPerTask: { type: 'number', default: 8 },
+        },
+      },
+    },
+    initialValues: {
+      slurmPartition: 'gpu',
+      max_nodes: 4,
+      numGPUs: 2,
+      'scratch-dir': '/scratch/runs',
+      enableMPI: true,
+      walltime: 7200,
+      s3_bucket: 's3://results',
+      slurmOptions: { mail_type: 'END,FAIL', cpusPerTask: 8 },
+    },
+    skipValueParse: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByRole('textbox', { name: 'Slurm partition' }, { timeout: 5000 }),
+    ).toBeVisible()
+    await expect(canvas.getByText('Max nodes')).toBeVisible()
+    await expect(canvas.getByText('Num GPUs')).toBeVisible()
+    await expect(canvas.getByText('Scratch dir')).toBeVisible()
+    await expect(canvas.getByText('Results bucket (s3://)')).toBeVisible()
+    await expect(canvas.getByText('Slurm options')).toBeVisible()
+    await expect(canvas.getByText('Mail type')).toBeVisible()
+  },
+}
+
 /** The server rejected fields the form sent: each shows the server's message under it, or asks to
  * check the value, until the person changes it. They never hold back a submit. */
 export const ServerErrors: StoryObj<typeof DynamicForm> = {

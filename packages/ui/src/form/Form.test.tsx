@@ -239,6 +239,27 @@ describe('DynamicForm workflowForm prop', () => {
   })
 })
 
+describe('labels', () => {
+  it('names an unlabeled input from its key in sentence case, and keeps a label the workflow gave', async () => {
+    render(
+      <DynamicForm
+        initialValues={{ jobs: { cpusPerTask: 8 } }}
+        formJSONs={{
+          max_nodes: { type: 'number' },
+          numGPUs: { type: 'number' },
+          slurm_account: { type: 'string', label: 'slurm_account (as written)' },
+          jobs: { type: 'object', options: { cpusPerTask: { type: 'number' } } },
+        }}
+      />,
+    )
+    expect(await screen.findByLabelText('Max nodes')).toBeInTheDocument()
+    expect(screen.getByLabelText('Num GPUs')).toBeInTheDocument()
+    expect(screen.getByLabelText('slurm_account (as written)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cpus per task')).toBeInTheDocument()
+    expect(screen.getByText('Jobs')).toBeInTheDocument()
+  })
+})
+
 describe('input widths', () => {
   const cellOf = (name: string) => screen.getByTestId(`field-${name}`).closest('[data-input-cell]')
   const labelOf = (name: string) =>
