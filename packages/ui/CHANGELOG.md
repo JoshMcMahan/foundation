@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.105.2](https://github.com/parallelworks/foundation/compare/ui-v0.105.1...ui-v0.105.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **ui:** an unlabeled form input reads its key as a sentence-case label ([#596](https://github.com/parallelworks/foundation/issues/596)) ([dd03470](https://github.com/parallelworks/foundation/commit/dd03470aa21a24ecde12f2fb30d958d9f24176df))
+
 ## [0.105.1](https://github.com/parallelworks/foundation/compare/ui-v0.105.0...ui-v0.105.1) (2026-10-31)
 
 
