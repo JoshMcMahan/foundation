@@ -18,10 +18,17 @@
     cursor: pointer;
     text-decoration: none;
     text-align: start;
-    transition: background-color 150ms ease-out;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
   }
   .pw-frame-nav-item:hover {
     background: var(--theme-sidebar-hover, var(--theme-hover));
+    /* Halfway from the sidebar's text to full contrast: a translucent text gains half its missing opacity. */
+    color: oklch(
+      from var(--theme-sidebar-text, var(--theme-app)) calc(l + (l - 0.5) * 0.5) c h /
+      calc(alpha + (1 - alpha) * 0.5)
+    );
   }
   .pw-frame-nav-item[aria-current] {
     background: var(--theme-sidebar-active-bg, var(--theme-accent-subtle));
