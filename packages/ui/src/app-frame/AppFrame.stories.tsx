@@ -1,8 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import { GridIcon, ListViewIcon, SettingsIcon } from '../icons'
-import { AppFrame, AppFrameNavItem, type AppFrameProps, AppFrameToggle, useAppFrame } from './index'
+import { GridIcon, ListViewIcon, PinFilledIcon, SettingsIcon } from '../icons'
+import {
+  AppFrame,
+  AppFrameNavGroup,
+  AppFrameNavItem,
+  type AppFrameProps,
+  AppFrameToggle,
+  useAppFrame,
+} from './index'
 
 function Header() {
   const { isMobile } = useAppFrame()
@@ -24,6 +31,7 @@ function Header() {
 }
 function Demo(args: AppFrameProps) {
   const [active, setActive] = useState('Projects')
+  const [pinned, setPinned] = useState(['Climate research', 'Materials lab'])
   return (
     <AppFrame
       {...args}
@@ -53,6 +61,31 @@ function Demo(args: AppFrameProps) {
               onClick={() => setActive(label)}
             />
           ))}
+          <AppFrameNavGroup
+            label="Pinned"
+            icon={<PinFilledIcon />}
+            selected={pinned.includes(active)}
+          >
+            {pinned.map((label) => (
+              <AppFrameNavItem
+                key={label}
+                label={label}
+                icon={<ListViewIcon />}
+                selected={active === label}
+                onClick={() => setActive(label)}
+                action={
+                  <button
+                    type="button"
+                    aria-label={`Unpin ${label}`}
+                    style={{ display: 'flex', width: 16, height: 16 }}
+                    onClick={() => setPinned(pinned.filter((p) => p !== label))}
+                  >
+                    <PinFilledIcon />
+                  </button>
+                }
+              />
+            ))}
+          </AppFrameNavGroup>
         </nav>
       }
       footer={({ isMobile }) => !isMobile && <AppFrameToggle />}

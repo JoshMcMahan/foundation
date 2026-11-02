@@ -1,9 +1,11 @@
+import { Collapsible } from '@base-ui/react/collapsible'
 import { Dialog } from '@base-ui/react/dialog'
 import {
   createContext,
   type HTMLAttributes,
   type MouseEvent,
   type ReactNode,
+  use,
   useCallback,
   useContext,
   useEffect,
@@ -14,9 +16,11 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { AppLink, isPlainClick, type LinkTarget } from '../components/AppLink'
+import { collapsePanelClassName } from '../components/Disclosure'
+import { Popover, useClosePopover } from '../components/Popover'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
-import { CloseIcon, SidebarCloseIcon, SidebarOpenIcon } from '../icons'
+import { ChevronRightIcon, CloseIcon, SidebarCloseIcon, SidebarOpenIcon } from '../icons'
 
 export interface AppFrameLabels {
   navigation: string
@@ -425,28 +429,43 @@ export function AppFrameToggle({
     </Tooltip>
   )
 }
-export interface AppFrameNavItemProps extends LinkTarget {
+// Items render with labels inside a rail group's flyout, whatever the frame's state.
+const NavExpanded = createContext<boolean | null>(null)
+
+export interface AppFrameNavItemProps
+  extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onClick'>,
+    LinkTarget {
   label: string
   icon: ReactNode
   selected?: boolean
   badge?: ReactNode
   disabled?: boolean
+  /** A control at the item's end, beside the link rather than in it, such as an unpin button.
+   *  It shows while the item is hovered or focused, and not in the rail. */
+  action?: ReactNode
   onClick?: (event: MouseEvent<HTMLElement>) => void
-  className?: string
 }
-/** Router-aware navigation that keeps icon-only rail items named and discoverable. */
+/** Router-aware navigation that keeps icon-only rail items named and discoverable.
+ *  Other attributes, such as `onContextMenu` or `draggable`, go on the link or button. */
 export function AppFrameNavItem({
   label,
   icon,
   selected,
   badge,
   disabled,
+  action,
   onClick,
   className,
-  ...target
+  href,
+  reloadDocument,
+  target,
+  ...rest
 }: AppFrameNavItemProps) {
-  const { expanded, closeNavigation } = useFrameContext()
+  const frame = useFrameContext()
+  const expanded = use(NavExpanded) ?? frame.expanded
+  const closePopover = useClosePopover()
   const props = {
+    ...rest,
     className: cx('pw-frame-nav-item', className),
     'aria-current': selected ? ('page' as const) : undefined,
     onClick: (event: MouseEvent<HTMLElement>) => {
@@ -455,7 +474,10 @@ export function AppFrameNavItem({
         return
       }
       onClick?.(event)
-      if (!event.defaultPrevented && isPlainClick(event)) closeNavigation()
+      if (!event.defaultPrevented && isPlainClick(event)) {
+        closePopover()
+        frame.closeNavigation()
+      }
     },
     children: (
       <>
@@ -471,16 +493,111 @@ export function AppFrameNavItem({
       </>
     ),
   }
-  const item = target.href ? (
-    <AppLink {...target} {...props} disabled={disabled} />
+  const item = href ? (
+    <AppLink
+      {...props}
+      href={href}
+      reloadDocument={reloadDocument}
+      target={target}
+      disabled={disabled}
+    />
   ) : (
     <button {...props} type="button" disabled={disabled} />
   )
-  return expanded ? (
+  if (!expanded) {
+    return (
+      <Tooltip content={label} side="right" delay={0}>
+        {item}
+      </Tooltip>
+    )
+  }
+  return action == null ? (
     item
   ) : (
-    <Tooltip content={label} side="right" delay={0}>
+    <div className="pw-frame-nav-row">
       {item}
-    </Tooltip>
+      <span className="pw-frame-nav-action">{action}</span>
+    </div>
+  )
+}
+
+export interface AppFrameNavGroupProps {
+  label: string
+  /** Stands for the group in the rail, where its items open beside it. Defaults to the label's first letter. */
+  icon?: ReactNode
+  /** One of its items is the current page, which the rail's icon shows while they're out of sight. */
+  selected?: boolean
+  /** False shows the items under a plain heading with no toggle. */
+  collapsible?: boolean
+  open?: boolean
+  defaultOpen?: boolean
+  /** Keep `open` in `usePersistedState` to remember it. */
+  onOpenChange?: (open: boolean) => void
+  children: ReactNode
+}
+/** Named navigation items that fold under their heading, and open beside the rail from one icon. */
+export function AppFrameNavGroup({
+  label,
+  icon,
+  selected,
+  collapsible = true,
+  open,
+  defaultOpen = true,
+  onOpenChange,
+  children,
+}: AppFrameNavGroupProps) {
+  const frame = useFrameContext()
+  if (!(use(NavExpanded) ?? frame.expanded)) {
+    return (
+      <Popover
+        openOnHover
+        hoverDelay={0}
+        hoverCloseDelay={100}
+        side="right"
+        align="start"
+        sheet={false}
+        title={label}
+        className="pw-frame-nav-flyout"
+        trigger={
+          <button
+            type="button"
+            className="pw-frame-nav-item"
+            aria-label={label}
+            data-selected={selected || undefined}
+          >
+            <span className="pw-frame-nav-icon" aria-hidden="true">
+              {icon ?? label.charAt(0).toUpperCase()}
+            </span>
+          </button>
+        }
+      >
+        <NavExpanded value={true}>
+          <div className="pw-frame-nav-group-items">{children}</div>
+        </NavExpanded>
+      </Popover>
+    )
+  }
+  const items = <div className="pw-frame-nav-group-items">{children}</div>
+  if (!collapsible) {
+    return (
+      <div className="pw-frame-nav-group">
+        <div className="pw-frame-nav-group-heading">{label}</div>
+        {items}
+      </div>
+    )
+  }
+  return (
+    <Collapsible.Root
+      className="pw-frame-nav-group"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={(next) => onOpenChange?.(next)}
+    >
+      <Collapsible.Trigger className="pw-frame-nav-group-heading">
+        <span className="pw-frame-nav-label">{label}</span>
+        <ChevronRightIcon aria-hidden="true" className="pw-frame-nav-group-chevron" />
+      </Collapsible.Trigger>
+      <Collapsible.Panel className={collapsePanelClassName}>{items}</Collapsible.Panel>
+    </Collapsible.Root>
   )
 }

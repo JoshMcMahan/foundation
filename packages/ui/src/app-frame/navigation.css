@@ -22,7 +22,8 @@
       background-color 150ms ease-out,
       color 150ms ease-out;
   }
-  .pw-frame-nav-item:hover {
+  .pw-frame-nav-item:hover,
+  :where(.pw-frame-nav-row:hover) > .pw-frame-nav-item {
     background: var(--theme-sidebar-hover, var(--theme-hover));
     /* Halfway from the sidebar's text to full contrast: a translucent text gains half its missing opacity. */
     color: oklch(
@@ -30,7 +31,7 @@
       calc(alpha + (1 - alpha) * 0.5)
     );
   }
-  .pw-frame-nav-item[aria-current] {
+  .pw-frame-nav-item:is([aria-current], [data-selected]) {
     background: var(--theme-sidebar-active-bg, var(--theme-accent-subtle));
     color: var(--theme-sidebar-active-text, var(--theme-accent));
   }
@@ -60,6 +61,68 @@
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
+  .pw-frame-nav-row {
+    position: relative;
+  }
+  :where(.pw-frame-nav-row) > .pw-frame-nav-item {
+    padding-inline-end: 32px;
+  }
+  .pw-frame-nav-action {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 6px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+  }
+  .pw-frame-nav-row:is(:hover, :focus-within) > .pw-frame-nav-action {
+    opacity: 1;
+  }
+  .pw-frame-nav-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: 0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: transparent;
+    color: var(--theme-sidebar-text, var(--theme-muted-text-color));
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    text-align: start;
+  }
+  button.pw-frame-nav-group-heading {
+    cursor: pointer;
+  }
+  .pw-frame-nav-group-chevron {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    transition: transform 200ms ease-out;
+  }
+  .pw-frame-nav-group-heading[data-panel-open] .pw-frame-nav-group-chevron {
+    transform: rotate(90deg);
+  }
+  .pw-frame-nav-group-items {
+    display: grid;
+    gap: 2px;
+  }
+  .pw-frame-nav-group {
+    padding-block: 4px;
+  }
+  /* A flyout is a popover, not the sidebar, so its items take the popover's colors. */
+  .pw-frame-nav-flyout {
+    --theme-sidebar-text: var(--theme-app);
+    --theme-sidebar-hover: var(--theme-hover);
+    --theme-sidebar-active-bg: var(--theme-accent-subtle);
+    --theme-sidebar-active-text: var(--theme-accent);
+    min-width: 220px;
+    padding: 6px;
+  }
   [data-sidebar-mode="rail"] .pw-frame-nav-item {
     padding-inline: 0;
     justify-content: center;
@@ -69,7 +132,9 @@
     min-height: 44px;
   }
   @media (prefers-reduced-motion: reduce) {
-    .pw-frame-nav-item {
+    .pw-frame-nav-item,
+    .pw-frame-nav-action,
+    .pw-frame-nav-group-chevron {
       transition: none;
     }
   }

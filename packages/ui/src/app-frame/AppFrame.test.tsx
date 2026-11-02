@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ActionMenu } from '../components/ActionMenu'
-import { AppFrame, AppFrameNavItem, AppFrameToggle } from './index'
+import { AppFrame, AppFrameNavGroup, AppFrameNavItem, AppFrameToggle } from './index'
 
 let mobile = false
 beforeEach(() => {
@@ -274,4 +274,68 @@ describe('AppFrame', () => {
       expect(onContextMenu).toHaveBeenCalledOnce()
     },
   )
+  it('puts other attributes on the item, and its action beside the link rather than in it', () => {
+    const onContextMenu = vi.fn()
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <AppFrameNavItem
+            label="Pinned"
+            icon={<span>P</span>}
+            href="#pinned"
+            draggable={false}
+            onContextMenu={onContextMenu}
+            action={<button type="button">Unpin</button>}
+          />
+        }
+      />,
+    )
+    const link = screen.getByRole('link', { name: 'Pinned' })
+    expect(link).toHaveAttribute('draggable', 'false')
+    fireEvent.contextMenu(link)
+    expect(onContextMenu).toHaveBeenCalledOnce()
+    expect(link).not.toContainElement(screen.getByRole('button', { name: 'Unpin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(screen.queryByRole('button', { name: 'Unpin' })).not.toBeInTheDocument()
+  })
+  it('folds a group under its heading and reports the change', () => {
+    const onOpenChange = vi.fn()
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <AppFrameNavGroup label="Compute" onOpenChange={onOpenChange}>
+            <AppFrameNavItem label="Clusters" icon={<span>C</span>} href="#clusters" />
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    const heading = screen.getByRole('button', { name: 'Compute' })
+    expect(heading).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(heading)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(screen.queryByRole('link', { name: 'Clusters' })).not.toBeInTheDocument()
+  })
+  it('opens a collapsed group beside the rail with its items labeled', async () => {
+    render(
+      <AppFrame
+        {...props}
+        defaultExpanded={false}
+        navigation={
+          <AppFrameNavGroup label="Compute" icon={<span>C</span>} selected>
+            <AppFrameNavItem label="Clusters" icon={<span>C</span>} href="#clusters" selected />
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    const trigger = screen.getByRole('button', { name: 'Compute' })
+    expect(trigger).toHaveAttribute('data-selected')
+    fireEvent.click(trigger)
+    const link = await screen.findByRole('link', { name: 'Clusters' })
+    expect(link).toHaveTextContent('Clusters')
+    expect(link.querySelector('.sr-only')).toBeNull()
+    fireEvent.click(link)
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Clusters' })).toBeNull())
+  })
 })
