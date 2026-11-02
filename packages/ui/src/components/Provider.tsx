@@ -451,6 +451,9 @@ export interface UIStrings {
       storageIconAlt: string
       type: string
       storages: string
+      groupBy: string
+      groupByUser: string
+      groupByType: string
       modified: string
       lastModified: string
       contentType: string
@@ -1402,6 +1405,9 @@ const DEFAULTS: UIProviderValue = {
         storageIconAlt: 'An icon for the storage',
         type: 'Type',
         storages: 'Storages',
+        groupBy: 'Group by',
+        groupByUser: 'User',
+        groupByType: 'Type',
         modified: 'Modified',
         lastModified: 'Last modified',
         contentType: 'Content type',

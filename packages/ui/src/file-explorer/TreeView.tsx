@@ -682,6 +682,11 @@ const TreeRowItem = memo(function TreeRowItem({
       <>
         <RowIcons isDirectory={isDirectory} isExpanded={isExpanded} customIcon={customIcon} />
         <span className="text-sm truncate">{label}</span>
+        {node.owner && (
+          <span className="shrink-0 max-w-[40%] truncate text-xs theme-muted-text">
+            {node.owner}
+          </span>
+        )}
       </>
     ),
   }

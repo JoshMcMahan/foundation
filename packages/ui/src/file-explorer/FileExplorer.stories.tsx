@@ -2,11 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
 import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type UILinkComponent, UIProvider } from '../components/Provider'
+import { BucketIcon, ClusterIcon } from '../icons'
 import FileExplorer from './FileExplorer'
 import { FileExplorerProvider } from './FileExplorerContext'
 import { CorsPropagatingPreview, NoDataAvailablePreview } from './helpers'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
-import type { TStorage, TStorageObject, UploadSession } from './lib/types'
+import type { TStorage, TStorageGroup, TStorageObject, UploadSession } from './lib/types'
 import { UploadSessionToast } from './toasts'
 
 const meta: Meta = {
@@ -199,10 +200,14 @@ const COMPUTE_STORAGE: TStorage = {
 
 function ExplorerDemo({
   storages = STORAGES,
+  storageGroups,
+  viewer,
   initialPath = '',
   width,
 }: {
   storages?: TStorage[]
+  storageGroups?: TStorageGroup[]
+  viewer?: string
   initialPath?: string
   width?: number
 }) {
@@ -213,6 +218,8 @@ function ExplorerDemo({
         <FileExplorer
           storages={storages}
           showUserHierarchy
+          storageGroups={storageGroups}
+          viewer={viewer}
           getProviderAndClient={async () => ({
             provider: mockProvider,
             client: createMockClient(),
@@ -227,6 +234,42 @@ function ExplorerDemo({
 
 export const Default: StoryObj = {
   render: () => <ExplorerDemo />,
+}
+
+const STORAGE_GROUPS: TStorageGroup[] = [
+  { id: '~clusters', label: 'Clusters', icon: ClusterIcon },
+  { id: '~buckets', label: 'Buckets', icon: BucketIcon },
+]
+const GROUPED_STORAGES: TStorage[] = [
+  { ...STORAGE, group: '~buckets' },
+  { ...STORAGE, id: 'shared-storage', user: 'ada', group: '~buckets' },
+  { ...COMPUTE_STORAGE, group: '~clusters' },
+  {
+    ...COMPUTE_STORAGE,
+    id: 'shared-compute',
+    name: 'cluster~ada~gpu',
+    displayName: 'gpu',
+    owner: 'ada',
+    group: '~clusters',
+  },
+]
+
+export const GroupedByType: StoryObj<{ viewer: string }> = {
+  args: { viewer: 'storybook' },
+  argTypes: {
+    viewer: {
+      description: 'The user whose storages carry no owner name',
+      control: 'text',
+    },
+  },
+  render: ({ viewer }) => (
+    <ExplorerDemo storages={GROUPED_STORAGES} storageGroups={STORAGE_GROUPS} viewer={viewer} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Type' }))
+    await expect(await canvas.findByRole('treeitem', { name: /Clusters/ })).toBeVisible()
+  },
 }
 
 // The path lives in the frame's hash, so a link opened in a new tab, or the

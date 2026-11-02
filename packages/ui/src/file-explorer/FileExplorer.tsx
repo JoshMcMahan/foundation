@@ -33,6 +33,7 @@ import {
 } from '../components/Provider'
 import { RefreshButton } from '../components/RefreshButton'
 import { RelativeTime } from '../components/relativeTime'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { StatusBadge } from '../components/StatusBadge'
 import { useSplitter } from '../components/splitter'
 import { Table } from '../components/Table'
@@ -78,6 +79,7 @@ import { FileTable } from './FileTable'
 import { FileTableHeaders } from './FileTableHeaders'
 import {
   DragDropZone,
+  GROUP_BY_STORAGE_KEY,
   getNodeIcon,
   NoDataAvailablePreview,
   NoFileSelectedPreview,
@@ -106,16 +108,18 @@ import {
   retainListings,
   type TListings,
 } from './lib/paging'
-import type { ExplorerObject, TreeNode, TStorage, UploadNode } from './lib/types'
+import type { ExplorerObject, TreeNode, TStorage, TStorageGroup, UploadNode } from './lib/types'
 import {
   calculateUploadNodesTotalSize,
   createTreeBuilder,
+  ensureTrailingSlash,
   exceededTransferLimit,
   getDirectoryNameError,
   getDirectoryObjectPath,
   getNodeChildren,
   getObjectKeyFromNode,
   getParentPath,
+  getStorageRoots,
   getUploadNodesFromDataTransferItems,
   getUriScheme,
   pruneNodesInsideSelectedDirectories,
@@ -175,6 +179,8 @@ type IFileExplorerProps = ExplorerNavigation & {
    * return false to fall through to the built-in preview. */
   onOpenFile?: ((node: TreeNode, storage: TStorage | undefined) => boolean) | undefined
   showUserHierarchy?: boolean
+  storageGroups?: readonly TStorageGroup[] | undefined
+  viewer?: string | undefined
   groups?: { name: string; id?: string | undefined }[] | undefined
   groupsLoading?: boolean
   selectedPath: string
@@ -284,6 +290,8 @@ export default function FileExplorer({
   refreshKey,
   onOpenFile,
   showUserHierarchy = false,
+  storageGroups,
+  viewer,
   groups = [],
   groupsLoading = false,
   selectedPath,
@@ -336,15 +344,21 @@ export default function FileExplorer({
     return next
   }, [listings])
 
+  const [storedGroupBy, setGroupBy] = usePersistedState(GROUP_BY_STORAGE_KEY, 'user')
+  const groupBy = storedGroupBy === 'type' ? 'type' : 'user'
+  const canGroupByType = showUserHierarchy && !!storageGroups?.length
+  const typeGroups = canGroupByType && groupBy === 'type' ? storageGroups : undefined
   const [buildTree] = useState(createTreeBuilder)
   const { treeMap, parentToChildrenMap, rootNodes } = useMemo(
     () =>
       buildTree(storages, {
         listings,
         forceUserHierarchy: showUserHierarchy,
+        storageGroups: typeGroups,
+        viewer,
         unsortedParents: incompleteDirs,
       }),
-    [buildTree, storages, listings, showUserHierarchy, incompleteDirs],
+    [buildTree, storages, listings, showUserHierarchy, typeGroups, viewer, incompleteDirs],
   )
 
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set())
@@ -366,6 +380,23 @@ export default function FileExplorer({
   }, [selectedPath, treeMap])
   const setSelectedPath = (path: string) =>
     onPathChange ? onPathChange(path) : pathHref && goTo(pathHref(path))
+  const linkedGroupBy = !canGroupByType
+    ? undefined
+    : storageGroups?.some((group) => normalizedSelectedPath.startsWith(`${group.id}/`))
+      ? 'type'
+      : storages.some((storage) => ensureTrailingSlash(storage.user) === normalizedSelectedPath)
+        ? 'user'
+        : undefined
+  const adoptGroupBy = useEffectEvent((next: 'user' | 'type') => {
+    if (next !== groupBy) {
+      setGroupBy(next)
+    }
+  })
+  useEffect(() => {
+    if (linkedGroupBy) {
+      adoptGroupBy(linkedGroupBy)
+    }
+  }, [linkedGroupBy])
 
   // A Set, not an array: membership is tested once per tree row, so an array scan
   // made expansion O(rows x expanded).
@@ -428,12 +459,9 @@ export default function FileExplorer({
 
   const storageRoots = useMemo(() => {
     const roots = new Map<string, string>()
-    for (const node of rootNodes) {
-      const candidates = node.root ? [node] : (parentToChildrenMap[node.path] ?? [])
-      for (const root of candidates) {
-        if (root.root && root.storageId) {
-          roots.set(root.storageId, root.path)
-        }
+    for (const root of getStorageRoots(parentToChildrenMap, rootNodes)) {
+      if (root.storageId) {
+        roots.set(root.storageId, root.path)
       }
     }
     return roots
@@ -690,11 +718,17 @@ export default function FileExplorer({
     }
   }
 
+  const selectedGroupPath = getAncestorDirPaths(normalizedSelectedPath)
+    .map((path) => treeMap[path]?.groupPath)
+    .find(Boolean)
   useEffect(() => {
     if (!normalizedSelectedPath) {
       return
     }
     const ancestors = getAncestorDirPaths(normalizedSelectedPath)
+    if (selectedGroupPath) {
+      ancestors.unshift(selectedGroupPath)
+    }
     if (ancestors.length === 0) {
       return
     }
@@ -708,7 +742,7 @@ export default function FileExplorer({
       }
       return next
     })
-  }, [normalizedSelectedPath])
+  }, [normalizedSelectedPath, selectedGroupPath])
 
   // One request per run, each settling into an update that re-triggers this effect
   // until the chain resolves or reports itself stuck. useLayoutEffect so
@@ -1607,7 +1641,29 @@ export default function FileExplorer({
     >
       {/* File Tree - Left sidebar */}
       <div className="h-full flex flex-col border-r theme-border bg-(--theme-panel-bg)/60">
-        <div className="flex items-center justify-end h-10 px-3 shrink-0 border-b theme-border">
+        <div
+          className={cx(
+            'flex items-center h-10 px-3 shrink-0 border-b theme-border',
+            canGroupByType ? 'justify-between gap-2' : 'justify-end',
+          )}
+        >
+          {canGroupByType && (
+            <SegmentedControl
+              size="sm"
+              label={t.chrome.groupBy}
+              value={groupBy}
+              onValueChange={(next) => {
+                setGroupBy(next)
+                if (selectedNode && !selectedNode.storageId) {
+                  setSelectedPath('')
+                }
+              }}
+              options={[
+                { value: 'user', label: t.chrome.groupByUser },
+                { value: 'type', label: t.chrome.groupByType },
+              ]}
+            />
+          )}
           <div className="flex gap-x-0.5">
             <RefreshButton iconOnly onRefresh={() => handleRefresh()} />
 
@@ -1727,12 +1783,21 @@ export default function FileExplorer({
                         node={rootNode}
                         icon={getNodeIcon(rootNode)}
                         href={href}
-                        storageCount={getNodeChildren(parentToChildrenMap, rootNode.path).length}
-                        getItems={() => [
-                          href
-                            ? { ...open, href }
-                            : { ...open, onClick: () => openUserNode(rootNode) },
-                        ]}
+                        type={rootNode.root ? rootNode.storageType : undefined}
+                        storageCount={
+                          rootNode.root
+                            ? undefined
+                            : getStorageRoots(parentToChildrenMap, [rootNode]).length
+                        }
+                        getItems={() =>
+                          rootNode.root
+                            ? buildRowMenu(rootNode)
+                            : [
+                                href
+                                  ? { ...open, href }
+                                  : { ...open, onClick: () => openUserNode(rootNode) },
+                              ]
+                        }
                         openMenu={openMenu}
                         onOpen={openUserNode}
                       />

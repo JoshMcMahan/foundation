@@ -19,6 +19,7 @@ export type {
   PreviewLimits,
   TreeNode,
   TStorage,
+  TStorageGroup,
   TStorageObject,
 } from './lib/types'
 export {

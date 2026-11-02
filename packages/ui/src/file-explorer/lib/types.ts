@@ -1,3 +1,4 @@
+import type { IconType } from '../../icons'
 import type { IFileExplorerClient, IFileExplorerProvider } from './fileExplorer'
 
 /** Above these a file is not fetched for preview; the pane offers a download instead. */
@@ -16,12 +17,15 @@ export type TStorage = {
   name: string
   bucketName?: string
   user: string
+  owner?: string | undefined
   displayName?: string
   type?: string
   created?: string
   modified?: string
   csp?: string
   imageUrl?: string
+  fallbackImageUrl?: string | undefined
+  group?: string | undefined
   canWrite?: boolean | undefined
   canUpload?: boolean | undefined
   canDelete?: boolean | undefined
@@ -32,6 +36,12 @@ export type TStorage = {
   previewLimits?: Partial<PreviewLimits> | undefined
   transferLimitBytes?: number | undefined
   rootPath?: string | undefined
+}
+
+export type TStorageGroup = {
+  id: string
+  label: string
+  icon?: IconType | undefined
 }
 
 /** A file the host is asked to name or download: its storage, key and name. */
@@ -69,7 +79,12 @@ export type TreeNode = {
   storageName?: string | undefined
   storageNodeIcon?: string | undefined // Only for storage nodes ("aws-bucket", "google-bucket", "azure-bucket")
   storageImageUrl?: string | undefined // Image URL for the storage node if available
+  storageFallbackImageUrl?: string | undefined
   storageType?: string | undefined
+  groupPath?: string | undefined
+  group?: boolean | undefined
+  groupIcon?: IconType | undefined
+  owner?: string | undefined
   root?: boolean | undefined // True only for the storage root node
 }
 

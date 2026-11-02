@@ -82,6 +82,7 @@ export function UserRow({
   node,
   icon,
   href,
+  type,
   storageCount,
   getItems,
   openMenu,
@@ -91,7 +92,8 @@ export function UserRow({
   icon: ReactNode
   /** Makes the row a link to the user. */
   href?: string | undefined
-  storageCount: number
+  type?: string | undefined
+  storageCount?: number | undefined
   getItems: () => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
@@ -119,7 +121,7 @@ export function UserRow({
         </div>
       </Table.Item>
       <Table.Item className="hidden py-2.5 text-xs uppercase @min-[40rem]/files:table-cell tracking-wider text-(--theme-muted-text-color)">
-        {t.preview.userType}
+        {node.group ? null : (type ?? t.preview.userType)}
       </Table.Item>
       <Table.Item className="py-2.5 tabular-nums text-(--theme-muted-text-color)">
         {storageCount}
@@ -191,6 +193,11 @@ export function FileRow({
           <div className="min-w-0">
             <div className="truncate text-[13px] font-medium leading-tight text-(--theme-app)">
               <RowName name={node.displayName || node.name} href={href} />
+              {node.owner && (
+                <span className="ml-1.5 font-normal text-xs text-(--theme-muted-text-color)">
+                  {node.owner}
+                </span>
+              )}
             </div>
             {isTwoLineRow(node) && (
               <div className="truncate text-xs leading-tight text-(--theme-muted-text-color)">

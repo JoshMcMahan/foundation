@@ -39,6 +39,7 @@ import { carriesFiles, getFileExtension } from './lib/utils'
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'fileExplorerSidebarWidth'
 const SIDEBAR_WIDTH_DEFAULT = 300
+const GROUP_BY_STORAGE_KEY = 'fileExplorerGroupBy'
 
 const contentTypeIconMap = [
   {
@@ -100,13 +101,13 @@ const extensionIconMap = [
   },
 ]
 
-// A storage's own image, or the host's for its type, falling back to the host's if its own fails.
+// A storage's own image, else its fallback or the host's for its type, which also stands in if its own fails.
 function StorageImage({ node }: { node: TreeNode }) {
   const { storageIconUrl } = useSlots()
   const alt = useStrings().fileExplorer.chrome.storageIconAlt
-  const fallbackSrc = node.storageNodeIcon
-    ? storageIconUrl?.({ type: node.storageNodeIcon })
-    : undefined
+  const fallbackSrc =
+    node.storageFallbackImageUrl ??
+    (node.storageNodeIcon ? storageIconUrl?.({ type: node.storageNodeIcon }) : undefined)
   const src = node.storageImageUrl || fallbackSrc
   if (!src) {
     return <DiskIcon className="h-4 w-4 mr-2" />
@@ -117,7 +118,7 @@ function StorageImage({ node }: { node: TreeNode }) {
       src={src}
       alt={alt}
       onError={(e) => {
-        if (fallbackSrc) {
+        if (fallbackSrc && e.currentTarget.getAttribute('src') !== fallbackSrc) {
           e.currentTarget.src = fallbackSrc
         }
       }}
@@ -126,6 +127,9 @@ function StorageImage({ node }: { node: TreeNode }) {
 }
 
 function getNodeIcon(node: TreeNode): JSX.Element | null {
+  if (node.group) {
+    return node.groupIcon ? <node.groupIcon className="h-4 w-4 mr-2" /> : null
+  }
   const isUserNode = !node.storageId
   const isStorageNode = node.root
   if (isUserNode) {
@@ -657,6 +661,7 @@ export {
   CorsIssuePreview,
   CorsPropagatingPreview,
   DragDropZone,
+  GROUP_BY_STORAGE_KEY,
   getNodeIcon,
   NoDataAvailablePreview,
   NoFileSelectedPreview,
