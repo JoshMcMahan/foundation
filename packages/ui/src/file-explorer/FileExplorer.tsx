@@ -2251,6 +2251,7 @@ export default function FileExplorer({
           setPendingUpload(null)
         }}
         align="center"
+        size="lg"
         title={t.confirmUpload.title}
         description={t.confirmUpload.text(pendingUpload?.targetPath || t.confirmUpload.defaultPath)}
         confirmLabel={t.confirmUpload.confirm}
