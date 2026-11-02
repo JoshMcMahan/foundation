@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
+import { UIProvider } from '../components/Provider'
 import {
   ALL_PRINCIPALS,
   applyChange,
@@ -259,6 +260,54 @@ describe('AccessDrawer', () => {
         grant: [{ principalId: 'u-jun', roleId: 'login' }],
         revoke: [],
       }),
+    )
+  })
+
+  it('names only the role granted when each person gives up the one they held', async () => {
+    const onChange = vi.fn(async () => {})
+    render(
+      <UIProvider>
+        <Host singleRole onChange={onChange} />
+      </UIProvider>,
+    )
+    const principals = await openGrant()
+    await choose(principals, 'Tom Becker')
+    await choose(principals, 'Priya Nair')
+    await choose(screen.getByRole('combobox', { name: 'Roles' }), 'Admin')
+    fireEvent.click(screen.getByRole('button', { name: 'Grant Admin' }))
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith({
+        grant: [
+          { principalId: 'u-tom', roleId: 'admin' },
+          { principalId: 'u-priya', roleId: 'admin' },
+        ],
+        revoke: [
+          { principalId: 'u-tom', roleId: 'sudo' },
+          { principalId: 'u-priya', roleId: 'login' },
+        ],
+      }),
+    )
+    expect(
+      await screen.findByText('Granted Admin to Tom Becker and Priya Nair'),
+    ).toBeInTheDocument()
+  })
+
+  it('names only the role it couldn’t grant when each person would give up theirs', async () => {
+    render(
+      <Host
+        singleRole
+        onChange={async () => {
+          throw new Error('The server didn’t respond')
+        }}
+      />,
+    )
+    const principals = await openGrant()
+    await choose(principals, 'Tom Becker')
+    await choose(principals, 'Priya Nair')
+    await choose(screen.getByRole('combobox', { name: 'Roles' }), 'Admin')
+    fireEvent.click(screen.getByRole('button', { name: 'Grant Admin' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Couldn’t grant Admin to Tom Becker and Priya Nair',
     )
   })
 

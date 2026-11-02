@@ -259,13 +259,15 @@ function useAccessEditor(
     (typeof errorMessage === 'function' ? errorMessage(error) : errorMessage) || t.failedReason
   const sectionId = (id: string) => `${uid}${arrangement}${id}`
 
+  /** Who and what a change is about: what it grants, or what it takes away when it only takes
+   *  away, so a role given up for the new one doesn't read as granted too. */
   const names = (changed: AccessChange) => {
-    const all = [...changed.grant, ...changed.revoke]
-    const principalNames = [...new Set(all.map((grant) => grant.principalId))].map((id) => {
+    const about = changed.grant.length > 0 ? changed.grant : changed.revoke
+    const principalNames = [...new Set(about.map((grant) => grant.principalId))].map((id) => {
       const principal = seen.get(id) ?? model.principalById.get(id)
       return principal?.kind === 'everyone' ? t.everyone : (principal?.name ?? id)
     })
-    const roleNames = [...new Set(all.map((grant) => grant.roleId))].map(
+    const roleNames = [...new Set(about.map((grant) => grant.roleId))].map(
       (id) => model.roleById.get(id)?.name ?? id,
     )
     return { principalNames, roleNames }
