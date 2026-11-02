@@ -76,8 +76,9 @@ export function useRowMenuActive(openMenu: OpenMenu): {
   return { active, openMenu: wrapped }
 }
 
-/** Opens the row's menu on a right-click; Shift+right-click keeps the browser's own. Pass a
- *  function to build a large list's menus only when one opens, not on every render. */
+/** Opens the row's menu on a right-click; Shift+right-click, or a row with no items, keeps the
+ *  browser's own. Pass a function to build a large list's menus only when one opens, not on
+ *  every render. */
 export function rowContextMenuProps(
   openMenu: OpenMenu,
   entries: MenuEntry[] | (() => MenuEntry[]),
@@ -88,12 +89,14 @@ export function rowContextMenuProps(
         return
       }
       const items = typeof entries === 'function' ? entries() : entries
+      // A row without a menu leaves the right-click to an ancestor's menu, or the browser's.
+      if (items.length === 0) {
+        return
+      }
       e.preventDefault()
       // A row with its own menu claims the right-click so the event doesn't
       // also bubble to an ancestor's context menu (e.g. a dashboard module).
-      if (items.length > 0) {
-        e.stopPropagation()
-      }
+      e.stopPropagation()
       openMenu(e, items)
     },
   }

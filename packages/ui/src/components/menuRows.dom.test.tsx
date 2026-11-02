@@ -241,6 +241,34 @@ describe('the shared menu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  it('leaves a right-click on a row with no items to the menu around it, or the browser', async () => {
+    function Rowless() {
+      const openMenu = useOpenMenu()
+      return (
+        <>
+          <div data-testid="bare" {...rowContextMenuProps(openMenu, [])} />
+          <div {...rowContextMenuProps(openMenu, [{ label: 'Arrange', onClick: run }])}>
+            <div data-testid="nested" {...rowContextMenuProps(openMenu, () => [])} />
+          </div>
+        </>
+      )
+    }
+    render(
+      <ContextMenuProvider>
+        <Rowless />
+      </ContextMenuProvider>,
+    )
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    act(() => {
+      screen.getByTestId('bare').dispatchEvent(event)
+    })
+    expect(event.defaultPrevented).toBe(false)
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    fireEvent.contextMenu(screen.getByTestId('nested'), { clientX: 10, clientY: 10 })
+    expect(await screen.findByRole('menuitem', { name: 'Arrange' })).toBeInTheDocument()
+  })
+
   it('closes on a second press of the button that opened it', async () => {
     render(
       <ContextMenuProvider>
