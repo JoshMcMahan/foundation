@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.106.0](https://github.com/parallelworks/foundation/compare/ui-v0.105.2...ui-v0.106.0) (2026-11-02)
+
+
+### Features
+
+* **ui:** a disclosure row can keep its name whole while the text beside it gives way ([#598](https://github.com/parallelworks/foundation/issues/598)) ([d1dbe51](https://github.com/parallelworks/foundation/commit/d1dbe51f1c44b130b89047fcd7626644bb3b2433))
+
 ## [0.105.2](https://github.com/parallelworks/foundation/compare/ui-v0.105.1...ui-v0.105.2) (2026-11-01)
 
 
