@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.107.0](https://github.com/parallelworks/foundation/compare/ui-v0.106.0...ui-v0.107.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** the chat's question card asks several questions at once, with option previews and notes ([#503](https://github.com/parallelworks/foundation/issues/503))
+
+### Features
+
+* **ui:** a sidebar item's text brightens on hover, halfway to full contrast ([#607](https://github.com/parallelworks/foundation/issues/607)) ([a4fd420](https://github.com/parallelworks/foundation/commit/a4fd4204478c2d8e84437087f0ffc7891d7a740d))
+* **ui:** explorer groups storages by user or by type ([#593](https://github.com/parallelworks/foundation/issues/593)) ([3d500e9](https://github.com/parallelworks/foundation/commit/3d500e9dbc091ca03e7aa4c0b3d2e2f788ec94c9))
+* **ui:** the chat's question card asks several questions at once, with option previews and notes ([#503](https://github.com/parallelworks/foundation/issues/503)) ([55d902c](https://github.com/parallelworks/foundation/commit/55d902c1f2d3e27ac2774c2fb2fd0b694868f313))
+
+
+### Bug Fixes
+
+* **ui:** a right-click on a list row with no menu shows the browser's own menu ([#605](https://github.com/parallelworks/foundation/issues/605)) ([141209e](https://github.com/parallelworks/foundation/commit/141209e9720c16f934f9799560f1e221d7fb376e))
+
 ## [0.106.0](https://github.com/parallelworks/foundation/compare/ui-v0.105.2...ui-v0.106.0) (2026-11-02)
 
 
