@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.108.0](https://github.com/parallelworks/foundation/compare/ui-v0.107.0...ui-v0.108.0) (2026-11-02)
+
+
+### Features
+
+* **ui:** navigation groups that fold and open beside the rail, and items with an action at their end ([#608](https://github.com/parallelworks/foundation/issues/608)) ([5070bef](https://github.com/parallelworks/foundation/commit/5070befd44fc7c047a59e272354a819cd8081863))
+
 ## [0.107.0](https://github.com/parallelworks/foundation/compare/ui-v0.106.0...ui-v0.107.0) (2026-11-02)
 
 
