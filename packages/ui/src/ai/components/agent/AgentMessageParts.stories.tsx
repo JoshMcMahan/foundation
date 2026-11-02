@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useMemo, useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import {
   makeAgentTurn,
@@ -13,7 +14,13 @@ import {
   useStreamedText,
 } from '../../stories/harness'
 import { defaultChatStrings } from '../../strings'
-import type { ChatMessage, ToolCallPart, ToolCallStatus, ToolDecision } from '../../types'
+import type {
+  ApprovalAnswerValue,
+  ChatMessage,
+  ToolCallPart,
+  ToolCallStatus,
+  ToolDecision,
+} from '../../types'
 import ActivityLine from './ActivityLine'
 import AgentMessageParts from './AgentMessageParts'
 
@@ -267,11 +274,21 @@ export const Approvals: StoryObj<{
   resolved: boolean
   multiSelect: boolean
   subject: 'command' | 'code' | 'path' | 'call'
+  questions: number
+  chat: boolean
 }> = {
-  args: { kind: 'confirm', resolved: false, multiSelect: false, subject: 'command' },
+  args: {
+    kind: 'confirm',
+    resolved: false,
+    multiSelect: false,
+    subject: 'command',
+    questions: 1,
+    chat: false,
+  },
   argTypes: {
     kind: { control: 'inline-radio', options: ['confirm', 'ask'] },
     subject: { control: 'inline-radio', options: ['command', 'code', 'path', 'call'] },
+    questions: { control: { type: 'range', min: 1, max: 4 } },
   },
   render: (args) => (
     <AgentMessageParts
@@ -298,9 +315,9 @@ export const ApprovalFeedback: StoryObj<{ kind: 'confirm' | 'ask' }> = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(
-      canvas.getByRole('button', {
-        name: args.kind === 'confirm' ? /provide feedback/ : /Write my own answer/,
-      }),
+      args.kind === 'confirm'
+        ? canvas.getByRole('button', { name: /provide feedback/ })
+        : canvas.getByRole('textbox', { name: 'Your answer' }),
     )
     const field = canvas.getByRole('textbox')
     await expect(field).toHaveFocus()
@@ -309,6 +326,101 @@ export const ApprovalFeedback: StoryObj<{ kind: 'confirm' | 'ask' }> = {
       args.kind === 'confirm' ? 'Scale the deployment to zero instead' : 'Only the failed shards',
     )
   },
+}
+
+// Settles the card on an answer, as a host does.
+function AskRoundTrip({
+  questions,
+  multiSelect,
+  previews = false,
+}: {
+  questions: number
+  multiSelect: boolean
+  previews?: boolean
+}) {
+  const ask = useMemo(
+    () => makeApprovalPart({ kind: 'ask', questions, multiSelect, previews }),
+    [questions, multiSelect, previews],
+  )
+  const [answer, setAnswer] = useState<ApprovalAnswerValue | null>(null)
+  const message = useMemo(() => {
+    const part =
+      answer?.kind === 'ask'
+        ? {
+            ...ask,
+            resolved: true,
+            answers: answer.answers,
+            ...(answer.chat ? { chat: true } : {}),
+          }
+        : ask
+    return makeMessage({ content: null, parts: [part] })
+  }, [ask, answer])
+  return (
+    <AgentMessageParts
+      message={message}
+      onApprovalAnswer={(id, value) => {
+        logAnswer(id, value)
+        setAnswer(value)
+      }}
+    />
+  )
+}
+
+// Several questions, one tab each; a pick or Enter moves on.
+export const AskQuestions: StoryObj<{ questions: number; multiSelect: boolean }> = {
+  args: { questions: 4, multiSelect: false },
+  argTypes: { questions: { control: { type: 'range', min: 2, max: 4 } } },
+  render: (args) => <AskRoundTrip {...args} />,
+  play: async ({ canvasElement, args }) => {
+    if (args.multiSelect || args.questions < 3) {
+      return
+    }
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Shard 4/ }))
+    await expect(canvas.getByRole('tab', { name: 'Runners' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: /Hosted/ }))
+    await userEvent.type(
+      await canvas.findByPlaceholderText('Type your answer…'),
+      'Only the failed shards{Enter}',
+    )
+  },
+}
+
+// The pane follows focus or a resting pointer, and stacks in a narrow card.
+export const AskPreviews: StoryObj<{ questions: number }> = {
+  args: { questions: 1 },
+  argTypes: { questions: { control: { type: 'range', min: 1, max: 4 } } },
+  render: ({ questions }) => <AskRoundTrip questions={questions} multiSelect={false} previews />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.hover(canvas.getByRole('button', { name: /Shard 12/ }))
+    await expect(
+      await canvas.findByRole('region', { name: 'Preview: Shard 12' }),
+    ).toBeInTheDocument()
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Notes' }), 'Only the flaky jobs')
+  },
+}
+
+// An ask the reader can't answer here: someone else's, or one the card can't read.
+export const AskReadOnly: StoryObj<{ questions: number; waitingOn: string }> = {
+  args: { questions: 2, waitingOn: 'Dana' },
+  argTypes: { questions: { control: { type: 'range', min: 0, max: 4 } } },
+  render: ({ questions, waitingOn }) => (
+    <AgentMessageParts
+      message={makeMessage({
+        content: null,
+        parts: [
+          {
+            ...makeApprovalPart({ kind: 'ask', questions }),
+            ...(waitingOn ? { waitingOn } : {}),
+          },
+        ],
+      })}
+    />
+  ),
 }
 
 export const TodoChecklist: StoryObj<{ pending: number; completed: number }> = {

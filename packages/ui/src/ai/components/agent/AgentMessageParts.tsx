@@ -47,6 +47,7 @@ import type {
 import Markdown from '../../ui/Markdown'
 import { chatProseClasses } from '../../ui/prose'
 import { Reasoning, ReasoningBody } from '../Reasoning'
+import { AskAnswered, AskApproval } from './AskApproval'
 
 const COLLAPSED_RESULT_LINES = 12
 
@@ -657,87 +658,6 @@ function ConfirmApproval({
   )
 }
 
-function AskApproval({
-  part,
-  onAnswer,
-}: {
-  part: ApprovalPart
-  onAnswer?: PartRendererProps['onApprovalAnswer']
-}) {
-  const { strings } = useChatConfig()
-  const { common } = useStrings()
-  const t = strings.agentTranscript
-  const [own, setOwn] = useState<string | null>(null)
-  const answer = (text: string) => onAnswer?.(part.id, { kind: 'ask', text })
-  if (!onAnswer) {
-    return (
-      <>
-        {part.question && <div className="text-sm">{part.question}</div>}
-        {(part.options ?? []).length > 0 && (
-          <div className="text-xs theme-muted-text">
-            <span className="font-medium">{t.approvalOptions}: </span>
-            {(part.options ?? []).map((o) => o.label).join(' · ')}
-          </div>
-        )}
-        <div className="text-xs theme-muted-text">{t.approvalPending}</div>
-      </>
-    )
-  }
-  return (
-    <>
-      {part.question && <div className="text-sm">{part.question}</div>}
-      {own === null ? (
-        <div className="flex flex-col items-start gap-1.5">
-          {(part.options ?? []).map((o) => (
-            <button
-              key={o.label}
-              type="button"
-              onClick={() => answer(o.label)}
-              className="px-3 py-1 text-xs font-medium rounded-full border theme-border hover:theme-hover text-left"
-              title={o.description}
-            >
-              {o.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setOwn('')}
-            className="px-3 py-1 text-xs rounded-full theme-muted-text hover:theme-hover"
-          >
-            {t.writeOwnAnswer}
-          </button>
-        </div>
-      ) : (
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (own.trim()) {
-              answer(own.trim())
-            }
-          }}
-        >
-          <input
-            ref={focusOnMount}
-            value={own}
-            onChange={(e) => setOwn(e.target.value)}
-            aria-label={t.ownAnswerLabel}
-            placeholder={t.ownAnswerLabel}
-            className={cx(fieldBox({ size: 'sm' }), 'flex-1')}
-          />
-          <button
-            type="submit"
-            disabled={!own.trim()}
-            className="px-3 py-1 text-xs font-medium rounded-full bg-(--theme-accent) text-(--theme-accent-text) disabled:opacity-50"
-          >
-            {common.send}
-          </button>
-        </form>
-      )}
-    </>
-  )
-}
-
 export function ApprovalBlock({
   part,
   onApprovalAnswer,
@@ -748,21 +668,26 @@ export function ApprovalBlock({
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   const headingId = useId()
-  const heading = part.header ?? part.toolName
+  // A lone question is named by its header; several are named by their tabs.
+  const lone = part.questions?.length === 1 ? part.questions[0] : undefined
+  const heading = part.header ?? (part.approvalKind === 'ask' ? lone?.header : part.toolName)
   if (part.resolved) {
     return (
       <div
         className="my-1.5 rounded-lg border theme-border p-2.5 text-xs theme-muted-text space-y-1"
         data-testid="approval-part"
       >
-        {part.question && <div className="theme-text">{part.question}</div>}
-        <div className="flex items-center gap-2">
-          <CheckIcon className="w-3.5 h-3.5" />
-          <span>
-            {t.answered}
-            {part.answer ? `: ${part.answer}` : ''}
-          </span>
-        </div>
+        {part.approvalKind === 'ask' ? (
+          <AskAnswered part={part} />
+        ) : (
+          <div className="flex items-center gap-2">
+            <CheckIcon className="w-3.5 h-3.5" />
+            <span>
+              {t.answered}
+              {part.answer ? `: ${part.answer}` : ''}
+            </span>
+          </div>
+        )}
       </div>
     )
   }

@@ -276,14 +276,92 @@ describe('approval parts', () => {
           kind: 'approval',
           id: 'a3',
           approvalKind: 'ask',
-          question: 'Which db?',
-          options: [{ label: 'Postgres' }, { label: 'Mongo' }],
+          questions: [
+            { question: 'Which db?', options: [{ label: 'Postgres' }, { label: 'Mongo' }] },
+          ],
         },
       ],
       { onApprovalAnswer: onAnswer },
     )
     fireEvent.click(screen.getByText('Mongo'))
-    expect(onAnswer).toHaveBeenCalledWith('a3', { kind: 'ask', text: 'Mongo' })
+    expect(onAnswer).toHaveBeenCalledWith('a3', {
+      kind: 'ask',
+      answers: [{ picked: ['Mongo'] }],
+    })
+  })
+
+  it('renders a resolved ask with what each question was given', () => {
+    renderParts([
+      {
+        kind: 'approval',
+        id: 'a5',
+        approvalKind: 'ask',
+        questions: [
+          { question: 'Which db?', options: [{ label: 'Postgres' }] },
+          { question: 'Which checks?', multiSelect: true, options: [{ label: 'Lint' }] },
+          { question: 'Anything else?' },
+        ],
+        resolved: true,
+        answers: [
+          { picked: ['Postgres'], notes: 'the managed one' },
+          { picked: ['Lint'], text: 'and the e2e suite' },
+          {},
+        ],
+      },
+    ])
+    expect(screen.getByText('Postgres')).toBeInTheDocument()
+    expect(screen.getByText('the managed one')).toBeInTheDocument()
+    expect(screen.getByText('Lint, and the e2e suite')).toBeInTheDocument()
+    expect(screen.getByText('No answer')).toBeInTheDocument()
+    expect(screen.getByText('Answered')).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('shows an answer of notes alone as notes only, over the notes', () => {
+    renderParts([
+      {
+        kind: 'approval',
+        id: 'a8',
+        approvalKind: 'ask',
+        questions: [{ question: 'Which db?', options: [{ label: 'Postgres', preview: 'pg' }] }],
+        resolved: true,
+        answers: [{ notes: 'something in between' }],
+      },
+    ])
+    expect(screen.getByText('(notes only)')).toBeInTheDocument()
+    expect(screen.getByText('something in between')).toBeInTheDocument()
+  })
+
+  it('says a resolved ask went to chat, keeping the answers given so far', () => {
+    renderParts([
+      {
+        kind: 'approval',
+        id: 'a6',
+        approvalKind: 'ask',
+        questions: [{ question: 'Which db?' }, { question: 'Which auth?' }],
+        resolved: true,
+        answers: [{ text: 'Postgres' }, {}],
+        chat: true,
+      },
+    ])
+    expect(screen.getByText('Postgres')).toBeInTheDocument()
+    expect(screen.getByText('Chat about this')).toBeInTheDocument()
+    expect(screen.queryByText('Answered')).not.toBeInTheDocument()
+  })
+
+  it('renders an older resolved ask with the one answer its record kept', () => {
+    renderParts([
+      {
+        kind: 'approval',
+        id: 'a7',
+        approvalKind: 'ask',
+        questions: [{ question: 'Which db?' }],
+        resolved: true,
+        answer: 'Postgres',
+      },
+    ])
+    expect(screen.getByText('Which db?')).toBeInTheDocument()
+    expect(screen.getByText('Answered: Postgres')).toBeInTheDocument()
   })
 
   it('renders a resolved approval inert with its answer', () => {
@@ -595,8 +673,9 @@ describe('approvals without an answer handler', () => {
         kind: 'approval',
         id: 'ro2',
         approvalKind: 'ask',
-        question: 'Which database?',
-        options: [{ label: 'Postgres' }, { label: 'Mongo' }],
+        questions: [
+          { question: 'Which database?', options: [{ label: 'Postgres' }, { label: 'Mongo' }] },
+        ],
       },
     ])
     expect(screen.getByText('Which database?')).toBeInTheDocument()
@@ -673,7 +752,7 @@ describe('approval forms', () => {
     })
   })
 
-  it('labels the own-answer field, focuses it, and ignores an empty submit', () => {
+  it('labels the own-answer field and ignores an empty submit', () => {
     const onAnswer = vi.fn()
     renderParts(
       [
@@ -681,21 +760,18 @@ describe('approval forms', () => {
           kind: 'approval',
           id: 'q1',
           approvalKind: 'ask',
-          question: 'Which region?',
-          options: [{ label: 'East' }],
+          questions: [{ question: 'Which region?', options: [{ label: 'East' }] }],
         },
       ],
       { onApprovalAnswer: onAnswer },
     )
     expect(screen.getByRole('group', { name: 'Waiting for your answer' })).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Write my own answer…'))
     const field = screen.getByRole('textbox', { name: 'Your answer' })
-    expect(field).toHaveFocus()
     fireEvent.submit(field)
     expect(onAnswer).not.toHaveBeenCalled()
     fireEvent.change(field, { target: { value: 'West' } })
     fireEvent.submit(field)
-    expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', text: 'West' })
+    expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', answers: [{ text: 'West' }] })
   })
 })
 

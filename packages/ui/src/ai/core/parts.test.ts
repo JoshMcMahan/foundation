@@ -160,6 +160,19 @@ describe('applyPartDelta', () => {
     ])
   })
 
+  it('resolves an ask with what each question was given', () => {
+    const ask = {
+      kind: 'approval' as const,
+      id: 'q1',
+      approvalKind: 'ask' as const,
+      questions: [{ question: 'Which db?' }, { question: 'Which auth?' }],
+    }
+    const answers = [{ picked: ['Postgres'] }, {}]
+    expect(
+      applyPartDelta([ask], { type: 'approval_resolved', id: 'q1', answers, chat: true }),
+    ).toEqual([{ ...ask, resolved: true, answers, chat: true }])
+  })
+
   it('grows the last text or reasoning part and starts a new one when the kind changes', () => {
     let parts = applyPartDelta([], { type: 'reasoning', text: 'Look' })
     parts = applyPartDelta(parts, { type: 'reasoning', text: 'ing' })

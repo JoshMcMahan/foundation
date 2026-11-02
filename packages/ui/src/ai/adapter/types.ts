@@ -1,6 +1,7 @@
 import type {
   Allocation,
   ApprovalPart,
+  ApprovalQuestionAnswer,
   AttachmentRef,
   ChatModel,
   Conversation,
@@ -116,7 +117,13 @@ export type PartDelta =
       report?: string
     }
   | { type: 'approval_request'; approval: ApprovalPart }
-  | { type: 'approval_resolved'; id: string; answer?: string }
+  | {
+      type: 'approval_resolved'
+      id: string
+      answer?: string
+      answers?: ApprovalQuestionAnswer[]
+      chat?: boolean
+    }
   | { type: 'notice' | 'warning'; text: string }
   | { type: 'todo_snapshot'; todos: TodoItem[] }
 

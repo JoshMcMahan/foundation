@@ -1,4 +1,5 @@
 import {
+  askQuestionsFromArgs,
   hiddenTranscriptTool,
   parseSubagentNotice,
   subagentDeliveryLine,
@@ -57,6 +58,56 @@ describe('parseSubagentNotice', () => {
       parseSubagentNotice('[Background command bash-2 (npm test) exited with code 1]'),
     ).toMatchObject({ id: 'bash-2', preview: 'exited with code 1' })
     expect(parseSubagentNotice('Goal set: ship it')).toBeNull()
+  })
+})
+
+describe('askQuestionsFromArgs', () => {
+  it('reads every question a call asked', () => {
+    const args = JSON.stringify({
+      questions: [
+        {
+          question: 'Which db?',
+          header: 'Database',
+          options: [
+            { label: 'Postgres', description: 'Relational', preview: 'CREATE TABLE runs ()' },
+            { label: 'Mongo' },
+          ],
+        },
+        { question: 'Which checks?', multiSelect: true, options: [{ label: 'Lint' }] },
+        { question: 'Anything else?' },
+      ],
+    })
+    expect(askQuestionsFromArgs(args)).toEqual([
+      {
+        question: 'Which db?',
+        header: 'Database',
+        options: [
+          { label: 'Postgres', description: 'Relational', preview: 'CREATE TABLE runs ()' },
+          { label: 'Mongo' },
+        ],
+      },
+      { question: 'Which checks?', multiSelect: true, options: [{ label: 'Lint' }] },
+      { question: 'Anything else?' },
+    ])
+  })
+
+  it('reads the one question a call made before several per call', () => {
+    const args = JSON.stringify({ question: 'Which db?', options: [{ label: 'Postgres' }] })
+    expect(askQuestionsFromArgs(args)).toEqual([
+      { question: 'Which db?', options: [{ label: 'Postgres' }] },
+    ])
+  })
+
+  it('skips what is not a question or an option', () => {
+    const args = JSON.stringify({
+      questions: [
+        { question: 'Which db?', multiSelect: 'yes', options: [{ label: 1 }, 'Mongo'] },
+        { header: 'No question' },
+        null,
+      ],
+    })
+    expect(askQuestionsFromArgs(args)).toEqual([{ question: 'Which db?' }])
+    expect(askQuestionsFromArgs('not json')).toEqual([])
   })
 })
 

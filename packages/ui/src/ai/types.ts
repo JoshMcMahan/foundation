@@ -145,6 +145,24 @@ export interface SubagentPart {
 export interface ApprovalOption {
   label: string
   description?: string
+  /** Shown as written unless it fences its own code; a multi-select question ignores it. */
+  preview?: string
+}
+
+/** One question of an ask; one without options takes typed text alone. */
+export interface ApprovalQuestion {
+  question: string
+  /** A short name for the question, on its tab. */
+  header?: string
+  multiSelect?: boolean
+  options?: ApprovalOption[]
+}
+
+/** `picked` is in option order; `notes` come only on a question with previews. */
+export interface ApprovalQuestionAnswer {
+  picked?: string[]
+  text?: string
+  notes?: string
 }
 
 export type ApprovalAnswerValue =
@@ -160,7 +178,13 @@ export type ApprovalAnswerValue =
        *  run in place of the model's suggestion. */
       args?: string
     }
-  | { kind: 'ask'; text: string; chat?: boolean }
+  | {
+      kind: 'ask'
+      /** One per question, in order; an empty one leaves its question blank. */
+      answers: ApprovalQuestionAnswer[]
+      /** The reader would rather talk the questions through than answer them. */
+      chat?: boolean
+    }
 
 export type ApprovalSubject = 'command' | 'code' | 'path' | 'call'
 
@@ -176,11 +200,12 @@ export interface ApprovalPart {
   reason?: string
   agent?: string
   mode?: string
-  // ask fields
-  question?: string
+  // The card's heading, in place of the tool's name or a lone question's header.
   header?: string
-  multiSelect?: boolean
-  options?: ApprovalOption[]
+  // ask fields
+  questions?: ApprovalQuestion[]
+  // The tool call the approval holds, which a decision on that call names.
+  toolCallId?: string
   // plan fields: the finished plan body awaiting approval, as markdown.
   plan?: string
   // Set false by producers whose backend refuses standing directory grants.
@@ -192,6 +217,10 @@ export interface ApprovalPart {
   resolved?: boolean
   // Display form of the chosen answer, once resolved.
   answer?: string
+  // What each question of a resolved ask was given, lining up with `questions`.
+  answers?: ApprovalQuestionAnswer[]
+  // A resolved ask the reader chose to chat about instead.
+  chat?: boolean
 }
 
 export interface NoticePart {

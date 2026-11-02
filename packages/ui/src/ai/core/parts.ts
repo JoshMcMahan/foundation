@@ -97,6 +97,8 @@ export function applyPartDelta(parts: MessagePart[], delta: PartDelta): MessageP
               ...p,
               resolved: true,
               ...(delta.answer !== undefined ? { answer: delta.answer } : {}),
+              ...(delta.answers !== undefined ? { answers: delta.answers } : {}),
+              ...(delta.chat !== undefined ? { chat: delta.chat } : {}),
             }
           : p,
       )

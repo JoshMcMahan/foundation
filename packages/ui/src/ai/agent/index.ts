@@ -49,7 +49,7 @@ export {
 export { defaultToolStrings, type ToolStrings } from './toolStrings'
 export {
   agentTypeLabel,
-  askQuestionFromArgs,
+  askQuestionsFromArgs,
   firstNonEmptyLine,
   hiddenTranscriptTool,
   INTERRUPTED_NOTICE,
