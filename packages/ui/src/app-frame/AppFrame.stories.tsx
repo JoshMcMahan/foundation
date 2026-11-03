@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import { GridIcon, ListViewIcon, PinFilledIcon, SettingsIcon } from '../icons'
+import { AddIcon, GridIcon, ListViewIcon, MoreIcon, PinFilledIcon, SettingsIcon } from '../icons'
 import {
   AppFrame,
   AppFrameNavGroup,
@@ -163,6 +163,75 @@ const meta = {
 } satisfies Meta<typeof AppFrame>
 export default meta
 type Story = StoryObj<typeof meta>
+const sessions = [
+  { label: 'Refactor the importer', detail: 'Running', color: 'var(--theme-success)' },
+  {
+    label: 'Summarize last week',
+    detail: 'Waiting for you',
+    color: 'var(--theme-warning)',
+  },
+  { label: 'Fix flaky upload test', detail: 'Finished 2 hours ago' },
+  { label: 'Draft release notes', detail: 'Finished yesterday' },
+]
+function StatusDot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{ width: 8, height: 8, borderRadius: '50%', background: color, margin: 'auto' }}
+    />
+  )
+}
+function DetailsDemo(args: AppFrameProps) {
+  const [active, setActive] = useState(sessions[0]?.label ?? '')
+  return (
+    <AppFrame
+      {...args}
+      brand={({ expanded }) => (
+        <strong
+          style={{ display: 'block', padding: '6px 0', textAlign: expanded ? 'start' : 'center' }}
+        >
+          {expanded ? 'Workspace' : 'W'}
+        </strong>
+      )}
+      navigation={
+        <nav aria-label="Main navigation">
+          <AppFrameNavItem label="New session" icon={<AddIcon />} />
+          <AppFrameNavGroup label="Sessions" collapsible={false}>
+            {sessions.map(({ label, detail, color }) => (
+              <AppFrameNavItem
+                key={label}
+                label={label}
+                detail={detail}
+                {...(color ? { icon: <StatusDot color={color} /> } : {})}
+                selected={active === label}
+                onClick={() => setActive(label)}
+                action={
+                  <button
+                    type="button"
+                    aria-label={`More actions for ${label}`}
+                    style={{ display: 'flex', width: 16, height: 16 }}
+                  >
+                    <MoreIcon />
+                  </button>
+                }
+              />
+            ))}
+          </AppFrameNavGroup>
+        </nav>
+      }
+      footer={({ isMobile }) => !isMobile && <AppFrameToggle />}
+      header={<Header />}
+    >
+      <div style={{ padding: 24 }}>{active}</div>
+    </AppFrame>
+  )
+}
+/** Items can carry a second line, and need no icon: a row with none starts at its label, and the rail shows its first letter. */
+export const ItemDetails: Story = { render: DetailsDemo }
+export const ItemDetailsCollapsed: Story = {
+  render: DetailsDemo,
+  args: { defaultExpanded: false },
+}
 export const Expanded: Story = {}
 export const Collapsed: Story = { args: { defaultExpanded: false } }
 export const Compact: Story = { args: { minWidth: 168, defaultWidth: 184 } }

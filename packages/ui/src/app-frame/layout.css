@@ -54,7 +54,6 @@
   .pw-frame-links nav {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
   }
   .pw-frame-footer {
     flex-shrink: 0;

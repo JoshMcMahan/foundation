@@ -436,7 +436,10 @@ export interface AppFrameNavItemProps
   extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onClick'>,
     LinkTarget {
   label: string
-  icon: ReactNode
+  /** Optional, such as a status mark; the rail shows the label's first letter without one. */
+  icon?: ReactNode
+  /** A second line under the label, such as a session's state. Not shown in the rail. */
+  detail?: ReactNode
   selected?: boolean
   badge?: ReactNode
   disabled?: boolean
@@ -450,6 +453,7 @@ export interface AppFrameNavItemProps
 export function AppFrameNavItem({
   label,
   icon,
+  detail,
   selected,
   badge,
   disabled,
@@ -464,8 +468,12 @@ export function AppFrameNavItem({
   const frame = useFrameContext()
   const expanded = use(NavExpanded) ?? frame.expanded
   const closePopover = useClosePopover()
+  const detailId = useId()
+  const described = expanded && detail != null
   const props = {
     ...rest,
+    // The label alone names it; the second line describes it.
+    ...(described ? { 'aria-label': label, 'aria-describedby': detailId } : {}),
     className: cx('pw-frame-nav-item', className),
     'aria-current': selected ? ('page' as const) : undefined,
     onClick: (event: MouseEvent<HTMLElement>) => {
@@ -481,10 +489,21 @@ export function AppFrameNavItem({
     },
     children: (
       <>
-        <span className="pw-frame-nav-icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span className={expanded ? 'pw-frame-nav-label' : 'sr-only'}>{label}</span>
+        {(icon != null || !expanded) && (
+          <span className="pw-frame-nav-icon" aria-hidden="true">
+            {icon ?? label.charAt(0).toUpperCase()}
+          </span>
+        )}
+        {described ? (
+          <span className="pw-frame-nav-text">
+            <span className="pw-frame-nav-label">{label}</span>
+            <span id={detailId} className="pw-frame-nav-detail">
+              {detail}
+            </span>
+          </span>
+        ) : (
+          <span className={expanded ? 'pw-frame-nav-label' : 'sr-only'}>{label}</span>
+        )}
         {expanded && badge != null && (
           <span className="pw-frame-nav-badge" aria-hidden="true">
             {badge}

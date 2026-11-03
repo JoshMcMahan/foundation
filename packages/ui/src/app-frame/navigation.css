@@ -3,12 +3,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 36px;
+    min-height: 32px;
     min-width: 0;
     width: 100%;
     border: 0;
     border-radius: 8px;
-    padding: 8px;
+    padding: 6px 8px;
     background: transparent;
     color: inherit;
     font: inherit;
@@ -55,6 +55,30 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .pw-frame-nav-item:has(> .pw-frame-nav-text) {
+    align-items: flex-start;
+  }
+  .pw-frame-nav-item:has(> .pw-frame-nav-text) > .pw-frame-nav-icon {
+    height: 20px;
+  }
+  .pw-frame-nav-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .pw-frame-nav-detail {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 16px;
+    white-space: nowrap;
+    color: color-mix(in oklch, currentColor 70%, transparent);
   }
   .pw-frame-nav-badge {
     flex-shrink: 0;
@@ -109,7 +133,6 @@
   }
   .pw-frame-nav-group-items {
     display: grid;
-    gap: 2px;
   }
   .pw-frame-nav-group {
     padding-block: 4px;
@@ -127,9 +150,6 @@
     padding-inline: 0;
     justify-content: center;
     height: 40px;
-  }
-  .pw-frame-drawer .pw-frame-nav-item {
-    min-height: 44px;
   }
   @media (prefers-reduced-motion: reduce) {
     .pw-frame-nav-item,

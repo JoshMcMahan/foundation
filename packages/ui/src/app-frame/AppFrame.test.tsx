@@ -338,4 +338,17 @@ describe('AppFrame', () => {
     fireEvent.click(link)
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Clusters' })).toBeNull())
   })
+  it('shows a second line under the label, and the first letter in the rail without an icon', () => {
+    render(
+      <AppFrame
+        {...props}
+        navigation={<AppFrameNavItem label="Build" detail="Running" href="#build" />}
+      />,
+    )
+    expect(screen.getByRole('link', { name: 'Build' })).toHaveAccessibleDescription('Running')
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    const link = screen.getByRole('link', { name: 'Build' })
+    expect(link).toHaveTextContent('B')
+    expect(link).not.toHaveTextContent('Running')
+  })
 })
