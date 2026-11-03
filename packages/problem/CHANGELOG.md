@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/parallelworks/foundation/compare/problem-v0.6.0...problem-v0.6.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **problem:** a field an app's problem marks invalid shows that problem's message ([#612](https://github.com/parallelworks/foundation/issues/612)) ([1f08b7c](https://github.com/parallelworks/foundation/commit/1f08b7c1d0cb6bf1ccb98f6ef4e6213d0b3e730c))
+
 ## [0.6.0](https://github.com/parallelworks/foundation/compare/problem-v0.5.0...problem-v0.6.0) (2026-10-21)
 
 
