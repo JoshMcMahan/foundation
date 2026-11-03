@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.109.0](https://github.com/parallelworks/foundation/compare/ui-v0.108.0...ui-v0.109.0) (2026-11-03)
+
+
+### Features
+
+* **ui:** a navigation item can carry a second line, and needs no icon ([#610](https://github.com/parallelworks/foundation/issues/610)) ([9f5e53c](https://github.com/parallelworks/foundation/commit/9f5e53c8cfe51a3157981473660c2d34b0425cef))
+
+
+### Bug Fixes
+
+* **ui:** list rows ignore clicks in their portals, and their text can be selected ([#611](https://github.com/parallelworks/foundation/issues/611)) ([22fdc0e](https://github.com/parallelworks/foundation/commit/22fdc0ebc721e44c0ed8e5e18bae2ddd4ad681e2))
+
 ## [0.108.0](https://github.com/parallelworks/foundation/compare/ui-v0.107.0...ui-v0.108.0) (2026-11-02)
 
 
