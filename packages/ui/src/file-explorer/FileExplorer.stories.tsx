@@ -329,8 +329,10 @@ function LinkedExplorerDemo({ links, initialPath }: { links: boolean; initialPat
   )
 }
 
-/** With `pathHref`, rows, tree rows, the trail and each row menu's Open folder
- *  are links: hover one for its URL, open it in a new tab, or go back. */
+/** With `pathHref`, a row's name, tree rows, the trail and each row menu's Open
+ *  folder are links: hover one for its URL, open it in a new tab, or go back. A
+ *  click anywhere else on a row opens it too, in a new tab with a modified or
+ *  middle click, and its text, such as a size, can be selected to copy it. */
 export const Links: StoryObj<{ links: boolean }> = {
   args: { links: true },
   argTypes: {

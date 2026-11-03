@@ -11,7 +11,14 @@ import { cx } from '../cx'
 import { formatBytes } from '../format'
 import { PreviewIcon } from '../icons'
 import { MoreButton, RowSelectCheckbox, rowContextMenuProps, useRowMenuActive } from '../list/index'
-import { STRETCHED_LINK, STRETCHED_LINK_ROW } from '../list/ListTable'
+import {
+  endsTextSelection,
+  openRowInNewTab,
+  pressesRow,
+  rowPressProps,
+  STRETCHED_LINK,
+  STRETCHED_LINK_ROW,
+} from '../list/ListTable'
 import type { TreeNode } from './lib/types'
 
 // Measured row pitch, hairline included. `height` on a `<tr>` is only a minimum,
@@ -29,25 +36,24 @@ export function fileRowHeight(node: TreeNode): number {
   return isTwoLineRow(node) ? ROW_HEIGHT_TALL : ROW_HEIGHT_SHORT
 }
 
-// A click on an interactive control inside the row should not also open the row.
-function isInteractiveTarget(e: React.MouseEvent) {
-  return !!(e.target as HTMLElement).closest('a,button,input,label')
-}
-
-/** Opens the row on a click its controls don't take. Beside a link, which
- *  covers the row, that is only a click on a gap the link leaves, and a
- *  modified one there asks for a new tab, which only the link can give. */
+/** Opens the row on a click its controls don't take, other than one that ends
+ *  selecting its text. Beside a link, a modified click asks for a new tab, as
+ *  it would on the link. */
 function rowClickHandler(onOpen: () => void, href: string | undefined) {
   return (e: React.MouseEvent) => {
-    if (isInteractiveTarget(e) || (href && !isPlainClick(e))) {
+    if (!pressesRow(e) || endsTextSelection(e.currentTarget)) {
+      return
+    }
+    if (href && !isPlainClick(e)) {
+      openRowInNewTab(e, href)
       return
     }
     onOpen()
   }
 }
 
-/** A row's name: with an href, the link that covers the row, so the whole row
- *  opens in a new tab, shows its URL and reads as a link. */
+/** A row's name: with an href, the row's link, whose focus ring is drawn
+ *  around the row, as the row opens it. */
 function RowName({ name, href }: { name: string; href: string | undefined }) {
   return href ? (
     <AppLink href={href} data-row-link className={STRETCHED_LINK}>
@@ -108,6 +114,7 @@ export function UserRow({
         href && STRETCHED_LINK_ROW,
       )}
       onClick={rowClickHandler(() => onOpen(node), href)}
+      {...rowPressProps(href)}
       {...rowContextMenuProps(openRowMenu, getItems)}
     >
       <Table.Item className="py-2.5">
@@ -180,6 +187,7 @@ export function FileRow({
       )}
       onClick={rowClickHandler(() => onOpen(node), href)}
       style={{ height: fileRowHeight(node) }}
+      {...rowPressProps(href)}
       {...rowContextMenuProps(openRowMenu, getItems)}
     >
       <Table.Item className="py-2.5">

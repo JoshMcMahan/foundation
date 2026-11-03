@@ -570,7 +570,7 @@ where it opens elsewhere, and renders it through `AppLink`:
 | `PageHeaderAction`, `PageHeaderAddButton`, `PageHeader` breadcrumbs              | `href`; `external` opens a new tab                                                                       |
 | `Breadcrumbs`                                                                    | `href` on the crumb; `onSelect` only for a place with no URL, as the explorer's trail without `pathHref` |
 | `Tabs` that are pages, `Pagination`                                              | `href` on the item, `pageHref`                                                                           |
-| A list row                                                                       | `ListRow` `href` with a `NameCell` of the same `href`: the name's link covers the row                    |
+| A list row                                                                       | `ListRow` `href` with a `NameCell` of the same `href`: the name's link, which the whole row opens        |
 | A toast's action                                                                 | `action: { label, href }`                                                                                |
 | `SidebarRailItem`                                                                | `href`; `onSelect` then runs only on a plain click                                                       |
 | `FileExplorer` rows, tree, trail and "Open folder"                               | `pathHref(path)`; `onPathChange` is then optional, and the explorer's own moves go to `navigation.goTo`  |
@@ -584,6 +584,11 @@ modified and middle clicks to the browser. `AppLink` passes every href through
 renders a disabled link with no href and `aria-disabled`, still focusable for
 its tooltip. Work a link's `onClick` does beside navigating, such as closing a
 drawer, belongs to a plain click only: check `isPlainClick(event)`.
+
+A list row's link takes only the clicks on itself, so a reader can select the
+row's other text to copy it. The row opens the link on its other clicks, in a
+new tab with a middle or modified click, but not on one that ends selecting
+its text, and draws the link's focus ring around itself.
 
 ## Toasts
 

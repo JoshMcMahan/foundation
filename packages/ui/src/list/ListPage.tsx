@@ -39,12 +39,16 @@ import { isDev } from '../dev'
 import { ChevronRightIcon } from '../icons'
 import { ListFilterBar, type ListFilterBarProps } from './ListFilterBar'
 import {
+  endsTextSelection,
   FLOATING_ACTIONS_LANE,
   HEADERS_OFF,
   ListActionsHeader,
   ListError,
   ListSkeleton,
   NAME_MIN_WIDTH_PX,
+  openRowInNewTab,
+  pressesRow,
+  rowPressProps,
   STRETCHED_LINK_ROW,
   StretchRowLinkContext,
 } from './ListTable'
@@ -387,8 +391,9 @@ export function ListRow({
   className,
   children,
 }: {
-  /** Where the row goes. Its `NameCell` with the same href becomes a link
-   *  covering the row; a click the link doesn't catch still goes there. */
+  /** Where the row goes. Its `NameCell` with the same href is the row's link,
+   *  and a click on the rest of the row goes there too, in a new tab with a
+   *  middle or modified click, unless it ends selecting text in the row. */
   href: string | null
   /** Plain-click handler for rows that open something in place instead of navigating. */
   onActivate?: (() => void) | undefined
@@ -524,11 +529,15 @@ export function ListRow({
   const floating =
     !alwaysShowActions && !(pinnedActions && pinnedActions.length > 0) && !reservesLane
 
-  // While selecting, a plain click on the row selects it, so the link stays in its cell.
+  // While selecting, a plain click on the row selects it, so the name is only its own link.
   const stretch = !!href && !selectionActive
+  const clickable = !!href || !!onActivate || !!selectionActive
 
   const handleRowClick = (e: ReactMouseEvent) => {
-    if ((e.target as HTMLElement).closest('a,button,input,label')) {
+    // What the row opened in a portal, such as a drawer or a popover, passes its clicks up to the
+    // row through React, though it isn't in the row: clicking its backdrop or its text isn't
+    // clicking the row. Its own controls, its name's link among them, take their own clicks.
+    if (!pressesRow(e) || endsTextSelection(e.currentTarget)) {
       return
     }
     if (selectionActive && onRowSelect) {
@@ -536,9 +545,10 @@ export function ListRow({
       return
     }
     if (href) {
-      // A modified click asks for a new tab, which only the link can give.
       if (isPlainClick(e)) {
         goTo(href)
+      } else {
+        openRowInNewTab(e, href)
       }
     } else {
       onActivate?.()
@@ -564,12 +574,13 @@ export function ListRow({
           : menuActive
             ? 'theme-hover'
             : 'hover:theme-hover',
-        (href || onActivate || selectionActive) && 'cursor-pointer',
-        // The row is its stretched link's box; other controls rise above the link.
+        clickable && 'cursor-pointer',
+        // The box its link's focus ring is drawn around.
         stretch && STRETCHED_LINK_ROW,
         className,
       )}
       onClick={handleRowClick}
+      {...rowPressProps(stretch ? href : null, clickable)}
       {...rowContextMenuProps(openRowMenu, items)}
     >
       {leading && <CellPlacementContext value={LEADING_SELECT}>{leading}</CellPlacementContext>}
@@ -819,11 +830,17 @@ export function GroupRow({
       />
     </button>
   )
-  // The whole header toggles to a pointer, but for its own links and buttons. The chevron's
-  // button is the keyboard's and the screen reader's way.
+  // The whole header toggles to a pointer, but for its own links and buttons, and for a click
+  // that ends selecting its text. The chevron's button is the keyboard's and the screen reader's
+  // way.
   const onClick = toggle
     ? (e: ReactMouseEvent) => {
-        if (!(e.target as HTMLElement).closest(OWN_CONTROL)) {
+        // A click in what the header opened in a portal reaches it through React, not from it.
+        if (
+          e.currentTarget.contains(e.target as Node) &&
+          !(e.target as HTMLElement).closest(OWN_CONTROL) &&
+          !endsTextSelection(e.currentTarget)
+        ) {
           toggle.toggle()
         }
       }

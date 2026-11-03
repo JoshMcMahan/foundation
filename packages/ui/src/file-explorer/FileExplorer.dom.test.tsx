@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isPlainClick } from '../components/AppLink'
 import { type UILinkComponent, UIProvider } from '../components/Provider'
+import { clearSelection, selectText } from '../test/selection'
 import { CorsError } from './lib/errors'
 import type { TListPageRequest } from './lib/paging'
 import type { TreeNode, TStorage, TStorageObject } from './lib/types'
@@ -988,6 +989,32 @@ describe('FileExplorer links', () => {
     fireEvent.click(await findTreeItem('b'), { ctrlKey: true })
     expect(routed).toHaveLength(1)
     expect(onPathChange).not.toHaveBeenCalled()
+  })
+
+  it('opens a row on a click off its link, in a new tab on a modified or middle one, but not on one that ends selecting its text', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { routed, onPathChange } = await renderLinked(FOLDER_A)
+    const link = await within(grid()).findByRole('link', { name: 'sub' })
+    const size = link.closest('tr')?.querySelectorAll('td')[1] as HTMLElement
+
+    selectText(size)
+    fireEvent.click(size)
+    expect(onPathChange).not.toHaveBeenCalled()
+    clearSelection()
+
+    fireEvent.click(size, { metaKey: true })
+    fireEvent(size, new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }))
+    expect(open.mock.calls).toEqual(
+      Array(2).fill([`/files/${FOLDER_A}/sub/`, '_blank', 'noopener']),
+    )
+    expect(onPathChange).not.toHaveBeenCalled()
+
+    await act(async () => {
+      fireEvent.click(size)
+    })
+    expect(onPathChange).toHaveBeenCalledOnce()
+    expect(routed).toEqual([])
+    open.mockRestore()
   })
 
   it('moves from the keyboard through pathHref when the host passes no onPathChange', async () => {

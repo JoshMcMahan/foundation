@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { UIProvider } from '../components/Provider'
 import { Table } from '../components/Table'
+import { clearSelection, selectText } from '../test/selection'
 import { memoryStorage } from '../test/storage'
 import { GroupRow, ListColumns, ListGroup, ListPage } from './ListPage'
 import { listTableProps } from './ListTable'
@@ -126,6 +127,18 @@ describe('ListGroup', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Usage of gpu-west' }))
     expect(toggle('gpu-west')).toHaveAttribute('aria-expanded', 'false')
     expect(changes).toEqual([['west', true]])
+  })
+
+  it('doesn’t toggle on the click that ends selecting the header’s text', () => {
+    render(<Queues />)
+    const header = toggle('gpu-west').closest('tr') as HTMLElement
+    const count = within(header).getByText('2')
+    selectText(count)
+    fireEvent.click(count)
+    expect(toggle('gpu-west')).toHaveAttribute('aria-expanded', 'true')
+    clearSelection()
+    fireEvent.click(count)
+    expect(toggle('gpu-west')).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('still counts every match under the rows while a group is collapsed', () => {

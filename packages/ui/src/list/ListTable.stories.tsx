@@ -116,10 +116,11 @@ interface LinkedRowsArgs {
   alwaysShowActions: boolean
 }
 
-/** Rows that open something are links: the name's link covers the row, so the whole row opens in
- *  a new tab with a modified or middle click and shows its URL on hover. Its controls (the
- *  checkbox, pinned actions and ⋯) sit above the link. A pinned action that navigates, such as
- *  Logs, is a link too. While selecting, a plain click selects the row instead. */
+/** Rows that open something have a link, the name's: it shows its URL on hover and opens in a
+ *  new tab as any link does, and a click anywhere else on the row opens it too, in a new tab with
+ *  a modified or middle click. Its focus ring is drawn around the row. A pinned action that
+ *  navigates, such as Logs, is a link too. While selecting, a plain click selects the row
+ *  instead. */
 export const LinkedRows: StoryObj<LinkedRowsArgs> = {
   args: { selecting: false, alwaysShowActions: true },
   argTypes: {
@@ -137,14 +138,36 @@ export const LinkedRows: StoryObj<LinkedRowsArgs> = {
       await expect(name).not.toHaveAttribute('data-row-link')
     } else {
       await expect(name).toHaveAttribute('data-row-link')
+      await userEvent.click(canvas.getAllByText('ready')[0] as HTMLElement)
+      await expect(canvas.getByRole('status')).toHaveTextContent('Opened /clusters/a?tab=overview')
     }
     const logs = canvas.getAllByRole('link', { name: 'Logs' })[0]
     await expect(logs).toHaveAttribute('href', '/clusters/a/logs#latest')
   },
 }
 
+/** A row's text selected to copy it, such as its status: the press dragged over it, let go,
+ *  is a click on the row, but it doesn't open the row. The next click does. */
+export const SelectedRowText: StoryObj<LinkedRowsArgs> = {
+  ...LinkedRows,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const status = canvas.getAllByText('ready')[1] as HTMLElement
+    // As the drag leaves it: the play can't drag the browser's own selection.
+    const range = document.createRange()
+    range.selectNodeContents(status)
+    window.getSelection()?.removeAllRanges()
+    window.getSelection()?.addRange(range)
+    fireEvent.click(status)
+    await expect(canvas.getByRole('status')).toHaveTextContent('Nothing opened')
+    await expect(window.getSelection()?.toString()).toBe('ready')
+  },
+}
+
 function LinkedRowsDemo({ selecting, alwaysShowActions }: LinkedRowsArgs) {
   const { openMenu, contextMenu } = useContextMenu()
+  // Where the rows' clicks went, as a host's router would go there.
+  const [opened, setOpened] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const toggle = (id: string) =>
     setSelected((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]))
@@ -164,7 +187,7 @@ function LinkedRowsDemo({ selecting, alwaysShowActions }: LinkedRowsArgs) {
               key={row.id}
               href={`/clusters/${row.id}?tab=overview`}
               items={rowMenuItems(row.name)}
-              goTo={() => {}}
+              goTo={setOpened}
               openMenu={openMenu}
               selected={selected.includes(row.id)}
               selectionActive={selecting}
@@ -210,6 +233,9 @@ function LinkedRowsDemo({ selecting, alwaysShowActions }: LinkedRowsArgs) {
           ))}
         </Table>
       </ListRowActionsProvider>
+      <p role="status" className="mt-3 px-4 text-xs text-(--theme-muted-text-color)">
+        {opened ? `Opened ${opened}` : 'Nothing opened'}
+      </p>
       {contextMenu}
     </div>
   )

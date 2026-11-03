@@ -377,23 +377,26 @@ describe('ListRow with href', () => {
     )
   }
 
-  it('makes its name link cover the row', () => {
+  it('makes its name the row’s link', () => {
     renderRow(() => {})
     expect(screen.getByRole('link', { name: 'gpu-cluster' })).toHaveAttribute('data-row-link')
   })
 
-  it('keeps the link in its cell while selecting', () => {
+  it('leaves its name only its own link while selecting', () => {
     renderRow(() => {}, true)
     expect(screen.getByRole('link', { name: 'gpu-cluster' })).not.toHaveAttribute('data-row-link')
   })
 
-  it('goes there on a plain click the link misses, and not on a modified one', () => {
+  it('goes there on a plain click off the link, and opens a new tab on a modified one', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
     const goTo = vi.fn()
     renderRow(goTo)
     const cell = screen.getByText('ready')
     fireEvent.click(cell, { ctrlKey: true })
     expect(goTo).not.toHaveBeenCalled()
+    expect(open).toHaveBeenCalledWith(HREF, '_blank', 'noopener')
     fireEvent.click(cell)
     expect(goTo).toHaveBeenCalledWith(HREF)
+    open.mockRestore()
   })
 })

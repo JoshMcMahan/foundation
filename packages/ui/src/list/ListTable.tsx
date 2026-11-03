@@ -1,4 +1,9 @@
-import { createContext, type ReactNode, useContext } from 'react'
+import {
+  createContext,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  useContext,
+} from 'react'
 import { AppLink } from '../components/AppLink'
 import { Checkbox } from '../components/Checkbox'
 import { positionKeys } from '../components/keys'
@@ -8,6 +13,7 @@ import { CellPlacementContext, Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
 import { cx } from '../cx'
 import { ErrorIcon } from '../icons'
+import { safeUrl } from '../safeUrl'
 
 const NAME_TEXT = 'font-medium text-[13px] leading-tight text-(--theme-app) truncate'
 const SUBTITLE_TEXT = 'text-xs leading-tight text-(--theme-muted-text-color) truncate'
@@ -49,24 +55,78 @@ export const listTableFixedProps = {
   className: listTableProps.className.replace('table-auto', 'table-fixed'),
 } as const
 
-/** True inside a `ListRow` whose name link should take the whole row's
- *  clicks: it navigates, and no selection claims plain clicks. */
+/** True inside a `ListRow` whose name is the row's link: the row opens it,
+ *  as no selection claims plain clicks. */
 export const StretchRowLinkContext = createContext(false)
 
-/** Makes a link cover its `ListRow` (the row's `<tr>` is its containing block),
- *  so the whole row is the link: it opens in a new tab, shows its URL and
- *  reads as a link, where a row click handler could do none of these. Its
- *  focus ring follows, drawn around the row. A `NameCell` with an `href` does
- *  this itself; a row whose link is elsewhere, such as a run's number before
- *  its workflow's name, gives its own link this class and `data-row-link`. */
+/** Marks a row's own link, the one the row opens, and draws its focus ring
+ *  around the row (the row's `<tr>` is its containing block). The link takes
+ *  only the clicks on itself: covering the row, it would take a press dragged
+ *  over the row's text as dragging the link, and letting go as a click on it,
+ *  so the text couldn't be selected. The row opens on the rest of its clicks
+ *  (see `ListRow`). A `NameCell` with an `href` does this itself; a row whose
+ *  link is elsewhere, such as a run's number before its workflow's name, gives
+ *  its own link this class and `data-row-link`. */
 export const STRETCHED_LINK =
-  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-focus)"
+  "after:pointer-events-none after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--theme-focus)"
 
-/** The row a `STRETCHED_LINK` covers: its box, with the row's other controls
- *  raised above the link so they keep their own clicks. A checkbox is a
- *  `role="checkbox"` span, not an input, so the role names it. */
-export const STRETCHED_LINK_ROW =
-  'relative [&_:is(a,button,input,label,[role=checkbox]):not([data-row-link])]:relative [&_:is(a,button,input,label,[role=checkbox]):not([data-row-link])]:z-[1]'
+/** The row a `STRETCHED_LINK` draws its focus ring around. */
+export const STRETCHED_LINK_ROW = 'relative'
+
+// Where a press on a row belongs to a control of its own, such as its link or its checkbox, which
+// is a `role="checkbox"` span rather than an input.
+const ROW_CONTROL = 'a,button,input,label,[role=checkbox]'
+
+/** True for a press on the row itself: not on one of its own controls, and not in what it opened
+ *  in a portal, such as a drawer, which passes its events up to the row through React though it
+ *  isn't in the row. */
+export function pressesRow(e: ReactMouseEvent): boolean {
+  return e.currentTarget.contains(e.target as Node) && !(e.target as Element).closest(ROW_CONTROL)
+}
+
+/** True when a click on `row` ends selecting text in it, such as a name or an ID to copy: a press
+ *  dragged over text and let go is a click, but it asks for the text, not for the row to open. */
+export function endsTextSelection(row: Element): boolean {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || selection.toString() === '') {
+    return false
+  }
+  const { anchorNode, focusNode } = selection
+  return (!!anchorNode && row.contains(anchorNode)) || (!!focusNode && row.contains(focusNode))
+}
+
+/** Opens a row's link in a new tab for a click that asks for one, as the link itself would: a
+ *  middle click, or one with Cmd, Ctrl or Shift held. */
+export function openRowInNewTab(e: ReactMouseEvent, href: string) {
+  const asks = e.button === 1 || (e.button === 0 && (e.metaKey || e.ctrlKey || e.shiftKey))
+  const url = asks ? safeUrl(href) : undefined
+  if (url) {
+    window.open(url, '_blank', 'noopener')
+  }
+}
+
+/** A row's mouse handlers beside its click handler: a middle click anywhere on the row opens
+ *  `href` in a new tab, as on its link. */
+export function rowPressProps(href: string | null | undefined, clickable = true) {
+  return {
+    onMouseDown: (e: ReactMouseEvent) => {
+      // On a row that opens on a click, Shift would extend a text selection from the last click,
+      // so the click would end selecting rather than reach the row; and the middle button would
+      // start the browser's autoscroll rather than open the row.
+      if (
+        pressesRow(e) &&
+        ((clickable && e.button === 0 && e.shiftKey) || (href && e.button === 1))
+      ) {
+        e.preventDefault()
+      }
+    },
+    onAuxClick: (e: ReactMouseEvent) => {
+      if (href && e.button === 1 && pressesRow(e)) {
+        openRowInNewTab(e, href)
+      }
+    },
+  }
+}
 
 export function NameCell({
   icon,
@@ -99,8 +159,9 @@ export function NameCell({
   description?: string | undefined
   /** `error` for a note that says what went wrong. */
   descriptionTone?: 'muted' | 'error' | undefined
-  /** The name's link. Inside a `ListRow` with an `href`, the whole row is
-   *  this link, so give both the same URL. */
+  /** The name's link. Inside a `ListRow` with an `href`, it is the row's
+   *  link, which a click on the rest of the row opens too, so give both the
+   *  same URL. */
   href: string | null
   badge?: ReactNode
   title?: string | undefined
@@ -133,7 +194,14 @@ export function NameCell({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
           <div
-            className={cx(NAME_TEXT, href && 'group-hover/namecell:text-(--theme-link)')}
+            className={cx(
+              NAME_TEXT,
+              // The row's link takes the row's hover too, as a click anywhere on the row opens it.
+              href &&
+                (stretch
+                  ? 'group-hover:text-(--theme-link)'
+                  : 'group-hover/namecell:text-(--theme-link)'),
+            )}
             title={title}
           >
             {name}

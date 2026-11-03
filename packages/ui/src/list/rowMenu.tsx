@@ -85,7 +85,9 @@ export function rowContextMenuProps(
 ) {
   return {
     onContextMenu: (e: ReactMouseEvent) => {
-      if (e.shiftKey) {
+      // A right-click in what the row opened in a portal, such as a drawer, reaches it through
+      // React but isn't on the row: it keeps the browser's own menu.
+      if (e.shiftKey || !e.currentTarget.contains(e.target as Node)) {
         return
       }
       const items = typeof entries === 'function' ? entries() : entries
