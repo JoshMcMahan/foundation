@@ -79,7 +79,10 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 // WebSocket upgrades and flushing work through the recorder.
 func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
-func logRequests(next http.Handler, logger *slog.Logger) http.Handler {
+func logRequests(next http.Handler, logger *slog.Logger, level func(*http.Request, int) slog.Level) http.Handler {
+	if level == nil {
+		level = func(_ *http.Request, status int) slog.Level { return requestLevel(status) }
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w}
@@ -88,7 +91,7 @@ func logRequests(next http.Handler, logger *slog.Logger) http.Handler {
 		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
 			return
 		}
-		logger.LogAttrs(r.Context(), slog.LevelInfo, "http request",
+		logger.LogAttrs(r.Context(), level(r, rec.status), "http request",
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.Int("status", rec.status),
@@ -97,6 +100,15 @@ func logRequests(next http.Handler, logger *slog.Logger) http.Handler {
 			slog.String("remote_addr", r.RemoteAddr),
 		)
 	})
+}
+
+// requestLevel is a request's default log level. A client error is the
+// client's mistake, not the server's, so only a server error is raised.
+func requestLevel(status int) slog.Level {
+	if status >= 500 {
+		return slog.LevelError
+	}
+	return slog.LevelInfo
 }
 
 func recoverPanics(next http.Handler, logger *slog.Logger, apiPrefix string) http.Handler {

@@ -230,12 +230,37 @@ func TestPanics(t *testing.T) {
 }
 
 func TestRequestLog(t *testing.T) {
-	var logs bytes.Buffer
-	h := newHandler(t, server.Options{Logger: slog.New(slog.NewTextHandler(&logs, nil))})
-	do(t, h, http.MethodGet, "/healthz")
-	do(t, h, http.MethodGet, "/issues")
-	if strings.Contains(logs.String(), "/healthz") || !strings.Contains(logs.String(), "path=/issues status=200") {
-		t.Errorf("logs:\n%s", logs.String())
+	logged := func(level func(*http.Request, int) slog.Level) string {
+		var logs bytes.Buffer
+		h := newHandler(t, server.Options{
+			Logger:          slog.New(slog.NewTextHandler(&logs, nil)),
+			RequestLogLevel: level,
+			Routes: func(mux *http.ServeMux) {
+				mux.HandleFunc("GET /api/v1/boom", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) })
+			},
+		})
+		do(t, h, http.MethodGet, "/healthz")
+		do(t, h, http.MethodGet, "/issues")
+		do(t, h, http.MethodGet, "/api/v1/nope")
+		do(t, h, http.MethodGet, "/api/v1/boom")
+		return logs.String()
+	}
+	// Every request but health checks shows, a server error at a higher level.
+	def := logged(nil)
+	if strings.Contains(def, "/healthz") || !strings.Contains(def, "level=INFO msg=\"http request\" method=GET path=/issues status=200") ||
+		!strings.Contains(def, "level=INFO msg=\"http request\" method=GET path=/api/v1/nope status=404") ||
+		!strings.Contains(def, "level=ERROR msg=\"http request\" method=GET path=/api/v1/boom status=500") {
+		t.Errorf("default logs:\n%s", def)
+	}
+	// A host can quiet a route it polls and still see failures.
+	quiet := logged(func(r *http.Request, status int) slog.Level {
+		if r.URL.Path == "/issues" && status < 400 {
+			return slog.LevelDebug
+		}
+		return slog.LevelInfo
+	})
+	if strings.Contains(quiet, "/issues") || !strings.Contains(quiet, "path=/api/v1/nope status=404") {
+		t.Errorf("quiet logs:\n%s", quiet)
 	}
 }
 
