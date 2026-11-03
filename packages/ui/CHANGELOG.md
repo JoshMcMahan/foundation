@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.110.0](https://github.com/parallelworks/foundation/compare/ui-v0.109.0...ui-v0.110.0) (2026-11-03)
+
+
+### Features
+
+* **ui:** the Display menu can lead with a list's layouts ([#556](https://github.com/parallelworks/foundation/issues/556)) ([00f327f](https://github.com/parallelworks/foundation/commit/00f327f57a70ea8060d1ed3685c2e4a5805572cf))
+
 ## [0.109.0](https://github.com/parallelworks/foundation/compare/ui-v0.108.0...ui-v0.109.0) (2026-11-03)
 
 
