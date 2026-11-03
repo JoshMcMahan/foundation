@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { IconButton } from '../components/IconButton'
 import { Pagination } from '../components/Pagination'
 import { Popover } from '../components/Popover'
 import { UIProvider } from '../components/Provider'
-import { InfoIcon } from '../icons'
+import { ColumnsIcon, InfoIcon, ListViewIcon, TimelineIcon } from '../icons'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { ListSearchControl, useListSearch } from './listSearch'
 import { useListView } from './listView'
@@ -28,7 +29,8 @@ const ROWS: DemoRow[] = [
   { id: '4', name: 'googleflex', status: 'active', owner: 'bob' },
 ]
 
-function ControlsDemo({ searchable }: { searchable: boolean }) {
+function ControlsDemo({ searchable, layouts }: { searchable: boolean; layouts?: boolean }) {
+  const [layout, setLayout] = useState('list')
   const view = useListView<DemoRow>({
     storageKey: 'storybook-demo-list',
     columns: [
@@ -78,7 +80,22 @@ function ControlsDemo({ searchable }: { searchable: boolean }) {
       <div className="flex items-center justify-end gap-2">
         <ListSearchControl search={search} placeholder="Search clusters" />
         <ListFilterMenu view={view} />
-        <ListDisplayMenu view={view} />
+        <ListDisplayMenu
+          view={view}
+          layout={
+            layouts
+              ? {
+                  options: [
+                    { value: 'list', label: 'List', icon: <ListViewIcon /> },
+                    { value: 'board', label: 'Board', icon: <ColumnsIcon /> },
+                    { value: 'timeline', label: 'Timeline', icon: <TimelineIcon /> },
+                  ],
+                  value: layout,
+                  onValueChange: setLayout,
+                }
+              : undefined
+          }
+        />
       </div>
       <ul className="text-sm">
         {rows.map((r) => (
@@ -128,6 +145,15 @@ export const ControlsWithoutSingleKeyShortcuts: StoryObj<{
     // The filter menu would open in a layer over the page, outside the story's canvas.
     await expect(within(document.body).queryByRole('menu')).toBeNull()
     await expect(canvas.queryByPlaceholderText('Search clusters')).toBeNull()
+  },
+}
+
+// A list that can also show as a board or a timeline: the Display panel leads with the
+// layouts. The play opens it.
+export const Layouts: StoryObj = {
+  render: () => <ControlsDemo searchable layouts />,
+  play: async ({ canvasElement }) => {
+    canvasElement.querySelector<HTMLButtonElement>('button[aria-label="Display options"]')?.click()
   },
 }
 

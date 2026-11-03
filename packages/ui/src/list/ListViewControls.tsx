@@ -1,10 +1,12 @@
 import { Menu } from '@base-ui/react/menu'
 import { Toggle } from '@base-ui/react/toggle'
+import type { ReactNode } from 'react'
 import { IconButton } from '../components/IconButton'
 import { InfoTip } from '../components/InfoTip'
 import { MenuPopup, MenuRadioItem, MenuSeparator } from '../components/Menu'
 import { Popover } from '../components/Popover'
 import { useStrings } from '../components/Provider'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
 import { Tooltip } from '../components/Tooltip'
@@ -28,7 +30,29 @@ const pillClassName =
 const SECTION_LABEL =
   'mb-2 text-[11px] font-medium uppercase tracking-wide text-(--theme-muted-text-color)'
 
-export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?: string }) {
+/** One way to lay a list out, such as rows, a board or a timeline. */
+export interface ListLayoutOption {
+  value: string
+  label: string
+  icon: ReactNode
+}
+
+/** The layouts a list can switch between, which lead its Display panel. */
+export interface ListLayoutChoice {
+  options: ListLayoutOption[]
+  value: string
+  onValueChange: (value: string) => void
+}
+
+export function ListDisplayMenu<T>({
+  view,
+  label,
+  layout,
+}: {
+  view: ListView<T>
+  label?: string
+  layout?: ListLayoutChoice | undefined
+}) {
   const { common, list: t } = useStrings()
   const toggleable = view.columns.filter((c) => !isLocked(c))
   const hasGrouping = view.groupBys.length > 0
@@ -44,6 +68,17 @@ export function ListDisplayMenu<T>({ view, label }: { view: ListView<T>; label?:
         <IconButton variant="outline" icon={<DisplayIcon />} label={label ?? t.displayOptions} />
       }
     >
+      {layout && layout.options.length > 1 && (
+        <div className="mb-3 border-b border-(--theme-border) pb-3">
+          <SegmentedControl
+            label={t.layout}
+            fill
+            options={layout.options}
+            value={layout.value}
+            onValueChange={layout.onValueChange}
+          />
+        </div>
+      )}
       {hasGrouping && (
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] text-(--theme-app)">{t.grouping}</span>

@@ -1,11 +1,36 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import { memoryStorage } from '../test/storage'
 import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
 import { useListView } from './listView'
 
 type Row = { owner: string }
+
+function LayoutHarness() {
+  const view = useListView<Row>({
+    storageKey: 'layouts',
+    columns: [{ key: 'name', label: 'Name', alwaysVisible: true }],
+  })
+  const [layout, setLayout] = useState('list')
+  return (
+    <>
+      <ListDisplayMenu
+        view={view}
+        layout={{
+          options: [
+            { value: 'list', label: 'List', icon: null },
+            { value: 'timeline', label: 'Timeline', icon: null },
+          ],
+          value: layout,
+          onValueChange: setLayout,
+        }}
+      />
+      <output>{layout}</output>
+    </>
+  )
+}
 
 function Harness() {
   const view = useListView<Row>({
@@ -113,5 +138,15 @@ describe('the display panel', () => {
     expect(pill).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(pill)
     expect(pill).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('leads with the layouts and switches between them', () => {
+    render(<LayoutHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Display options' }))
+    const layouts = screen.getByRole('group', { name: 'Layout' })
+    expect(layouts).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(screen.getByRole('button', { name: 'Timeline' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('timeline')
   })
 })

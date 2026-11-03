@@ -59,7 +59,12 @@ export {
   STRETCHED_LINK,
 } from './ListTable'
 export { ListToolbar, type ListToolbarProps } from './ListToolbar'
-export { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
+export {
+  ListDisplayMenu,
+  ListFilterMenu,
+  type ListLayoutChoice,
+  type ListLayoutOption,
+} from './ListViewControls'
 export {
   ListCount,
   type ListSearch,

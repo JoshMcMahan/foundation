@@ -3,7 +3,7 @@ import { useContext } from 'react'
 import { HeaderActionsFitContext } from '../components/headerActionsFit'
 import { useStrings } from '../components/Provider'
 import { cx } from '../cx'
-import { ListDisplayMenu, ListFilterMenu } from './ListViewControls'
+import { ListDisplayMenu, ListFilterMenu, type ListLayoutChoice } from './ListViewControls'
 import {
   type ListCountProps,
   ListCountText,
@@ -29,6 +29,8 @@ export interface ListToolbarProps<T> {
   }
   /** Adds its filter menu, when it has facets, and its display options. */
   view?: ListView<T> | undefined
+  /** The layouts the list switches between, at the top of its display options. */
+  layout?: ListLayoutChoice | undefined
   search?: ListSearch | undefined
   /** Names the search for assistive technology; the strings' "Search" by default. */
   searchLabel?: string | undefined
@@ -69,7 +71,7 @@ export function toolbarCount<T>({
  *  rows (see `ListPage`'s `count`), and while filter chips show, the toolbar
  *  sits at the end of their first line. */
 export function ListToolbar<T>(props: ListToolbarProps<T>) {
-  const { view, search, searchLabel, searchPlaceholder, action, children } = props
+  const { view, layout, search, searchLabel, searchPlaceholder, action, children } = props
   const { common } = useStrings()
   // Inside a ListPage that shows the count under its rows, the toolbar leaves it out.
   const inFooter = useContext(ListFooterCountContext)
@@ -99,7 +101,7 @@ export function ListToolbar<T>(props: ListToolbarProps<T>) {
       >
         {children}
         {view && <ListFilterMenu view={view} />}
-        {view && <ListDisplayMenu view={view} />}
+        {view && <ListDisplayMenu view={view} layout={layout} />}
         {search && (
           <ListSearchControl
             search={search}

@@ -629,6 +629,8 @@ export interface UIStrings {
     /** How many rows a filter left, of how many. */
     matchCount: (matches: string, total: string, nounPlural: string) => string
     displayOptions: string
+    /** Names the Display menu's switch between a list's layouts, such as rows and a board. */
+    layout: string
     grouping: string
     /** The Display menu's line that collapses or expands every group the list shows. */
     groups: string
@@ -1566,6 +1568,7 @@ const DEFAULTS: UIProviderValue = {
       count: (count, noun) => `${count} ${noun}`,
       matchCount: (matches, total, nounPlural) => `${matches} of ${total} ${nounPlural}`,
       displayOptions: 'Display options',
+      layout: 'Layout',
       grouping: 'Grouping',
       groups: 'Groups',
       ordering: 'Ordering',
