@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.0](https://github.com/parallelworks/foundation/compare/v0.17.0...v0.18.0) (2026-11-03)
+
+
+### Features
+
+* **server:** a host that logs requests itself can turn off the request log ([#614](https://github.com/parallelworks/foundation/issues/614)) ([0a3ce6f](https://github.com/parallelworks/foundation/commit/0a3ce6fb156fa40e08fbfaa0c91d1d0e63ba0a9b))
+* **server:** hosts choose the level each request is logged at ([#342](https://github.com/parallelworks/foundation/issues/342)) ([9fc1444](https://github.com/parallelworks/foundation/commit/9fc14449aeae3ebecacd3648e8de7bfb4b92587f))
+
 ## [0.17.0](https://github.com/parallelworks/foundation/compare/v0.16.0...v0.17.0) (2026-10-29)
 
 
