@@ -239,6 +239,15 @@ func TestRequestLog(t *testing.T) {
 	}
 }
 
+func TestNoRequestLog(t *testing.T) {
+	var logs bytes.Buffer
+	h := newHandler(t, server.Options{Logger: slog.New(slog.NewTextHandler(&logs, nil)), NoRequestLog: true})
+	do(t, h, http.MethodGet, "/issues")
+	if logs.Len() > 0 {
+		t.Errorf("logs:\n%s", logs.String())
+	}
+}
+
 // shutdownClient sends each request on its own connection. A keep-alive
 // client can dial a spare connection that never carries a request, and
 // http.Server.Shutdown waits five seconds before it treats one as idle, which
