@@ -204,6 +204,41 @@ describe('useFieldMessages', () => {
     ])
   })
 
+  it("shows an app problem's own message on a field it only marks invalid", () => {
+    const zone = {
+      type: '/problems/zone_not_in_region',
+      status: 400,
+      code: 'zone_not_in_region',
+      detail: 'La zona us-east-1z no está en us-east-1.',
+      language: 'es',
+      errors: [
+        { code: 'invalid', pointer: '#/controller/zone' },
+        { code: 'too_long', pointer: '#/name', params: { max: 64 } },
+      ],
+    }
+    expect(fieldMessages(zone, 'es')).toEqual([
+      { path: 'controller.zone', message: 'La zona us-east-1z no está en us-east-1.' },
+      { path: 'name', message: 'Debe tener como máximo 64 caracteres.' },
+    ])
+    const catalog = { apiErrors: { zone_not_in_region: 'Pick a zone in the region.' } }
+    expect(fieldMessages(zone, 'en', catalog)[0]).toEqual({
+      path: 'controller.zone',
+      message: 'Pick a zone in the region.',
+    })
+  })
+
+  it('keeps the generic message when the problem is a generic one', () => {
+    const generic = {
+      type: '/problems/validation',
+      status: 422,
+      code: 'validation',
+      errors: [{ code: 'invalid', pointer: '#/zone' }],
+    }
+    expect(fieldMessages(generic, 'en')).toEqual([
+      { path: 'zone', message: sharedMessages.en.apiErrors.invalid },
+    ])
+  })
+
   it('takes a lone field error', () => {
     expect(fieldMessages(tooLong)).toEqual([
       { path: 'name', message: 'Must be at most 64 characters.' },

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { createTranslator, useLocale, useTranslations } from 'use-intl'
 import { ApiError, FieldError, type Params, toApiError } from './index.js'
-import { baseLanguage, sharedMessagesFor, typeApp } from './messages.js'
+import { baseLanguage, sharedMessages, sharedMessagesFor, typeApp } from './messages.js'
 
 type Format = (key: string, values?: Record<string, string | number>) => string
 type Translator = Format & { has: (key: string) => boolean }
@@ -43,6 +43,9 @@ export function useErrorMessage(): (err: unknown) => string {
  * Returns a function that turns any error into the fields it rejects in the
  * request body, each with its form path and its message in the active
  * language, as `useErrorMessage` shows it. A form shows each under its field.
+ * A field the server only marks `invalid` under a problem of the app's own,
+ * such as a zone that isn't in the chosen region, shows that problem's
+ * message: the generic one would sit beside the real reason and say less.
  */
 export function useFieldMessages(): (err: unknown) => FieldMessage[] {
   const translate = useTranslate()
@@ -50,12 +53,24 @@ export function useFieldMessages(): (err: unknown) => FieldMessage[] {
     (err: unknown) => {
       const apiError = err instanceof FieldError ? undefined : toApiError(err)
       const fields = apiError ? apiError.fields : [err as FieldError]
+      const specific = apiError !== undefined && !isSharedCode(apiError.code)
       return fields
         .filter((field) => field.pointer !== undefined && field.path !== '')
-        .map((field) => ({ path: field.path, message: translate(field, apiError?.language) }))
+        .map((field) => ({
+          path: field.path,
+          message:
+            specific && field.code === 'invalid'
+              ? translate(apiError, apiError.language)
+              : translate(field, apiError?.language),
+        }))
     },
     [translate],
   )
+}
+
+/** Whether a code is one of the shared, generic ones, such as `validation`. */
+function isSharedCode(code: string): boolean {
+  return Object.hasOwn(sharedMessages.en.apiErrors, code)
 }
 
 /** A code's message in the active language, with its params, found by the
