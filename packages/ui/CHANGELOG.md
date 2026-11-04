@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.115.0](https://github.com/parallelworks/foundation/compare/ui-v0.114.1...ui-v0.115.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** a file explorer host can relabel a crumb in the folder trail ([#637](https://github.com/parallelworks/foundation/issues/637)) ([58d6211](https://github.com/parallelworks/foundation/commit/58d6211f206741864f5a5ddf33f7d1005ba1668f))
+* **ui:** ImageUpload, a square image a person uploads and crops ([#396](https://github.com/parallelworks/foundation/issues/396)) ([436be06](https://github.com/parallelworks/foundation/commit/436be0650da671d2de59a92979ad9ff84ba8028b))
+* **ui:** rename files and folders in the file explorer ([#603](https://github.com/parallelworks/foundation/issues/603)) ([c9e7e0c](https://github.com/parallelworks/foundation/commit/c9e7e0c72fcf6691c0fca26d973ab1c1f639d718))
+
+
+### Bug Fixes
+
+* **ui:** a disclosure's arrow sits below its summary when the summary text is small ([#627](https://github.com/parallelworks/foundation/issues/627)) ([2d8bb45](https://github.com/parallelworks/foundation/commit/2d8bb458c7887aa5867b94db755e193a2508de89))
+* **ui:** double-clicked or selected text in the chat shows a highlight you can see ([#635](https://github.com/parallelworks/foundation/issues/635)) ([4a7b61b](https://github.com/parallelworks/foundation/commit/4a7b61b1991aa28c3550e194c9c5eb3504b11f80))
+* **ui:** what sits at a tab row's end drops under the tabs when both don't fit ([#631](https://github.com/parallelworks/foundation/issues/631)) ([7036000](https://github.com/parallelworks/foundation/commit/70360006f4677ae7dfd4ff3ed300e0c5a732d2eb))
+
 ## [0.114.1](https://github.com/parallelworks/foundation/compare/ui-v0.114.0...ui-v0.114.1) (2026-11-04)
 
 
