@@ -141,6 +141,15 @@ describe('Tabs', () => {
     expect(screen.getByText('Session')).toBeInTheDocument()
   })
 
+  it('lets what sits at its end drop under the tabs when both don’t fit', () => {
+    render(<Tabs label="Views" items={items} end={<button type="button">Search</button>} />)
+    const end = screen.getByRole('button', { name: 'Search' }).parentElement as HTMLElement
+    expect(end).toHaveClass('ms-auto')
+    expect(end.parentElement).toHaveClass('flex-wrap')
+    // The tabs keep their own rule, so the current tab's underline stays on one.
+    expect(screen.getByRole('tablist').parentElement).toHaveClass('border-b', 'max-w-full')
+  })
+
   it('marks the current segment in the segmented look, held or not', () => {
     render(<Tabs label="Views" variant="segmented" items={items} defaultValue="overview" />)
     fireEvent.click(screen.getByRole('tab', { name: 'Settings' }))

@@ -111,6 +111,7 @@ export function Tabs<Value extends string>({
   const [own, setOwn] = useState(defaultValue ?? items[0]?.value)
   const current = value ?? own
   const showRow = items.length > 1 || !!end
+  const wraps = !segmented && !!end
   const [row, setRow] = useState<HTMLDivElement | null>(null)
   useStickyTop(row, !!sticky)
   // A line row that runs past its width scrolls sideways: it fades at the end that hides tabs,
@@ -195,12 +196,23 @@ export function Tabs<Value extends string>({
           className={cx(
             'flex items-center justify-between gap-2',
             !segmented && 'border-b border-(--theme-border)',
+            // What sits at the end takes a line of its own under the tabs when both don't fit,
+            // such as a list's controls on a phone, rather than squeezing the tabs to a sliver.
+            wraps && 'flex-wrap items-stretch gap-y-1',
             sticky && stickyClasses,
             className,
           )}
         >
           {/* Holds the row's arrows at its ends, over the fade. */}
-          <div className={cx('relative flex min-w-0', segmented && 'contents')}>
+          <div
+            className={cx(
+              'relative flex min-w-0',
+              segmented && 'contents',
+              // As wide as its tabs, up to the whole row, where they scroll. Its own rule, on the
+              // row's, keeps the current tab's underline on a rule when the end drops below.
+              wraps && 'max-w-full grow -mb-px border-b border-(--theme-border)',
+            )}
+          >
             <BaseTabs.List
               aria-label={label}
               ref={segmented ? undefined : scroller.ref}
@@ -231,7 +243,7 @@ export function Tabs<Value extends string>({
               <ScrollArrow side="end" onPress={() => scrollRow(scroller.ref.current, 1)} />
             )}
           </div>
-          {end}
+          {wraps ? <div className="ms-auto flex items-center py-0.5">{end}</div> : end}
         </div>
       )}
       {/* Provided either way, so tabs nested in a steady panel don't take on its height. A

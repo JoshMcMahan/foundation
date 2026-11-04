@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
+import { DisplayIcon, FilterIcon, SearchIcon } from '../icons'
+import { Button } from './Button'
+import { IconButton } from './IconButton'
 import { SegmentedControl } from './SegmentedControl'
 import { TabPanel, Tabs, type TabsProps } from './Tabs'
 
@@ -202,6 +205,62 @@ export const OnAPhone: StoryObj = {
     const list = events.closest('[role="tablist"]') as HTMLElement
     // The current tab shows whole, clear of the fade at the row's start.
     await expect(events.getBoundingClientRect().right).toBeLessThanOrEqual(
+      list.getBoundingClientRect().right,
+    )
+  },
+}
+
+const SKU_VIEWS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'skus', label: 'Managed SKUs' },
+  { value: 'realtime', label: 'Realtime' },
+]
+
+function ListControls() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <Button variant="ghost">Unknown only</Button>
+      <IconButton label="Filters" icon={<FilterIcon />} />
+      <IconButton label="Display options" icon={<DisplayIcon />} />
+      <IconButton label="Search" icon={<SearchIcon />} />
+    </div>
+  )
+}
+
+/** A list's controls at the end of its page's tabs. Where the tabs and the controls both fit,
+ *  they share the row; where they don't, such as on a phone, the controls take a line of their
+ *  own under the tabs, and the current tab keeps its underline on the rule. */
+export const ControlsAtTheEnd: StoryObj = {
+  render: () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
+      <Tabs label="Billing" items={SKU_VIEWS} defaultValue="skus" end={<ListControls />} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tab = canvas.getByRole('tab', { name: 'Managed SKUs' })
+    const list = tab.closest('[role="tablist"]') as HTMLElement
+    // Every tab shows whole, whatever the width.
+    await expect(tab.getBoundingClientRect().right).toBeLessThanOrEqual(
+      list.getBoundingClientRect().right,
+    )
+  },
+}
+
+/** The same row on a phone: the controls drop under the tabs instead of squeezing them. */
+export const ControlsAtTheEndOnAPhone: StoryObj = {
+  ...ControlsAtTheEnd,
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tab = canvas.getByRole('tab', { name: 'Realtime' })
+    const search = canvas.getByRole('button', { name: 'Search' })
+    // The controls sit below the tabs, and the last tab shows whole.
+    await expect(search.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      tab.getBoundingClientRect().bottom,
+    )
+    const list = tab.closest('[role="tablist"]') as HTMLElement
+    await expect(tab.getBoundingClientRect().right).toBeLessThanOrEqual(
       list.getBoundingClientRect().right,
     )
   },
