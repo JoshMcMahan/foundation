@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ActionMenu } from '../components/ActionMenu'
+import { CountBadge } from '../components/StatusBadge'
 import { AppFrame, AppFrameNavGroup, AppFrameNavItem, AppFrameToggle } from './index'
 
 let mobile = false
@@ -433,5 +434,34 @@ describe('AppFrame', () => {
     const link = screen.getByRole('link', { name: 'Build' })
     expect(link).toHaveTextContent('B')
     expect(link).not.toHaveTextContent('Running')
+  })
+  it('reads a count with the label, beside a second line and in the rail', () => {
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <>
+            <AppFrameNavItem
+              label="Inbox"
+              badge={<CountBadge count={3} label="unread" />}
+              href="#inbox"
+            />
+            <AppFrameNavItem
+              label="Build"
+              detail="Running"
+              badge={<CountBadge count={2} label="failing" />}
+              href="#build"
+            />
+          </>
+        }
+      />,
+    )
+    expect(screen.getByRole('link', { name: /^Inbox 3 ?unread$/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^Build 2 ?failing$/ })).toHaveAccessibleDescription(
+      'Running',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    const inbox = screen.getByRole('link', { name: /^Inbox 3 ?unread$/ })
+    expect(within(inbox).getByText('3').parentElement).toHaveClass('sr-only')
   })
 })

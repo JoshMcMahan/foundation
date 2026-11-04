@@ -441,6 +441,8 @@ export interface AppFrameNavItemProps
   /** A second line under the label, such as a session's state. Not shown in the rail. */
   detail?: ReactNode
   selected?: boolean
+  /** Such as a count, read after the label, so give it its words (`CountBadge`'s `label`).
+   *  Not shown in the rail. */
   badge?: ReactNode
   disabled?: boolean
   /** A control at the item's end, beside the link rather than in it, such as an unpin button.
@@ -468,12 +470,16 @@ export function AppFrameNavItem({
   const frame = useFrameContext()
   const expanded = use(NavExpanded) ?? frame.expanded
   const closePopover = useClosePopover()
-  const detailId = useId()
+  const id = useId()
+  const [labelId, detailId, badgeId] = [`${id}-label`, `${id}-detail`, `${id}-badge`]
   const described = expanded && detail != null
   const props = {
     ...rest,
-    // The label alone names it; the second line describes it.
-    ...(described ? { 'aria-label': label, 'aria-describedby': detailId } : {}),
+    // The label and badge name it; the second line describes it.
+    ...(described || badge != null
+      ? { 'aria-labelledby': badge == null ? labelId : `${labelId} ${badgeId}` }
+      : {}),
+    ...(described ? { 'aria-describedby': detailId } : {}),
     className: cx('pw-frame-nav-item', className),
     'aria-current': selected ? ('page' as const) : undefined,
     onClick: (event: MouseEvent<HTMLElement>) => {
@@ -496,16 +502,21 @@ export function AppFrameNavItem({
         )}
         {described ? (
           <span className="pw-frame-nav-text">
-            <span className="pw-frame-nav-label">{label}</span>
+            <span id={labelId} className="pw-frame-nav-label">
+              {label}
+            </span>
             <span id={detailId} className="pw-frame-nav-detail">
               {detail}
             </span>
           </span>
         ) : (
-          <span className={expanded ? 'pw-frame-nav-label' : 'sr-only'}>{label}</span>
+          <span id={labelId} className={expanded ? 'pw-frame-nav-label' : 'sr-only'}>
+            {label}
+          </span>
         )}
-        {expanded && badge != null && (
-          <span className="pw-frame-nav-badge" aria-hidden="true">
+        {/* The rail reads it without showing it. */}
+        {badge != null && (
+          <span id={badgeId} className={expanded ? 'pw-frame-nav-badge' : 'sr-only'}>
             {badge}
           </span>
         )}
