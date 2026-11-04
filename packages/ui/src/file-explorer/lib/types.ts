@@ -29,6 +29,7 @@ export type TStorage = {
   canWrite?: boolean | undefined
   canUpload?: boolean | undefined
   canDelete?: boolean | undefined
+  canRename?: boolean | undefined
   // Storage capabilities. Undefined means capable (the cloud-bucket default);
   // only storages that lack a capability (e.g. workspace files) set it false.
   canShare?: boolean | undefined

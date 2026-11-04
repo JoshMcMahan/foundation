@@ -367,6 +367,21 @@ export interface UIStrings {
         exists: string
       }
     }
+    rename: {
+      action: string
+      submit: string
+      renaming: string
+      file: string
+      namePlaceholder: string
+      success: (name: string) => string
+      error: (message: string) => string
+      unsupported: string
+      validation: {
+        reserved: string
+        separator: string
+        exists: string
+      }
+    }
     readOnly: string
     /** Names what a copy took, in its toast. */
     fileLink: string
@@ -1324,6 +1339,21 @@ const DEFAULTS: UIProviderValue = {
         validation: {
           reserved: 'The folder name cannot be . or ..',
           separator: 'Folder names cannot include / or \\.',
+          exists: 'An item with this name already exists.',
+        },
+      },
+      rename: {
+        action: 'Rename',
+        submit: 'Rename',
+        renaming: 'Renaming…',
+        file: 'File',
+        namePlaceholder: 'New name',
+        success: (name: string) => `Renamed to ${name}.`,
+        error: (message: string) => `Couldn't rename: ${message}`,
+        unsupported: 'Renaming is not supported for this storage.',
+        validation: {
+          reserved: 'The name cannot be . or ..',
+          separator: 'Names cannot include / or \\.',
           exists: 'An item with this name already exists.',
         },
       },

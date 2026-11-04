@@ -64,6 +64,7 @@ interface CreateModalProps {
   /** Its width, as `Modal`'s: `xl` for a long body such as a rich text editor. It narrows to
    *  fit a small window. */
   size?: ModalSize | undefined
+  align?: 'top' | 'center' | undefined
   /** Resolves true to close the modal, false to keep it open (e.g. on error). `modifier` is
    *  true when submitted with ⌘/Ctrl+Enter, so a host can create and then open what it made. */
   onSubmit: (
@@ -105,6 +106,7 @@ export function CreateModal({
   footerHint,
   error,
   size = 'lg',
+  align,
   onSubmit,
 }: CreateModalProps) {
   const t = useStrings().modal
@@ -214,6 +216,7 @@ export function CreateModal({
       onClose={onClose}
       aria-label={`${submitText}: ${typeLabel}`}
       size={size}
+      align={align}
       dismissible={!isDirty}
       // The name, ahead of the type chip; a form without one starts at its first control.
       initialFocus={() => nameRef.current ?? true}

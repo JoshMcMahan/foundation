@@ -122,6 +122,17 @@ function scriptedStorage(pages: Record<string, TStorageObject[][]> = PAGES) {
       return {}
     },
     uploadFile: async () => ({}),
+    async renameEntry(input: unknown) {
+      const { from, name } = input as { from: string; name: string }
+      const to = from.replace(/[^/]+(\/?)$/, `${name}$1`)
+      for (const [path, dirPages] of fixture) {
+        fixture.set(
+          path,
+          dirPages.map((page) => page.map((o) => (o.path === from ? { ...o, path: to } : o))),
+        )
+      }
+      return {}
+    },
   }
   const provider = {
     listDirectoryInput: (_storage: TStorage, dirPath = '', page: TListPageRequest = {}) => ({
@@ -132,6 +143,10 @@ function scriptedStorage(pages: Record<string, TStorageObject[][]> = PAGES) {
     nextPageCursor: (data: unknown) => (data as { next?: string }).next,
     deleteFilesInput: (_name: string, nodes: TreeNode[]) => ({
       keys: nodes.map((n) => n.relativePath ?? n.path),
+    }),
+    renameInput: (_name: string, node: TreeNode, name: string) => ({
+      from: node.relativePath ?? node.path,
+      name,
     }),
   }
 
@@ -881,6 +896,34 @@ describe('FileExplorer write without delete', () => {
     fireEvent.contextMenu(await findTreeItem('b'))
     expect(await screen.findByRole('menuitem', { name: 'New folder' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument()
+  })
+})
+
+describe('FileExplorer rename', () => {
+  it('renames a file from its row menu and re-lists the folder', async () => {
+    const script = scriptedStorage()
+    render(explorer(FOLDER_A, script, [{ ...storage, canRename: true }]))
+    await act(async () => {})
+
+    fireEvent.contextMenu(await findTreeItem('one.txt'))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
+    const name = await screen.findByPlaceholderText('New name')
+    expect(name).toHaveValue('one.txt')
+    fireEvent.change(name, { target: { value: 'two.txt' } })
+    expect(await screen.findByText('An item with this name already exists.')).toBeInTheDocument()
+    fireEvent.change(name, { target: { value: 'renamed.txt' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+    expect(await screen.findByLabelText('Select renamed.txt')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Select one.txt')).not.toBeInTheDocument()
+  })
+
+  it('offers no rename when the storage cannot rename', async () => {
+    await renderExplorer(FOLDER_A)
+
+    fireEvent.contextMenu(await findTreeItem('one.txt'))
+    expect(await screen.findByRole('menuitem', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Rename' })).not.toBeInTheDocument()
   })
 })
 

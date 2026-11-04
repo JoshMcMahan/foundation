@@ -33,6 +33,7 @@ export interface IFileExplorerClient {
     }) => void,
     abortController?: AbortController,
   ): Promise<unknown>
+  renameEntry?(input: unknown): Promise<unknown>
 }
 
 export interface IFileExplorerProvider {
@@ -58,4 +59,5 @@ export interface IFileExplorerProvider {
     | null
   deleteFilesInput?: ((storageName: string, nodes: TreeNode[]) => unknown) | null
   uploadFileInput?: ((storageName: string, objectPath: string, file: File | Blob) => unknown) | null
+  renameInput?: ((storageName: string, node: TreeNode, name: string) => unknown) | null
 }
