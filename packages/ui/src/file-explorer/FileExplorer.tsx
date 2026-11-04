@@ -209,6 +209,8 @@ type IFileExplorerProps = ExplorerNavigation & {
   extraRowActions?: ((node: TreeNode, storage: TStorage | undefined) => RowAction[]) | undefined
   /** Host content for the selected folder's header, before its badges. */
   headerAccessory?: ((node: TreeNode, storage: TStorage | undefined) => ReactNode) | undefined
+  /** A crumb's label in the selected folder's trail; undefined keeps its name. */
+  crumbLabel?: ((node: TreeNode, storage: TStorage | undefined) => string | undefined) | undefined
 }
 
 /** `href` resolved against the page, as the browser's "Copy link" gives it. */
@@ -303,6 +305,7 @@ export default function FileExplorer({
   downloadCommand,
   extraRowActions,
   headerAccessory,
+  crumbLabel,
 }: IFileExplorerProps) {
   const [frame, setFrame] = useState<HTMLDivElement | null>(null)
   const frameWidth = useWidth(frame)
@@ -1294,7 +1297,7 @@ export default function FileExplorer({
         label={t.chrome.location}
         current="location"
         crumbs={chain.map((node) => ({
-          label: node.displayName || node.name,
+          label: crumbLabel?.(node, findStorage(node.storageId)) || node.displayName || node.name,
           href: pathHref?.(node.path),
         }))}
         onSelect={(_, i) => {

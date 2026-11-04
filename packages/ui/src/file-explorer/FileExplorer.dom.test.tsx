@@ -828,12 +828,15 @@ describe('FileExplorer host extensions', () => {
               : []
           }
           headerAccessory={(node) => <span>{`header for ${node.name}`}</span>}
+          crumbLabel={(node, owner) => (node.root ? `${owner?.name}:/srv` : undefined)}
         />
       </FileExplorerProvider>,
     )
     await act(async () => {})
 
     expect(await screen.findByText('header for a')).toBeInTheDocument()
+    const trail = within(screen.getByRole('navigation', { name: 'Location' }))
+    expect(trail.getByRole('button', { name: `${storage.name}:/srv` })).toBeInTheDocument()
 
     fireEvent.contextMenu(await findTreeItem('b'))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Host action' }))
