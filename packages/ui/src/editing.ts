@@ -169,7 +169,14 @@ export interface LintFix {
 /** One problem a workflow's schema can't catch, such as a need read but never listed. */
 export interface WorkflowLintProblem {
   path: string
+  /** Its text, shown when it has no `code` or the host has no message for it. */
   message: string
+  /** Its stable code, which the host's `useProblemMessage` words in the reader's language. */
+  code?: string | null | undefined
+  /** The values the code's message shows, by name. */
+  params?: Readonly<Record<string, string | number>> | null | undefined
+  /** The URI of the page that explains it, which the host's message is found by too. */
+  type?: string | null | undefined
   line: number
   fix?: LintFix
 }

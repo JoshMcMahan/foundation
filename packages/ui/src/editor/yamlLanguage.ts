@@ -1,6 +1,9 @@
 import * as monaco from 'monaco-editor/editor/editor.api'
+import type { CodedProblem } from '../components/Provider'
+import { setProblemMarkers } from './problemMarkers'
 import { createYamlWorker } from './workers'
 import { onYamlSchemas, type SchemasSettings } from './yaml'
+import { yamlProblem, yamlProblemBundle } from './yamlProblems'
 
 // The subset of the Language Server Protocol this client speaks. Declared here
 // rather than imported so the emitted .d.ts files need no protocol package.
@@ -182,13 +185,29 @@ const SEVERITY: Record<number, monaco.MarkerSeverity> = {
   4: monaco.MarkerSeverity.Hint,
 }
 
-function toMarker(diagnostic: Diagnostic): monaco.editor.IMarkerData {
+function toMarker(diagnostic: Diagnostic, message: string): monaco.editor.IMarkerData {
+  // A syntax error's parser code only names its message; Monaco shows the code it had before.
+  const code = typeof diagnostic.code === 'string' ? 0 : diagnostic.code
   return {
     ...toRange(diagnostic.range),
     severity: SEVERITY[diagnostic.severity ?? 1] ?? monaco.MarkerSeverity.Error,
-    message: diagnostic.message,
-    ...(diagnostic.code === undefined ? {} : { code: String(diagnostic.code) }),
+    message,
+    ...(code === undefined ? {} : { code: String(code) }),
     ...(diagnostic.source === undefined ? {} : { source: diagnostic.source }),
+  }
+}
+
+let problemText: (problem: CodedProblem) => string = (problem) => problem.message
+let republish: (() => void) | undefined
+
+/**
+ * Words the YAML service's problems in the reader's language from now on, those already marked
+ * included. The editor passes `useProblemText`'s; every editor on a page shares one language.
+ */
+export function setYamlProblemText(text: (problem: CodedProblem) => string): void {
+  if (text !== problemText) {
+    problemText = text
+    republish?.()
   }
 }
 
@@ -284,6 +303,28 @@ function startYamlLanguage(): void {
 
   // Keyed by the URI string sent to the server, which is how it names models back.
   const open = new Map<string, monaco.editor.ITextModel>()
+  // The last problems the server found in each model, marked again when the language changes.
+  const published = new Map<string, Diagnostic[]>()
+
+  function mark(uri: string): void {
+    const model = open.get(uri)
+    if (!model || model.isDisposed()) {
+      return
+    }
+    setProblemMarkers(
+      model,
+      MARKER_OWNER,
+      (published.get(uri) ?? []).map((diagnostic) => {
+        const problem = yamlProblem(diagnostic)
+        return { marker: toMarker(diagnostic, problemText(problem)), problem }
+      }),
+    )
+  }
+  republish = () => {
+    for (const uri of published.keys()) {
+      mark(uri)
+    }
+  }
 
   // The server is a megabyte of worker, so it starts with the first YAML model rather than
   // with the first editor, which may well be showing a shell script.
@@ -292,16 +333,14 @@ function startYamlLanguage(): void {
       return server
     }
     const worker = createYamlWorker()
-    // The first message starts the server; it carries an optional translation
-    // bundle, and without one the server speaks English.
-    worker.postMessage({})
+    // The first message starts the server. Its translation bundle has the server word each schema
+    // problem as a code and its params, which the editor words in the reader's language.
+    worker.postMessage({ l10nBundle: yamlProblemBundle() })
     const connection = new WorkerConnection(worker, answerServer)
     connection.onNotification('textDocument/publishDiagnostics', (params) => {
       const { uri, diagnostics } = params as { uri: string; diagnostics: Diagnostic[] }
-      const model = open.get(uri)
-      if (model && !model.isDisposed()) {
-        monaco.editor.setModelMarkers(model, MARKER_OWNER, diagnostics.map(toMarker))
-      }
+      published.set(uri, diagnostics)
+      mark(uri)
     })
     const ready = connection
       .request('initialize', {
@@ -350,9 +389,10 @@ function startYamlLanguage(): void {
 
   function close(uri: string, model: monaco.editor.ITextModel): void {
     open.delete(uri)
+    published.delete(uri)
     notify('textDocument/didClose', { textDocument: { uri } })
     if (!model.isDisposed()) {
-      monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
+      setProblemMarkers(model, MARKER_OWNER, [])
     }
   }
 

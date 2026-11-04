@@ -95,7 +95,7 @@ vi.mock('monaco-editor/editor/editor.api', () => {
 })
 vi.mock('./monacoFeatures', () => ({}))
 vi.mock('./workers', () => ({ setupMonacoWorkers: () => {} }))
-vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {} }))
+vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {}, setYamlProblemText: () => {} }))
 vi.mock('./reveal', () => ({ registerRevealer: () => () => {} }))
 vi.mock('../components/useCssIsDark', () => ({ useCssIsDark: () => false }))
 

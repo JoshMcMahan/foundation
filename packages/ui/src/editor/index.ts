@@ -17,3 +17,4 @@ export {
 export { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 export { setupMonacoWorkers } from './workers'
 export { configureEditorYaml, type SchemasSettings } from './yaml'
+export { YAML_PROBLEM_CODES } from './yamlProblems'

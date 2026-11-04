@@ -2,9 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { expect, screen, waitFor } from 'storybook/test'
+import { type ProblemParams, UIProvider } from '../components/Provider'
 import { Editor } from './Editor'
 import { EditorField } from './EditorField'
 import { addEditorLanguages } from './languages'
+import type { ValidationMarker } from './Monaco'
 import { configureEditorYaml } from './yaml'
 
 const meta: Meta<typeof Editor> = {
@@ -253,6 +255,8 @@ configureEditorYaml([
                   properties: {
                     name: { type: 'string', description: 'Shown in the run log.' },
                     run: { type: 'string', description: 'The shell command to run.' },
+                    shell: { enum: ['bash', 'sh'], description: 'The shell that runs it.' },
+                    retries: { type: 'integer', description: 'Times to try again.' },
                   },
                 },
               },
@@ -281,6 +285,74 @@ export const YamlWithSchema: StoryObj<typeof Editor> = {
     ].join('\n'),
     height: 320,
     width: 640,
+  },
+}
+
+// How a host words the editor's problem codes in the reader's language, here Spanish.
+const SPANISH: Record<string, (params: ProblemParams) => string> = {
+  yaml_property_not_allowed: (p) => `No se permite la propiedad ${p['property']}.`,
+  yaml_missing_property: (p) => `Falta la propiedad "${p['property']}".`,
+  yaml_wrong_type: (p) => `Tipo incorrecto. Se esperaba "${p['type']}".`,
+  yaml_enum: (p) => `Valor no aceptado. Valores válidos: ${p['values']}.`,
+  yaml_duplicate_key: () => 'Las claves de un mapa deben ser únicas.',
+}
+const spanishProblems = {
+  useProblemMessage: () => (code: string, params?: ProblemParams) => SPANISH[code]?.(params ?? {}),
+}
+
+function ProblemsInSpanish() {
+  const [markers, setMarkers] = useState<ValidationMarker[]>([])
+  return (
+    <UIProvider data={spanishProblems}>
+      <div className="flex w-[640px] flex-col gap-3">
+        <Editor
+          language="yaml"
+          path="file:///problems/pipeline.yaml"
+          height={280}
+          onValidate={setMarkers}
+          value={[
+            'jobs:',
+            '  build:',
+            '    timeout: 10',
+            '    steps:',
+            '      - name: compile',
+            '        run: make build',
+            '        shell: zsh',
+            '        retries: twice',
+            '      - name: test',
+            '  build:',
+            '    steps: []',
+            '',
+          ].join('\n')}
+        />
+        <ul className="flex flex-col gap-1 text-xs">
+          {markers.map((marker) => (
+            <li key={`${marker.startLineNumber}:${marker.startColumn}:${marker.message}`}>
+              <span className="theme-muted-text">
+                {marker.startLineNumber} · {marker.problem?.code ?? '—'}
+              </span>{' '}
+              {marker.message}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </UIProvider>
+  )
+}
+
+/** The schema's and the parser's problems in the reader's language: each comes with a code and
+ *  params, which the host's `useProblemMessage` words, here in Spanish. One the host has no message
+ *  for keeps the YAML service's English. `onValidate` reports each marker's code, listed below. */
+export const YamlProblemsInTheReadersLanguage: StoryObj<typeof Editor> = {
+  render: () => <ProblemsInSpanish />,
+  play: async () => {
+    await waitFor(
+      () => expect(screen.getByText(/No se permite la propiedad timeout/)).toBeVisible(),
+      {
+        timeout: 15000,
+      },
+    )
+    await expect(screen.getByText(/Falta la propiedad "run"/)).toBeVisible()
   },
 }
 

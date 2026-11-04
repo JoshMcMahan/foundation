@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from '@testing-library/react'
+import { UIProvider } from '../components/Provider'
 import MonacoEditor from './Monaco'
 
 // A Monaco that keeps markers by owner and calls its listeners, as the editor's marker loop needs.
@@ -60,8 +61,10 @@ const fake = vi.hoisted(() => {
   )
   const getModelMarkers = ({ owner }: { owner?: string }) =>
     owner
-      ? (markers.get(owner) ?? []).map((marker) => ({ ...marker, owner }))
-      : [...markers].flatMap(([key, list]) => list.map((marker) => ({ ...marker, owner: key })))
+      ? (markers.get(owner) ?? []).map((marker) => ({ ...marker, owner, resource: model.uri }))
+      : [...markers].flatMap(([key, list]) =>
+          list.map((marker) => ({ ...marker, owner: key, resource: model.uri })),
+        )
   return { markers, setModelMarkers, getModelMarkers, model, disposed, markerListeners, listen }
 })
 
@@ -105,7 +108,7 @@ vi.mock('monaco-editor/editor/editor.api', () => ({
 }))
 vi.mock('./monacoFeatures', () => ({}))
 vi.mock('./workers', () => ({ setupMonacoWorkers: () => {} }))
-vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {} }))
+vi.mock('./yamlLanguage', () => ({ ensureYamlLanguage: () => {}, setYamlProblemText: () => {} }))
 vi.mock('./reveal', () => ({ registerRevealer: () => () => {} }))
 vi.mock('../components/useCssIsDark', () => ({ useCssIsDark: () => false }))
 // The lint finds one problem on line 2 whenever it runs.
@@ -197,4 +200,52 @@ test('lets go of its listeners when it unmounts', () => {
   unmount()
   expect(fake.disposed).toEqual(expect.arrayContaining(['content', 'markers']))
   expect(fake.markerListeners.size).toBe(0)
+})
+
+// A host that words one code, in the reader's language, and no other.
+const spanish = {
+  useProblemMessage: () => (code: string, params?: Readonly<Record<string, string | number>>) =>
+    code === 'undefined_need'
+      ? `El trabajo lee needs.${params?.['job']}, que no lista.`
+      : undefined,
+}
+
+test('words a coded problem in the reader’s language, and reports the code it came from', () => {
+  const onValidate = vi.fn()
+  render(
+    <UIProvider data={spanish}>
+      <MonacoEditor
+        value="jobs: {}"
+        onValidate={onValidate}
+        markers={[
+          {
+            line: 1,
+            message: 'The job reads needs.lint, which it does not list.',
+            code: 'undefined_need',
+            params: { job: 'lint' },
+          },
+          { line: 2, message: 'A problem with no code' },
+        ]}
+      />
+    </UIProvider>,
+  )
+  expect(messages('workflowmarkers')).toEqual([
+    'El trabajo lee needs.lint, que no lista.',
+    'A problem with no code',
+  ])
+  const reported = onValidate.mock.lastCall?.[0] as {
+    message: string
+    problem?: { code?: string; message: string }
+  }[]
+  expect(reported).toEqual([
+    expect.objectContaining({
+      message: 'El trabajo lee needs.lint, que no lista.',
+      problem: expect.objectContaining({
+        code: 'undefined_need',
+        params: { job: 'lint' },
+        message: 'The job reads needs.lint, which it does not list.',
+      }),
+    }),
+    expect.not.objectContaining({ problem: expect.anything() }),
+  ])
 })

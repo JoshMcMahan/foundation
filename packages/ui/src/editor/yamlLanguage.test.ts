@@ -108,7 +108,12 @@ describe('ensureYamlLanguage', () => {
   })
 
   it('starts the server before speaking JSON-RPC to it', () => {
-    expect(worker.posted[0]).toEqual({})
+    // Its translation bundle words each schema problem as a code and params.
+    expect(worker.posted[0]).toEqual({
+      l10nBundle: expect.objectContaining({
+        'Missing property "{0}".': expect.stringContaining('yaml_missing_property'),
+      }),
+    })
     expect(worker.posted[1]?.method).toBe('initialize')
     expect(worker.sent('initialize')).toHaveLength(1)
   })
@@ -172,6 +177,40 @@ describe('ensureYamlLanguage', () => {
         severity: 8,
         message: 'Property timeout is not allowed.',
       },
+    ])
+  })
+
+  it('words a coded problem in the reader’s language, and again when the language changes', async () => {
+    const { setYamlProblemText } = await import('./yamlLanguage')
+    const { yamlProblemBundle } = await import('./yamlProblems')
+    const encoded = (yamlProblemBundle()['Property {0} is not allowed.'] ?? '').replace(
+      '{0}',
+      'timeout',
+    )
+    setYamlProblemText(({ code, params, message }) =>
+      code === 'yaml_property_not_allowed' ? `No se permite ${params?.['property']}.` : message,
+    )
+    worker.deliver({
+      jsonrpc: '2.0',
+      method: 'textDocument/publishDiagnostics',
+      params: {
+        uri: 'file:///pipeline.yaml',
+        diagnostics: [
+          {
+            range: { start: { line: 2, character: 4 }, end: { line: 2, character: 11 } },
+            severity: 1,
+            code: 0,
+            message: encoded,
+          },
+        ],
+      },
+    })
+    expect(setModelMarkers).toHaveBeenLastCalledWith(models[0], 'yaml', [
+      expect.objectContaining({ message: 'No se permite timeout.', code: '0' }),
+    ])
+    setYamlProblemText(({ message }) => message)
+    expect(setModelMarkers).toHaveBeenLastCalledWith(models[0], 'yaml', [
+      expect.objectContaining({ message: 'Property timeout is not allowed.' }),
     ])
   })
 })

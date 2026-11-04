@@ -1,7 +1,12 @@
 import * as monaco from 'monaco-editor/editor/editor.api'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFieldLabelledControl } from '../components/Field'
-import { useStrings } from '../components/Provider'
+import {
+  type CodedProblem,
+  type ProblemParams,
+  useProblemText,
+  useStrings,
+} from '../components/Provider'
 import { useCssIsDark } from '../components/useCssIsDark'
 import { cx } from '../cx'
 import type { WorkflowEditing } from '../editing'
@@ -15,38 +20,52 @@ import {
   useLintSources,
 } from './lintContext'
 import { type NestedWorkflowText, publishNestedText } from './nestedText'
+import { markerProblem, type ProblemMarker, setProblemMarkers } from './problemMarkers'
 import './monacoFeatures'
 import { registerRevealer } from './reveal'
 import { defineEditorThemes, followThemeTokens, getThemeName } from './themes'
 import { setupMonacoWorkers } from './workers'
-import { ensureYamlLanguage } from './yamlLanguage'
+import { ensureYamlLanguage, setYamlProblemText } from './yamlLanguage'
 
 setupMonacoWorkers()
 
-/** A problem Monaco or the YAML service found in the text, as `onValidate` reports it. */
-export type ValidationMarker = monaco.editor.IMarker
+/**
+ * A problem Monaco or the YAML service found in the text, as `onValidate` reports it. Its `message`
+ * is in the reader's language; `problem` is the coded problem it was worded from, when it has a
+ * code, with the text the service wrote as its `message`.
+ */
+export type ValidationMarker = monaco.editor.IMarker & { problem?: CodedProblem }
 
 // yaml-language-server's code for a schema it couldn't load, which says nothing about the text.
 const SCHEMA_UNREADABLE = '768'
 
-/** A problem to mark on one line of the editor. */
+/** A problem to mark on one line of the editor. With a `code`, the host's `useProblemMessage`
+ *  words it in the reader's language, and `message` is the text shown when it has none. */
 export interface EditorMarker {
   line: number
   message: string
+  code?: string | null | undefined
+  params?: ProblemParams | null | undefined
+  type?: string | null | undefined
 }
 
 function lintMarker(
   model: monaco.editor.ITextModel,
-  { line, message }: EditorMarker,
-): monaco.editor.IMarkerData {
-  const at = Math.min(Math.max(line || 1, 1), model.getLineCount())
+  problem: EditorMarker,
+  text: (problem: CodedProblem) => string,
+): ProblemMarker {
+  const at = Math.min(Math.max(problem.line || 1, 1), model.getLineCount())
+  const { message, code, params, type } = problem
   return {
-    severity: monaco.MarkerSeverity.Error,
-    message,
-    startLineNumber: at,
-    startColumn: model.getLineFirstNonWhitespaceColumn(at) || 1,
-    endLineNumber: at,
-    endColumn: model.getLineMaxColumn(at),
+    marker: {
+      severity: monaco.MarkerSeverity.Error,
+      message: text(problem),
+      startLineNumber: at,
+      startColumn: model.getLineFirstNonWhitespaceColumn(at) || 1,
+      endLineNumber: at,
+      endColumn: model.getLineMaxColumn(at),
+    },
+    problem: { message, code, params, type },
   }
 }
 
@@ -64,14 +83,8 @@ function sameMarkers(
 }
 
 // Setting markers runs the check again through the marker listener; leaving equal ones stops the loop.
-function setMarkers(
-  model: monaco.editor.ITextModel,
-  owner: string,
-  wanted: monaco.editor.IMarkerData[],
-) {
-  if (!sameMarkers(monaco.editor.getModelMarkers({ resource: model.uri, owner }), wanted)) {
-    monaco.editor.setModelMarkers(model, owner, wanted)
-  }
+function setMarkers(model: monaco.editor.ITextModel, owner: string, wanted: ProblemMarker[]) {
+  setProblemMarkers(model, owner, wanted, sameMarkers)
 }
 
 function editorText(value: string): string {
@@ -167,6 +180,9 @@ export default function MonacoEditor({
   ...options
 }: EditorProps) {
   const { common: t } = useStrings()
+  const problemText = useProblemText()
+  const problemTextRef = useRef(problemText)
+  problemTextRef.current = problemText
   // In a Field, the label names the editor and its description and help describe it.
   const field = useFieldLabelledControl()
   // Editors that shared one URI would share one model, and a second would take the first's text.
@@ -275,7 +291,7 @@ export default function MonacoEditor({
     setMarkers(
       model,
       HOST_MARKER_OWNER,
-      (markersRef.current ?? []).map((marker) => lintMarker(model, marker)),
+      (markersRef.current ?? []).map((marker) => lintMarker(model, marker, problemTextRef.current)),
     )
     setMarkers(model, LINT_OWNER, [])
     // The cross-reference checks read a shape they can only take for granted once the
@@ -301,14 +317,19 @@ export default function MonacoEditor({
           ? []
           : editing
               .lintWorkflow(source, lintContext(editing, source, lintSourcesRef.current, runLint))
-              .map((problem) => lintMarker(model, problem)),
+              .map((problem) => lintMarker(model, problem, problemTextRef.current)),
       )
     }
     runLintRef.current = runLint
     let lintTimer: number | undefined
     const validate = () => {
       runLint()
-      onValidateRef.current(monaco.editor.getModelMarkers({ resource: model.uri }))
+      onValidateRef.current(
+        monaco.editor.getModelMarkers({ resource: model.uri }).map((marker) => {
+          const problem = markerProblem(marker)
+          return problem ? { ...marker, problem } : marker
+        }),
+      )
     }
     const modelListeners = [
       model.onDidChangeContent(() => {
@@ -437,6 +458,7 @@ export default function MonacoEditor({
     }
   }, [language])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new language words the lint again.
   useEffect(() => {
     const model = monacoRef.current?.getModel()
     if (!lint && model) {
@@ -444,7 +466,7 @@ export default function MonacoEditor({
     } else if (lint && lintEditing) {
       runLintRef.current?.()
     }
-  }, [lint, lintEditing])
+  }, [lint, lintEditing, problemText])
 
   useEffect(() => {
     const model = monacoRef.current?.getModel()
@@ -452,10 +474,14 @@ export default function MonacoEditor({
       setMarkers(
         model,
         HOST_MARKER_OWNER,
-        (markers ?? []).map((marker) => lintMarker(model, marker)),
+        (markers ?? []).map((marker) => lintMarker(model, marker, problemText)),
       )
     }
-  }, [markers])
+  }, [markers, problemText])
+
+  useEffect(() => {
+    setYamlProblemText(problemText)
+  }, [problemText])
 
   useEffect(() => {
     if (!isNested) {

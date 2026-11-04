@@ -4,7 +4,7 @@ import { ErrorText, FieldOption } from '../components/Field'
 import { IconButton } from '../components/IconButton'
 import { Input } from '../components/Input'
 import { withPositionKeys } from '../components/keys'
-import { useWorkflowActions, useWorkflowEditing } from '../components/Provider'
+import { useProblemText, useWorkflowActions, useWorkflowEditing } from '../components/Provider'
 import { Select } from '../components/Select'
 import type { GraphEdit, WorkflowEditing } from '../editing'
 import { useLintContext, useLintEditing } from '../editor/lintContext'
@@ -1891,6 +1891,7 @@ function useScopedProblems(
   const context = useLintContext(whole)
   const contextKey = JSON.stringify(context)
   const scope = prefix.join('.')
+  const problemText = useProblemText()
   // biome-ignore lint/correctness/useExhaustiveDependencies: context is compared by its content.
   return useMemo(() => {
     if (!ready || whole === undefined) {
@@ -1907,7 +1908,7 @@ function useScopedProblems(
       const at = path
         .slice(prefix.length)
         .map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment))
-      return [{ at, message: problem.message, fix: problem.fix }]
+      return [{ at, message: problemText(problem), fix: problem.fix }]
     })
     return {
       problems,
@@ -1921,7 +1922,7 @@ function useScopedProblems(
                 1,
             })),
     }
-  }, [ready, whole, contextKey, scope, fragment, exclude.join()])
+  }, [ready, whole, contextKey, scope, fragment, exclude.join(), problemText])
 }
 
 interface AddedGroup {
