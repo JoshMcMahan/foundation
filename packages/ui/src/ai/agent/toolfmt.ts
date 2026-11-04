@@ -157,9 +157,13 @@ function formatToolArgs(primary: string | undefined, argsJSON: string, style: Ar
   return clip(joined, style.totalClip)
 }
 
-// Compact one-line argument summary for a collapsed tool header.
+// The row it sits in ends it with an ellipsis wherever the row ends, so the cap
+// only keeps a huge argument out of the DOM; it is past any row's width.
+const SUMMARY_MAX_CHARS = 300
+
+// One-line argument summary for a collapsed tool header.
 export function summarizeToolArgs(primary: string | undefined, argsJSON: string): string {
-  return formatToolArgs(primary, argsJSON, { valueClip: 50, totalClip: 100 })
+  return formatToolArgs(primary, argsJSON, { valueClip: 0, totalClip: SUMMARY_MAX_CHARS })
 }
 
 // Unclipped form for an expanded block.

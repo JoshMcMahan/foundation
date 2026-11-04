@@ -55,9 +55,17 @@ describe('summarizeToolArgs', () => {
     )
     expect(s).toBe('a.ts')
   })
-  it('clips long values and the total line', () => {
-    const s = summarizeToolArgs('command', JSON.stringify({ command: 'x'.repeat(200) }))
-    expect(s.length).toBeLessThanOrEqual(100)
+  it('keeps a long primary arg whole, ahead of the rest, for the row to cut', () => {
+    const command = `GOOS=linux golangci-lint run --timeout=20m ${'./cmd/... '.repeat(10)}`
+    const s = summarizeToolArgs(
+      'command',
+      JSON.stringify({ command, timeout: 600000, workdir: '/src' }),
+    )
+    expect(s).toBe(`${command}, timeout: 600000, workdir: "/src"`)
+  })
+  it('caps a huge arg', () => {
+    const s = summarizeToolArgs('command', JSON.stringify({ command: 'x'.repeat(5000) }))
+    expect(s.length).toBeLessThanOrEqual(300)
     expect(s.endsWith('...')).toBe(true)
   })
   it('returns empty for unparsable args', () => {
