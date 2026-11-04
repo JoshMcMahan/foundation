@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.113.0](https://github.com/parallelworks/foundation/compare/ui-v0.112.0...ui-v0.113.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** list pages can add their own switches to Display options ([#623](https://github.com/parallelworks/foundation/issues/623)) ([2186d46](https://github.com/parallelworks/foundation/commit/2186d46dbc1d10b66bd550d7fe9bd2230aade7b7))
+
+
+### Bug Fixes
+
+* **ui:** the navigation highlight flashes back to the page just left ([#629](https://github.com/parallelworks/foundation/issues/629)) ([ef6da40](https://github.com/parallelworks/foundation/commit/ef6da4056833b49398822be3844f257dea1d37d5))
+
 ## [0.112.0](https://github.com/parallelworks/foundation/compare/ui-v0.111.0...ui-v0.112.0) (2026-11-04)
 
 
