@@ -447,9 +447,16 @@ leaves unset follows the `color-scheme` it sets:
 ```css
 /* In a Tailwind v4 build: */
 @import "@parallelworks/ui/theme.css";
+@import "@parallelworks/ui/base.css";
 @source "../node_modules/@parallelworks/ui/dist/components";
 @source "../node_modules/@parallelworks/ui/dist/list";
 ```
+
+`base.css` holds the page defaults: the stacking scale under
+[Host chrome](#host-chrome), the body's font and colors, and the default border
+color. Components draw some borders without naming a color, such as a table's
+row dividers, so without `base.css` those borders take the text color instead
+of `--theme-border`.
 
 The package publishes only `dist`, built one JavaScript module per source
 module under the same folders as its subpaths (`dist/components`, `dist/list`,
