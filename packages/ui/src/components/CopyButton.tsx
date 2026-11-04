@@ -226,7 +226,7 @@ export function CopyCodeBlock({
       >
         {shown}
       </pre>
-      <div className="absolute top-2 right-2 flex items-center gap-1">
+      <div className="absolute top-3.25 right-2 flex items-center gap-1">
         {revealButton}
         <CopyButton
           text={text}
