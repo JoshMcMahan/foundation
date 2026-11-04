@@ -8,6 +8,7 @@ import { cx } from '../../cx'
 import { Editor } from '../../editor/Editor'
 import { formatBytes } from '../../format'
 import { DownloadIcon, FileIcon, LockIcon, MusicIcon, ZipIcon } from '../../icons'
+import { FailureDetail } from '../errorText'
 import { type CorsAwareRefresh, CorsIssuePreview } from '../helpers'
 import type { TreeNode, TStorage } from '../lib/types'
 import { joinSource, type NotebookOutput, parseDelimited, parseNotebook, stripAnsi } from './parse'
@@ -34,6 +35,8 @@ interface FilePreviewViewerProps {
   url: string | null
   urlLoading: boolean
   urlError: string | null
+  /** The error's own text, shown under `urlError` as technical detail. */
+  urlErrorDetail?: string | undefined
   /** Image zoom percentage; 100 fits the stage. */
   zoom?: number
   onDownload?: (() => void) | undefined
@@ -46,6 +49,7 @@ export function FilePreviewViewer({
   url,
   urlLoading,
   urlError,
+  urlErrorDetail,
   zoom = 100,
   onDownload,
   storage = null,
@@ -79,6 +83,7 @@ export function FilePreviewViewer({
         icon={<FileIcon className="h-9 w-9 theme-muted-text" />}
         title={t.preview.errorTitle}
         message={urlError}
+        detail={urlErrorDetail}
         onDownload={onDownload}
       />
     )
@@ -671,11 +676,14 @@ function NotPreviewable({
   icon,
   title,
   message,
+  detail,
   onDownload,
 }: {
   icon: React.ReactNode
   title: string
   message: string
+  /** The error's own text, shown under the message as technical detail. */
+  detail?: string | undefined
   onDownload?: (() => void) | undefined
 }) {
   const t = useStrings().fileExplorer
@@ -688,6 +696,11 @@ function NotPreviewable({
         <div>
           <div className="font-semibold">{title}</div>
           <div className="mt-1 text-sm theme-muted-text">{message}</div>
+          {detail && (
+            <div className="mt-3 w-full rounded-md border theme-border bg-(--theme-muted-panel-bg) px-3 py-2">
+              <FailureDetail detail={detail} />
+            </div>
+          )}
         </div>
         {onDownload && (
           <Button variant="primary" icon={<DownloadIcon />} onClick={onDownload}>

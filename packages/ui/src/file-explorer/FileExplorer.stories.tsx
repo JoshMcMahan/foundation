@@ -1,8 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
 import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
-import { type UILinkComponent, UIProvider } from '../components/Provider'
+import { Button } from '../components/Button'
+import { type UILinkComponent, UIProvider, useStrings } from '../components/Provider'
+import { toast } from '../components/Toast'
 import { BucketIcon, ClusterIcon } from '../icons'
+import { FailureLine, FailureText } from './errorText'
 import FileExplorer from './FileExplorer'
 import { FileExplorerProvider } from './FileExplorerContext'
 import { CorsPropagatingPreview, NoDataAvailablePreview } from './helpers'
@@ -204,17 +207,21 @@ function ExplorerDemo({
   viewer,
   initialPath = '',
   width,
+  client = createMockClient,
+  errorMessage,
 }: {
   storages?: TStorage[]
   storageGroups?: TStorageGroup[]
   viewer?: string
   initialPath?: string
   width?: number
+  client?: () => IFileExplorerClient
+  errorMessage?: ((error: unknown) => string | undefined) | undefined
 }) {
   const [path, setPath] = useState(initialPath)
   return (
     <div style={{ height: 560, width }}>
-      <FileExplorerProvider>
+      <FileExplorerProvider errorMessage={errorMessage}>
         <FileExplorer
           storages={storages}
           showUserHierarchy
@@ -222,7 +229,7 @@ function ExplorerDemo({
           viewer={viewer}
           getProviderAndClient={async () => ({
             provider: mockProvider,
-            client: createMockClient(),
+            client: client(),
           })}
           selectedPath={path}
           onPathChange={setPath}
@@ -234,6 +241,141 @@ function ExplorerDemo({
 
 export const Default: StoryObj = {
   render: () => <ExplorerDemo />,
+}
+
+// An API error, as a host's client reports one: a code the host words in the reader's language.
+class ProblemError extends Error {
+  readonly code = 'forbidden'
+  readonly status = 403
+}
+
+// Errors as the storage SDKs throw them: each names its refusal by a code or status, and says
+// what happened in its own words.
+const FAILURES = {
+  api: () => new ProblemError('forbidden'),
+  accessDenied: () =>
+    Object.assign(
+      new Error(
+        'User: arn:aws:sts::123456789012:assumed-role/explorer/session is not authorized to perform: s3:ListBucket on resource: "arn:aws:s3:::demo-bucket" because no identity-based policy allows the s3:ListBucket action',
+      ),
+      { name: 'AccessDenied', $metadata: { httpStatusCode: 403 } },
+    ),
+  notFound: () =>
+    Object.assign(new Error('The specified bucket does not exist'), {
+      name: 'NoSuchBucket',
+      $metadata: { httpStatusCode: 404 },
+    }),
+  credentials: () =>
+    Object.assign(
+      new Error(
+        'Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.',
+      ),
+      { name: 'RestError', code: 'AuthenticationFailed', statusCode: 403 },
+    ),
+  throttled: () =>
+    Object.assign(new Error('Request failed with status code 429'), {
+      isAxiosError: true,
+      response: { status: 429 },
+    }),
+  network: () => new TypeError('Failed to fetch'),
+  other: () => new Error('unexpected EOF while reading the listing response (offset 4096)'),
+} satisfies Record<string, () => unknown>
+
+type FailureCase = keyof typeof FAILURES
+
+function createFailingClient(failure: FailureCase) {
+  return (): IFileExplorerClient => ({
+    ...createMockClient(),
+    async listDirectory(input: unknown) {
+      await sleep(LATENCY_MS)
+      if ((input as MockListInput).directoryPath.replace(/\/+$/, '') === 'data') {
+        throw FAILURES[failure]()
+      }
+      return input as MockListInput
+    },
+  })
+}
+
+const hostErrorMessage = (error: unknown) =>
+  error instanceof ProblemError ? 'You don’t have access to this folder.' : undefined
+
+const FOLDER_FAILS_TEXT: Record<FailureCase, string> = {
+  api: 'Failed to load contents for data: You don’t have access to this folder.',
+  accessDenied: 'Failed to load contents for data: You don’t have access to this storage',
+  notFound: 'Failed to load contents for data: This bucket or file doesn’t exist',
+  credentials: 'Failed to load contents for data: The storage credentials expired or aren’t valid',
+  throttled: 'Failed to load contents for data: The storage service is busy. Try again in a moment',
+  network: 'Failed to load contents for data: Couldn’t reach the storage service',
+  other: 'Failed to load contents for data: The storage service returned an error',
+}
+
+/** A folder that fails to list. An API error shows the host's `errorMessage`, such as a
+ *  localized message for its code. A storage service's refusal is named by its code (access
+ *  denied, not found, expired credentials, throttling, network), and any other error falls back
+ *  to a generic reason. Whatever the error said itself shows under it as detail, with a copy
+ *  button, so the reason is clearer than before and nothing is lost. */
+export const FolderFails: StoryObj<{ failure: FailureCase }> = {
+  args: { failure: 'accessDenied' },
+  argTypes: {
+    failure: {
+      description: 'What the listing fails with',
+      control: 'select',
+      options: Object.keys(FAILURES),
+    },
+  },
+  render: ({ failure }) => (
+    <ExplorerDemo
+      key={failure}
+      initialPath="storybook/demo-bucket/data"
+      client={createFailingClient(failure)}
+      errorMessage={hostErrorMessage}
+    />
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(FOLDER_FAILS_TEXT[args.failure])).toBeVisible()
+  },
+}
+
+/** How a failed delete, download link and refresh after an upload read in a toast: the place's
+ *  sentence, the reason, and the error's own text with its copy button. */
+export const FailureToasts: StoryObj = {
+  render: () => <FailureToastsDemo />,
+}
+
+function FailureToastsDemo() {
+  const t = useStrings().fileExplorer
+  return (
+    <div className="flex flex-wrap gap-2 p-8">
+      <Button
+        onClick={() =>
+          toast.error(
+            <FailureLine
+              failure={{ detail: FAILURES.other().message }}
+              sentence={t.messages.deleteFailed}
+            />,
+          )
+        }
+      >
+        Delete fails
+      </Button>
+      <Button
+        onClick={() =>
+          toast.error(
+            <FailureText
+              summary={t.messages.downloadLinkFailed}
+              failure={{
+                reason: t.messages.cloudErrors.accessDenied,
+                detail: FAILURES.accessDenied().message,
+              }}
+            />,
+          )
+        }
+      >
+        Download link fails
+      </Button>
+    </div>
+  )
 }
 
 const STORAGE_GROUPS: TStorageGroup[] = [

@@ -63,6 +63,7 @@ export function FilePreview({
     url,
     loading: urlLoading,
     error: urlError,
+    errorDetail: urlErrorDetail,
   } = usePresignedUrl(node, getPresignedUrl, {
     enabled: open,
     linkErrorMessage: t.preview.linkError,
@@ -222,6 +223,7 @@ export function FilePreview({
         url={url}
         urlLoading={urlLoading}
         urlError={urlError}
+        urlErrorDetail={urlErrorDetail}
         zoom={zoom}
         storage={storage}
         onDownload={transferLimit === undefined ? () => onDownload(node) : undefined}

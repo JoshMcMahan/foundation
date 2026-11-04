@@ -436,6 +436,18 @@ export interface UIStrings {
       loadFailed: (name: string, message: string) => string
       /** A failure that came with no message of its own. */
       unknownError: string
+      /** Why a storage service refused, recognized by its error code. */
+      cloudErrors: {
+        accessDenied: string
+        notFound: string
+        credentials: string
+        throttled: string
+        network: string
+        /** Any other error from the storage service, whose own text shows below it. */
+        other: string
+      }
+      /** Names the error's own text for its copy button: "Copy error". */
+      errorDetail: string
     }
     chrome: {
       explorer: string
@@ -1392,6 +1404,15 @@ const DEFAULTS: UIProviderValue = {
         previewUnsupported: 'Preview is not supported for this storage.',
         loadFailed: (name, message) => `Failed to load contents for ${name}: ${message}`,
         unknownError: 'Unknown error',
+        cloudErrors: {
+          accessDenied: 'You don’t have access to this storage',
+          notFound: 'This bucket or file doesn’t exist',
+          credentials: 'The storage credentials expired or aren’t valid',
+          throttled: 'The storage service is busy. Try again in a moment',
+          network: 'Couldn’t reach the storage service',
+          other: 'The storage service returned an error',
+        },
+        errorDetail: 'error',
       },
       chrome: {
         explorer: 'Explorer',

@@ -181,8 +181,13 @@ const ROOT = `${storage.user}/${storage.name}`
 const FOLDER_A = `${ROOT}/a`
 const FOLDER_B = `${ROOT}/b`
 
-const explorer = (selectedPath: string, script: Script, storages: TStorage[] = [storage]) => (
-  <FileExplorerProvider>
+const explorer = (
+  selectedPath: string,
+  script: Script,
+  storages: TStorage[] = [storage],
+  errorMessage?: (error: unknown) => string | undefined,
+) => (
+  <FileExplorerProvider errorMessage={errorMessage}>
     <FileExplorer
       getProviderAndClient={script.getProviderAndClient}
       storages={storages}
@@ -192,8 +197,12 @@ const explorer = (selectedPath: string, script: Script, storages: TStorage[] = [
   </FileExplorerProvider>
 )
 
-async function renderExplorer(selectedPath: string, script: Script = scriptedStorage()) {
-  const utils = render(explorer(selectedPath, script))
+async function renderExplorer(
+  selectedPath: string,
+  script: Script = scriptedStorage(),
+  errorMessage?: (error: unknown) => string | undefined,
+) {
+  const utils = render(explorer(selectedPath, script, [storage], errorMessage))
   await act(async () => {})
   return {
     ...utils,
@@ -444,7 +453,10 @@ describe('FileExplorer listing failures', () => {
     await renderExplorer(FOLDER_A, script)
 
     expect(await screen.findByText('Connection issue')).toBeInTheDocument()
-    expect(screen.getByText('Failed to load contents for a: boom')).toBeInTheDocument()
+    expect(
+      screen.getByText('Failed to load contents for a: The storage service returned an error'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('boom')).toBeInTheDocument()
     await act(async () => {})
     expect(script.callsFor('a/')).toHaveLength(1)
 
@@ -453,6 +465,36 @@ describe('FileExplorer listing failures', () => {
 
     expect(await screen.findByLabelText('Select one.txt')).toBeInTheDocument()
     expect(script.callsFor('a/')).toHaveLength(2)
+  })
+
+  it("says why a folder failed in the host's words for an error it knows", async () => {
+    const script = scriptedStorage()
+    script.failWith('a/', Object.assign(new Error('forbidden'), { code: 'forbidden' }))
+    await renderExplorer(FOLDER_A, script, (error) =>
+      (error as { code?: string }).code === 'forbidden' ? 'You can’t open this folder.' : undefined,
+    )
+
+    expect(
+      await screen.findByText('Failed to load contents for a: You can’t open this folder.'),
+    ).toBeInTheDocument()
+  })
+
+  it("names a storage refusal by its code and keeps the error's own text as detail", async () => {
+    const script = scriptedStorage()
+    const denied = Object.assign(new Error('User: arn:aws:iam::123:user/x is not authorized'), {
+      name: 'AccessDenied',
+      $metadata: { httpStatusCode: 403 },
+    })
+    script.failWith('a/', denied)
+    await renderExplorer(FOLDER_A, script, () => 'Something went wrong')
+
+    expect(
+      await screen.findByText(
+        'Failed to load contents for a: You don’t have access to this storage',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('User: arn:aws:iam::123:user/x is not authorized')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy error' })).toBeInTheDocument()
   })
 
   it('re-lists the deepest folder it has on Try again, then walks down to the target', async () => {

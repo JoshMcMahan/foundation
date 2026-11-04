@@ -88,6 +88,7 @@ export function FileRowsWindow({
               rowIndex={item.index + 2}
               loading={loadMore.loading}
               error={loadMore.error}
+              errorDetail={loadMore.errorDetail}
               auto={loadMore.auto}
               root={scrollEl}
               onLoadMore={loadMore.onLoadMore}

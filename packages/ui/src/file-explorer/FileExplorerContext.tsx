@@ -2,6 +2,14 @@ import { createContext, use, useRef } from 'react'
 import { keyedByContent } from '../components/keys'
 import { useStrings } from '../components/Provider'
 import { toast } from '../components/Toast'
+import {
+  type ErrorMessage,
+  ErrorMessageContext,
+  FailureDetail,
+  FailureLine,
+  ShownError,
+  useErrorText,
+} from './errorText'
 import { mapWithConcurrency } from './lib/batch'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
 import type { TreeNode, UploadFileProgress, UploadNode, UploadSession } from './lib/types'
@@ -60,10 +68,24 @@ function isPermissionDenied(reason: unknown): boolean {
 
 interface IFileExplorerProviderProps {
   children: React.ReactNode
+  /** Why something failed, in the reader's words, such as a localized message for an API
+   *  error's code. Return undefined for an error it has no words for: the explorer then names
+   *  a storage service's refusal by its code itself, and shows the error's own text as detail
+   *  under the place's sentence, so nothing the error said is lost. */
+  errorMessage?: ErrorMessage | undefined
 }
 
-export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
+export function FileExplorerProvider({ children, errorMessage }: IFileExplorerProviderProps) {
+  return (
+    <ErrorMessageContext.Provider value={errorMessage}>
+      <UploadSessions>{children}</UploadSessions>
+    </ErrorMessageContext.Provider>
+  )
+}
+
+function UploadSessions({ children }: { children: React.ReactNode }) {
   const t = useStrings().fileExplorer
+  const errorText = useErrorText()
   const uploadSessionMapRef = useRef<Map<string, UploadSession>>(new Map())
   const uploadQueueRef = useRef<string[]>([])
 
@@ -291,7 +313,7 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
           const uploadFileInput = session.provider.uploadFileInput
           if (!uploadFileInput) {
             updateFileProgressInUploadSession(session, node.relativePath, { status: 'failed' })
-            throw new Error('Upload is not supported for this storage provider')
+            throw new ShownError(t.messages.uploadUnsupported)
           }
 
           const input = uploadFileInput(session.storageName, objectPath, node.file)
@@ -392,10 +414,10 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
         await session.refreshTargetNode(session.targetNode)
       } catch (err) {
         toast.error(
-          t.upload.refreshFailed(
-            session.storageName,
-            err instanceof Error ? err.message : t.upload.unknownError,
-          ),
+          <FailureLine
+            failure={errorText(err)}
+            sentence={(reason) => t.upload.refreshFailed(session.storageName, reason)}
+          />,
         )
       }
 
@@ -425,12 +447,24 @@ export function FileExplorerProvider({ children }: IFileExplorerProviderProps) {
                 {t.upload.failedSummary(actualFailedResults.length, results.length)}
               </div>
               <ul className="text-sm space-y-1 max-h-32 overflow-y-auto">
-                {keyedByContent(failedFileNames, (n) => n).map(({ key, item: name }, i) => (
-                  <li key={key}>
-                    • {name}
-                    {actualFailedResults[i]?.reason ? `: ${actualFailedResults[i].reason}` : ''}
-                  </li>
-                ))}
+                {keyedByContent(failedFileNames, (n) => n).map(({ key, item: name }, i) => {
+                  const failure = actualFailedResults[i]?.reason
+                    ? errorText(actualFailedResults[i].reason)
+                    : {}
+                  return (
+                    <li key={key} className="flex flex-col gap-0.5">
+                      <span>
+                        • {name}
+                        {failure.reason ? `: ${failure.reason}` : ''}
+                      </span>
+                      {failure.detail && (
+                        <span className="pl-3">
+                          <FailureDetail detail={failure.detail} />
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
               <div className="mt-2 text-sm">
                 {actualFailedResults.every((result) => isPermissionDenied(result.reason))

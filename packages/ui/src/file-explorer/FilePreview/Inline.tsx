@@ -28,7 +28,7 @@ export function FilePreviewInline({
   active = true,
 }: FilePreviewInlineProps) {
   const t = useStrings().fileExplorer
-  const { url, loading, error } = usePresignedUrl(node, getPresignedUrl, {
+  const { url, loading, error, errorDetail } = usePresignedUrl(node, getPresignedUrl, {
     enabled: active,
     linkErrorMessage: t.preview.linkError,
   })
@@ -44,6 +44,7 @@ export function FilePreviewInline({
           url={url}
           urlLoading={loading}
           urlError={error}
+          urlErrorDetail={errorDetail}
           storage={storage}
           onDownload={
             exceededTransferLimit(node, storage) === undefined ? () => onDownload(node) : undefined

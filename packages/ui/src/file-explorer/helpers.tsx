@@ -33,6 +33,7 @@ import {
   ZipIcon,
 } from '../icons'
 import { ListSkeleton } from '../list/index'
+import { FailureDetail } from './errorText'
 import { CorsError } from './lib/errors'
 import type { TreeNode, TStorage, UploadNode } from './lib/types'
 import { carriesFiles, getFileExtension } from './lib/utils'
@@ -459,6 +460,7 @@ function NoDataAvailablePreview({
   error,
   onRefresh,
   connectionIssueMessage = null,
+  connectionIssueDetail,
   className,
   canWrite = true,
 }: {
@@ -466,6 +468,8 @@ function NoDataAvailablePreview({
   error?: Error | null
   onRefresh?: CorsAwareRefresh
   connectionIssueMessage?: string | null | undefined
+  /** The error's own text, shown under the message as technical detail. */
+  connectionIssueDetail?: string | undefined
   className?: string
   canWrite?: boolean
 }) {
@@ -498,6 +502,11 @@ function NoDataAvailablePreview({
           </div>
           <h2 className="text-base font-semibold mb-1">{t.empty.connectionIssue}</h2>
           <p className="text-sm theme-muted-text mb-4">{connectionIssueMessage}</p>
+          {connectionIssueDetail && (
+            <div className="mb-4 w-full max-w-full rounded-md border theme-border bg-(--theme-muted-panel-bg) px-3 py-2">
+              <FailureDetail detail={connectionIssueDetail} />
+            </div>
+          )}
           <Button
             variant="primary"
             icon={<RefreshIcon />}

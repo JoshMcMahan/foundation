@@ -23,6 +23,8 @@ export type TDirectoryListing = {
   /** The storage-level error surfaces only on an empty folder, so without this a
    *  failure mid-folder is invisible. */
   error?: string | undefined
+  /** The error's own text, shown under `error` as technical detail. */
+  errorDetail?: string | undefined
   /** A new array per page, never mutated: the builder reuses work by identity. */
   entries: readonly TStorageObject[]
 }
@@ -69,6 +71,7 @@ export function beginLoadingMore(listings: TListings, path: string): TListings {
     ...listing,
     loadingMore: true,
     error: undefined,
+    errorDetail: undefined,
   })
 }
 
@@ -109,15 +112,25 @@ export function replaceListing(listings: TListings, path: string, page: TListPag
 }
 
 /** `pagesLoaded` stays put, so a failed first page still reads as unlisted. */
-export function recordListingError(listings: TListings, path: string, error: string): TListings {
+export function recordListingError(
+  listings: TListings,
+  path: string,
+  error: string,
+  errorDetail?: string,
+): TListings {
   const listing = listings.get(path)
   return new Map(listings).set(path, {
     cursor: listing?.cursor,
     pagesLoaded: listing?.pagesLoaded ?? 0,
     loadingMore: false,
     error,
+    ...(errorDetail ? { errorDetail } : {}),
     entries: listing?.entries ?? [],
   })
+}
+
+export function loadMoreErrorDetail(listings: TListings, path: string): string | undefined {
+  return listings.get(path)?.errorDetail
 }
 
 /** Keeps the cursor and pages, so a retry resumes paging instead of starting over. */
@@ -126,7 +139,7 @@ export function clearListingError(listings: TListings, path: string): TListings 
   if (!listing) {
     return listings
   }
-  return new Map(listings).set(path, { ...listing, error: undefined })
+  return new Map(listings).set(path, { ...listing, error: undefined, errorDetail: undefined })
 }
 
 export function clearListingsUnder(listings: TListings, path: string): TListings {
