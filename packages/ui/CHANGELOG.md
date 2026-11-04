@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.114.0](https://github.com/parallelworks/foundation/compare/ui-v0.113.0...ui-v0.114.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** the YAML editor's problems show in the reader's language ([#628](https://github.com/parallelworks/foundation/issues/628)) ([4aad0f9](https://github.com/parallelworks/foundation/commit/4aad0f98e0952c7bb16289d93de4962194893b67))
+
 ## [0.113.0](https://github.com/parallelworks/foundation/compare/ui-v0.112.0...ui-v0.113.0) (2026-11-04)
 
 
