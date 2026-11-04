@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.111.0](https://github.com/parallelworks/foundation/compare/ui-v0.110.0...ui-v0.111.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** navigation groups nest, can be a page, and carry an action on their heading ([#619](https://github.com/parallelworks/foundation/issues/619)) ([2d60dcd](https://github.com/parallelworks/foundation/commit/2d60dcdc3cd7de7bb5675e09ae57cde80c0dbb7b))
+
 ## [0.110.0](https://github.com/parallelworks/foundation/compare/ui-v0.109.0...ui-v0.110.0) (2026-11-03)
 
 
