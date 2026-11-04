@@ -23,6 +23,12 @@ export const SIDEBAR_DEFAULT_WIDTH_PX = 256
 const HIGHLIGHT_SELECTED = 'bg-[color-mix(in_oklab,var(--theme-accent)_12%,transparent)]'
 const HIGHLIGHT_HOVER = 'hover:bg-[color-mix(in_oklab,var(--theme-app)_5%,transparent)]'
 
+// A row's menu button sits over the time rather than holding room of its own
+// at the end of every row, so the time steps aside whenever the button shows.
+// A touch screen shows the button always and keeps room for it instead.
+const ROW_MENU_SHOWN_HIDE =
+  'pointer-fine:group-hover/sidebar-row:invisible pointer-fine:group-data-[menu-open]/sidebar-row:invisible pointer-fine:group-has-[[aria-haspopup=menu]:focus-visible]/sidebar-row:invisible'
+
 /** The column a conversation list lives in: it animates between its width
  *  and a rail, unless a drag is setting the width right now. */
 export function SidebarPanel({
@@ -121,7 +127,14 @@ export function SidebarRowTitle({
     <span className="flex min-w-0 flex-1 items-baseline gap-2">
       <span className="min-w-0 flex-1 truncate text-sm theme-text">{children}</span>
       {time && (
-        <span className="min-w-8 shrink-0 text-[11px] tabular-nums theme-muted-text">{time}</span>
+        <span
+          className={cx(
+            'min-w-8 shrink-0 text-right text-[11px] tabular-nums theme-muted-text',
+            ROW_MENU_SHOWN_HIDE,
+          )}
+        >
+          {time}
+        </span>
       )}
     </span>
   )
@@ -221,15 +234,20 @@ export function SidebarRow({
   const { active, openMenu: openRowMenu } = useRowMenuActive(openMenu)
   return (
     <li
+      data-menu-open={active || undefined}
       className={cx(
-        'group relative flex items-center justify-between rounded-lg px-2 py-[3px] transition-colors duration-150',
+        'group/sidebar-row group relative flex items-center justify-between rounded-lg px-2 py-[3px] transition-colors duration-150 pointer-coarse:pr-9',
         selected || active ? HIGHLIGHT_SELECTED : HIGHLIGHT_HOVER,
         className,
       )}
       {...rowContextMenuProps(openRowMenu, menuItems)}
     >
       {children}
-      <MoreButton open={active} onOpen={(button) => openRowMenu(button, menuItems)} />
+      <MoreButton
+        open={active}
+        onOpen={(button) => openRowMenu(button, menuItems)}
+        className="absolute top-[3px] right-2"
+      />
     </li>
   )
 }

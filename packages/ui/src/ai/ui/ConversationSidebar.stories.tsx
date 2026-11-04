@@ -12,7 +12,7 @@ import {
   type ConversationSidebarGroup,
   sidebarDrawerProps,
 } from './ConversationSidebar'
-import { SidebarRailItem, SidebarRow, SidebarRowTitle, SidebarToggle } from './sidebar'
+import { SidebarRailItem, SidebarRow, SidebarRowBody, SidebarToggle } from './sidebar'
 
 const meta: Meta = {
   title: 'Chat/Conversation sidebar',
@@ -29,14 +29,33 @@ interface Task {
   title: string
   state: State
   age: string
+  /** Where it runs, on the row's second line. */
+  host?: string
 }
 
 const TASKS: Task[] = [
   { id: 't1', title: 'Approve the schema migration', state: 'waiting', age: '2m' },
-  { id: 't2', title: 'Fix the flaky upload test', state: 'running', age: '4m' },
-  { id: 't3', title: 'Bump the build image', state: 'running', age: '11m' },
+  {
+    id: 't2',
+    title: 'Fix the flaky upload test',
+    state: 'running',
+    age: '4m',
+    host: 'build-runner-2.local',
+  },
+  {
+    id: 't3',
+    title: 'Bump the build image and rerun every integration suite',
+    state: 'running',
+    age: '11m',
+    host: 'build-runner-2.local',
+  },
   { id: 't4', title: 'Write release notes', state: 'idle', age: '1h' },
-  { id: 't5', title: 'Profile the slow report query', state: 'idle', age: '3d' },
+  {
+    id: 't5',
+    title: 'Profile the slow report query on the staging replica',
+    state: 'idle',
+    age: '3d',
+  },
 ]
 
 const taskHref = (t: Task) => `/tasks/${t.id}?view=log#latest`
@@ -91,33 +110,43 @@ function TaskSidebar({
         getKey={(t) => t.id}
         cycle={{ current: open, onSelect: (t) => setOpenId(t.id) }}
         placeholder={<EmptyState variant="bare" title="No tasks yet" />}
-        renderRow={(t) => (
-          <SidebarRow
-            selected={t.id === openId}
-            openMenu={openMenu}
-            menuItems={[{ label: 'Rename', onClick: () => {} }]}
-          >
-            {links ? (
-              <AppLink
-                href={taskHref(t)}
-                onClick={() => setOpenId(t.id)}
-                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
-              >
-                {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
-                <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
-              </AppLink>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setOpenId(t.id)}
-                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
-              >
-                {t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
-                <SidebarRowTitle time={t.age}>{t.title}</SidebarRowTitle>
-              </button>
-            )}
-          </SidebarRow>
-        )}
+        renderRow={(t) => {
+          const body = (
+            <SidebarRowBody
+              leading={t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
+              title={t.title}
+              time={t.age}
+              detail={
+                t.host && <span className="truncate font-mono theme-muted-text">{t.host}</span>
+              }
+            />
+          )
+          return (
+            <SidebarRow
+              selected={t.id === openId}
+              openMenu={openMenu}
+              menuItems={[{ label: 'Rename', onClick: () => {} }]}
+            >
+              {links ? (
+                <AppLink
+                  href={taskHref(t)}
+                  onClick={() => setOpenId(t.id)}
+                  className="flex min-w-0 flex-1 py-1 text-left"
+                >
+                  {body}
+                </AppLink>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setOpenId(t.id)}
+                  className="flex min-w-0 flex-1 py-1 text-left"
+                >
+                  {body}
+                </button>
+              )}
+            </SidebarRow>
+          )
+        }}
         rail={tasks
           .filter((t) => t.state !== 'idle')
           .map((t) => (
