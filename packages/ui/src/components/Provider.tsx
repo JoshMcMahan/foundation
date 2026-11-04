@@ -166,6 +166,25 @@ export interface UIStrings {
     /** Under the hex field while what is typed isn't a color. */
     invalid: string
   }
+  imageUpload: {
+    /** Names the tile's menu: what the image stands for, such as a team's name. */
+    change: (name: string) => string
+    /** The menu trigger beside the tile. */
+    edit: string
+    upload: string
+    replace: string
+    remove: string
+    cropTitle: (name: string) => string
+    cropHint: string
+    /** Names the square the image is moved in, for assistive technology. */
+    cropArea: string
+    zoom: string
+    save: string
+    /** When the browser can't read the chosen file as an image. */
+    unreadable: string
+    /** When saving fails without a message of its own. */
+    failed: string
+  }
   oneTimeCode: {
     /** Names each box after the first, which the field's label names. */
     character: (position: number, length: number) => string
@@ -1144,6 +1163,20 @@ const DEFAULTS: UIProviderValue = {
     colorInput: {
       pick: (name) => (name ? `Pick ${name.toLowerCase()}` : 'Pick a color'),
       invalid: 'Enter a hex color, such as #1f6feb.',
+    },
+    imageUpload: {
+      change: (name) => `Change the image for ${name}`,
+      edit: 'Edit image',
+      upload: 'Upload image',
+      replace: 'Upload a new image',
+      remove: 'Remove image',
+      cropTitle: (name) => `Image for ${name}`,
+      cropHint: 'Drag to move it, and zoom to fit.',
+      cropArea: 'Image to crop. Use the arrow keys to move it, and plus or minus to zoom.',
+      zoom: 'Zoom',
+      save: 'Save image',
+      unreadable: "This file couldn't be opened as an image.",
+      failed: "The image couldn't be saved. Try again.",
     },
     oneTimeCode: {
       character: (position, length) => `Character ${position} of ${length}`,

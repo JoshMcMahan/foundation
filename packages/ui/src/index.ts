@@ -148,6 +148,11 @@ export { type FieldBoxOptions, type FieldBoxSize, fieldBox } from './components/
 export type { FloatingAnchor } from './components/floating'
 export { HoverCard, type HoverCardProps } from './components/HoverCard'
 export { IconButton, type IconButtonProps } from './components/IconButton'
+export {
+  IMAGE_UPLOAD_SIZE,
+  ImageUpload,
+  type ImageUploadProps,
+} from './components/ImageUpload'
 export { formatInfoTipContent, InfoTip } from './components/InfoTip'
 export {
   Input,
