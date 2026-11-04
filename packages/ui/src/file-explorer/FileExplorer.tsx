@@ -1645,7 +1645,7 @@ export default function FileExplorer({
       toast.success(t.rename.success(name))
       return true
     } catch (error) {
-      toast.error(t.rename.error(getErrorMessage(error)))
+      toast.error(<FailureText summary={t.rename.failed} failure={errorText(error)} />)
       return false
     }
   }

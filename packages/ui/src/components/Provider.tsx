@@ -393,7 +393,7 @@ export interface UIStrings {
       file: string
       namePlaceholder: string
       success: (name: string) => string
-      error: (message: string) => string
+      failed: string
       unsupported: string
       validation: {
         reserved: string
@@ -1382,7 +1382,7 @@ const DEFAULTS: UIProviderValue = {
         file: 'File',
         namePlaceholder: 'New name',
         success: (name: string) => `Renamed to ${name}.`,
-        error: (message: string) => `Couldn't rename: ${message}`,
+        failed: "Couldn't rename.",
         unsupported: 'Renaming is not supported for this storage.',
         validation: {
           reserved: 'The name cannot be . or ..',
