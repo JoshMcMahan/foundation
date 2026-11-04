@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.115.1](https://github.com/parallelworks/foundation/compare/ui-v0.115.0...ui-v0.115.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** a failed rename in the file explorer shows the storage's own error under a summary ([#639](https://github.com/parallelworks/foundation/issues/639)) ([52a266c](https://github.com/parallelworks/foundation/commit/52a266cde7d0cd86d8118cd8f8e96537d75ce541))
+* **ui:** a sidebar row cuts its title short while leaving empty space at its end ([#640](https://github.com/parallelworks/foundation/issues/640)) ([6239a82](https://github.com/parallelworks/foundation/commit/6239a82449286762165f8c9a5597303f30092151))
+* **ui:** an agent tool call's arguments end at 100 characters in a row with room for more ([#638](https://github.com/parallelworks/foundation/issues/638)) ([8127a48](https://github.com/parallelworks/foundation/commit/8127a48740efdf87a93f1c1e8fb73ede5452bfaa))
+
 ## [0.115.0](https://github.com/parallelworks/foundation/compare/ui-v0.114.1...ui-v0.115.0) (2026-11-04)
 
 
