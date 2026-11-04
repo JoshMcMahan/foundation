@@ -243,3 +243,26 @@ describe('column headers', () => {
     expect(headers().current.showColumnHeaders).toBe(false)
   })
 })
+
+describe('display switches', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', { value: memoryStorage(), configurable: true })
+  })
+
+  it('starts at its default, counts as a display change once flipped, and resets', () => {
+    const { result } = renderHook(() =>
+      useListView<Row>({
+        storageKey: 'switches',
+        columns: COLUMNS,
+        switches: [{ key: 'compact', label: 'Compact', defaultOn: true }],
+      }),
+    )
+    expect(result.current.isSwitchOn('compact')).toBe(true)
+    act(() => result.current.toggleSwitch('compact'))
+    expect(result.current.isSwitchOn('compact')).toBe(false)
+    expect(result.current.isDisplayDefault).toBe(false)
+    act(() => result.current.resetDisplay())
+    expect(result.current.isSwitchOn('compact')).toBe(true)
+    expect(result.current.isDisplayDefault).toBe(true)
+  })
+})

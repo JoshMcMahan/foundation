@@ -168,6 +168,17 @@ export function ListDisplayMenu<T>({
           />
         </div>
       )}
+      {view.switches.map((s) => (
+        <div key={s.key} className="mt-2.5 flex items-center justify-between gap-3">
+          <span className="text-[13px] text-(--theme-app)">{s.label}</span>
+          <Switch
+            size="sm"
+            checked={view.isSwitchOn(s.key)}
+            onCheckedChange={() => view.toggleSwitch(s.key)}
+            aria-label={s.label}
+          />
+        </div>
+      ))}
       {toggleable.length > 0 && (
         <div className="mt-3 border-t border-(--theme-border) pt-3">
           <div className={SECTION_LABEL}>{t.displayProperties}</div>

@@ -29,7 +29,15 @@ const ROWS: DemoRow[] = [
   { id: '4', name: 'googleflex', status: 'active', owner: 'bob' },
 ]
 
-function ControlsDemo({ searchable, layouts }: { searchable: boolean; layouts?: boolean }) {
+function ControlsDemo({
+  searchable,
+  layouts,
+  switches,
+}: {
+  searchable: boolean
+  layouts?: boolean
+  switches?: boolean
+}) {
   const [layout, setLayout] = useState('list')
   const view = useListView<DemoRow>({
     storageKey: 'storybook-demo-list',
@@ -71,7 +79,9 @@ function ControlsDemo({ searchable, layouts }: { searchable: boolean; layouts?: 
         matches: (row, selected) => selected.includes(row.owner),
       },
     ],
+    switches: switches ? [{ key: 'owners', label: 'Show owners', defaultOn: true }] : [],
   })
+  const showOwners = !switches || view.isSwitchOn('owners')
   const search = useListSearch(true, 'storybook-demo-search')
   const rows = view.applyOrder(view.applyFilters(ROWS))
   return (
@@ -100,7 +110,8 @@ function ControlsDemo({ searchable, layouts }: { searchable: boolean; layouts?: 
       <ul className="text-sm">
         {rows.map((r) => (
           <li key={r.id}>
-            {r.name} · {r.status} · {r.owner}
+            {r.name} · {r.status}
+            {showOwners && ` · ${r.owner}`}
           </li>
         ))}
       </ul>
@@ -152,6 +163,14 @@ export const ControlsWithoutSingleKeyShortcuts: StoryObj<{
 // layouts. The play opens it.
 export const Layouts: StoryObj = {
   render: () => <ControlsDemo searchable layouts />,
+  play: async ({ canvasElement }) => {
+    canvasElement.querySelector<HTMLButtonElement>('button[aria-label="Display options"]')?.click()
+  },
+}
+
+// A page's own on-or-off choice, kept and reset with the rest of the view. The play opens it.
+export const Switches: StoryObj = {
+  render: () => <ControlsDemo searchable switches />,
   play: async ({ canvasElement }) => {
     canvasElement.querySelector<HTMLButtonElement>('button[aria-label="Display options"]')?.click()
   },

@@ -75,6 +75,7 @@ export {
   type ActionDef,
   type ColumnDef,
   DEFAULT_ORDER,
+  type DisplaySwitch,
   FAVORITE_ORDER,
   type FilterFacet,
   type ListGroupState,

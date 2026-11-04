@@ -114,6 +114,14 @@ export interface FilterFacet<T> {
   searchable?: boolean
 }
 
+/** A page's own on-or-off choice in Display options, such as how amounts are written, remembered
+ *  and reset with the rest of the view. */
+export interface DisplaySwitch {
+  key: string
+  label: string
+  defaultOn?: boolean
+}
+
 /** Picker metadata + default pinned state only — per-row icons and handlers live in the row component. */
 export interface ActionDef {
   key: string
@@ -152,6 +160,7 @@ export interface ListViewConfig<T> {
   defaultShowColumnHeaders?: boolean
   /** Whether row action affordances show before the user changes Display options. */
   defaultShowActions?: boolean
+  switches?: DisplaySwitch[]
   /** Adds built-in "Default" and "Favorites" sort modes; "Default" wins until the user picks a sort. */
   isFavorite?: (row: T) => boolean
   /** Whether a row is powered on/running; "Default" sort keeps on-rows above off-rows. */
@@ -251,6 +260,9 @@ export interface ListView<T> extends ListViewChrome {
   /** Toggle whether rows expose action affordances. */
   toggleShowActions: () => void
   toggleAlwaysShowActions: () => void
+  switches: DisplaySwitch[]
+  isSwitchOn: (key: string) => boolean
+  toggleSwitch: (key: string) => void
   /** True when grouping, columns, header row, and pinned actions are all at
    * their defaults. */
   isDisplayDefault: boolean
@@ -286,6 +298,7 @@ export function useListView<T>({
   actionCount,
   defaultShowColumnHeaders = true,
   defaultShowActions = true,
+  switches = [],
   isFavorite,
   isOn,
   createdAt,
@@ -358,6 +371,10 @@ export function useListView<T>({
   const [alwaysShowActions, setAlwaysShowActions] = usePersistedState<boolean>(
     `${storageKey}:alwaysShowActions`,
     false,
+  )
+  const [switchChoices, setSwitchChoices] = usePersistedState<Record<string, boolean>>(
+    `${storageKey}:switches`,
+    {},
   )
   const [savedOrderBy, setOrderBy] = usePersistedState<string>(
     `${storageKey}:orderBy`,
@@ -476,6 +493,14 @@ export function useListView<T>({
       setShowActions(true)
     }
   }, [alwaysShowActions, setAlwaysShowActions, setShowActions])
+  const isSwitchOn = useCallback(
+    (key: string) => switchChoices[key] ?? switches.find((s) => s.key === key)?.defaultOn ?? false,
+    [switchChoices, switches],
+  )
+  const toggleSwitch = useCallback(
+    (key: string) => setSwitchChoices((prev) => ({ ...prev, [key]: !isSwitchOn(key) })),
+    [setSwitchChoices, isSwitchOn],
+  )
   const toggleOrderDir = useCallback(
     () => setOrderDir((d) => (d === 'asc' ? 'desc' : 'asc')),
     [setOrderDir],
@@ -513,7 +538,8 @@ export function useListView<T>({
     showActions === defaultShowActions &&
     alwaysShowActions === false &&
     sameKeys(hiddenKeys, defaultHiddenKeys) &&
-    sameKeys(pinnedKeys, defaultPinnedKeys)
+    sameKeys(pinnedKeys, defaultPinnedKeys) &&
+    switches.every((s) => isSwitchOn(s.key) === (s.defaultOn ?? false))
   const resetDisplay = useCallback(() => {
     setGroupBy(defaultGroupByValue)
     setOrderBy(defaultOrderByValue)
@@ -523,6 +549,7 @@ export function useListView<T>({
     setAlwaysShowActions(false)
     setHiddenKeys(defaultHiddenKeys)
     setPinnedKeys(defaultPinnedKeys)
+    setSwitchChoices({})
   }, [
     setGroupBy,
     setOrderBy,
@@ -533,6 +560,7 @@ export function useListView<T>({
     setAlwaysShowActions,
     setHiddenKeys,
     setPinnedKeys,
+    setSwitchChoices,
     defaultGroupByValue,
     defaultHiddenKeys,
     defaultPinnedKeys,
@@ -583,6 +611,9 @@ export function useListView<T>({
     toggleShowActions,
     alwaysShowActions,
     toggleAlwaysShowActions,
+    switches,
+    isSwitchOn,
+    toggleSwitch,
     isDisplayDefault,
     resetDisplay,
     ...groups,
