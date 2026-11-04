@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.112.0](https://github.com/parallelworks/foundation/compare/ui-v0.111.0...ui-v0.112.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** apps can fade a sideways row's hidden ends, and job names read as sentence-case labels ([#622](https://github.com/parallelworks/foundation/issues/622)) ([49046eb](https://github.com/parallelworks/foundation/commit/49046eb4c0088450ae82b2169365589ab1605e4c))
+
+
+### Bug Fixes
+
+* **ui:** screen readers read a navigation item's count with its name ([#625](https://github.com/parallelworks/foundation/issues/625)) ([af304c2](https://github.com/parallelworks/foundation/commit/af304c219fc7ad3e4c482e268f2dd3e566763692))
+* **ui:** the file explorer names a storage service's refusal in the reader's language and keeps the error's own text ([#621](https://github.com/parallelworks/foundation/issues/621)) ([cff247d](https://github.com/parallelworks/foundation/commit/cff247d8831f5ebe8fc6eb2f76cc6737be16302a))
+
 ## [0.111.0](https://github.com/parallelworks/foundation/compare/ui-v0.110.0...ui-v0.111.0) (2026-11-04)
 
 
