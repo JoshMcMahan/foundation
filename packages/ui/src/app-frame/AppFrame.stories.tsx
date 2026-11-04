@@ -1,7 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import { AddIcon, GridIcon, ListViewIcon, MoreIcon, PinFilledIcon, SettingsIcon } from '../icons'
+import {
+  AddIcon,
+  FileTextIcon,
+  GridIcon,
+  InboxIcon,
+  IssueIcon,
+  ListViewIcon,
+  MoreIcon,
+  PinFilledIcon,
+  ProjectIcon,
+  SettingsIcon,
+} from '../icons'
 import {
   AppFrame,
   AppFrameNavGroup,
@@ -230,6 +241,131 @@ function DetailsDemo(args: AppFrameProps) {
 export const ItemDetails: Story = { render: DetailsDemo }
 export const ItemDetailsCollapsed: Story = {
   render: DetailsDemo,
+  args: { defaultExpanded: false },
+}
+function Swatch({ color, letter }: { color: string; letter: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'grid',
+        placeItems: 'center',
+        width: 16,
+        height: 16,
+        borderRadius: 4,
+        background: color,
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 600,
+      }}
+    >
+      {letter}
+    </span>
+  )
+}
+function More({ name }: { name: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={`More actions for ${name}`}
+      style={{ display: 'flex', width: 16, height: 16 }}
+    >
+      <MoreIcon />
+    </button>
+  )
+}
+function NestedDemo(args: AppFrameProps) {
+  const [active, setActive] = useState('Runbooks')
+  const item = (label: string, icon?: ReactNode) => (
+    <AppFrameNavItem
+      key={label}
+      label={label}
+      icon={icon}
+      selected={active === label}
+      onClick={() => setActive(label)}
+    />
+  )
+  const page = (label: string, children: ReactNode) => (
+    <AppFrameNavGroup
+      label={label}
+      icon={<FileTextIcon />}
+      href={`#${label.toLowerCase()}`}
+      current={active === label}
+      onClick={(event) => {
+        event.preventDefault()
+        setActive(label)
+      }}
+      action={<More name={label} />}
+    >
+      {children}
+    </AppFrameNavGroup>
+  )
+  const team = (name: string, color: string, children: ReactNode) => (
+    <AppFrameNavGroup
+      label={name}
+      icon={<Swatch color={color} letter={name.charAt(0)} />}
+      action={<More name={name} />}
+    >
+      {children}
+    </AppFrameNavGroup>
+  )
+  return (
+    <AppFrame
+      {...args}
+      brand={({ expanded }) => (
+        <strong
+          style={{ display: 'block', padding: '6px 0', textAlign: expanded ? 'start' : 'center' }}
+        >
+          {expanded ? 'Workspace' : 'W'}
+        </strong>
+      )}
+      navigation={
+        <nav aria-label="Main navigation">
+          {item('Inbox', <InboxIcon />)}
+          <AppFrameNavGroup
+            label="Teams"
+            collapsible={false}
+            action={
+              <button
+                type="button"
+                aria-label="New team"
+                style={{ display: 'flex', width: 16, height: 16 }}
+              >
+                <AddIcon />
+              </button>
+            }
+          >
+            {team(
+              'Platform',
+              'oklch(0.6 0.15 250)',
+              <>
+                {item('Issues', <IssueIcon />)}
+                {item('Projects', <ProjectIcon />)}
+                {page(
+                  'Docs',
+                  <>
+                    {item('Onboarding', <FileTextIcon />)}
+                    {page('Runbooks', item('Deploys', <FileTextIcon />))}
+                  </>,
+                )}
+                {team('Storage', 'oklch(0.6 0.15 150)', item('Storage issues', <IssueIcon />))}
+              </>,
+            )}
+            {team('Research', 'oklch(0.6 0.15 30)', item('Research issues', <IssueIcon />))}
+          </AppFrameNavGroup>
+        </nav>
+      }
+      footer={({ isMobile }) => !isMobile && <AppFrameToggle />}
+      header={<Header />}
+    >
+      <div style={{ padding: 24 }}>{active}</div>
+    </AppFrame>
+  )
+}
+/** A group inside another is a row with its own icon and actions, and a group can be a page too, folded from the chevron at its end. */
+export const NestedGroups: Story = { render: NestedDemo }
+export const NestedGroupsCollapsed: Story = {
+  render: NestedDemo,
   args: { defaultExpanded: false },
 }
 export const Expanded: Story = {}

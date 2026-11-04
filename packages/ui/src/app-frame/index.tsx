@@ -540,33 +540,65 @@ export function AppFrameNavItem({
   )
 }
 
-export interface AppFrameNavGroupProps {
+export interface AppFrameNavGroupProps
+  extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onClick'>,
+    LinkTarget {
   label: string
-  /** Stands for the group in the rail, where its items open beside it. Defaults to the label's first letter. */
+  /** Stands for the group in the rail, where its items open beside it, and leads its row when
+   *  nested. Defaults to the label's first letter in the rail. */
   icon?: ReactNode
   /** One of its items is the current page, which the rail's icon shows while they're out of sight. */
   selected?: boolean
+  /** The group's own page, at `href`, is the current one. */
+  current?: boolean
   /** False shows the items under a plain heading with no toggle. */
   collapsible?: boolean
   open?: boolean
   defaultOpen?: boolean
   /** Keep `open` in `usePersistedState` to remember it. */
   onOpenChange?: (open: boolean) => void
+  /** A control at the heading's end, such as a menu or an add button. It shows while the
+   *  heading is hovered or focused, and not in the rail. */
+  action?: ReactNode
+  onClick?: (event: MouseEvent<HTMLElement>) => void
   children: ReactNode
 }
-/** Named navigation items that fold under their heading, and open beside the rail from one icon. */
+// How many groups enclose this one; a nested group's heading is a row like its items.
+const NavDepth = createContext(0)
+
+/** Named navigation items that fold under their heading, and open beside the rail from one icon.
+ *  A group inside another, or one with its own page at `href`, shows its heading as a row, and
+ *  nests its items under it. Other attributes, such as `onContextMenu`, go on the heading. */
 export function AppFrameNavGroup({
   label,
   icon,
   selected,
+  current,
   collapsible = true,
   open,
   defaultOpen = true,
   onOpenChange,
+  action,
+  onClick,
+  href,
+  reloadDocument,
+  target,
+  className,
   children,
+  ...rest
 }: AppFrameNavGroupProps) {
   const frame = useFrameContext()
-  if (!(use(NavExpanded) ?? frame.expanded)) {
+  const depth = use(NavDepth)
+  const expanded = use(NavExpanded) ?? frame.expanded
+  const nested = depth > 0 || href != null
+  const items = (
+    <NavDepth value={depth + 1}>
+      <div className={cx('pw-frame-nav-group-items', nested && 'pw-frame-nav-group-nested')}>
+        {children}
+      </div>
+    </NavDepth>
+  )
+  if (!expanded) {
     return (
       <Popover
         openOnHover
@@ -579,10 +611,11 @@ export function AppFrameNavGroup({
         className="pw-frame-nav-flyout"
         trigger={
           <button
+            {...rest}
             type="button"
-            className="pw-frame-nav-item"
+            className={cx('pw-frame-nav-item', className)}
             aria-label={label}
-            data-selected={selected || undefined}
+            data-selected={selected || current || undefined}
           >
             <span className="pw-frame-nav-icon" aria-hidden="true">
               {icon ?? label.charAt(0).toUpperCase()}
@@ -591,31 +624,105 @@ export function AppFrameNavGroup({
         }
       >
         <NavExpanded value={true}>
-          <div className="pw-frame-nav-group-items">{children}</div>
+          {/* The flyout stands for this group, so groups in it are nested ones. */}
+          <NavDepth value={depth + 1}>
+            <div className="pw-frame-nav-group-items">
+              {href != null && (
+                <AppFrameNavItem
+                  label={label}
+                  icon={icon}
+                  href={href}
+                  reloadDocument={reloadDocument}
+                  target={target}
+                  selected={current === true}
+                  {...(onClick ? { onClick } : {})}
+                />
+              )}
+              {children}
+            </div>
+          </NavDepth>
         </NavExpanded>
       </Popover>
     )
   }
-  const items = <div className="pw-frame-nav-group-items">{children}</div>
+  const withAction = (heading: ReactNode) =>
+    action == null ? (
+      heading
+    ) : (
+      <div className="pw-frame-nav-row">
+        {heading}
+        <span className="pw-frame-nav-action">{action}</span>
+      </div>
+    )
+  const headingClass = cx(
+    nested ? 'pw-frame-nav-item pw-frame-nav-group-row' : 'pw-frame-nav-group-heading',
+    className,
+  )
+  const headingContent = (
+    <>
+      {nested && icon != null && (
+        <span className="pw-frame-nav-icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <span className="pw-frame-nav-label">{label}</span>
+    </>
+  )
+  const chevron = <ChevronRightIcon aria-hidden="true" className="pw-frame-nav-group-chevron" />
+  const page =
+    href != null ? (
+      <AppLink
+        {...rest}
+        href={href}
+        reloadDocument={reloadDocument}
+        target={target}
+        className={headingClass}
+        aria-current={current ? 'page' : undefined}
+        onClick={(event: MouseEvent<HTMLElement>) => {
+          onClick?.(event)
+          if (!event.defaultPrevented && isPlainClick(event)) frame.closeNavigation()
+        }}
+      >
+        {headingContent}
+      </AppLink>
+    ) : null
+  const groupClass = cx('pw-frame-nav-group', nested && 'pw-frame-nav-subgroup')
   if (!collapsible) {
     return (
-      <div className="pw-frame-nav-group">
-        <div className="pw-frame-nav-group-heading">{label}</div>
+      <div className={groupClass}>
+        {withAction(
+          page ?? (
+            <div {...rest} className={headingClass}>
+              {headingContent}
+            </div>
+          ),
+        )}
         {items}
       </div>
     )
   }
   return (
     <Collapsible.Root
-      className="pw-frame-nav-group"
+      className={groupClass}
       open={open}
       defaultOpen={defaultOpen}
       onOpenChange={(next) => onOpenChange?.(next)}
     >
-      <Collapsible.Trigger className="pw-frame-nav-group-heading">
-        <span className="pw-frame-nav-label">{label}</span>
-        <ChevronRightIcon aria-hidden="true" className="pw-frame-nav-group-chevron" />
-      </Collapsible.Trigger>
+      {withAction(
+        page ? (
+          <div className="pw-frame-nav-page">
+            {page}
+            <Collapsible.Trigger className="pw-frame-nav-group-toggle" aria-label={label}>
+              {chevron}
+            </Collapsible.Trigger>
+          </div>
+        ) : (
+          <Collapsible.Trigger {...rest} className={headingClass} onClick={onClick}>
+            {headingContent}
+            {chevron}
+          </Collapsible.Trigger>
+        ),
+      )}
       <Collapsible.Panel className={collapsePanelClassName}>{items}</Collapsible.Panel>
     </Collapsible.Root>
   )

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ActionMenu } from '../components/ActionMenu'
 import { AppFrame, AppFrameNavGroup, AppFrameNavItem, AppFrameToggle } from './index'
@@ -337,6 +337,89 @@ describe('AppFrame', () => {
     expect(link.querySelector('.sr-only')).toBeNull()
     fireEvent.click(link)
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Clusters' })).toBeNull())
+  })
+  it('puts other attributes on a group heading, and its action beside the heading', () => {
+    const onContextMenu = vi.fn()
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <AppFrameNavGroup
+            label="Teams"
+            onContextMenu={onContextMenu}
+            action={<button type="button">Create team</button>}
+          >
+            <AppFrameNavItem label="Design" href="#design" />
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    const heading = screen.getByRole('button', { name: 'Teams' })
+    fireEvent.contextMenu(heading)
+    expect(onContextMenu).toHaveBeenCalledOnce()
+    expect(heading).not.toContainElement(screen.getByRole('button', { name: 'Create team' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(screen.queryByRole('button', { name: 'Create team' })).not.toBeInTheDocument()
+  })
+  it('shows a nested group as a row that folds its items', () => {
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <AppFrameNavGroup label="Teams" collapsible={false}>
+            <AppFrameNavGroup label="Design" icon={<span>D</span>}>
+              <AppFrameNavItem label="Issues" href="#issues" />
+            </AppFrameNavGroup>
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    const row = screen.getByRole('button', { name: 'Design' })
+    expect(row).toHaveClass('pw-frame-nav-item')
+    expect(row).toHaveTextContent('D')
+    fireEvent.click(row)
+    expect(screen.queryByRole('link', { name: 'Issues' })).not.toBeInTheDocument()
+  })
+  it('links a group to its own page, and folds it from a separate toggle', () => {
+    render(
+      <AppFrame
+        {...props}
+        navigation={
+          <AppFrameNavGroup label="Guides" href="#guides" current>
+            <AppFrameNavItem label="Setup" href="#setup" />
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    const page = screen.getByRole('link', { name: 'Guides' })
+    expect(page).toHaveAttribute('aria-current', 'page')
+    const toggle = screen.getByRole('button', { name: 'Guides' })
+    expect(page).not.toContainElement(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle)
+    expect(screen.queryByRole('link', { name: 'Setup' })).not.toBeInTheDocument()
+    expect(page).toBeInTheDocument()
+  })
+  it("leads a rail group's flyout with the group's own page", async () => {
+    render(
+      <AppFrame
+        {...props}
+        defaultExpanded={false}
+        navigation={
+          <AppFrameNavGroup label="Guides" icon={<span>G</span>} href="#guides">
+            <AppFrameNavItem label="Setup" href="#setup" />
+          </AppFrameNavGroup>
+        }
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Guides' }))
+    const setup = await screen.findByRole('link', { name: 'Setup' })
+    const flyout = setup.closest('.pw-frame-nav-flyout') as HTMLElement
+    expect(
+      within(flyout)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['GGuides', 'Setup'])
   })
   it('shows a second line under the label, and the first letter in the rail without an icon', () => {
     render(

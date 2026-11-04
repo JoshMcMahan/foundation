@@ -23,7 +23,8 @@
       color 150ms ease-out;
   }
   .pw-frame-nav-item:hover,
-  :where(.pw-frame-nav-row:hover) > .pw-frame-nav-item {
+  :where(.pw-frame-nav-row:hover, .pw-frame-nav-page:hover) > .pw-frame-nav-item,
+  :where(.pw-frame-nav-row:hover > .pw-frame-nav-page) > .pw-frame-nav-item {
     background: var(--theme-sidebar-hover, var(--theme-hover));
     /* Halfway from the sidebar's text to full contrast: a translucent text gains half its missing opacity. */
     color: oklch(
@@ -88,7 +89,7 @@
   .pw-frame-nav-row {
     position: relative;
   }
-  :where(.pw-frame-nav-row) > .pw-frame-nav-item {
+  :where(.pw-frame-nav-row) > :is(.pw-frame-nav-item, .pw-frame-nav-group-heading) {
     padding-inline-end: 32px;
   }
   .pw-frame-nav-action {
@@ -102,6 +103,12 @@
   }
   .pw-frame-nav-row:is(:hover, :focus-within) > .pw-frame-nav-action {
     opacity: 1;
+  }
+  /* Without hover, a hidden action could only be found by accident. */
+  @media (hover: none) {
+    .pw-frame-nav-action {
+      opacity: 1;
+    }
   }
   .pw-frame-nav-group-heading {
     display: flex;
@@ -128,14 +135,56 @@
     flex-shrink: 0;
     transition: transform 200ms ease-out;
   }
-  .pw-frame-nav-group-heading[data-panel-open] .pw-frame-nav-group-chevron {
+  [data-panel-open] > .pw-frame-nav-group-chevron {
     transform: rotate(90deg);
+  }
+  .pw-frame-nav-group-row > .pw-frame-nav-group-chevron {
+    opacity: 0.6;
+  }
+  /* A group with its own page: the link fills the row, and its toggle sits at the row's end. */
+  .pw-frame-nav-page {
+    position: relative;
+  }
+  :where(.pw-frame-nav-page) > .pw-frame-nav-item {
+    padding-inline-end: 28px;
+  }
+  :where(.pw-frame-nav-row) > .pw-frame-nav-page > .pw-frame-nav-item {
+    padding-inline-end: 52px;
+  }
+  .pw-frame-nav-group-toggle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+  }
+  :where(.pw-frame-nav-row) > .pw-frame-nav-page > .pw-frame-nav-group-toggle {
+    inset-inline-end: 26px;
+  }
+  .pw-frame-nav-group-toggle:hover {
+    opacity: 1;
   }
   .pw-frame-nav-group-items {
     display: grid;
   }
+  /* Nested items start under their group's label. */
+  .pw-frame-nav-group-nested {
+    margin-inline-start: var(--pw-frame-nav-indent, 26px);
+  }
   .pw-frame-nav-group {
     padding-block: 4px;
+  }
+  .pw-frame-nav-subgroup {
+    padding-block: 0;
   }
   /* A flyout is a popover, not the sidebar, so its items take the popover's colors. */
   .pw-frame-nav-flyout {
