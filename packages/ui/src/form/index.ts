@@ -61,6 +61,6 @@ export {
 } from './utils/duration'
 export type { FieldOption, FieldOptionGroup, FieldOptionItem } from './utils/fieldItems'
 export { getPlaceholder } from './utils/getPlaceholder'
-export { humanizeKey } from './utils/humanizeKey'
+export { type HumanizeKeyOptions, humanizeKey } from './utils/humanizeKey'
 export { applySecondaryField } from './utils/secondaryField'
 export type { ServerError } from './validation'

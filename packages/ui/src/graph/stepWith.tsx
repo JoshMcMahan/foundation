@@ -11,6 +11,7 @@ import {
 } from '../components/Provider'
 import type { LintFix, WorkflowAction, WorkflowActionInput } from '../editing'
 import { DynamicForm } from '../form/Form'
+import { humanizeKey } from '../form/utils/humanizeKey'
 import { RemoveIcon } from '../icons'
 import {
   asRecord,
@@ -706,7 +707,7 @@ export function WithEditor({
                 return (
                   <SuggestedInput
                     key={key}
-                    label={label || key}
+                    label={label || humanizeKey(key)}
                     yamlKey={key}
                     description={about || (typeNames[type] ?? type)}
                     value={draft.rows.find((row) => row.key === key)?.value ?? ''}

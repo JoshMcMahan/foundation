@@ -112,9 +112,9 @@ describe('TreeView', () => {
       )
     }
     render(<Pipeline />)
-    const merge = row('merge-bams')
-    expect(within(merge).getByText('Merge-bams')).toHaveAttribute('title', 'Merge-bams')
-    const lane = within(merge).getByText('Align-lane-4')
+    const merge = row('merge bams')
+    expect(within(merge).getByText('Merge bams')).toHaveAttribute('title', 'Merge bams')
+    const lane = within(merge).getByText('Align lane 4')
     expect(lane).toHaveClass('whitespace-nowrap')
     expect(lane.parentElement).toHaveClass('flex-wrap')
     // The name's column takes all the room the time leaves; no spacer splits it.

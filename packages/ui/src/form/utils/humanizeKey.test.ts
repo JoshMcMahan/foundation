@@ -66,6 +66,13 @@ describe('humanizeKey', () => {
     expect(humanizeKey('jobs.0')).toBe('Jobs')
   })
 
+  it('reads a name with dots as a whole when it is not a path', () => {
+    expect(humanizeKey('deploy.prod', { path: false })).toBe('Deploy prod')
+    expect(humanizeKey('jobs.0', { path: false })).toBe('Jobs 0')
+    expect(humanizeKey('run_tests', { path: false })).toBe('Run tests')
+    expect(humanizeKey('deploy.prod')).toBe('Prod')
+  })
+
   it('returns a key with no words as given', () => {
     expect(humanizeKey('')).toBe('')
     expect(humanizeKey('___')).toBe('___')

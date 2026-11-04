@@ -1,12 +1,18 @@
 import { type CSSProperties, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 
-/** Which ends of a sideways scroller hide some of its content, kept up to date as it
- *  scrolls, resizes or settles. */
+/** Which ends of a sideways scroller hide some of its content. `start` and `end` follow the
+ *  line's direction, so `start` is the right in a right-to-left line. */
 export type HiddenEnds = { start: boolean; end: boolean }
 const NO_ENDS: HiddenEnds = { start: false, end: false }
 
-export function useHiddenEnds(active: boolean) {
-  const ref = useRef<HTMLElement>(null)
+/**
+ * Tracks which ends of a row that scrolls sideways hide some of its content, kept up to date
+ * as it scrolls, resizes or settles. Put `ref` and `onScroll` on the element that scrolls
+ * (`overflow-x: auto`), and give its `style` `fadeMask(ends)` to fade the ends that hide
+ * something. While `active` is false, as for a row that wraps instead, no end is hidden.
+ */
+export function useHiddenEnds<T extends HTMLElement = HTMLElement>(active = true) {
+  const ref = useRef<T>(null)
   const [ends, setEnds] = useState<HiddenEnds>(NO_ENDS)
   const measureNow = () => {
     const el = ref.current
@@ -49,8 +55,14 @@ export function useHiddenEnds(active: boolean) {
 // How far the fade reaches into a value that runs on past an edge.
 const FADE = '1.25rem'
 
-/** Fades whichever ends hide content, over `reach` from each edge, leaving the outermost `clear`
- *  of it fully hidden, such as for a control that sits there. */
+/**
+ * A mask style that fades whichever `ends` hide content, over `reach` from each edge (1.25rem
+ * unless given), leaving the outermost `clear` of it fully hidden, such as under an arrow that
+ * sits there. Returns undefined when nothing is hidden, so a row that fits shows whole.
+ *
+ * The fade runs left to right. In a right-to-left line, set `--fade-end: left` on the same
+ * element (`rtl:[--fade-end:left]`) so it follows the line.
+ */
 export function fadeMask(
   { start, end }: HiddenEnds,
   reach = FADE,

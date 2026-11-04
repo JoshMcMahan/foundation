@@ -5,18 +5,26 @@ const WORD = /[A-Z]{2,}s(?![a-z])|[A-Z]+\d*(?![a-z])|[A-Z]?[a-z]+\d*|\d+[a-z]*/g
 
 const isAcronym = (word: string) => /^[A-Z][A-Z\d]*$|^[A-Z]{2,}[A-Z\d]*s$/.test(word)
 
+export interface HumanizeKeyOptions {
+  /** Whether `key` is a path, read by its last name. False reads a name that may hold dots,
+   *  such as a job's, as a whole: `deploy.prod` is "Deploy prod". True unless given. */
+  path?: boolean | undefined
+}
+
 /**
  * A schema key as a sentence-case label, for a field that has no label of its own: `max_nodes` is
  * "Max nodes", `slurmPartition` "Slurm partition", `numGPUs` "Num GPUs". A path reads by its last
- * name (`jobs.0.name` is "Name"). Acronyms keep their capitals, unless the whole key is written in
- * capitals (`MAX_NODES` is "Max nodes"). A key with no letters or digits is returned as given.
+ * name (`jobs.0.name` is "Name"), unless `path` is false. Acronyms keep their capitals, unless the
+ * whole key is written in capitals (`MAX_NODES` is "Max nodes"). A key with no letters or digits
+ * is returned as given.
  */
-export function humanizeKey(key: string): string {
-  const segment =
-    key
-      .split(/[.[\]]+/)
-      .filter((part) => part !== '' && !/^\d+$/.test(part))
-      .at(-1) ?? key
+export function humanizeKey(key: string, { path = true }: HumanizeKeyOptions = {}): string {
+  const segment = path
+    ? (key
+        .split(/[.[\]]+/)
+        .filter((part) => part !== '' && !/^\d+$/.test(part))
+        .at(-1) ?? key)
+    : key
   const shouting = /[^A-Za-z0-9]/.test(segment) && segment === segment.toUpperCase()
   const words = segment
     .split(/[^A-Za-z0-9]+/)

@@ -35,6 +35,7 @@ import * as splitView from './components/SplitView.stories'
 import * as statTile from './components/StatTile.stories'
 import * as statusBadge from './components/StatusBadge.stories'
 import * as statusLabel from './components/StatusLabel.stories'
+import * as scrollFade from './components/scrollFade.stories'
 import * as sections from './components/sections.stories'
 import * as tabs from './components/Tabs.stories'
 import * as tags from './components/Tag.stories'
@@ -117,6 +118,7 @@ const SUITES = {
   descriptionList,
   errorPage,
   tabs,
+  scrollFade,
   splitView,
   loading,
   markdown,

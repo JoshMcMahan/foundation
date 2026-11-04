@@ -356,6 +356,7 @@ export {
 } from './components/StatusLabel'
 export { StickyBar, type StickyBarProps } from './components/StickyBar'
 export { Switch, type SwitchProps } from './components/Switch'
+export { fadeMask, type HiddenEnds, useHiddenEnds } from './components/scrollFade'
 export type { SegmentTone } from './components/segmented'
 export { isTextEntryContext, useShortcutKey } from './components/shortcutKey'
 export { type SortDirection, Table, type TableDensity } from './components/Table'

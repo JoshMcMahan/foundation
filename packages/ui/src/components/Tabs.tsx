@@ -3,7 +3,6 @@ import {
   type CSSProperties,
   createContext,
   type ReactNode,
-  type Ref,
   useContext,
   useLayoutEffect,
   useRef,
@@ -116,7 +115,7 @@ export function Tabs<Value extends string>({
   useStickyTop(row, !!sticky)
   // A line row that runs past its width scrolls sideways: it fades at the end that hides tabs,
   // and keeps the current tab in view.
-  const scroller = useHiddenEnds(!segmented && showRow)
+  const scroller = useHiddenEnds<HTMLDivElement>(!segmented && showRow)
   const scrolled = useRef(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs again when the current tab changes, to find it
   useLayoutEffect(() => {
@@ -204,7 +203,7 @@ export function Tabs<Value extends string>({
           <div className={cx('relative flex min-w-0', segmented && 'contents')}>
             <BaseTabs.List
               aria-label={label}
-              ref={segmented ? undefined : (scroller.ref as Ref<HTMLDivElement>)}
+              ref={segmented ? undefined : scroller.ref}
               onScroll={segmented ? undefined : scroller.onScroll}
               style={
                 segmented ? undefined : fadeMask(scroller.ends, `${TAB_FADE_PX}px`, `${ARROW_PX}px`)

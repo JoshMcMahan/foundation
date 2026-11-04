@@ -68,7 +68,7 @@ const STEP_KINDS = `jobs:
 `
 
 // The workflow a step reads under withDeployWorkflow, with two configurations it can name, beside
-// saved inputs of the reader's own.
+// saved inputs of the reader's own. One input has no label, so the dialog names it from its key.
 const DEPLOY = {
   configurations: {
     staging: { inputs: { region: 'us-east', replicas: 1 } },
@@ -79,6 +79,7 @@ const DEPLOY = {
       inputs: {
         region: { type: 'string', label: 'Region' },
         replicas: { type: 'number', label: 'Replicas' },
+        health_check_path: { type: 'string' },
       },
     },
   },
