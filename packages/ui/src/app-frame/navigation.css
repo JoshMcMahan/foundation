@@ -1,5 +1,7 @@
 @layer pw-ui {
   .pw-frame-nav-item {
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -18,23 +20,50 @@
     cursor: pointer;
     text-decoration: none;
     text-align: start;
-    transition:
-      background-color 150ms ease-out,
-      color 150ms ease-out;
+    transition: color 150ms ease-out;
+  }
+  /* Backgrounds fade by opacity on layers: Chromium runs background-color transitions on the
+     compositor, and an item repainted mid-fade shows its starting color for a frame as the fade
+     ends, flashing the highlight back to the item just left. */
+  .pw-frame-nav-item::before,
+  .pw-frame-nav-item::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease-out;
+  }
+  .pw-frame-nav-item::before {
+    background: var(--theme-sidebar-hover, var(--theme-hover));
+  }
+  .pw-frame-nav-item::after {
+    background: var(--theme-sidebar-active-bg, var(--theme-accent-subtle));
   }
   .pw-frame-nav-item:hover,
   :where(.pw-frame-nav-row:hover, .pw-frame-nav-page:hover) > .pw-frame-nav-item,
   :where(.pw-frame-nav-row:hover > .pw-frame-nav-page) > .pw-frame-nav-item {
-    background: var(--theme-sidebar-hover, var(--theme-hover));
     /* Halfway from the sidebar's text to full contrast: a translucent text gains half its missing opacity. */
     color: oklch(
       from var(--theme-sidebar-text, var(--theme-app)) calc(l + (l - 0.5) * 0.5) c h /
       calc(alpha + (1 - alpha) * 0.5)
     );
   }
+  .pw-frame-nav-item:hover::before,
+  :where(.pw-frame-nav-row:hover, .pw-frame-nav-page:hover) > .pw-frame-nav-item::before,
+  :where(.pw-frame-nav-row:hover > .pw-frame-nav-page) > .pw-frame-nav-item::before {
+    opacity: 1;
+  }
   .pw-frame-nav-item:is([aria-current], [data-selected]) {
-    background: var(--theme-sidebar-active-bg, var(--theme-accent-subtle));
     color: var(--theme-sidebar-active-text, var(--theme-accent));
+  }
+  .pw-frame-nav-item:is([aria-current], [data-selected])::before {
+    opacity: 0;
+  }
+  .pw-frame-nav-item:is([aria-current], [data-selected])::after {
+    opacity: 1;
   }
   .pw-frame-nav-item:is(:disabled, [aria-disabled]) {
     opacity: 0.5;
@@ -202,6 +231,8 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .pw-frame-nav-item,
+    .pw-frame-nav-item::before,
+    .pw-frame-nav-item::after,
     .pw-frame-nav-action,
     .pw-frame-nav-group-chevron {
       transition: none;
