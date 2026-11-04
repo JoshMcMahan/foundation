@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.114.1](https://github.com/parallelworks/foundation/compare/ui-v0.114.0...ui-v0.114.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** a code block's copy button sits above its one line of code ([#633](https://github.com/parallelworks/foundation/issues/633)) ([26c5e4c](https://github.com/parallelworks/foundation/commit/26c5e4cc66868f03e2172b0fb9394e161f2a3a9a))
+
 ## [0.114.0](https://github.com/parallelworks/foundation/compare/ui-v0.113.0...ui-v0.114.0) (2026-11-04)
 
 
