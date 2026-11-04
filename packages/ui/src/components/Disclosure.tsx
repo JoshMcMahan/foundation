@@ -79,7 +79,7 @@ export function Disclosure({
       {!disabled && chevron && (
         <ChevronRightIcon
           aria-hidden="true"
-          className="mt-1 h-3.5 w-3.5 shrink-0 opacity-70 transition-transform group-data-panel-open/disclosure:rotate-90 motion-reduce:transition-none"
+          className="mt-[calc((1lh-0.875rem)/2)] h-3.5 w-3.5 shrink-0 opacity-70 transition-transform group-data-panel-open/disclosure:rotate-90 motion-reduce:transition-none"
         />
       )}
     </Collapsible.Trigger>
