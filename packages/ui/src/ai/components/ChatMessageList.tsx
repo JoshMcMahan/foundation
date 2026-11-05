@@ -144,6 +144,7 @@ export default function ChatMessageList({
   }, [adapter])
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const floorRef = useRef<HTMLDivElement>(null)
   const reasoningScrollRef = useRef<HTMLDivElement>(null)
 
   const messageCount = messages.length
@@ -324,10 +325,19 @@ export default function ChatMessageList({
 
   // Follows content that grows after its reply finished, such as a card that
   // keeps showing what a tool is doing, while the reader sits at the bottom.
+  //
+  // It also holds the list at the content's last observed height until the
+  // next observation. WebKit lays the list out partway through inserting an
+  // inline SVG sized by its attributes, before the inserted rows count toward
+  // the list's height. Rows swapped near the bottom (the finished reply taking
+  // the streaming row's place, markdown replacing its loading text) would
+  // otherwise clamp the position by their height, and the scroll event that
+  // follows would read as the reader scrolling up.
   // biome-ignore lint/correctness/useExhaustiveDependencies: hasContent re-observes once the content mounts; it is absent in the empty state.
   useEffect(() => {
     const content = contentRef.current
-    if (!content || typeof ResizeObserver === 'undefined') {
+    const floor = floorRef.current
+    if (!content || !floor || typeof ResizeObserver === 'undefined') {
       return
     }
     // Growth the reader caused, such as opening a tool's row, stays put: the
@@ -339,6 +349,7 @@ export default function ChatMessageList({
     content.addEventListener('click', touched, true)
     content.addEventListener('keydown', touched, true)
     const observer = new ResizeObserver(() => {
+      floor.style.minHeight = `${content.offsetHeight}px`
       const el = containerRef.current
       if (
         el &&
@@ -384,142 +395,159 @@ export default function ChatMessageList({
       aria-relevant="additions"
       aria-label={label ?? strings.thread.label}
       aria-busy={isStreaming || undefined}
-      className="chat-thread flex-1 overflow-y-auto theme-scrollbar flex flex-col bg-(--theme-panel-bg)"
+      // Scroll anchoring keeps a reader who scrolled up in place. At the bottom
+      // the list follows on its own, and an anchoring adjustment (WebKit makes
+      // one when markdown replaces its loading text) would read as the reader
+      // scrolling up.
+      className={cx(
+        'chat-thread flex-1 overflow-y-auto theme-scrollbar flex flex-col bg-(--theme-panel-bg)',
+        pinned && '[overflow-anchor:none]',
+      )}
     >
-      <div
-        ref={contentRef}
-        className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 flex-1 px-4"
-      >
-        <MessageRows
-          messages={messages}
-          allMessages={allMessages}
-          streaming={!!streamingMessage}
-          flush={flush}
-          editingMessageId={editingMessageId}
-          showAuthor={showAuthor}
-          currentUsername={currentUsername}
-          attachmentDownloadUrl={attachmentDownloadUrl}
-          onOpenAttachment={onOpenAttachment}
-          onNavigateBranch={onNavigateBranch}
-          onEditMessage={onEditMessage}
-          onSaveEdit={onSaveEdit}
-          onCancelEdit={onCancelEdit}
-          onRegenerateMessage={onRegenerateMessage}
-          onRetryMessage={onRetryMessage}
-          onOpenReasoning={onOpenReasoning}
-          onApprovalAnswer={onApprovalAnswer}
-        />
-        {/* Thinking / "Thought for" section — visible during and after thinking */}
-        {isStreaming && streamingReasoning && (
-          <div key="thinking" className="animate-chat-enter">
-            <div className={cx('pt-3', !flush && 'sm:px-4')}>
-              <Reasoning
-                label={
-                  <ThinkingLabel
-                    startedAt={isThinking ? thinkingStartTime : undefined}
-                    finalDuration={finalThinkingDuration}
-                  />
-                }
-                shimmer={isThinking}
-                open={reasoningOpen}
-                onOpenChange={setReasoningOpen}
-                onOpenPanel={
-                  onOpenReasoning &&
-                  (() => onOpenReasoning(streamingReasoning, finalThinkingDuration))
-                }
-                // While thinking, its tail, faded at the top, so the work shows without taking the page.
-                preview={
-                  isThinking && (
-                    <ReasoningBody className="chat-reasoning-tail">
-                      <div ref={reasoningScrollRef} className="max-h-20 overflow-y-hidden">
-                        <Markdown isStreaming>{streamingReasoning}</Markdown>
-                      </div>
-                    </ReasoningBody>
-                  )
-                }
-              >
-                <Markdown isStreaming={isThinking}>{streamingReasoning}</Markdown>
-              </Reasoning>
-            </div>
-          </div>
-        )}
-        {/* Tool calls and other parts streamed this turn, between the
-              thinking header and the answer — mirrors the stored-message
-              layout where parts precede content. */}
-        {isStreaming && streamingParts.length > 0 && (
-          <div key="streaming-parts" className={cx('animate-chat-enter py-1', !flush && 'sm:px-4')}>
-            <AgentMessageParts message={streamingPartsMessage} isStreaming={isStreaming} />
-          </div>
-        )}
-        {/* Working indicator — until the answer starts streaming */}
-        {showWorkingIndicator && (
-          <div key="waiting" className="animate-chat-enter">
-            <div className={cx('py-3', !flush && 'sm:px-4')}>
-              <div className="animate-shimmer text-shimmer text-sm">{tThinking.ellipsis}</div>
-            </div>
-          </div>
-        )}
-        {streamingMessage && (
-          <div key="streaming" className="animate-chat-enter">
-            <ChatMessage
-              message={streamingMessage}
-              allMessages={allMessages}
-              flush={flush}
-              isStreaming={isStreaming}
-              attachmentDownloadUrl={attachmentDownloadUrl}
-              onOpenAttachment={onOpenAttachment}
-              onApprovalAnswer={onApprovalAnswer}
-            />
-          </div>
-        )}
-        {queuedMessages?.map((msg) => {
-          const removable = canRemoveQueued?.(msg.id) ?? true
-          const status = !removable
-            ? strings.queue.handedOver
-            : (typeof queueDelivery === 'function' ? queueDelivery(msg.id) : queueDelivery) ===
-                'nextStep'
-              ? strings.queue.waitingNextStep
-              : strings.queue.waiting
-          return (
-            // Waiting, not faded: full-contrast text in an outline rather than
-            // a filled bubble, with a line saying when it reaches the model.
-            // One already handed to the running turn is sent, so it is filled.
-            <div key={msg.id} className={cx('animate-chat-enter', removable && 'chat-queued')}>
-              <ChatMessage
-                message={msg}
-                allMessages={allMessages}
-                flush={flush}
-                attachmentDownloadUrl={attachmentDownloadUrl}
-                onOpenAttachment={onOpenAttachment}
-              />
-              <div
-                data-testid="queued-status"
-                className={cx(
-                  '-mt-4 mb-2 flex items-center justify-end gap-2 text-xs theme-muted-text',
-                  !flush && 'sm:px-4',
-                )}
-              >
-                {removable ? <ClockIcon className="h-3 w-3" /> : <CheckIcon className="h-3 w-3" />}
-                <span>{status}</span>
-                {onRemoveQueued && removable && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <button
-                      type="button"
-                      aria-label={strings.queue.remove}
-                      onClick={() => onRemoveQueued(msg.id)}
-                      className="rounded font-medium underline-offset-2 hover:theme-text hover:underline"
-                    >
-                      {common.remove}
-                    </button>
-                  </>
-                )}
+      {/* Holds the content's last observed height: see the resize observer. */}
+      <div ref={floorRef} className="flex-1">
+        <div
+          ref={contentRef}
+          className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 px-4"
+        >
+          <MessageRows
+            messages={messages}
+            allMessages={allMessages}
+            streaming={!!streamingMessage}
+            flush={flush}
+            editingMessageId={editingMessageId}
+            showAuthor={showAuthor}
+            currentUsername={currentUsername}
+            attachmentDownloadUrl={attachmentDownloadUrl}
+            onOpenAttachment={onOpenAttachment}
+            onNavigateBranch={onNavigateBranch}
+            onEditMessage={onEditMessage}
+            onSaveEdit={onSaveEdit}
+            onCancelEdit={onCancelEdit}
+            onRegenerateMessage={onRegenerateMessage}
+            onRetryMessage={onRetryMessage}
+            onOpenReasoning={onOpenReasoning}
+            onApprovalAnswer={onApprovalAnswer}
+          />
+          {/* Thinking / "Thought for" section — visible during and after thinking */}
+          {isStreaming && streamingReasoning && (
+            <div key="thinking" className="animate-chat-enter">
+              <div className={cx('pt-3', !flush && 'sm:px-4')}>
+                <Reasoning
+                  label={
+                    <ThinkingLabel
+                      startedAt={isThinking ? thinkingStartTime : undefined}
+                      finalDuration={finalThinkingDuration}
+                    />
+                  }
+                  shimmer={isThinking}
+                  open={reasoningOpen}
+                  onOpenChange={setReasoningOpen}
+                  onOpenPanel={
+                    onOpenReasoning &&
+                    (() => onOpenReasoning(streamingReasoning, finalThinkingDuration))
+                  }
+                  // While thinking, its tail, faded at the top, so the work shows without taking the page.
+                  preview={
+                    isThinking && (
+                      <ReasoningBody className="chat-reasoning-tail">
+                        <div ref={reasoningScrollRef} className="max-h-20 overflow-y-hidden">
+                          <Markdown isStreaming>{streamingReasoning}</Markdown>
+                        </div>
+                      </ReasoningBody>
+                    )
+                  }
+                >
+                  <Markdown isStreaming={isThinking}>{streamingReasoning}</Markdown>
+                </Reasoning>
               </div>
             </div>
-          )
-        })}
-        {footer}
-        <div className="h-8" />
+          )}
+          {/* Tool calls and other parts streamed this turn, between the
+                thinking header and the answer — mirrors the stored-message
+                layout where parts precede content. */}
+          {isStreaming && streamingParts.length > 0 && (
+            <div
+              key="streaming-parts"
+              className={cx('animate-chat-enter py-1', !flush && 'sm:px-4')}
+            >
+              <AgentMessageParts message={streamingPartsMessage} isStreaming={isStreaming} />
+            </div>
+          )}
+          {/* Working indicator — until the answer starts streaming */}
+          {showWorkingIndicator && (
+            <div key="waiting" className="animate-chat-enter">
+              <div className={cx('py-3', !flush && 'sm:px-4')}>
+                <div className="animate-shimmer text-shimmer text-sm">{tThinking.ellipsis}</div>
+              </div>
+            </div>
+          )}
+          {streamingMessage && (
+            <div key="streaming" className="animate-chat-enter">
+              <ChatMessage
+                message={streamingMessage}
+                allMessages={allMessages}
+                flush={flush}
+                isStreaming={isStreaming}
+                attachmentDownloadUrl={attachmentDownloadUrl}
+                onOpenAttachment={onOpenAttachment}
+                onApprovalAnswer={onApprovalAnswer}
+              />
+            </div>
+          )}
+          {queuedMessages?.map((msg) => {
+            const removable = canRemoveQueued?.(msg.id) ?? true
+            const status = !removable
+              ? strings.queue.handedOver
+              : (typeof queueDelivery === 'function' ? queueDelivery(msg.id) : queueDelivery) ===
+                  'nextStep'
+                ? strings.queue.waitingNextStep
+                : strings.queue.waiting
+            return (
+              // Waiting, not faded: full-contrast text in an outline rather than
+              // a filled bubble, with a line saying when it reaches the model.
+              // One already handed to the running turn is sent, so it is filled.
+              <div key={msg.id} className={cx('animate-chat-enter', removable && 'chat-queued')}>
+                <ChatMessage
+                  message={msg}
+                  allMessages={allMessages}
+                  flush={flush}
+                  attachmentDownloadUrl={attachmentDownloadUrl}
+                  onOpenAttachment={onOpenAttachment}
+                />
+                <div
+                  data-testid="queued-status"
+                  className={cx(
+                    '-mt-4 mb-2 flex items-center justify-end gap-2 text-xs theme-muted-text',
+                    !flush && 'sm:px-4',
+                  )}
+                >
+                  {removable ? (
+                    <ClockIcon className="h-3 w-3" />
+                  ) : (
+                    <CheckIcon className="h-3 w-3" />
+                  )}
+                  <span>{status}</span>
+                  {onRemoveQueued && removable && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        aria-label={strings.queue.remove}
+                        onClick={() => onRemoveQueued(msg.id)}
+                        className="rounded font-medium underline-offset-2 hover:theme-text hover:underline"
+                      >
+                        {common.remove}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          {footer}
+          <div className="h-8" />
+        </div>
       </div>
       {!pinned && !inputElement && (
         <div className="sticky bottom-4 z-10 flex h-0 items-start justify-center overflow-visible">

@@ -200,6 +200,20 @@ describe('ChatMessageList stick-to-bottom', () => {
 
     expect(container.scrollTop).toBe(590)
   })
+
+  // An anchoring adjustment at the bottom would read as the reader scrolling
+  // up; a reader who did scroll up keeps their place through changes above.
+  it('turns scroll anchoring off only while it sits at the bottom', () => {
+    const { container } = renderStreaming('a')
+    armAtBottom(container)
+    expect(container).toHaveClass('[overflow-anchor:none]')
+
+    fireEvent.wheel(container, { deltaY: -40 })
+    container.scrollTop = 200
+    fireEvent.scroll(container)
+
+    expect(container).not.toHaveClass('[overflow-anchor:none]')
+  })
 })
 
 describe('ChatMessageList after a reply', () => {
@@ -284,6 +298,39 @@ describe('ChatMessageList after a reply', () => {
     expect(rows).toHaveLength(2)
     expect(rows[1]?.parentElement).not.toHaveClass('animate-chat-enter')
     expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  // WebKit lays the list out partway through inserting the finished reply,
+  // before it counts toward the list's height. The floor keeps that layout
+  // from clamping the position of a reader at the bottom.
+  it('holds the height it last observed through the commit that swaps the finished reply in', () => {
+    const user = createMockMessage({ id: 'm1' })
+    const result = render(
+      <ChatMessageList
+        messages={[user]}
+        allMessages={[]}
+        isStreaming
+        streamingMessage={createMockMessage({ id: 'stream', role: 'assistant', content: 'Done.' })}
+      />,
+    )
+    const floor = result.container.firstElementChild?.firstElementChild as HTMLElement
+    const content = floor.firstElementChild as HTMLElement
+    Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 900 })
+    resized?.()
+
+    result.rerender(
+      <ChatMessageList
+        messages={[user, createMockMessage({ id: 'm2', role: 'assistant', content: 'Done.' })]}
+        allMessages={[]}
+        isStreaming={false}
+        streamingMessage={null}
+      />,
+    )
+    expect(floor).toHaveStyle({ minHeight: '900px' })
+
+    Object.defineProperty(content, 'offsetHeight', { configurable: true, value: 860 })
+    resized?.()
+    expect(floor).toHaveStyle({ minHeight: '860px' })
   })
 
   it('still lets a new question enter', () => {
