@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.116.0](https://github.com/parallelworks/foundation/compare/ui-v0.115.2...ui-v0.116.0) (2026-11-05)
+
+
+### Features
+
+* **ui:** chat image attachments open in an in-page viewer ([#645](https://github.com/parallelworks/foundation/issues/645)) ([fd35bb2](https://github.com/parallelworks/foundation/commit/fd35bb29cecfff5ff9479f7c8d5a31c51b9d6085))
+
+
+### Bug Fixes
+
+* **ui:** a question form's first question offers Submit answers instead of Next ([#646](https://github.com/parallelworks/foundation/issues/646)) ([e12d835](https://github.com/parallelworks/foundation/commit/e12d835bcb93981c62bc73613b29ff3143dabd2e))
+* **ui:** a question form's Next and Submit answers sit on the left instead of the right ([#649](https://github.com/parallelworks/foundation/issues/649)) ([a197ec2](https://github.com/parallelworks/foundation/commit/a197ec2c1673599700a3bfc42d9ca42d45796f51))
+
 ## [0.115.2](https://github.com/parallelworks/foundation/compare/ui-v0.115.1...ui-v0.115.2) (2026-11-05)
 
 
