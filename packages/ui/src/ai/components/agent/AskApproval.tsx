@@ -218,7 +218,14 @@ function AskForm({
           {t.answeredCount(answers.filter(hasAnswer).length, questions.length)}
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => send(answers, true)}
+          className={several ? outlineButton : quietButton}
+        >
+          {t.chatAboutThis}
+        </button>
         {sendShown && (
           <button
             ref={submit}
@@ -230,13 +237,6 @@ function AskForm({
             {several ? (onLast ? t.submitAnswers : common.next) : common.send}
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => send(answers, true)}
-          className={several ? outlineButton : quietButton}
-        >
-          {t.chatAboutThis}
-        </button>
       </div>
     </>
   )

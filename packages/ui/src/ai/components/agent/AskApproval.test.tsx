@@ -139,6 +139,19 @@ describe('AskApproval with several questions', () => {
     expect(screen.getByRole('button', { name: 'Submit answers' })).toHaveFocus()
   })
 
+  it('ends the actions with the primary one, after Chat about this', async () => {
+    renderAsk([database, auth])
+    const chat = screen.getByRole('button', { name: 'Chat about this' })
+    expect(chat.compareDocumentPosition(screen.getByRole('button', { name: 'Next' }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await switched()
+    expect(
+      chat.compareDocumentPosition(screen.getByRole('button', { name: 'Submit answers' })),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
   it('sends the answers so far to chat about them instead', () => {
     const onAnswer = renderAsk([database, auth])
     fireEvent.click(screen.getByRole('button', { name: /Mongo/ }))
