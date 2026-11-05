@@ -295,8 +295,9 @@ func TestUpRebuildsTheServerAndRunsProcesses(t *testing.T) {
 			{
 				Name: "server",
 				// A stand-in for go build: fails when the source says so.
-				Build:   []string{"sh", "-c", `! grep -q broken src/msg.go && mkdir -p bin && cp src/msg.go bin/msg`},
-				Run:     []string{"sh", "-c", `echo "$GREETING $(cat bin/msg)"; echo $$ > bin/pid; exec sleep 300`},
+				Build: []string{"sh", "-c", `! grep -q broken src/msg.go && mkdir -p bin && cp src/msg.go bin/msg`},
+				// The pid comes before the greeting the test waits on, so stopping the server right after never leaves the file empty.
+				Run:     []string{"sh", "-c", `echo $$ > bin/pid; echo "$GREETING $(cat bin/msg)"; exec sleep 300`},
 				Watch:   []string{"src"},
 				Exclude: []string{"bin"},
 			},
@@ -327,11 +328,8 @@ func TestUpRebuildsTheServerAndRunsProcesses(t *testing.T) {
 
 	write(t, filepath.Join(root, "src", "msg.go"), "broken")
 	eventually(t, "the failed build", has("build failed"))
-	pid, err := os.ReadFile(filepath.Join(root, "bin", "pid"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	serverPID, _ := strconv.Atoi(strings.TrimSpace(string(pid)))
+	pidFile := filepath.Join(root, "bin", "pid")
+	serverPID := pidOf(t, pidFile)
 	eventually(t, "the stale server to stop", func() bool { return !alive(serverPID) })
 
 	write(t, filepath.Join(root, "src", "msg.go"), "three")
@@ -346,11 +344,7 @@ func TestUpRebuildsTheServerAndRunsProcesses(t *testing.T) {
 	case <-time.After(stopGrace):
 		t.Fatal("Up did not return after cancel")
 	}
-	pid, err = os.ReadFile(filepath.Join(root, "bin", "pid"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	serverPID, _ = strconv.Atoi(strings.TrimSpace(string(pid)))
+	serverPID = pidOf(t, pidFile)
 	// Briefly allow for a process killed a moment ago: a leaked one is a
 	// sleep 300 that is still there long after.
 	deadline := time.Now().Add(2 * time.Second)
