@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react'
 import { cx } from '../cx'
 import { SortDownIcon, SortUnsortedIcon, SortUpIcon } from '../icons'
 import { Loader } from './Loader'
+import { fadeMask, useHiddenEnds } from './scrollFade'
 import { useStickyTop } from './stickyTop'
 
 /** Which way a column sorts, as `aria-sort` names it. */
@@ -300,6 +301,47 @@ export function Table({
   const childList = React.Children.toArray(children)
   const [thead, setThead] = useState<HTMLTableSectionElement | null>(null)
   useStickyTop(thead, stickyHeader && !isLoading)
+  // A table wider than its box scrolls sideways; the edges that hide columns fade, so it reads
+  // as more to scroll rather than cut off. The fade sits inside the border, which stays whole.
+  const scroller = useHiddenEnds<HTMLDivElement>(!stickyHeader && !isLoading)
+  const tableElement = (
+    <table
+      className={cx(
+        'min-w-full divide-y theme-border',
+        flush &&
+          '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
+        columnDividers && '[&_tr]:divide-x [&_tr]:divide-(--theme-border)',
+        className,
+      )}
+      {...tableProps}
+    >
+      {columns && (
+        // The table's row rules are a divide between its children; a
+        // collapsed column group's own would draw under the last row.
+        <colgroup className="border-0">
+          {columns.map((width, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a column is its position
+            <col key={i} style={width ? { width } : undefined} />
+          ))}
+        </colgroup>
+      )}
+      <thead
+        ref={setThead}
+        className={cx(
+          // Collapsed borders stay where the row was, so the line under
+          // a stuck header is a shadow that moves with it. It sits on
+          // the sticky layer, under menus and popovers. Its `top` is set
+          // as it renders, below the chrome pinned above it.
+          stickyHeader &&
+            'sticky top-0 z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
+          theadClassName ?? (flush ? 'text-(--theme-muted-text-color)' : 'theme-muted-panel'),
+        )}
+      >
+        <tr>{childList.filter(isHeaderChild)}</tr>
+      </thead>
+      <TableBody className={tbodyClassName} rows={childList.filter((c) => !isHeaderChild(c))} />
+    </table>
+  )
   const hasOverflow = wrapperClassName.split(' ').some((cls) => cls.startsWith('overflow-'))
 
   return (
@@ -321,7 +363,7 @@ export function Table({
             <div
               className={cx(
                 'inline-block min-w-full align-middle',
-                !stickyHeader && 'overflow-x-auto',
+                !stickyHeader && 'overflow-hidden',
                 panel && 'theme-panel',
                 !borderless && 'border theme-border',
                 rounded && 'rounded-xl',
@@ -329,46 +371,18 @@ export function Table({
                 roundedTop && 'rounded-t-xl',
               )}
             >
-              <table
-                className={cx(
-                  'min-w-full divide-y theme-border',
-                  flush &&
-                    '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
-                  columnDividers && '[&_tr]:divide-x [&_tr]:divide-(--theme-border)',
-                  className,
-                )}
-                {...tableProps}
-              >
-                {columns && (
-                  // The table's row rules are a divide between its children; a
-                  // collapsed column group's own would draw under the last row.
-                  <colgroup className="border-0">
-                    {columns.map((width, i) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: a column is its position
-                      <col key={i} style={width ? { width } : undefined} />
-                    ))}
-                  </colgroup>
-                )}
-                <thead
-                  ref={setThead}
-                  className={cx(
-                    // Collapsed borders stay where the row was, so the line under
-                    // a stuck header is a shadow that moves with it. It sits on
-                    // the sticky layer, under menus and popovers. Its `top` is set
-                    // as it renders, below the chrome pinned above it.
-                    stickyHeader &&
-                      'sticky top-0 z-(--layer-sticky) border-b-0 shadow-[inset_0_-1px_0_var(--theme-border)]',
-                    theadClassName ??
-                      (flush ? 'text-(--theme-muted-text-color)' : 'theme-muted-panel'),
-                  )}
+              {stickyHeader ? (
+                tableElement
+              ) : (
+                <div
+                  ref={scroller.ref}
+                  onScroll={scroller.onScroll}
+                  style={fadeMask(scroller.ends)}
+                  className="overflow-x-auto"
                 >
-                  <tr>{childList.filter(isHeaderChild)}</tr>
-                </thead>
-                <TableBody
-                  className={tbodyClassName}
-                  rows={childList.filter((c) => !isHeaderChild(c))}
-                />
-              </table>
+                  {tableElement}
+                </div>
+              )}
             </div>
           )}
         </div>

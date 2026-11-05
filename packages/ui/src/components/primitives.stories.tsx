@@ -1485,6 +1485,37 @@ function TablesDemo({ density }: { density: TableDensity }) {
   )
 }
 
+/** A table wider than its box scrolls sideways, and the edge that hides columns fades, so
+ *  it reads as more to scroll rather than cut off. The fade moves to the start once
+ *  scrolled, and leaves an edge with nothing past it. */
+export const WideTable: StoryObj = {
+  render: () => (
+    // Sizes are inline: the package's stylesheet doesn't scan stories.
+    <div style={{ maxWidth: '22rem' }}>
+      <Table rounded>
+        <Table.Header>Name</Table.Header>
+        <Table.Header>Status</Table.Header>
+        <Table.Header>Region</Table.Header>
+        <Table.Header className="text-right">Nodes</Table.Header>
+        <Table.Header className="text-right">Within ±10%</Table.Header>
+        <Table.Header className="text-right">Deployment-days</Table.Header>
+        {clusters.map((cluster) => (
+          <tr key={cluster.name}>
+            <Table.Item>{cluster.name}</Table.Item>
+            <Table.Item>
+              <StatusLabel variant="success">{cluster.status}</StatusLabel>
+            </Table.Item>
+            <Table.Item>{cluster.region}</Table.Item>
+            <Table.Item className="text-right tabular-nums">{cluster.nodes}</Table.Item>
+            <Table.Item className="text-right tabular-nums">{cluster.nodes * 7}%</Table.Item>
+            <Table.Item className="text-right tabular-nums">{cluster.nodes * 30}</Table.Item>
+          </tr>
+        ))}
+      </Table>
+    </div>
+  ),
+}
+
 /** In a box that scrolls, `stickyHeader` keeps the column titles in view
  *  while the rows pass under them. */
 export const StickyTableHeader: StoryObj<{ stickyHeader: boolean }> = {
