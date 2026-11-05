@@ -145,6 +145,11 @@ function AskForm({
   const send = (all: ApprovalQuestionAnswer[], chat: boolean) =>
     onAnswer(id, { kind: 'ask', answers: all, ...(chat ? { chat: true } : {}) })
 
+  const moveTo = (i: number) => {
+    focusNext.current = i
+    setActive(i)
+  }
+
   const done = (i: number, next: Given) => {
     const all = given.map((g, j) => (j === i ? next : g))
     setGiven(all)
@@ -154,8 +159,7 @@ function AskForm({
         false,
       )
     } else if (i < questions.length - 1) {
-      focusNext.current = i + 1
-      setActive(i + 1)
+      moveTo(i + 1)
     } else {
       submit.current?.focus()
     }
@@ -184,6 +188,7 @@ function AskForm({
   const loneKind = lone ? kindOf(lone) : 'text'
   // A pick sends a lone single-select question, so Send is only for typed text.
   const sendShown = several || loneKind !== 'single' || hasAnswer(answers[0])
+  const onLast = active === questions.length - 1
   return (
     <>
       {several ? (
@@ -218,11 +223,11 @@ function AskForm({
           <button
             ref={submit}
             type="button"
-            onClick={() => send(answers, false)}
+            onClick={() => (onLast ? send(answers, false) : moveTo(active + 1))}
             disabled={!several && loneKind === 'text' && !hasAnswer(answers[0])}
             className={primaryButton}
           >
-            {several ? t.submitAnswers : common.send}
+            {several ? (onLast ? t.submitAnswers : common.next) : common.send}
           </button>
         )}
         <button

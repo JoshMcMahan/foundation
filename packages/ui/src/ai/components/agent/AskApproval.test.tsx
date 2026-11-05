@@ -76,6 +76,23 @@ describe('AskApproval with several questions', () => {
     })
   })
 
+  it('offers Next until the last question, moving on without sending', async () => {
+    const onAnswer = renderAsk([checks, auth])
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Lint' }))
+    expect(screen.queryByRole('button', { name: 'Submit answers' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await switched()
+    expect(onAnswer).not.toHaveBeenCalled()
+    expect(tab('Q2')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: 'OAuth' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }))
+    expect(onAnswer).toHaveBeenCalledWith('q1', {
+      kind: 'ask',
+      answers: [{ picked: ['Lint'] }, {}],
+    })
+  })
+
   it('takes a typed answer in place of a pick, and a later pick in place of it', async () => {
     const onAnswer = renderAsk([database, auth])
     fireEvent.click(screen.getByRole('button', { name: /Postgres/ }))
@@ -88,11 +105,15 @@ describe('AskApproval with several questions', () => {
       'aria-pressed',
       'false',
     )
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await switched()
     fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }))
     expect(onAnswer).toHaveBeenLastCalledWith('q1', {
       kind: 'ask',
       answers: [{ text: 'SQLite' }, {}],
     })
+    fireEvent.click(tab('Database'))
+    await switched()
     fireEvent.click(screen.getByRole('button', { name: /Mongo/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }))
     expect(onAnswer).toHaveBeenLastCalledWith('q1', {
