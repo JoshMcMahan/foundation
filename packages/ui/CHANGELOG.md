@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.116.1](https://github.com/parallelworks/foundation/compare/ui-v0.116.0...ui-v0.116.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **ui:** a finished reply no longer loses the bottom of the chat in WebKit ([#647](https://github.com/parallelworks/foundation/issues/647)) ([b5c642b](https://github.com/parallelworks/foundation/commit/b5c642bb35bf529383ae04cc0ecb610643b85eb0))
+
 ## [0.116.0](https://github.com/parallelworks/foundation/compare/ui-v0.115.2...ui-v0.116.0) (2026-11-05)
 
 
