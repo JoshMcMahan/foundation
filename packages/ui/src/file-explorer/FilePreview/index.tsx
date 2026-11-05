@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconButton } from '../../components/IconButton'
+import { ZOOM_FIT, ZoomControls } from '../../components/ImageStage'
 import { Modal } from '../../components/Modal'
 import { usePersistedState, useStrings } from '../../components/Provider'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -12,8 +13,6 @@ import {
   DownloadIcon,
   FileIcon,
   LinkIcon,
-  ZoomInIcon,
-  ZoomOutIcon,
 } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
 import { exceededTransferLimit } from '../lib/utils'
@@ -58,7 +57,7 @@ export function FilePreview({
   const t = useStrings().fileExplorer
   const { common } = useStrings()
   const [style, setStyle] = usePersistedState<PreviewStyle>('fileExplorer.previewStyle', 'compact')
-  const [zoom, setZoom] = useState(100)
+  const [zoom, setZoom] = useState(ZOOM_FIT)
   const {
     url,
     loading: urlLoading,
@@ -89,7 +88,7 @@ export function FilePreview({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on file change
   useEffect(() => {
-    setZoom(100)
+    setZoom(ZOOM_FIT)
   }, [node])
 
   if (!node) {
@@ -170,26 +169,11 @@ export function FilePreview({
       </span>
       <div className="flex items-center gap-3">
         {showZoom && (
-          <div
-            className={cx(
-              'flex items-center gap-1 rounded-lg p-0.5',
-              floatingChrome ? 'bg-white/10' : 'theme-muted-panel',
-            )}
-          >
-            <IconButton
-              size="xs"
-              label={common.zoomOut}
-              onClick={() => setZoom((z) => Math.max(25, z - 25))}
-              icon={<ZoomOutIcon />}
-            />
-            <span className="min-w-11 text-center text-xs tabular-nums">{zoom}%</span>
-            <IconButton
-              size="xs"
-              label={common.zoomIn}
-              onClick={() => setZoom((z) => Math.min(400, z + 25))}
-              icon={<ZoomInIcon />}
-            />
-          </div>
+          <ZoomControls
+            zoom={zoom}
+            onZoomChange={setZoom}
+            className={floatingChrome ? 'bg-white/10' : 'theme-muted-panel'}
+          />
         )}
         <div className="flex items-center gap-1">
           <IconButton

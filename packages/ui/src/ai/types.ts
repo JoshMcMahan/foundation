@@ -22,6 +22,9 @@ export interface AttachmentRef {
   contentType: string
   size: number
   uploadedAt: string
+  /** A small picture an image's thumbnail shows instead of loading the file, such as a
+   *  `data:image/...` URL. Only ever an image's source, never a link. */
+  previewUrl?: string
   conversationId?: string
   messageId?: string
 }

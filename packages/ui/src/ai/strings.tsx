@@ -196,6 +196,12 @@ export interface ChatStrings {
     download: (name: string) => string
     /** Names an attachment's delete button, given its name. */
     remove: (name: string) => string
+    /** Steps the image viewer back to the message's previous picture. */
+    previousImage: string
+    /** Steps the image viewer on to the message's next picture. */
+    nextImage: string
+    /** Where the shown picture falls among the message's pictures, such as "2 of 3". */
+    imagePosition: (position: number, total: number) => string
   }
   branch: {
     previous: string
@@ -537,6 +543,9 @@ export const defaultChatStrings: ChatStrings = {
     open: (name) => `Open ${name}`,
     download: (name) => `Download ${name}`,
     remove: (name) => `Delete ${name}`,
+    previousImage: 'Previous image',
+    nextImage: 'Next image',
+    imagePosition: (position, total) => `${position.toLocaleString()} of ${total.toLocaleString()}`,
   },
   branch: {
     previous: 'Previous branch',

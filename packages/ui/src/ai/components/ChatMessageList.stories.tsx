@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo } from 'react'
 import {
   makeAttachments,
+  makeImageAttachments,
   makeMessage,
   makePaste,
   makePasteText,
@@ -221,4 +222,31 @@ export const Attachments: StoryObj<AttachmentsStoryArgs> = {
     preview: { control: 'boolean', description: 'The host previews attachments (onOpen)' },
   },
   render: ({ preview }) => <AttachmentsExample preview={preview} key={String(preview)} />,
+}
+
+function ImagesExample() {
+  const adapter = useMemo(() => makeStaticAdapter({ attachments: true }), [])
+  const messages = [
+    makeMessage({
+      role: 'user',
+      content: 'These are from this morning. Why is the queue so deep?',
+      attachments: makeImageAttachments(),
+    }),
+  ]
+  return (
+    <StoryChat adapter={adapter}>
+      <StoryViewport>
+        <div className="flex h-full flex-col bg-(--theme-panel-bg)">
+          <ChatMessageList messages={messages} allMessages={messages} />
+        </div>
+      </StoryViewport>
+    </StoryChat>
+  )
+}
+
+// Pictures sent with a message, the first with an inline preview its thumbnail
+// shows. A plain click opens one larger in the page, where the arrow keys step
+// through the rest; a modified click still opens the link.
+export const Images: StoryObj = {
+  render: () => <ImagesExample />,
 }

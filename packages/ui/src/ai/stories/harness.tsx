@@ -528,6 +528,36 @@ export function makeAttachments(): AttachmentRef[] {
   ]
 }
 
+/** Pictures sent with a message. The first carries an inline preview, as a host
+ *  that sends one has it before the file loads; ids start with "img", so each
+ *  downloads as a picture. */
+export function makeImageAttachments(): AttachmentRef[] {
+  return [
+    {
+      id: 'img-preview',
+      filename: 'queue-depth.png',
+      contentType: 'image/png',
+      size: 412_880,
+      uploadedAt: '2026-08-16T10:12:00Z',
+      previewUrl: `data:image/svg+xml,${encodeURIComponent(PICTURE)}`,
+    },
+    {
+      id: 'img-3',
+      filename: 'node-usage.png',
+      contentType: 'image/png',
+      size: 198_400,
+      uploadedAt: '2026-08-16T10:12:00Z',
+    },
+    {
+      id: 'img-4',
+      filename: '',
+      contentType: 'image/png',
+      size: 64_200,
+      uploadedAt: '2026-08-16T10:12:00Z',
+    },
+  ]
+}
+
 // ---- Agent transcript part factories ---------------------------------------
 
 export function makeToolCallPart(options?: {

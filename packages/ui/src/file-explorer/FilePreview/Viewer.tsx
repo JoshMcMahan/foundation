@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Button } from '../../components/Button'
+import { ImageStage, ZOOM_FIT } from '../../components/ImageStage'
 import { positionKeys, withPositionKeys } from '../../components/keys'
 import { Loader } from '../../components/Loader'
 import Markdown from '../../components/Markdown'
@@ -50,7 +51,7 @@ export function FilePreviewViewer({
   urlLoading,
   urlError,
   urlErrorDetail,
-  zoom = 100,
+  zoom = ZOOM_FIT,
   onDownload,
   storage = null,
 }: FilePreviewViewerProps) {
@@ -197,19 +198,15 @@ function ImageView({
   if (hasError) {
     return <PreviewError onDownload={onDownload} />
   }
-  const fit = zoom === 100
   return (
-    <div className="flex h-full w-full items-center justify-center overflow-auto bg-(--theme-app-bg) p-4">
-      <img
-        src={url}
-        alt={node.name}
-        className={cx('block rounded-md shadow-lg', fit && 'object-contain')}
-        style={
-          fit ? { maxWidth: '100%', maxHeight: '100%' } : { width: `${zoom}%`, maxWidth: 'none' }
-        }
-        onError={() => setHasError(true)}
-      />
-    </div>
+    <ImageStage
+      src={url}
+      alt={node.name}
+      zoom={zoom}
+      className="bg-(--theme-app-bg) p-4"
+      imageClassName="rounded-md shadow-lg"
+      onError={() => setHasError(true)}
+    />
   )
 }
 
