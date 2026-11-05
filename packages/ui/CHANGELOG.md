@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.115.2](https://github.com/parallelworks/foundation/compare/ui-v0.115.1...ui-v0.115.2) (2026-11-05)
+
+
+### Bug Fixes
+
+* **ui:** a table wider than its box fades the edge that hides columns ([#643](https://github.com/parallelworks/foundation/issues/643)) ([099cfdc](https://github.com/parallelworks/foundation/commit/099cfdcd53241fafe8a7c9b63133fb3be678d606))
+
 ## [0.115.1](https://github.com/parallelworks/foundation/compare/ui-v0.115.0...ui-v0.115.1) (2026-11-04)
 
 
