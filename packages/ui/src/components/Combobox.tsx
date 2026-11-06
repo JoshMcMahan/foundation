@@ -1002,15 +1002,13 @@ function ListPopup<Value>({
           {empty}
         </BaseCombobox.Empty>
       )}
-      <BaseCombobox.List className={cx(withDetails && 'min-h-0 flex-1')}>
-        <VirtualList<Value>
-          ref={listRef}
-          statusGroups={statusGroups}
-          query={query}
-          tall={withDetails}
-          renderItem={renderItem}
-        />
-      </BaseCombobox.List>
+      <VirtualList<Value>
+        ref={listRef}
+        statusGroups={statusGroups}
+        query={query}
+        tall={withDetails}
+        renderItem={renderItem}
+      />
     </>
   )
   return (
@@ -1161,13 +1159,14 @@ function VirtualList<Value>({
     [virtualizer],
   )
 
+  // The listbox itself scrolls: the input moves through it by aria-activedescendant, so a
+  // scrolling element inside it would be one the keyboard can't reach.
   if (rows.length === 0) {
-    return null
+    return <BaseCombobox.List className={cx(tall && 'min-h-0 flex-1')} />
   }
   const total = virtualizer.getTotalSize()
   return (
-    <div
-      role="presentation"
+    <BaseCombobox.List
       ref={scrollerRef}
       onWheel={() => {
         scrolledByHand.current = true
@@ -1181,8 +1180,8 @@ function VirtualList<Value>({
       }}
       className={cx(
         // The panel's gutter: the virtualizer pads the ends, so the list takes only the sides.
-        'overflow-auto overscroll-contain px-1',
-        tall ? 'max-h-full' : 'max-h-[min(15rem,var(--available-height))]',
+        'block overflow-auto overscroll-contain px-1',
+        tall ? 'min-h-0 max-h-full flex-1' : 'max-h-[min(15rem,var(--available-height))]',
       )}
       style={{ height: total }}
     >
@@ -1226,6 +1225,6 @@ function VirtualList<Value>({
           })
         })}
       </div>
-    </div>
+    </BaseCombobox.List>
   )
 }

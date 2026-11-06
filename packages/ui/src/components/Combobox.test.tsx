@@ -389,6 +389,15 @@ describe('Combobox with a button trigger', () => {
     expect(within(list).queryByRole('option', { name: 'Small' })).not.toBeInTheDocument()
   })
 
+  it('scrolls the listbox itself, which the input moves through, not a box inside it', async () => {
+    render(<Pill />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Size' }))
+    const list = await screen.findByRole('listbox')
+    expect(list).toHaveClass('overflow-auto')
+    expect(list.querySelector('.overflow-auto')).toBeNull()
+    expect(within(list).getAllByRole('option').length).toBeGreaterThan(0)
+  })
+
   it('names the popup it opens, a dialog, by its label', async () => {
     render(<Pill />)
     fireEvent.click(screen.getByRole('combobox', { name: 'Size' }))
