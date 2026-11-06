@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.119.0](https://github.com/parallelworks/foundation/compare/ui-v0.118.0...ui-v0.119.0) (2026-11-06)
+
+
+### Features
+
+* **ui:** a breadcrumb's last crumb can switch to one of its siblings ([#659](https://github.com/parallelworks/foundation/issues/659)) ([52d00c6](https://github.com/parallelworks/foundation/commit/52d00c6db8d2bddd5dea63ddb540fed83848affd))
+
+
+### Bug Fixes
+
+* **ui:** a message sent while a reply streams stays in view, and the reply keeps following ([#666](https://github.com/parallelworks/foundation/issues/666)) ([1e998f3](https://github.com/parallelworks/foundation/commit/1e998f34187e5ad9c2d2d8f232bf96e39566e983))
+
 ## [0.118.0](https://github.com/parallelworks/foundation/compare/ui-v0.117.1...ui-v0.118.0) (2026-11-06)
 
 
