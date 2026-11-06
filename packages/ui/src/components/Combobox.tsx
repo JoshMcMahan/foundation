@@ -544,6 +544,8 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
         statusGroups={entries.statusGroups}
         query={inputValue ?? ''}
         header={<div className="border-b border-(--theme-border) p-1.5">{input}</div>}
+        label={ariaLabel || undefined}
+        labelledBy={ariaLabelledBy}
         // As wide as its longest rows, from a floor that gives a small chip a list to read up
         // to a cap that keeps it a list.
         className={
@@ -956,6 +958,8 @@ function ListPopup<Value>({
   renderItem,
   sizer,
   align = 'start',
+  label,
+  labelledBy,
 }: {
   listRef: RefObject<VirtualListHandle | null>
   empty?: string | undefined
@@ -975,6 +979,9 @@ function ListPopup<Value>({
   /** Gives a content-wide popup its width, which the list's positioned rows don't. */
   sizer?: ReactNode
   align?: 'start' | 'end' | undefined
+  /** Names a popup that is a dialog, as a button-triggered picker's is. */
+  label?: string | undefined
+  labelledBy?: string | undefined
 }) {
   const portal = usePopupContainer()
   const withDetails = details !== undefined
@@ -1015,6 +1022,8 @@ function ListPopup<Value>({
         {...(collisionBoundary && { collisionBoundary })}
       >
         <BaseCombobox.Popup
+          aria-label={labelledBy ? undefined : label}
+          aria-labelledby={labelledBy}
           className={cx(
             'overflow-hidden',
             // The popup is the container its narrow layout answers to, wherever the field sits.

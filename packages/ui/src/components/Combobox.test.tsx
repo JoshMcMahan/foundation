@@ -389,6 +389,13 @@ describe('Combobox with a button trigger', () => {
     expect(within(list).queryByRole('option', { name: 'Small' })).not.toBeInTheDocument()
   })
 
+  it('names the popup it opens, a dialog, by its label', async () => {
+    render(<Pill />)
+    fireEvent.click(screen.getByRole('combobox', { name: 'Size' }))
+    await screen.findByRole('listbox')
+    expect(screen.getByRole('dialog', { name: 'Size' })).toBeInTheDocument()
+  })
+
   it('selects into the value the button shows', async () => {
     const onValueChange = vi.fn()
     render(<Pill onValueChange={onValueChange} />)
