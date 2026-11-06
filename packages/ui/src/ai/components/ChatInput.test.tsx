@@ -263,7 +263,43 @@ describe('ChatInput slash commands', () => {
     expect(onSend).toHaveBeenCalledWith('/stats', undefined, undefined)
   })
 
-  it('sends a fully typed command, and Escape closes the menu', () => {
+  it('keeps a fully typed command listed, and Enter sends it', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} slash={slash()} />)
+    fireEvent.change(textarea(), { target: { value: '/model' } })
+    expect(options().map((o) => o.textContent)).toEqual(['/modelShow or change the current model'])
+
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(onSend).toHaveBeenCalledWith('/model', undefined, undefined)
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  it('completes a fully typed command with Tab, ready for its arguments', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} slash={slash()} />)
+    fireEvent.change(textarea(), { target: { value: '/model' } })
+    fireEvent.keyDown(textarea(), { key: 'Tab' })
+    expect(onSend).not.toHaveBeenCalled()
+    expect(textarea().value).toBe('/model ')
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  it('still completes a whole name that begins a longer one', () => {
+    const onSend = vi.fn()
+    render(
+      <ChatInput
+        onSend={onSend}
+        slash={{ commands: [{ name: 'plan' }, { name: 'plan-review' }], label: 'Commands' }}
+      />,
+    )
+    fireEvent.change(textarea(), { target: { value: '/plan' } })
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' })
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(onSend).not.toHaveBeenCalled()
+    expect(textarea().value).toBe('/plan-review ')
+  })
+
+  it('closes on Escape until the text changes, and Enter then sends', () => {
     const onSend = vi.fn()
     render(<ChatInput onSend={onSend} slash={slash()} />)
     fireEvent.change(textarea(), { target: { value: '/m' } })
@@ -271,6 +307,8 @@ describe('ChatInput slash commands', () => {
     expect(screen.queryByRole('listbox')).toBeNull()
 
     fireEvent.change(textarea(), { target: { value: '/model' } })
+    expect(screen.queryByRole('listbox')).not.toBeNull()
+    fireEvent.keyDown(textarea(), { key: 'Escape' })
     expect(screen.queryByRole('listbox')).toBeNull()
     fireEvent.keyDown(textarea(), { key: 'Enter' })
     expect(onSend).toHaveBeenCalledWith('/model', undefined, undefined)

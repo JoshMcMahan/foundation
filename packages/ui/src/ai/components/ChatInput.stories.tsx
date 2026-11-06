@@ -161,6 +161,43 @@ export const AgentComposer: StoryObj<{
   ),
 }
 
+const slashCommands = [
+  { name: 'model', description: 'Show or change the current model' },
+  { name: 'recap', description: 'Recap the session in a sentence or two' },
+  { name: 'review', description: 'Review the current changes' },
+]
+
+// The menu lists what matches the text and stays up once a whole name is typed,
+// so its description can still be read. Enter then sends the command, and Tab
+// adds a space for its arguments. The play types `typed`.
+export const SlashCommands: StoryObj<{ typed: string }> = {
+  args: { typed: '/re' },
+  argTypes: {
+    typed: { control: 'text', description: 'Typed into the composer' },
+  },
+  render: () => (
+    <StoryChat>
+      <div>
+        <ChatInput
+          onSend={send}
+          attachments={false}
+          requireModel={false}
+          conversationId="conv-slash"
+          slash={{ commands: slashCommands, label: 'Commands' }}
+        />
+      </div>
+    </StoryChat>
+  ),
+  play: async ({ canvasElement, args }) => {
+    await userEvent.type(within(canvasElement).getByRole('textbox'), args.typed)
+  },
+}
+
+export const SlashCommandTyped: StoryObj<{ typed: string }> = {
+  ...SlashCommands,
+  args: { typed: '/recap' },
+}
+
 type SharedProvidersStoryArgs = {
   pickerOpen: boolean
   listProviders: boolean

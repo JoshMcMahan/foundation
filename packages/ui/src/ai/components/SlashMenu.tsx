@@ -39,7 +39,7 @@ export function useSlashMenu(
   const [dismissed, setDismissed] = useState(false)
   const matches = config ? slashMatches(input, config.commands) : []
   const exact = matches.length === 1 && `/${matches[0]?.name}` === input
-  const open = matches.length > 0 && !dismissed && !exact
+  const open = matches.length > 0 && !dismissed
   const startsCommand = input.startsWith('/')
   const onOpen = config?.onOpen
 
@@ -66,8 +66,10 @@ export function useSlashMenu(
     setDismissed(false)
   }
 
-  /** True when the key belonged to the menu. */
-  const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => list.handleKey(e)
+  /** True when the key belonged to the menu. A whole name stays listed so its description can be
+   *  read, but there is nothing left to complete, so Enter stays the host's and sends it. */
+  const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) =>
+    !(exact && e.key === 'Enter') && list.handleKey(e)
 
   return {
     open,
