@@ -42,6 +42,11 @@ export interface AvatarProps extends Omit<ComponentPropsWithRef<'span'>, 'childr
   /** Defaults to the group's size inside an `AvatarGroup`, else `md`. */
   size?: AvatarSize | undefined
   status?: AvatarStatus | undefined
+  /** A small icon on a disc at the bottom corner, for what the person did, such as being
+   *  assigned or commenting. It is decoration: say what it means in the text beside the avatar.
+   *  The status dot holds the same corner, so an avatar with a `status` doesn't show it, and an
+   *  `xs` avatar is too small for one to read, so it doesn't either. */
+  badge?: ReactNode
   /** Hides it from assistive technology, for an avatar beside the name it shows, which a
    *  screen reader would otherwise read twice. */
   decorative?: boolean | undefined
@@ -90,6 +95,15 @@ const KIND_CLASSES: Record<AvatarKind, string> = {
 // An agent's square keeps a faint edge, over its picture as well as its initials.
 const AGENT_EDGE =
   "after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] after:inset-ring after:inset-ring-(--avatar-agent-ring,color-mix(in_oklab,var(--avatar-agent-text,var(--theme-category-2-text))_40%,transparent))"
+
+// A disc that stays legible at each size, its icon inset from the edge; xs has none.
+const BADGE_CLASSES: Record<Exclude<AvatarSize, 'xs'>, string> = {
+  sm: 'size-3.5 [&_svg]:size-2.5',
+  md: 'size-3.5 [&_svg]:size-2.5',
+  lg: 'size-4 [&_svg]:size-3',
+  xl: 'size-5 [&_svg]:size-3.5',
+  '2xl': 'size-6 [&_svg]:size-4',
+}
 
 const STATUS_CLASSES: Record<AvatarStatus, string> = {
   online: 'bg-(--theme-success)',
@@ -173,6 +187,7 @@ export function Avatar({
   colorClassName,
   size: sizeProp,
   status,
+  badge,
   decorative = false,
   tooltip = false,
   className,
@@ -247,6 +262,20 @@ export function Avatar({
           </span>
         </BaseAvatar.Fallback>
       </BaseAvatar.Root>
+      {badge !== undefined && badge !== null && !status && size !== 'xs' && (
+        // Over the shape's corner, a third of it outside, so it never covers the initials; ringed so
+        // it reads over a picture.
+        <span
+          aria-hidden="true"
+          data-testid="avatar-badge"
+          className={cx(
+            'absolute right-0 bottom-0 flex translate-x-1/3 translate-y-1/3 items-center justify-center rounded-full bg-(--theme-panel-bg) text-(--theme-muted-text-color) ring-1 ring-(--theme-border)',
+            BADGE_CLASSES[size],
+          )}
+        >
+          {badge}
+        </span>
+      )}
       {status && (
         <span
           data-testid="online-indicator"

@@ -38,6 +38,25 @@ describe('avatarInitials', () => {
 })
 
 describe('Avatar', () => {
+  it('shows a badge beside the initials, hidden from assistive technology', () => {
+    render(<Avatar name="Ada Lovelace" badge={<svg data-testid="icon" />} />)
+    const badge = screen.getByTestId('avatar-badge')
+    expect(badge).toHaveAttribute('aria-hidden', 'true')
+    expect(badge).toContainElement(screen.getByTestId('icon'))
+    expect(screen.getByRole('img', { name: 'Ada Lovelace' })).toContainElement(badge)
+  })
+
+  it('shows no badge on an xs avatar, too small for one to read', () => {
+    render(<Avatar name="Ada Lovelace" size="xs" badge={<svg />} />)
+    expect(screen.queryByTestId('avatar-badge')).not.toBeInTheDocument()
+  })
+
+  it('leaves the corner to the status dot when both are set', () => {
+    render(<Avatar name="Ada Lovelace" status="online" badge={<svg />} />)
+    expect(screen.queryByTestId('avatar-badge')).not.toBeInTheDocument()
+    expect(screen.getByTestId('online-indicator')).toBeInTheDocument()
+  })
+
   it('shows one whole character at the smallest size', () => {
     render(<Avatar name="😀 Smile" size="xs" />)
     expect(screen.getByRole('img', { name: '😀 Smile' })).toHaveTextContent(/^😀$/)
