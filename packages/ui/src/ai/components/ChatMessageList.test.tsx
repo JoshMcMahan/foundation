@@ -49,7 +49,7 @@ const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
   ...overrides,
 })
 
-function renderStreaming(content: string) {
+function renderStreaming(content: string, queuedMessages?: Message[]) {
   const props = {
     messages: [createMockMessage({ id: 'm1' })],
     allMessages: [] as Message[],
@@ -57,6 +57,7 @@ function renderStreaming(content: string) {
   const result = render(
     <ChatMessageList
       {...props}
+      {...(queuedMessages ? { queuedMessages } : {})}
       streamingMessage={createMockMessage({
         id: 'stream',
         role: 'assistant',
@@ -64,10 +65,11 @@ function renderStreaming(content: string) {
       })}
     />,
   )
-  const rerenderStreaming = (nextContent: string) =>
+  const rerenderStreaming = (nextContent: string, nextQueued = queuedMessages) =>
     result.rerender(
       <ChatMessageList
         {...props}
+        {...(nextQueued ? { queuedMessages: nextQueued } : {})}
         streamingMessage={createMockMessage({
           id: 'stream',
           role: 'assistant',
@@ -216,6 +218,130 @@ describe('ChatMessageList stick-to-bottom', () => {
   })
 })
 
+describe('ChatMessageList reading the position before it follows', () => {
+  it('keeps a jump up that a chunk beats to its scroll event', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello')
+    armAtBottom(container)
+
+    container.scrollTop = 300
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    rerenderStreaming('Hello there')
+    fireEvent.scroll(container)
+    rerenderStreaming('Hello there again')
+
+    expect(container.scrollTop).toBe(300)
+  })
+
+  it('keeps a jump up that growth beats to its scroll event', () => {
+    const resizedBy: (() => void)[] = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          resizedBy.push(callback)
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+    const { container } = renderStreaming('Hello')
+    armAtBottom(container)
+
+    container.scrollTop = 300
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    resizedBy.at(-1)?.()
+    vi.unstubAllGlobals()
+
+    expect(container.scrollTop).toBe(300)
+  })
+
+  it('follows a long reply rejoined after a conversation that had scrolled far', () => {
+    const props = { allMessages: [] as Message[] }
+    const reply = createMockMessage({ id: 'stream', role: 'assistant', content: 'Hello' })
+    const { container, rerender } = render(
+      <ChatMessageList
+        {...props}
+        messages={[createMockMessage({ id: 'm1' })]}
+        streamingMessage={reply}
+      />,
+    )
+    // The list keeps its element through the empty state, and has no listeners
+    // there to report the position falling back to the top.
+    const list = container.firstElementChild as HTMLElement
+    armAtBottom(list)
+    rerender(<ChatMessageList {...props} messages={[]} />)
+    list.scrollTop = 0
+
+    setDimensions(list, { scrollHeight: 900, clientHeight: 400 })
+    rerender(<ChatMessageList {...props} messages={[]} streamingMessage={reply} />)
+
+    expect(list.scrollTop).toBe(900)
+  })
+})
+
+describe('ChatMessageList with a message queued behind a reply', () => {
+  const first = createMockMessage({ id: 'q1' })
+  const second = createMockMessage({ id: 'q2' })
+
+  it('keeps following the reply, so the message below it stays in view', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello', [first])
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
+    rerenderStreaming('Hello there')
+
+    expect(container.scrollTop).toBe(1200)
+  })
+
+  it('brings each message into view as it is sent', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello', [first])
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1100, clientHeight: 400 })
+    rerenderStreaming('Hello', [first, second])
+
+    expect(container.scrollTop).toBe(1100)
+  })
+
+  it('keeps following when a picture lands before the scroll to it reports', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello', [first])
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1149, clientHeight: 400 })
+    container.scrollTop = 683
+    fireEvent.scroll(container)
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    rerenderStreaming('Hello there')
+
+    expect(container.scrollTop).toBe(1300)
+  })
+
+  it('leaves a reader who dragged the scrollbar up where they are', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello', [first])
+    armAtBottom(container)
+
+    container.scrollTop = 300
+    fireEvent.scroll(container)
+    setDimensions(container, { scrollHeight: 1300, clientHeight: 400 })
+    rerenderStreaming('Hello there')
+
+    expect(container.scrollTop).toBe(300)
+  })
+
+  it('leaves a reader who scrolled up where they are', () => {
+    const { container, rerenderStreaming } = renderStreaming('Hello')
+    armAtBottom(container)
+    fireEvent.wheel(container, { deltaY: -40 })
+    container.scrollTop = 200
+    fireEvent.scroll(container)
+
+    setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
+    rerenderStreaming('Hello', [first])
+
+    expect(container.scrollTop).toBe(200)
+  })
+})
+
 describe('ChatMessageList after a reply', () => {
   let resized: (() => void) | undefined
 
@@ -239,8 +365,11 @@ describe('ChatMessageList after a reply', () => {
     vi.unstubAllGlobals()
   })
 
-  const renderDone = () => {
-    const props = { allMessages: [] as Message[] }
+  const renderDone = (queuedMessages?: Message[]) => {
+    const props = {
+      allMessages: [] as Message[],
+      ...(queuedMessages ? { queuedMessages } : {}),
+    }
     const result = render(
       <ChatMessageList {...props} messages={[createMockMessage({ id: 'm1' })]} />,
     )
@@ -349,6 +478,29 @@ describe('ChatMessageList after a reply', () => {
     resized?.()
 
     expect(container.scrollTop).toBe(1300)
+  })
+
+  it('follows a queued message that grows, as its picture loads', () => {
+    const { container } = renderDone([createMockMessage({ id: 'q1' })])
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
+    resized?.()
+
+    expect(container.scrollTop).toBe(1200)
+  })
+
+  it('follows a message queued when nothing else has been said', () => {
+    const queued = [createMockMessage({ id: 'q1' })]
+    const { rerender, container } = render(<ChatMessageList messages={[]} allMessages={[]} />)
+    expect(resized).toBeUndefined()
+
+    rerender(<ChatMessageList messages={[]} allMessages={[]} queuedMessages={queued} />)
+    const list = container.firstElementChild as HTMLElement
+    setDimensions(list, { scrollHeight: 900, clientHeight: 400 })
+    resized?.()
+
+    expect(list.scrollTop).toBe(900)
   })
 
   it('keeps a row the reader just opened under the pointer', () => {

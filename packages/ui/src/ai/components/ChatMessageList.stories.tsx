@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   makeAttachments,
   makeImageAttachments,
@@ -9,6 +9,7 @@ import {
   makeStaticAdapter,
   StoryChat,
   StoryViewport,
+  useStreamedText,
 } from '../stories/harness'
 import type { ChatMessage } from '../types'
 import ChatMessageList from './ChatMessageList'
@@ -97,6 +98,48 @@ export const QueuedMessages: StoryObj<{
       />
     )
   },
+}
+
+const REPLY = Array.from(
+  { length: 40 },
+  (_, i) =>
+    `Step ${i + 1} of the build asks the gpu partition for more nodes than the config gives it, so the scheduler holds the job until the request fits.`,
+).join(' ')
+
+function SendWhileReplyingList() {
+  const { text } = useStreamedText(REPLY, 30_000)
+  const [queued, setQueued] = useState<ChatMessage[]>([])
+  const send = () =>
+    setQueued((current) => [
+      ...current,
+      makeMessage({
+        id: `sent-${current.length + 1}`,
+        role: 'user',
+        content: 'The sidebar is blank here [Image #1]',
+        attachments: makeImageAttachments().slice(0, 1),
+      }),
+    ])
+  return (
+    <MessageList
+      isStreaming
+      streamingMessage={makeMessage({ id: 'reply', role: 'assistant', content: text })}
+      queuedMessages={queued}
+      queueDelivery="nextStep"
+      inputElement={
+        <div className="flex justify-end border-t theme-border bg-(--theme-panel-bg) p-3">
+          <button type="button" onClick={send} className="rounded-lg border theme-border px-3 py-1">
+            Send with a picture
+          </button>
+        </div>
+      }
+    />
+  )
+}
+
+// A message sent while a reply is still coming in. A reader at the bottom keeps
+// it in view, picture and all, and it stays put as the reply grows above it.
+export const SendWhileReplying: StoryObj = {
+  render: () => <SendWhileReplyingList />,
 }
 
 const LINK =
