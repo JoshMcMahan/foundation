@@ -60,6 +60,9 @@ export interface SessionViewProps {
   footer?: ReactNode
   label?: string
   flush?: boolean
+  /** Folds tool calls as a terminal transcript does: every run from its first
+   *  call, failures and running calls included. */
+  foldEveryRun?: boolean
   workingIndicator?: boolean
   composer?: ComposerProps
 }
@@ -92,6 +95,7 @@ export default function SessionView({
   footer,
   label,
   flush,
+  foldEveryRun,
   workingIndicator,
   composer,
 }: SessionViewProps) {
@@ -196,6 +200,7 @@ export default function SessionView({
             {...(footer ? { footer } : {})}
             {...(label ? { label } : {})}
             {...(flush ? { flush } : {})}
+            {...(foldEveryRun ? { foldEveryRun } : {})}
             workingIndicator={workingIndicator ?? !activity}
             inputElement={input}
           />

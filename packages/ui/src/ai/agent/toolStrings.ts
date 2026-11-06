@@ -37,6 +37,22 @@ export interface ToolStrings {
     ranTools: (tools: number) => string
     sentence: (clauses: string[]) => string
   }
+  /** The same clauses while a call in the run is still working. Beside `rollup`, not in it,
+   *  so a host that replaces `rollup` whole still gets these from the defaults. */
+  rollupActive: {
+    searching: (patterns: number) => string
+    reading: (files: number) => string
+    runningCommands: (commands: number) => string
+    fetching: (urls: number) => string
+    loadingSkills: (skills: number) => string
+    sendingMessages: (messages: number) => string
+    runningTools: (tools: number) => string
+  }
+  /** One tool server's calls in a run, named in place of a count of its tools. */
+  rollupServer: {
+    called: (server: string, times: number) => string
+    calling: (server: string, times: number) => string
+  }
 }
 
 // English has two forms, chosen by the rules a translation would use, with
@@ -92,5 +108,18 @@ export const defaultToolStrings: ToolStrings = {
       const s = clauses.join(', ')
       return s.charAt(0).toUpperCase() + s.slice(1)
     },
+  },
+  rollupActive: {
+    searching: (n) => `searching for ${countOf(n, 'pattern', 'patterns')}`,
+    reading: (n) => `reading ${countOf(n, 'file', 'files')}`,
+    runningCommands: (n) => `running ${countOf(n, 'shell command', 'shell commands')}`,
+    fetching: (n) => `fetching ${countOf(n, 'URL', 'URLs')}`,
+    loadingSkills: (n) => `loading ${countOf(n, 'skill', 'skills')}`,
+    sendingMessages: (n) => `sending ${countOf(n, 'message', 'messages')}`,
+    runningTools: (n) => `running ${countOf(n, 'tool', 'tools')}`,
+  },
+  rollupServer: {
+    called: (server, n) => `called ${server} ${countOf(n, 'time', 'times')}`,
+    calling: (server, n) => `calling ${server} ${countOf(n, 'time', 'times')}`,
   },
 }

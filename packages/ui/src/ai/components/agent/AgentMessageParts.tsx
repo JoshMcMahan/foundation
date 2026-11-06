@@ -26,6 +26,7 @@ import {
   fullToolArgs,
   isGroupableTool,
   rollupClauses,
+  runClauses,
   summarizeToolArgs,
   toolHeaderFor,
   toolSummary,
@@ -967,11 +968,16 @@ function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
 // kinds (edits, todos, subagents) break the run. A thought between two calls
 // folds into the run with the work it preceded; the thoughts before and after
 // a run keep their own line — mirrors the TUI.
+//
+// With foldEveryRun a run folds from its first call: failed and running calls
+// join it, and so does a plain approval, while any other decision stays in view
+// and ends the run. Calls to one tool are not grouped, so edits keep their diffs.
 export function buildRenderItems(
   parts: MessagePart[],
   hostDrawn: (toolName: string) => boolean = () => false,
   // A drawn call the host names a rollup clause for can fold with other tools.
   joinsRollup: (part: ToolCallPart) => boolean = () => false,
+  foldEveryRun = false,
 ): RenderItem[] {
   const items: RenderItem[] = []
   let run: RunMember[] = []
@@ -1005,7 +1011,7 @@ export function buildRenderItems(
     const end = firstCore === -1 ? run.length : run.findLastIndex((m) => !isReasoning(m)) + 1
     emitThoughts(run.slice(0, start))
     const core = run.slice(start, end)
-    if (core.filter((m) => !isReasoning(m)).length >= 2) {
+    if (core.filter((m) => !isReasoning(m)).length >= (foldEveryRun ? 1 : 2)) {
       items.push({ kind: 'rollup', members: core })
     } else {
       emitLoose(core)
@@ -1021,9 +1027,13 @@ export function buildRenderItems(
       p.kind === 'tool_call' && hostDrawn(p.name) && !joinsRollup(p) ? [p.id] : [],
     ),
   )
+  const joinsRun = (part: ToolCallPart) =>
+    foldEveryRun
+      ? part.status !== 'waiting' && (!part.decision || plainApproval(part.decision))
+      : part.status === 'ok' && !part.decision
   parts.forEach((part, index) => {
     // An answered approval for a call that records its decision says nothing the call's own line doesn't.
-    if (part.kind === 'approval' && part.resolved && decided.has(part.id)) {
+    if (part.kind === 'approval' && part.resolved && decided.has(part.toolCallId ?? part.id)) {
       return
     }
     if (part.kind === 'approval' && drawnByHost.has(part.id)) {
@@ -1032,8 +1042,7 @@ export function buildRenderItems(
     if (
       part.kind === 'reasoning' ||
       (part.kind === 'tool_call' &&
-        part.status === 'ok' &&
-        !part.decision &&
+        joinsRun(part) &&
         !drawnByHost.has(part.id) &&
         isGroupableTool(part.name))
     ) {
@@ -1044,7 +1053,12 @@ export function buildRenderItems(
     items.push({ kind: 'single', part, index })
   })
   flush()
-  return groupRepeatedCalls(items)
+  return foldEveryRun ? items : groupRepeatedCalls(items)
+}
+
+/** An allowed call with nothing more to say, which reads fine once its run is opened. */
+function plainApproval(d: ToolDecision): boolean {
+  return d.status === 'approved' && !d.note
 }
 
 /** A call that can share a row with the same tool's calls beside it: never one
@@ -1085,14 +1099,36 @@ function groupRepeatedCalls(items: RenderItem[]): RenderItem[] {
   return out
 }
 
+// A new call in a folded run keeps to the run's line this long, so a quick one never flashes a block.
+const HOLD_RUNNING_CALL_MS = 1000
+
+function HeldCall({ show, children }: { show: boolean; children: ReactNode }) {
+  const [waited, setWaited] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setWaited(true), HOLD_RUNNING_CALL_MS)
+    return () => clearTimeout(timer)
+  }, [])
+  return show || waited ? children : null
+}
+
+function isRunningCall(m: RunMember): boolean {
+  return m.part.kind === 'tool_call' && m.part.status === 'running'
+}
+
 function RollupGroup({
   members,
   message,
+  foldEveryRun,
 }: {
   members: RunMember[]
   message: PartRendererProps['message']
+  foldEveryRun: boolean
 }) {
   const { strings, slots } = useChatConfig()
+  const [open, setOpen] = useState(false)
+  const live = members.filter(isRunningCall)
+  const settled = members.filter((m) => !isRunningCall(m))
+  const running = live.length > 0
   const { sentence, allNamed } = useMemo(() => {
     const builtin: string[] = []
     const named = new Map<string, { count: number; rollup: (count: number) => string }>()
@@ -1110,27 +1146,40 @@ function RollupGroup({
     }
     const clauses = [
       ...[...named.values()].map((n) => n.rollup(n.count)),
-      ...rollupClauses(builtin, strings.tools),
+      ...(foldEveryRun
+        ? runClauses(builtin, running, strings.tools)
+        : rollupClauses(builtin, strings.tools)),
     ]
     return {
-      sentence: clauses.length ? strings.tools.rollup.sentence(clauses) : '',
+      sentence: clauses.length
+        ? `${strings.tools.rollup.sentence(clauses)}${running ? '…' : ''}`
+        : '',
       allNamed: named.size > 0 && builtin.length === 0,
     }
-  }, [members, message, slots.toolPresentation, strings.tools])
+  }, [members, message, slots.toolPresentation, strings.tools, foldEveryRun, running])
   return (
     <div className="py-1.5 text-sm" data-testid="tool-rollup">
       <Disclosure
+        open={open}
+        onOpenChange={setOpen}
+        disabled={settled.length === 0}
         // Members stay mounted so their own expand state survives refolding.
         keepMounted
         summaryClassName={rowSummaryClasses}
         summary={
           <>
-            <span className="text-(--theme-success) leading-none" aria-hidden="true">
+            {/* Kept for alignment: a run that may hold a failure must not read as a success. */}
+            <span
+              className={cx('leading-none', foldEveryRun ? 'invisible' : 'text-(--theme-success)')}
+              aria-hidden="true"
+            >
               ●
             </span>
             <span
               className={cx(
-                'text-[13px] min-w-0 truncate',
+                'text-[13px] min-w-0',
+                // The row is all a folded run shows, so it wraps rather than losing its end.
+                !foldEveryRun && 'truncate',
                 allNamed ? 'theme-text' : 'font-mono theme-muted-text',
               )}
             >
@@ -1140,10 +1189,15 @@ function RollupGroup({
         }
         panelClassName="ml-1.5 mt-0.5 rounded-md bg-(--theme-muted-panel-bg)/40 px-2"
       >
-        {members.map((m) => (
+        {settled.map((m) => (
           <PartDispatch key={m.index} part={m.part} message={message} />
         ))}
       </Disclosure>
+      {live.map((m) => (
+        <HeldCall key={m.index} show={open}>
+          <PartDispatch part={m.part} message={message} />
+        </HeldCall>
+      ))}
     </div>
   )
 }
@@ -1229,10 +1283,14 @@ export default function AgentMessageParts({
   message,
   isStreaming,
   onApprovalAnswer,
+  foldEveryRun = false,
 }: {
   message: PartRendererProps['message']
   isStreaming?: boolean
   onApprovalAnswer?: PartRendererProps['onApprovalAnswer']
+  /** Folds tool calls as a terminal transcript does: every run from its first
+   *  call, failures and running calls included. */
+  foldEveryRun?: boolean | undefined
 }) {
   const parts = message.parts ?? []
   const { slots } = useChatConfig()
@@ -1247,15 +1305,21 @@ export default function AgentMessageParts({
           const p = toolPresentation?.(part, message)
           return !!p?.rollup && !p.open
         },
+        foldEveryRun,
       ),
-    [parts, message, toolRenderers, toolPresentation],
+    [parts, message, toolRenderers, toolPresentation, foldEveryRun],
   )
   const lastIndex = parts.length - 1
   return (
     <div className="w-full" data-testid="agent-parts">
       {items.map((item) =>
         item.kind === 'rollup' ? (
-          <RollupGroup key={item.members[0]?.index ?? 0} members={item.members} message={message} />
+          <RollupGroup
+            key={item.members[0]?.index ?? 0}
+            members={item.members}
+            message={message}
+            foldEveryRun={foldEveryRun}
+          />
         ) : item.kind === 'calls' ? (
           <CallGroup key={item.members[0]?.index ?? 0} members={item.members} message={message} />
         ) : item.kind === 'reasoning' ? (

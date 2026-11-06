@@ -7,6 +7,7 @@ import {
   isGroupableTool,
   resultFailed,
   rollupSentence,
+  runClauses,
   sanitizeLabel,
   sanitizePanelText,
   summarizeToolArgs,
@@ -142,6 +143,31 @@ describe('rollupSentence', () => {
   })
   it('returns empty for no names', () => {
     expect(rollupSentence([])).toBe('')
+  })
+})
+
+describe('runClauses', () => {
+  it('reads as under way while a call runs', () => {
+    expect(runClauses(['ReadFile', 'GrepSearch', 'Bash'], true)).toEqual([
+      'searching for 1 pattern',
+      'reading 1 file',
+      'running 1 shell command',
+    ])
+  })
+
+  it('gives each tool server its own clause, after the built-in tools', () => {
+    const names = ['mcp__linear-server__get', 'mcp__github__a', 'mcp__linear-server__b', 'Bash']
+    expect(runClauses(names, false)).toEqual([
+      'ran 1 shell command',
+      'called linear-server 2 times',
+      'called github 1 time',
+    ])
+    expect(runClauses(['mcp__github__a'], true)).toEqual(['calling github 1 time'])
+  })
+
+  it('counts an unknown tool', () => {
+    expect(runClauses(['Other'], false)).toEqual(['ran 1 tool'])
+    expect(runClauses(['Other'], true)).toEqual(['running 1 tool'])
   })
 })
 

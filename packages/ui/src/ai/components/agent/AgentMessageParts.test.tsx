@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ChatConfigProvider, resolveChatConfig } from '../../core/config'
 import type { ChatMessage, MessagePart, ToolCallPart, ToolDecision } from '../../types'
 import AgentMessageParts, { buildRenderItems } from './AgentMessageParts'
@@ -622,6 +622,126 @@ describe('rollup folding', () => {
   it('leaves a lone groupable call unfolded', () => {
     const items = buildRenderItems([tc('t1', 'ReadFile')])
     expect(items.map((i) => i.kind)).toEqual(['single'])
+  })
+})
+
+describe('foldEveryRun', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const kinds = (parts: MessagePart[]) =>
+    buildRenderItems(parts, undefined, undefined, true).map((i) => i.kind)
+  const decided = (id: string, decision: ToolDecision): MessagePart => ({
+    ...(tc(id, 'Bash') as ToolCallPart),
+    decision,
+  })
+  const folded = (parts: MessagePart[]) => (
+    <ChatConfigProvider value={resolveChatConfig()}>
+      <AgentMessageParts message={msg(parts)} foldEveryRun />
+    </ChatConfigProvider>
+  )
+
+  it('folds a run from its first call', () => {
+    expect(kinds([tc('t1', 'ReadFile')])).toEqual(['rollup'])
+    render(folded([tc('t1', 'ReadFile')]))
+    expect(screen.getByTestId('tool-rollup')).toHaveTextContent('Read 1 file')
+  })
+
+  it('folds a failed call into the run without calling the run a success', () => {
+    const parts = [tc('t1', 'ReadFile'), tc('t2', 'Bash', 'error')]
+    expect(kinds(parts)).toEqual(['rollup'])
+    render(folded(parts))
+    const toggle = screen.getByRole('button', { name: /Read 1 file, ran 1 shell command/ })
+    expect(toggle.querySelector('.invisible')).not.toBeNull()
+  })
+
+  it('holds a running call to the line for a moment, then shows its block below', () => {
+    vi.useFakeTimers()
+    const { rerender } = render(folded([tc('t1', 'ReadFile'), tc('t2', 'GrepSearch', 'running')]))
+    expect(screen.getByTestId('tool-rollup')).toHaveTextContent(
+      'Searching for 1 pattern, reading 1 file…',
+    )
+    expect(screen.getAllByTestId('tool-call-part')).toHaveLength(1)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getAllByTestId('tool-call-part')).toHaveLength(2)
+    rerender(folded([tc('t1', 'ReadFile'), tc('t2', 'GrepSearch')]))
+    expect(screen.getByTestId('tool-rollup')).toHaveTextContent(
+      'Searched for 1 pattern, read 1 file',
+    )
+  })
+
+  it('shows a running call at once in an open run', () => {
+    vi.useFakeTimers()
+    render(folded([tc('t1', 'ReadFile'), tc('t2', 'GrepSearch', 'running')]))
+    fireEvent.click(screen.getByRole('button', { name: /Searching for 1 pattern/ }))
+    expect(screen.getAllByTestId('tool-call-part')).toHaveLength(2)
+  })
+
+  it('wraps a long line, and leaves other runs on one', () => {
+    const parts = [tc('t1', 'ReadFile'), tc('t2', 'GrepSearch')]
+    const { unmount } = render(folded(parts))
+    expect(screen.getByText('Searched for 1 pattern, read 1 file')).not.toHaveClass('truncate')
+    unmount()
+    renderParts(parts)
+    expect(screen.getByText('Searched for 1 pattern, read 1 file')).toHaveClass('truncate')
+  })
+
+  it('has nothing to open until a call finishes', () => {
+    render(folded([tc('t1', 'Bash', 'running')]))
+    expect(screen.getByRole('button', { name: /Running 1 shell command/ })).toBeDisabled()
+  })
+
+  it('keeps a run open as it grows', () => {
+    const { rerender } = render(folded([tc('t1', 'ReadFile')]))
+    fireEvent.click(screen.getByRole('button', { name: /Read 1 file/ }))
+    rerender(folded([tc('t1', 'ReadFile'), tc('t2', 'ReadFile')]))
+    expect(screen.getByRole('button', { name: /Read 2 files/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
+  it('folds a plain approval and keeps any other decision in view', () => {
+    const around = (call: MessagePart) => [tc('t1', 'ReadFile'), call, tc('t3', 'GrepSearch')]
+    const approved: ToolDecision = { status: 'approved', by: 'auto-reviewer' }
+    expect(kinds(around(decided('t2', approved)))).toEqual(['rollup'])
+    expect(kinds(around(decided('t2', { ...approved, note: 'rules saved' })))).toEqual([
+      'rollup',
+      'single',
+      'rollup',
+    ])
+    expect(kinds(around(decided('t2', { status: 'denied', by: 'auto-reviewer' })))).toEqual([
+      'rollup',
+      'single',
+      'rollup',
+    ])
+  })
+
+  it('keeps edits apart so each shows its diff', () => {
+    const edits = [tc('t1', 'EditFile'), tc('t2', 'EditFile')]
+    expect(kinds(edits)).toEqual(['single', 'single'])
+    expect(buildRenderItems(edits).map((i) => i.kind)).toEqual(['calls'])
+  })
+
+  it('finds the call an answered approval was for by the call it names', () => {
+    const approval = (resolved: boolean): MessagePart => ({
+      kind: 'approval',
+      id: 'ap-1',
+      approvalKind: 'confirm',
+      toolCallId: 't1',
+      canAllowDirectory: false,
+      resolved,
+    })
+    const call = decided('t1', { status: 'approved', by: 'user' })
+    expect(kinds([call, approval(true), tc('t2', 'GrepSearch')])).toEqual(['rollup'])
+    expect(kinds([call, approval(false), tc('t2', 'GrepSearch')])).toEqual([
+      'rollup',
+      'single',
+      'rollup',
+    ])
   })
 })
 

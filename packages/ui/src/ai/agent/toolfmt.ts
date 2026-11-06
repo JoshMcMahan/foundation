@@ -473,6 +473,50 @@ export function rollupClauses(names: string[], t: ToolStrings = defaultToolStrin
   return parts
 }
 
+const ACTIVE_CLAUSES: Record<
+  Exclude<RollupClause, 'calledMcpTools'>,
+  keyof ToolStrings['rollupActive']
+> = {
+  searched: 'searching',
+  read: 'reading',
+  ranCommands: 'runningCommands',
+  fetched: 'fetching',
+  loadedSkills: 'loadingSkills',
+  sentMessages: 'sendingMessages',
+  ranTools: 'runningTools',
+}
+
+// Server names cannot contain "__", so the first one ends the server.
+function toolServer(name: string): string {
+  return name.startsWith('mcp__') ? (name.slice('mcp__'.length).split('__')[0] ?? '') : ''
+}
+
+// ["searching for 7 patterns", "calling linear 2 times"]: rollupClauses in the tense of a run
+// that may still be working, with one clause per tool server.
+export function runClauses(
+  names: string[],
+  running: boolean,
+  t: ToolStrings = defaultToolStrings,
+): string[] {
+  const clauses = new Map<string, { category: number; server: string; count: number }>()
+  for (const name of names) {
+    const category = ROLLUP_CATEGORIES.findIndex(([matches]) => matches(name))
+    const server = toolServer(name)
+    const key = `${category}:${server}`
+    const clause = clauses.get(key) ?? { category, server, count: 0 }
+    clauses.set(key, { ...clause, count: clause.count + 1 })
+  }
+  return [...clauses.values()]
+    .sort((a, b) => a.category - b.category)
+    .map(({ category, server, count }) => {
+      const clause = ROLLUP_CATEGORIES[category]?.[1] ?? 'ranTools'
+      if (clause === 'calledMcpTools') {
+        return t.rollupServer[running ? 'calling' : 'called'](server, count)
+      }
+      return running ? t.rollupActive[ACTIVE_CLAUSES[clause]](count) : t.rollup[clause](count)
+    })
+}
+
 // Renderable agent colors, ordered for auto-assignment (red last so it keeps
 // its error connotation longest).
 export const AGENT_COLOR_NAMES = [

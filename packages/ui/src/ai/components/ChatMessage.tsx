@@ -45,6 +45,9 @@ interface ChatMessageProps {
   onApprovalAnswer?: ((id: string, answer: ApprovalAnswerValue) => void) | undefined
   /** Drops the row's horizontal padding, for hosts that constrain the column themselves. */
   flush?: boolean | undefined
+  /** Folds tool calls as a terminal transcript does: every run from its first
+   *  call, failures and running calls included. */
+  foldEveryRun?: boolean | undefined
 }
 
 /** A message action: the chat's square, tinted from the ink on hover. */
@@ -81,6 +84,7 @@ function ChatMessage({
   onOpenReasoning,
   onApprovalAnswer,
   flush,
+  foldEveryRun,
 }: ChatMessageProps) {
   const isUser = message.role === 'user'
   const isTool = message.role === 'tool'
@@ -234,6 +238,7 @@ function ChatMessage({
           message={partsMessage}
           isStreaming={isStreaming}
           onApprovalAnswer={approvalAnswer}
+          foldEveryRun={foldEveryRun}
         />
         {hasError && (
           <Callout tone="error" size="sm" className="mt-2">
@@ -377,6 +382,7 @@ function ChatMessage({
                   message={partsMessage}
                   isStreaming={isStreaming}
                   onApprovalAnswer={approvalAnswer}
+                  foldEveryRun={foldEveryRun}
                 />
               </div>
             )}

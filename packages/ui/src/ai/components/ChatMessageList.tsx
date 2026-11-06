@@ -64,6 +64,9 @@ interface ChatMessageListProps {
   isStreaming?: boolean
   /** Rows without their own side padding, for a host that pads the column. */
   flush?: boolean
+  /** Folds tool calls as a terminal transcript does: every run from its first
+   *  call, failures and running calls included. */
+  foldEveryRun?: boolean
   /** Names the list, a live log, for assistive technology. Defaults to the
    *  chat strings' `thread.label`. */
   label?: string
@@ -96,6 +99,7 @@ export default function ChatMessageList({
   inputElement,
   isStreaming: isStreamingProp,
   flush,
+  foldEveryRun,
   label,
   footer,
   workingIndicator = true,
@@ -415,6 +419,7 @@ export default function ChatMessageList({
             allMessages={allMessages}
             streaming={!!streamingMessage}
             flush={flush}
+            foldEveryRun={foldEveryRun}
             editingMessageId={editingMessageId}
             showAuthor={showAuthor}
             currentUsername={currentUsername}
@@ -488,6 +493,7 @@ export default function ChatMessageList({
                 message={streamingMessage}
                 allMessages={allMessages}
                 flush={flush}
+                foldEveryRun={foldEveryRun}
                 isStreaming={isStreaming}
                 attachmentDownloadUrl={attachmentDownloadUrl}
                 onOpenAttachment={onOpenAttachment}
@@ -615,6 +621,7 @@ type MessageRowsProps = Pick<ChatMessageListProps, 'messages' | 'allMessages'> &
       | 'messages'
       | 'allMessages'
       | 'flush'
+      | 'foldEveryRun'
       | 'editingMessageId'
       | 'showAuthor'
       | 'currentUsername'
@@ -641,6 +648,7 @@ const MessageRows = memo(function MessageRows({
   allMessages,
   streaming,
   flush,
+  foldEveryRun,
   editingMessageId,
   showAuthor,
   currentUsername,
@@ -687,6 +695,7 @@ const MessageRows = memo(function MessageRows({
           message={message}
           allMessages={allMessages}
           flush={flush}
+          foldEveryRun={foldEveryRun}
           latest={i === lastIndex && !streaming}
           isEditing={editingMessageId === message.id}
           showAuthor={showAuthor}

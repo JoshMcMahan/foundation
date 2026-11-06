@@ -224,6 +224,38 @@ export const ToolCallRun: StoryObj<{ calls: number; failLast: boolean }> = {
   ),
 }
 
+export const EveryRunFolded: StoryObj<{ failed: boolean; running: boolean }> = {
+  name: 'Every run folded',
+  args: { failed: true, running: false },
+  argTypes: {
+    failed: { description: 'A failed call folds with the rest, with no success mark on the row' },
+    running: { description: 'The row reads as under way and the call shows below it' },
+  },
+  render: ({ failed, running }) => (
+    <AgentMessageParts
+      foldEveryRun
+      message={makeMessage({
+        content: null,
+        parts: [
+          {
+            ...makeToolCallPart({ name: 'ReadFile', status: 'ok', resultLines: 4 }),
+            args: JSON.stringify({ path: 'internal/server/server.go' }),
+          },
+          makeToolCallPart({ name: 'Bash', status: failed ? 'error' : 'ok', resultLines: 3 }),
+          {
+            ...makeToolCallPart({
+              name: 'GrepSearch',
+              status: running ? 'running' : 'ok',
+              resultLines: 2,
+            }),
+            args: JSON.stringify({ pattern: 'partition' }),
+          },
+        ],
+      })}
+    />
+  ),
+}
+
 export const EditDiff: StoryObj<{ startLine: number }> = {
   args: { startLine: 31 },
   argTypes: { startLine: { control: { type: 'number', min: 1 } } },
