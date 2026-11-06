@@ -174,7 +174,7 @@ const meta = {
 } satisfies Meta<typeof AppFrame>
 export default meta
 type Story = StoryObj<typeof meta>
-const sessions = [
+const sessions: { label: string; detail?: string; color?: string }[] = [
   { label: 'Refactor the importer', detail: 'Running', color: 'var(--theme-success)' },
   {
     label: 'Summarize last week',
@@ -184,6 +184,19 @@ const sessions = [
   { label: 'Fix flaky upload test', detail: 'Finished 2 hours ago' },
   { label: 'Draft release notes', detail: 'Finished yesterday' },
 ]
+const longSessions: typeof sessions = [
+  {
+    label: 'Run the integration suite against the staging cluster',
+    color: 'var(--theme-success)',
+  },
+  { label: 'Find why the nightly sync skips idle partitions' },
+  {
+    label: 'Review the network access changes in the open pull request',
+    detail: 'Waiting for you',
+    color: 'var(--theme-warning)',
+  },
+  { label: 'Short label' },
+]
 function StatusDot({ color }: { color: string }) {
   return (
     <span
@@ -192,8 +205,8 @@ function StatusDot({ color }: { color: string }) {
     />
   )
 }
-function DetailsDemo(args: AppFrameProps) {
-  const [active, setActive] = useState(sessions[0]?.label ?? '')
+function DetailsDemo({ items = sessions, ...args }: AppFrameProps & { items?: typeof sessions }) {
+  const [active, setActive] = useState(items[0]?.label ?? '')
   return (
     <AppFrame
       {...args}
@@ -208,11 +221,11 @@ function DetailsDemo(args: AppFrameProps) {
         <nav aria-label="Main navigation">
           <AppFrameNavItem label="New session" icon={<AddIcon />} />
           <AppFrameNavGroup label="Sessions" collapsible={false}>
-            {sessions.map(({ label, detail, color }) => (
+            {items.map(({ label, detail, color }) => (
               <AppFrameNavItem
                 key={label}
                 label={label}
-                detail={detail}
+                {...(detail ? { detail } : {})}
                 {...(color ? { icon: <StatusDot color={color} /> } : {})}
                 selected={active === label}
                 onClick={() => setActive(label)}
@@ -239,6 +252,10 @@ function DetailsDemo(args: AppFrameProps) {
 }
 /** Items can carry a second line, and need no icon: a row with none starts at its label, and the rail shows its first letter. */
 export const ItemDetails: Story = { render: DetailsDemo }
+/** A long label ends in an ellipsis and leaves the row's action inside the sidebar, with a second line or without one. */
+export const LongLabels: Story = {
+  render: (args) => <DetailsDemo {...args} items={longSessions} />,
+}
 export const ItemDetailsCollapsed: Story = {
   render: DetailsDemo,
   args: { defaultExpanded: false },

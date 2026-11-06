@@ -204,6 +204,8 @@
   }
   .pw-frame-nav-group-items {
     display: grid;
+    /* An auto column grows to the longest label, pushing each row's action out of the sidebar. */
+    grid-template-columns: minmax(0, 1fr);
   }
   /* Nested items start under their group's label. */
   .pw-frame-nav-group-nested {
