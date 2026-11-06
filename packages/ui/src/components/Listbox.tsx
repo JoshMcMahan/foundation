@@ -4,7 +4,6 @@ import {
   type ReactNode,
   useEffect,
   useId,
-  useRef,
   useState,
 } from 'react'
 import { cx } from '../cx'
@@ -42,8 +41,52 @@ export interface ListboxNavigationOptions<T> {
   onContextMenu?: ((item: T, index: number, anchor: HTMLElement) => boolean) | undefined
 }
 
-/** How long after the menu key the browser's own contextmenu event can follow it. */
-const contextMenuEchoMs = 1000
+/** How long after the menu key's release the browser's own contextmenu event can follow it. */
+const contextMenuEchoMs = 100
+
+let disarmEcho: (() => void) | undefined
+
+/** Cancels the contextmenu event the browser follows a menu key with, here or on the key's
+ *  release, wherever focus is by then: often in the menu the key opened, whose own menu stands
+ *  in for the browser's. It lasts until just after the key is released, and a press or another
+ *  key, such as a right-click or a later menu key left to the host, ends it at once. */
+function cancelContextMenuEcho(view: Window, key: string) {
+  disarmEcho?.()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const cancel = (event: Event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    disarm()
+  }
+  const keydown = (event: KeyboardEvent) => {
+    if (!event.repeat) {
+      disarm()
+    }
+  }
+  const keyup = (event: KeyboardEvent) => {
+    if (event.key === key) {
+      clearTimeout(timer)
+      timer = setTimeout(disarm, contextMenuEchoMs)
+    }
+  }
+  const disarm = () => {
+    clearTimeout(timer)
+    view.removeEventListener('contextmenu', cancel, true)
+    view.removeEventListener('pointerdown', disarm, true)
+    view.removeEventListener('keydown', keydown, true)
+    view.removeEventListener('keyup', keyup, true)
+    view.removeEventListener('blur', disarm)
+    if (disarmEcho === disarm) {
+      disarmEcho = undefined
+    }
+  }
+  view.addEventListener('contextmenu', cancel, true)
+  view.addEventListener('pointerdown', disarm, true)
+  view.addEventListener('keydown', keydown, true)
+  view.addEventListener('keyup', keyup, true)
+  view.addEventListener('blur', disarm)
+  disarmEcho = disarm
+}
 
 /** Keys are DOM or React keyboard events alike, as an editor plugin and an input pass them. */
 type AnyKeyboardEvent = KeyboardEvent | ReactKeyboardEvent
@@ -66,7 +109,6 @@ export function useListboxNavigation<T>({
 }: ListboxNavigationOptions<T>) {
   const listId = useId()
   const [active, setActive] = useState(0)
-  const keyMenuAt = useRef(0)
   const count = items.length
   // A shorter list can leave the index past its end until the next key.
   const shown = count === 0 ? -1 : Math.min(Math.max(active, 0), count - 1)
@@ -139,18 +181,16 @@ export function useListboxNavigation<T>({
         setActive(step(count, -1))
         break
       case onContextMenu !== undefined &&
-        (event.key === 'ContextMenu' ||
-          (event.key === 'F10' &&
-            event.shiftKey &&
-            !event.ctrlKey &&
-            !event.metaKey &&
-            !event.altKey)): {
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        (event.shiftKey ? event.key === 'F10' : event.key === 'ContextMenu'): {
         const item = items[shown]
         const anchor = document.getElementById(optionId(shown))
         if (item === undefined || !anchor || !onContextMenu?.(item, shown, anchor)) {
           return false
         }
-        keyMenuAt.current = Date.now()
+        cancelContextMenuEcho(window, event.key)
         break
       }
       case event.key === 'Enter' || chooseKeys.includes(event.key): {
@@ -178,17 +218,6 @@ export function useListboxNavigation<T>({
       'aria-autocomplete': 'list' as const,
       'aria-controls': shownOpen ? listId : undefined,
       'aria-activedescendant': shownOpen && shown >= 0 ? optionId(shown) : undefined,
-      // The browser follows the menu key with its own contextmenu event, here or on the key's
-      // release; the menu the key opened stands in for the browser's. A right-click stays the
-      // host's.
-      ...(onContextMenu && {
-        onContextMenu: (event: { preventDefault: () => void }) => {
-          if (Date.now() - keyMenuAt.current < contextMenuEchoMs) {
-            keyMenuAt.current = 0
-            event.preventDefault()
-          }
-        },
-      }),
     },
     listProps: { id: listId, role: 'listbox' as const },
     optionProps: (index: number) => {

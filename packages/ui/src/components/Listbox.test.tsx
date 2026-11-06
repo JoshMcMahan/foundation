@@ -145,15 +145,54 @@ describe('useListboxNavigation keyboard menus', () => {
     expect(fireEvent.keyDown(box, { key: 'ContextMenu' })).toBe(false)
     expect(onContextMenu).toHaveBeenCalledTimes(2)
     expect(fireEvent.keyDown(box, { key: 'F10', shiftKey: true, ctrlKey: true })).toBe(true)
+    expect(fireEvent.keyDown(box, { key: 'ContextMenu', ctrlKey: true })).toBe(true)
     expect(onContextMenu).toHaveBeenCalledTimes(2)
   })
 
-  it("stands in for the browser's menu after the key, but leaves a right-click to the host", () => {
+  it("stands in for the browser's menu after the key wherever focus is, without passing it on", () => {
+    const onAncestor = vi.fn()
+    document.addEventListener('contextmenu', onAncestor)
+    onTestFinished(() => document.removeEventListener('contextmenu', onAncestor))
     render(<Editor onContextMenu={() => true} />)
     const box = screen.getByRole('textbox', { name: 'Body' })
     expect(fireEvent.contextMenu(box)).toBe(true)
+    expect(onAncestor).toHaveBeenCalledTimes(1)
     fireEvent.keyDown(box, { key: 'ContextMenu' })
+    fireEvent.keyDown(document.body, { key: 'ContextMenu', repeat: true })
     expect(fireEvent.contextMenu(box)).toBe(false)
+    expect(onAncestor).toHaveBeenCalledTimes(1)
+    expect(fireEvent.contextMenu(box)).toBe(true)
+  })
+
+  it('lasts while the key is held and ends just after its release', () => {
+    vi.useFakeTimers()
+    try {
+      render(<Editor onContextMenu={() => true} />)
+      const box = screen.getByRole('textbox', { name: 'Body' })
+      fireEvent.keyDown(box, { key: 'ContextMenu' })
+      vi.advanceTimersByTime(5000)
+      fireEvent.keyUp(document.body, { key: 'ContextMenu' })
+      expect(fireEvent.contextMenu(document.body)).toBe(false)
+      fireEvent.keyDown(box, { key: 'F10', shiftKey: true })
+      fireEvent.keyUp(document.body, { key: 'F10', shiftKey: true })
+      vi.advanceTimersByTime(1000)
+      expect(fireEvent.contextMenu(document.body)).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('leaves a right-click, or a later key the host keeps, be', () => {
+    render(<Editor onContextMenu={() => true} />)
+    const box = screen.getByRole('textbox', { name: 'Body' })
+    fireEvent.keyDown(box, { key: 'F10', shiftKey: true })
+    fireEvent.pointerDown(box)
+    expect(fireEvent.contextMenu(box)).toBe(true)
+    fireEvent.keyDown(box, { key: 'ContextMenu' })
+    expect(fireEvent.keyDown(box, { key: 'ContextMenu', ctrlKey: true })).toBe(true)
+    expect(fireEvent.contextMenu(box)).toBe(true)
+    fireEvent.keyDown(box, { key: 'ContextMenu' })
+    expect(fireEvent.keyDown(box, { key: 'ContextMenu', shiftKey: true })).toBe(true)
     expect(fireEvent.contextMenu(box)).toBe(true)
   })
 

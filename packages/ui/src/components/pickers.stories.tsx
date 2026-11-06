@@ -6,11 +6,13 @@ import { Avatar } from './Avatar'
 import { buttonClasses } from './buttonClasses'
 import { Checkbox } from './Checkbox'
 import { Combobox, type ComboboxItem } from './Combobox'
+import { useOpenMenu } from './ContextMenu'
 import { Calendar, DatePicker } from './DatePicker'
 import { Field } from './Field'
 import { fieldBox } from './fieldBox'
 import { Textarea, TitleInput } from './Input'
 import { ListboxGroup, ListboxOption, ListboxPanel, useListboxNavigation } from './Listbox'
+import type { MenuEntry } from './MenuEntries'
 import { Select, type SelectItem } from './Select'
 import { StatusDot } from './StatusBadge'
 import { Tooltip } from './Tooltip'
@@ -887,5 +889,70 @@ export const ListboxChecked: StoryObj = {
     await expect(canvas.getByRole('option', { name: MORE_LABELS })).not.toHaveAttribute(
       'aria-checked',
     )
+  },
+}
+
+function RowMenuListboxDemo() {
+  const openMenu = useOpenMenu()
+  const [query, setQuery] = useState('')
+  const [done, setDone] = useState<string | null>(null)
+  const matches = LABELS.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
+  const menuFor = (name: string): MenuEntry[] => [
+    { label: 'Rename', onClick: () => setDone(`Renamed ${name}`) },
+    { label: 'Delete', destructive: true, onClick: () => setDone(`Deleted ${name}`) },
+  ]
+  const list = useListboxNavigation({
+    items: matches,
+    homeEnd: true,
+    onChoose: (label) => setDone(`Opened ${label.name}`),
+    onDismiss: () => setQuery(''),
+    onContextMenu: (label, _index, anchor) => openMenu(anchor, menuFor(label.name)) === true,
+  })
+  return (
+    <div className="flex max-w-xs flex-col gap-2 text-sm">
+      <input
+        aria-label="Find a label"
+        placeholder="Find a label…"
+        {...list.hostProps}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value)
+          list.setActive(0)
+        }}
+        onKeyDown={(event) => {
+          list.handleKey(event)
+        }}
+        className={fieldBox()}
+      />
+      <ListboxPanel
+        listProps={list.listProps}
+        aria-label="Labels"
+        empty="No labels match"
+        footer="Enter opens · Shift+F10 or the menu key shows its actions"
+      >
+        {matches.map((label, index) => (
+          <ListboxOption
+            key={label.name}
+            option={list.optionProps(index)}
+            label={label.name}
+            hint={String(label.count)}
+          />
+        ))}
+      </ListboxPanel>
+      <span className="text-(--theme-muted-text-color)">{done ?? 'Nothing done yet'}</span>
+    </div>
+  )
+}
+
+/** With `onContextMenu`, Shift+F10 or the menu key opens the highlighted option's menu at its
+ *  row, as a right-click on the row would, and the browser's own menu stays shut. */
+export const ListboxRowMenu: StoryObj = {
+  render: () => <RowMenuListboxDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('textbox', { name: 'Find a label' }))
+    await userEvent.keyboard('{ArrowDown}{Shift>}{F10}{/Shift}')
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
+    await expect(canvas.getByText('Renamed Feature')).toBeInTheDocument()
   },
 }
