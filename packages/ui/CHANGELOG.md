@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.119.1](https://github.com/parallelworks/foundation/compare/ui-v0.119.0...ui-v0.119.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **ui:** a long navigation label pushes its row's action out of the sidebar ([#668](https://github.com/parallelworks/foundation/issues/668)) ([aba2c8f](https://github.com/parallelworks/foundation/commit/aba2c8fcf2785fc82fc74092e4c7e919f874fdcb))
+
 ## [0.119.0](https://github.com/parallelworks/foundation/compare/ui-v0.118.0...ui-v0.119.0) (2026-11-06)
 
 
