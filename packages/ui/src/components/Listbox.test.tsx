@@ -9,10 +9,12 @@ function Editor({
   onChoose = vi.fn(),
   onDismiss,
   homeEnd,
+  onContextMenu,
 }: {
   onChoose?: (item: string) => void
   onDismiss?: () => void
   homeEnd?: boolean
+  onContextMenu?: (item: string, index: number, anchor: HTMLElement) => boolean
 }) {
   const list = useListboxNavigation({
     items: commands,
@@ -20,6 +22,7 @@ function Editor({
     onDismiss,
     homeEnd,
     isDisabled: (item) => item === 'Quote',
+    onContextMenu,
   })
   return (
     <>
@@ -124,6 +127,46 @@ describe('useListboxNavigation', () => {
     rerender(<Search open={false} />)
     expect(fireEvent.keyDown(box, { key: 'Escape' })).toBe(true)
     expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useListboxNavigation keyboard menus', () => {
+  it("opens the highlighted item's menu at its option on Shift+F10 and the menu key", () => {
+    const onContextMenu = vi.fn(() => true)
+    render(<Editor onContextMenu={onContextMenu} />)
+    const box = screen.getByRole('textbox', { name: 'Body' })
+    fireEvent.keyDown(box, { key: 'ArrowDown' })
+    expect(fireEvent.keyDown(box, { key: 'F10', shiftKey: true })).toBe(false)
+    expect(onContextMenu).toHaveBeenLastCalledWith(
+      'List',
+      1,
+      screen.getByRole('option', { name: /List/ }),
+    )
+    expect(fireEvent.keyDown(box, { key: 'ContextMenu' })).toBe(false)
+    expect(onContextMenu).toHaveBeenCalledTimes(2)
+    expect(fireEvent.keyDown(box, { key: 'F10', shiftKey: true, ctrlKey: true })).toBe(true)
+    expect(onContextMenu).toHaveBeenCalledTimes(2)
+  })
+
+  it("stands in for the browser's menu after the key, but leaves a right-click to the host", () => {
+    render(<Editor onContextMenu={() => true} />)
+    const box = screen.getByRole('textbox', { name: 'Body' })
+    expect(fireEvent.contextMenu(box)).toBe(true)
+    fireEvent.keyDown(box, { key: 'ContextMenu' })
+    expect(fireEvent.contextMenu(box)).toBe(false)
+    expect(fireEvent.contextMenu(box)).toBe(true)
+  })
+
+  it('leaves the keys to the host when no menu opens, or the list has no menus', () => {
+    const { unmount } = render(<Editor onContextMenu={() => false} />)
+    let box = screen.getByRole('textbox', { name: 'Body' })
+    expect(fireEvent.keyDown(box, { key: 'F10', shiftKey: true })).toBe(true)
+    expect(fireEvent.contextMenu(box)).toBe(true)
+    unmount()
+    render(<Editor />)
+    box = screen.getByRole('textbox', { name: 'Body' })
+    expect(fireEvent.keyDown(box, { key: 'ContextMenu' })).toBe(true)
+    expect(fireEvent.contextMenu(box)).toBe(true)
   })
 })
 
