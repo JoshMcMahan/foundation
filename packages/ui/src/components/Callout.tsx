@@ -102,25 +102,14 @@ export function Callout({
     }
   }, [words])
   const Icon = toneIcons[tone]
-  const controls = (
-    <>
-      {action !== undefined && (
-        // One line tall like the icon, so a button taller than the text centers on
-        // the first line and spills into the padding instead of sitting below it.
-        <div className={cx('flex shrink-0 items-center gap-2', small ? 'h-4' : 'h-5')}>
-          {action}
-        </div>
-      )}
-      {onDismiss && (
-        <IconButton
-          size="xs"
-          icon={<CloseIcon />}
-          label={common.dismiss}
-          onClick={onDismiss}
-          className={cx('shrink-0', small ? '-my-1 -me-1' : '-my-0.5 -me-1')}
-        />
-      )}
-    </>
+  const dismiss = onDismiss && (
+    <IconButton
+      size="xs"
+      icon={<CloseIcon />}
+      label={common.dismiss}
+      onClick={onDismiss}
+      className={cx('shrink-0', small ? '-my-1 -me-1' : '-my-0.5 -me-1')}
+    />
   )
   return (
     <div
@@ -150,18 +139,41 @@ export function Callout({
       )}
       {title !== undefined ? (
         // With a title, the action and the dismiss button sit on its line, and the body below
-        // reaches the callout's far edge under them, such as a value to copy.
+        // reaches the callout's far edge under them, such as a value to copy. Where the line
+        // can't keep the title a few words wide, as on a phone, the action wraps under the title
+        // instead of squeezing it to a word a line; the dismiss button stays beside the title.
+        // A wrap rather than a container query: containment would collapse a callout sized to
+        // its content.
         <div className="min-w-0 flex-1">
           <div className={cx('flex items-start', small ? 'gap-2' : 'gap-3')}>
-            <p className="m-0 min-w-0 flex-1 font-medium">{title}</p>
-            {controls}
+            <div
+              className={cx(
+                'flex min-w-0 flex-1 flex-wrap items-start',
+                small ? 'gap-x-2 gap-y-3' : 'gap-x-3 gap-y-3',
+              )}
+            >
+              <p className="m-0 min-w-0 flex-[1_1_12rem] font-medium">{title}</p>
+              {action !== undefined && (
+                // A button a size taller than the line rises into the padding, so its label sits
+                // on the title's line; below, it keeps clear of the body.
+                <div className="-mt-1 flex min-w-0 flex-wrap items-center gap-2">{action}</div>
+              )}
+            </div>
+            {dismiss}
           </div>
           {children !== undefined && <div className="mt-0.5">{children}</div>}
         </div>
       ) : (
         <>
           <div className="min-w-0 flex-1">{children}</div>
-          {controls}
+          {action !== undefined && (
+            // One line tall like the icon, so a button taller than the text centers on the
+            // first line and spills into the padding instead of sitting below it.
+            <div className={cx('flex shrink-0 items-center gap-2', small ? 'h-4' : 'h-5')}>
+              {action}
+            </div>
+          )}
+          {dismiss}
         </>
       )}
       {polite && (

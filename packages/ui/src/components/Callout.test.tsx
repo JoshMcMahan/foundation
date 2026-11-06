@@ -12,9 +12,29 @@ describe('Callout', () => {
     )
     const dismiss = screen.getByRole('button', { name: 'Dismiss' })
     const title = screen.getByText('Token created')
-    expect(dismiss.parentElement).toBe(title.parentElement)
+    expect(dismiss.parentElement).toBe(title.parentElement?.parentElement)
     // The body is outside the title's line, beside nothing.
     expect(title.parentElement).not.toContainElement(screen.getByText('tdm_pat_9c4e'))
+  })
+
+  it('lays the action out with the title and dismiss button, and the body below all three', () => {
+    render(
+      <Callout
+        title="Runner mismatch"
+        action={<button type="button">Switch</button>}
+        onDismiss={vi.fn()}
+      >
+        <span>Cells won't run</span>
+      </Callout>,
+    )
+    const title = screen.getByText('Runner mismatch')
+    const line = title.parentElement as HTMLElement
+    // The action shares a wrapping line with the title, so on a narrow callout it drops under the
+    // title instead of squeezing it; the dismiss button sits outside that line, beside it.
+    expect(line).toContainElement(screen.getByRole('button', { name: 'Switch' }))
+    expect(line).not.toContainElement(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.getByRole('button', { name: 'Dismiss' }).parentElement).toBe(line.parentElement)
+    expect(line.parentElement).not.toContainElement(screen.getByText("Cells won't run"))
   })
 
   it('keeps the dismiss button beside a body without a title', () => {

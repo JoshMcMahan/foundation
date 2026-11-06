@@ -128,6 +128,45 @@ export const Bars: StoryObj = {
   ),
 }
 
+/** Two actions on a phone: they drop under the title, which keeps its width, and the close
+ *  button stays on the title's line. Where the line is wide enough, they sit beside the title. */
+export const Narrow: StoryObj = {
+  render: () => {
+    const actions = (
+      <>
+        <Button size="sm">Switch the runner to R</Button>
+        <Button size="sm" variant="outline">
+          Keep Python 3 for this file
+        </Button>
+      </>
+    )
+    return (
+      <div className="flex flex-col gap-6">
+        <div style={{ width: 358 }}>
+          <Callout
+            tone="warning"
+            title="This file is in R, but its runner speaks Python 3"
+            action={actions}
+            onDismiss={() => {}}
+          >
+            Its cells won't run until they match.
+          </Callout>
+        </div>
+        <div style={{ maxWidth: 768 }}>
+          <Callout
+            tone="warning"
+            title="This file is in R, but its runner speaks Python 3"
+            action={actions}
+            onDismiss={() => {}}
+          >
+            Its cells won't run until they match.
+          </Callout>
+        </div>
+      </div>
+    )
+  },
+}
+
 /** Small, beside a compact control such as a composer, and put away with its close button. */
 export const Compact: StoryObj = {
   render: function Render() {
