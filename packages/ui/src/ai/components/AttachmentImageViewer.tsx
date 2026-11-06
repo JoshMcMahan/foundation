@@ -1,9 +1,11 @@
-import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, type MouseEvent, useLayoutEffect, useRef, useState } from 'react'
 import { IconButton } from '../../components/IconButton'
 import { ImageStage, ZOOM_FIT, ZoomControls, zoomForKey } from '../../components/ImageStage'
+import { Loader } from '../../components/Loader'
 import { Modal } from '../../components/Modal'
 import { useStrings } from '../../components/Provider'
 import { useClosingValue } from '../../components/useClosingValue'
+import { cx } from '../../cx'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon } from '../../icons'
 import { useChatConfig } from '../core/config'
 import type { AttachmentRef } from '../types'
@@ -20,28 +22,45 @@ export interface ViewableImage {
   href?: string | undefined
 }
 
+type FullImageStatus = 'loading' | 'loaded' | 'failed'
+
 /** The full image once it has loaded, and the preview until then or if it fails,
  *  so the viewer never shows a broken picture over one it already had. */
-function useLoadedImage(preview: string, full: string | undefined): string {
-  const [loaded, setLoaded] = useState<string | undefined>(undefined)
-  useEffect(() => {
-    if (!full || full === preview) {
+function useLoadedImage(
+  preview: string,
+  full: string | undefined,
+): { src: string; status: FullImageStatus } {
+  const [settled, setSettled] = useState<{ url: string; status: FullImageStatus } | null>(null)
+  const wanted = full && full !== preview ? full : undefined
+  // Before paint, so a picture the browser already holds opens with no loading state.
+  useLayoutEffect(() => {
+    if (!wanted) {
       return
     }
     let current = true
-    const image = new Image()
-    image.onload = () => {
+    const settle = (status: FullImageStatus) => {
       if (current) {
-        setLoaded(full)
+        setSettled({ url: wanted, status })
       }
     }
-    image.src = full
+    const image = new Image()
+    image.onload = () => settle('loaded')
+    image.onerror = () => settle('failed')
+    image.src = wanted
+    if (image.complete && image.naturalWidth > 0) {
+      settle('loaded')
+    }
     return () => {
       current = false
       image.onload = null
+      image.onerror = null
     }
-  }, [preview, full])
-  return full && loaded === full ? full : preview
+  }, [wanted])
+  if (!wanted) {
+    return { src: preview, status: 'loaded' }
+  }
+  const status = settled?.url === wanted ? settled.status : 'loading'
+  return { src: status === 'loaded' ? wanted : preview, status }
 }
 
 /** A message's images, one at a time, at their own size or smaller to fit the window. */
@@ -64,7 +83,8 @@ export default function AttachmentImageViewer({
   const image = shown === undefined ? undefined : images[shown]
   const t = useChatConfig().strings.attachmentManager
   const { common } = useStrings()
-  const src = useLoadedImage(image?.src ?? '', image?.fullUrl)
+  const { src, status } = useLoadedImage(image?.src ?? '', image?.fullUrl)
+  const loading = status === 'loading'
   const popup = useRef<HTMLDivElement | null>(null)
   const several = images.length > 1
   // Held against the image it was set for, so stepping starts at fit and closing keeps it
@@ -159,15 +179,38 @@ export default function AttachmentImageViewer({
             )}
             <IconButton icon={<CloseIcon />} label={common.close} onClick={onClose} />
           </div>
-          {/* Keyed by image, so stepping never shows the last one's picture under the next one's name. */}
-          <ImageStage
-            key={shown}
-            src={src}
-            alt={image.name}
-            zoom={zoom}
-            className="min-h-0 flex-1"
-            onClick={onClose}
-          />
+          <div className="relative min-h-0 flex-1">
+            {/* Keyed by image, so stepping never shows the last one's picture under the next one's name. */}
+            <ImageStage
+              key={shown}
+              src={src}
+              alt={image.name}
+              zoom={zoom}
+              imageClassName={cx(
+                'transition-[filter] duration-300 ease-out motion-reduce:transition-none',
+                loading && 'blur-lg',
+                // Filling the stage, a small preview is already where a large image will land.
+                loading && zoom === ZOOM_FIT && 'size-full',
+              )}
+              onClick={onClose}
+            />
+            {/* Always mounted, so a screen reader hears what appears in it. */}
+            <div
+              role="status"
+              className={cx(
+                'pointer-events-none absolute inset-0 flex justify-center p-3',
+                status === 'failed' ? 'items-end' : 'items-center',
+              )}
+            >
+              {status !== 'loaded' && (
+                // Held back a moment, so a quick load never flashes it.
+                <span className="flex items-center gap-2 rounded-lg border border-(--theme-border) bg-(--theme-panel-bg) px-3 py-1.5 text-sm text-(--theme-app) shadow-lg transition-opacity delay-150 duration-200 starting:opacity-0 motion-reduce:transition-none">
+                  {loading && <Loader inline decorative size="1em" />}
+                  {loading ? common.loading : t.fullImageFailed}
+                </span>
+              )}
+            </div>
+          </div>
         </>
       )}
     </Modal>

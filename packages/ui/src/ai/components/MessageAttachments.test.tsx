@@ -21,10 +21,13 @@ const download = (id: string) => `/dl/${id}`
 
 // jsdom loads no images, so each one a test makes waits for it to say how it went.
 const loads: { src: string; onload: (() => void) | null; onerror: (() => void) | null }[] = []
+let cached = false
 class FakeImage {
   src = ''
   onload: (() => void) | null = null
   onerror: (() => void) | null = null
+  complete = cached
+  naturalWidth = cached ? 1 : 0
   constructor() {
     loads.push(this)
   }
@@ -32,6 +35,7 @@ class FakeImage {
 
 beforeEach(() => {
   loads.length = 0
+  cached = false
   vi.stubGlobal('Image', FakeImage)
 })
 afterEach(() => {
@@ -117,6 +121,109 @@ describe('message image viewer', () => {
     await screen.findByRole('dialog')
     act(() => loads.find((load) => load.src === '/dl/a')?.onerror?.())
     expect(viewerImage('a.png')).toHaveAttribute('src', PREVIEW)
+  })
+
+  it('says it is loading over a blurred preview until the full image arrives', async () => {
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW })]}
+        downloadUrl={download}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'a.png' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Loading…')
+    expect(viewerImage('a.png')).toHaveClass('blur-lg', 'size-full')
+    act(() => loads.find((load) => load.src === '/dl/a')?.onload?.())
+    expect(within(dialog).getByRole('status')).toBeEmptyDOMElement()
+    expect(viewerImage('a.png')).not.toHaveClass('blur-lg')
+    expect(viewerImage('a.png')).not.toHaveClass('size-full')
+  })
+
+  it('stops loading and says it is showing a preview when the full image fails', async () => {
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW })]}
+        downloadUrl={download}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'a.png' }))
+    const dialog = await screen.findByRole('dialog')
+    act(() => loads.find((load) => load.src === '/dl/a')?.onerror?.())
+    expect(within(dialog).getByRole('status')).toHaveTextContent(
+      "Couldn't load the full image. Showing a preview.",
+    )
+    expect(viewerImage('a.png')).not.toHaveClass('blur-lg')
+    expect(viewerImage('a.png')).not.toHaveClass('size-full')
+  })
+
+  it('opens straight on a full image the browser already holds', async () => {
+    cached = true
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW })]}
+        downloadUrl={download}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'a.png' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(viewerImage('a.png')).toHaveAttribute('src', '/dl/a')
+    expect(within(dialog).getByRole('status')).toBeEmptyDOMElement()
+    expect(viewerImage('a.png')).not.toHaveClass('blur-lg')
+  })
+
+  it('loads nothing for a file that is its own preview, and still offers it to download', async () => {
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW, size: 8 })]}
+        downloadUrl={download}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'a.png' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(loads).toHaveLength(0)
+    expect(viewerImage('a.png')).toHaveAttribute('src', PREVIEW)
+    expect(viewerImage('a.png')).not.toHaveClass('blur-lg')
+    expect(within(dialog).getByRole('status')).toBeEmptyDOMElement()
+    expect(within(dialog).getByRole('link', { name: 'Download a.png' })).toHaveAttribute(
+      'href',
+      '/dl/a',
+    )
+  })
+
+  it('carries on with the same load when the viewer closes and opens again', async () => {
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW })]}
+        downloadUrl={download}
+      />,
+    )
+    const thumbnail = screen.getByRole('link', { name: 'a.png' })
+    fireEvent.click(thumbnail)
+    fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    fireEvent.click(thumbnail)
+    const dialog = await screen.findByRole('dialog')
+    const started = loads.filter((load) => load.src === '/dl/a')
+    expect(started).toHaveLength(1)
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Loading…')
+    act(() => started[0]?.onload?.())
+    expect(viewerImage('a.png')).toHaveAttribute('src', '/dl/a')
+  })
+
+  it('keeps a zoomed preview at its zoom while the full image loads', async () => {
+    render(
+      <MessageAttachments
+        attachments={[image('a', { previewUrl: PREVIEW })]}
+        downloadUrl={download}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'a.png' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.keyDown(dialog, { key: '+' })
+    expect(viewerImage('a.png')).toHaveStyle({ width: '125%' })
+    expect(viewerImage('a.png')).toHaveClass('blur-lg')
+    expect(viewerImage('a.png')).not.toHaveClass('size-full')
   })
 
   it('leaves the click to a host that opens attachments itself', () => {

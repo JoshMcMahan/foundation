@@ -202,6 +202,8 @@ export interface ChatStrings {
     nextImage: string
     /** Where the shown picture falls among the message's pictures, such as "2 of 3". */
     imagePosition: (position: number, total: number) => string
+    /** Says the image viewer is left showing a preview because the full image failed to load. */
+    fullImageFailed: string
   }
   branch: {
     previous: string
@@ -546,6 +548,7 @@ export const defaultChatStrings: ChatStrings = {
     previousImage: 'Previous image',
     nextImage: 'Next image',
     imagePosition: (position, total) => `${position.toLocaleString()} of ${total.toLocaleString()}`,
+    fullImageFailed: "Couldn't load the full image. Showing a preview.",
   },
   branch: {
     previous: 'Previous branch',

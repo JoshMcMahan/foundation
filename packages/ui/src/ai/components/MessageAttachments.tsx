@@ -11,6 +11,12 @@ import AttachmentImageViewer, { type ViewableImage } from './AttachmentImageView
 const chipClasses =
   'inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-(--theme-muted-panel-bg)'
 
+/** A small file can be its own preview, which leaves nothing larger to load. */
+function isOwnPreview({ previewUrl, size }: AttachmentRef): boolean {
+  const base64 = previewUrl?.match(/^data:[^,]*;base64,([^=]*)/)?.[1]
+  return base64 !== undefined && Math.floor((base64.length * 3) / 4) === size
+}
+
 /** The files sent with a message. One the reader can download is a link to
  *  it, so it can be saved or opened in a new tab like any other; a host that
  *  previews attachments takes the plain click, and without one a picture opens
@@ -40,8 +46,9 @@ export default function MessageAttachments({
     // The preview is only ever an image's source, so a data: URL suits it.
     const href = safeUrl(url)
     const src = isImage ? att.previewUrl || url : undefined
+    const fullUrl = isOwnPreview(att) ? undefined : url
     const viewer =
-      src && !onOpen ? images.push({ attachment: att, name, src, fullUrl: url, href }) - 1 : -1
+      src && !onOpen ? images.push({ attachment: att, name, src, fullUrl, href }) - 1 : -1
     return { att, name, href, src, viewer }
   })
   return (

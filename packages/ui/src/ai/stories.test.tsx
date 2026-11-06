@@ -9,6 +9,7 @@ import { composeStories } from '@storybook/react-vite'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as imageViewer from './components/AttachmentImageViewer.stories'
 import * as attachments from './components/AttachmentManager.stories'
 import * as attachmentUpload from './components/AttachmentUpload.stories'
 import * as agentParts from './components/agent/AgentMessageParts.stories'
@@ -30,6 +31,7 @@ const SUITES = {
   agentParts,
   attachments,
   attachmentUpload,
+  imageViewer,
   thread,
   messageList,
   sidebar,
