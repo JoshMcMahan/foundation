@@ -1,9 +1,11 @@
 import { type ReactNode, useLayoutEffect, useState } from 'react'
 import { cx } from '../cx'
-import { ChevronRightIcon, MoreIcon } from '../icons'
+import { ChevronDownIcon, ChevronRightIcon, MoreIcon } from '../icons'
 import { ActionMenu } from './ActionMenu'
 import { AppLink } from './AppLink'
 import { buttonClasses } from './buttonClasses'
+import { Combobox } from './Combobox'
+import type { ComboboxItems } from './comboboxItems'
 import { keyedByContent } from './keys'
 import type { MenuEntry } from './MenuEntries'
 import { useStrings } from './Provider'
@@ -18,6 +20,23 @@ export interface Breadcrumb {
   /** Before the label, such as the section a page belongs to; also beside
    *  the crumb's row once it folds into the "…" menu. */
   icon?: ReactNode
+  /** Lets the last crumb switch to one of its siblings, such as another of a
+   *  team's cycles: it opens a searchable list of them. Ignored on any other
+   *  crumb. */
+  switcher?: BreadcrumbSwitcher | undefined
+}
+
+/** The siblings the last crumb can switch to, and the one it is. */
+export interface BreadcrumbSwitcher {
+  items: ComboboxItems<string>
+  /** The item the crumb is, which the list marks and opens on. */
+  value: string
+  /** Called with another item's value when the reader picks it. */
+  onValueChange: (value: string) => void
+  /** Names the list and the crumb's button, such as "Switch cycle". */
+  label: string
+  /** The list's search placeholder, such as "Find a cycle". */
+  placeholder?: string | undefined
 }
 
 export interface BreadcrumbsProps {
@@ -157,6 +176,11 @@ export function Breadcrumbs({
               <Last aria-current={current} className="m-0">
                 <CrumbPlaceholder />
               </Last>
+            ) : last.switcher ? (
+              // A heading may hold the button: it is the page's name, and opens its siblings.
+              <Last aria-current={current} className="m-0 flex min-w-0 items-center">
+                <CrumbSwitcher crumb={last} switcher={last.switcher} />
+              </Last>
             ) : heading ? (
               // Two lines and their padding fit a 48px bar; a third grows it.
               <h1
@@ -203,6 +227,7 @@ export function Breadcrumbs({
               >
                 {crumb.label || ' '.repeat(6)}
               </span>
+              {i === crumbs.length - 1 && crumb.switcher && <ChevronDownIcon className="size-3" />}
               {i < crumbs.length - 1 && <Separator />}
             </span>
           ))}
@@ -229,6 +254,41 @@ function CrumbLabel({ crumb, wrap = false }: { crumb: Breadcrumb; wrap?: boolean
     </>
   )
 }
+/** The last crumb as a button that opens its siblings, picking one of which
+ *  goes there. */
+function CrumbSwitcher({ crumb, switcher }: { crumb: Breadcrumb; switcher: BreadcrumbSwitcher }) {
+  return (
+    <Combobox
+      aria-label={switcher.label}
+      placeholder={switcher.placeholder}
+      items={switcher.items}
+      value={switcher.value}
+      onValueChange={(next) => {
+        if (next !== null && next !== switcher.value) {
+          switcher.onValueChange(next)
+        }
+      }}
+      trigger={
+        <button
+          type="button"
+          className={cx(
+            crumbLink,
+            'flex min-w-0 cursor-pointer items-center gap-1 text-start text-[13px] font-medium leading-none text-(--theme-app)',
+          )}
+        >
+          <span className={cx('min-w-0 truncate', crumb.icon && withIcon)}>
+            <CrumbLabel crumb={crumb} />
+          </span>
+          <ChevronDownIcon
+            aria-hidden="true"
+            className="size-3 shrink-0 text-(--theme-muted-text-color)"
+          />
+        </button>
+      }
+    />
+  )
+}
+
 const crumbLink =
   'rounded-sm transition-colors hover:text-(--theme-app) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--theme-focus)'
 

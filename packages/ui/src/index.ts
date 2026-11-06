@@ -17,7 +17,12 @@ export {
   type AvatarStatus,
   avatarInitials,
 } from './components/Avatar'
-export { type Breadcrumb, Breadcrumbs, type BreadcrumbsProps } from './components/Breadcrumbs'
+export {
+  type Breadcrumb,
+  type BreadcrumbSwitcher,
+  Breadcrumbs,
+  type BreadcrumbsProps,
+} from './components/Breadcrumbs'
 export { Button, type ButtonProps, MethodButton } from './components/Button'
 export {
   type ButtonSize,

@@ -251,3 +251,54 @@ export const WithIcons: Story = {
     await expect(within(nav).getByRole('link', { name: 'Clusters' })).toBeVisible()
   },
 }
+
+const CYCLES = [
+  {
+    label: 'Past',
+    items: [
+      { value: '10', label: 'Cycle 10', hint: 'Oct 5 – 18' },
+      { value: '11', label: 'Cycle 11: Hardening', hint: 'Oct 19 – Nov 1' },
+    ],
+  },
+  { label: 'Current', items: [{ value: '12', label: 'Cycle 12', hint: 'Nov 2 – 15' }] },
+  { label: 'Upcoming', items: [{ value: '13', label: 'Cycle 13', hint: 'Nov 16 – 29' }] },
+]
+
+function SwitchingTrail() {
+  const [cycle, setCycle] = useState('12')
+  const label = CYCLES.flatMap((g) => g.items).find((c) => c.value === cycle)?.label ?? ''
+  return (
+    <Breadcrumbs
+      heading
+      crumbs={[
+        { label: 'Engineering', href: '/teams/eng' },
+        { label: 'Cycles', href: '/teams/eng/cycles' },
+        {
+          label,
+          switcher: {
+            items: CYCLES,
+            value: cycle,
+            onValueChange: setCycle,
+            label: 'Switch cycle',
+            placeholder: 'Find a cycle',
+          },
+        },
+      ]}
+    />
+  )
+}
+
+/** The last crumb can open its siblings, such as a team's other cycles: pick
+ *  one to go there, or type to find it. */
+export const Switcher: Story = {
+  render: () => <SwitchingTrail />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Switch cycle Cycle 12' }))
+    const list = await within(document.body).findByRole('listbox')
+    await userEvent.click(within(list).getByRole('option', { name: /Cycle 11/ }))
+    await waitFor(() =>
+      expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('Cycle 11: Hardening'),
+    )
+  },
+}
