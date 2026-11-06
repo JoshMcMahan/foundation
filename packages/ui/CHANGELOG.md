@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.117.1](https://github.com/parallelworks/foundation/compare/ui-v0.117.0...ui-v0.117.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **ui:** an opened chat image gives no sign the full picture is still loading ([#662](https://github.com/parallelworks/foundation/issues/662)) ([cc37d97](https://github.com/parallelworks/foundation/commit/cc37d97405ef860330f83ef468d735e1c7533831))
+* **ui:** the menu key opens the browser's menu over a list's row menu on Windows, and a right-click after Shift+F10 is ignored ([#661](https://github.com/parallelworks/foundation/issues/661)) ([2ccd593](https://github.com/parallelworks/foundation/commit/2ccd593b2d661b513b644ec2f5f3f3d296bfd67d))
+
 ## [0.117.0](https://github.com/parallelworks/foundation/compare/ui-v0.116.1...ui-v0.117.0) (2026-11-06)
 
 
