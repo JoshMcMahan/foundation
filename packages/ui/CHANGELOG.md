@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.117.0](https://github.com/parallelworks/foundation/compare/ui-v0.116.1...ui-v0.117.0) (2026-11-06)
+
+
+### Features
+
+* **ui:** a highlighted list opens an item's menu from the keyboard with Shift+F10 or the menu key ([#657](https://github.com/parallelworks/foundation/issues/657)) ([232ad8e](https://github.com/parallelworks/foundation/commit/232ad8e7bc54ef9ba32852b18cc226764b51ac18))
+* **ui:** an avatar can carry a badge for what the person did ([#654](https://github.com/parallelworks/foundation/issues/654)) ([98e7c08](https://github.com/parallelworks/foundation/commit/98e7c08f2c773a70e3883e635c2f26a114ac5587))
+
+
+### Bug Fixes
+
+* **ui:** a button-triggered Combobox opens a dialog with no name ([#655](https://github.com/parallelworks/foundation/issues/655)) ([b8c5e3e](https://github.com/parallelworks/foundation/commit/b8c5e3e0f5d62bacda2525b718ea46aa6089107f))
+* **ui:** a Combobox's options scroll in a box the keyboard can't reach ([#656](https://github.com/parallelworks/foundation/issues/656)) ([e46bbf4](https://github.com/parallelworks/foundation/commit/e46bbf42e702bb5889ac5fafbc2461173b65f0c0))
+* **ui:** a slash command's description disappears once you finish typing its name ([#660](https://github.com/parallelworks/foundation/issues/660)) ([5d325ce](https://github.com/parallelworks/foundation/commit/5d325ce35ad4db08cc878b2c20904176d53f45bb))
+* **ui:** a titled callout's actions wrap under the title on narrow screens ([#653](https://github.com/parallelworks/foundation/issues/653)) ([95a466e](https://github.com/parallelworks/foundation/commit/95a466e535a6e69ca65712ba526a11984c4f8f28))
+* **ui:** an AI chat reply stops when you leave the chat or reload the page ([#652](https://github.com/parallelworks/foundation/issues/652)) ([7dd0725](https://github.com/parallelworks/foundation/commit/7dd0725e35ea74f489eb717b00e864ac63a023d9))
+
 ## [0.116.1](https://github.com/parallelworks/foundation/compare/ui-v0.116.0...ui-v0.116.1) (2026-11-05)
 
 
