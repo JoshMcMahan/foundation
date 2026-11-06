@@ -23,6 +23,7 @@ import type {
   ChatUser,
   Conversation,
   ConversationSummary,
+  GeneratingReply,
   ChatMessage as Message,
   MessagePart,
   ProviderInfo,
@@ -42,7 +43,7 @@ import {
   useControllable,
   useOwnSidebar,
 } from './sidebarState'
-import { useSSEStream } from './useSSEStream'
+import { type BackgroundStream, useSSEStream } from './useSSEStream'
 
 function generateTitleFromMessage(content: string): string {
   const cleaned = content
@@ -230,6 +231,7 @@ export interface ChatStream {
 }
 
 const NO_TOOLS: ChatToolOption[] = []
+const WATCH_POLL_MS = 1000
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
 const ChatStreamContext = createContext<ChatStream | undefined>(undefined)
@@ -301,6 +303,9 @@ export function ChatProvider({
 }: ChatProviderProps) {
   const [state, dispatch] = useReducer(chatReducer, initialState)
   const hasLoadedConversationsRef = useRef(false)
+  const [streamOwner] = useState(() => ({}))
+  const followingRef = useRef<BackgroundStream | null>(null)
+  const watchingRef = useRef<{ id: string; reply: GeneratingReply } | null>(null)
 
   const {
     onStreamingChunk,
@@ -413,11 +418,158 @@ export function ChatProvider({
   // resolves after the user moved on cannot rebind the current conversation
   const loadSequenceRef = useRef(0)
 
+  const releaseSends = useCallback((sent: boolean) => {
+    const next = sent ? heldSendArgs(pendingQueueRef.current) : null
+    if (next) {
+      pendingQueueRef.current = []
+      dispatch({ type: 'CLEAR_QUEUED_MESSAGES' })
+    }
+    setTimeout(() => {
+      isSendingRef.current = false
+      if (next) {
+        sendMessageRef.current?.(...next)
+      }
+    }, 0)
+  }, [])
+
+  const followReply = useCallback(
+    (id: string, live: BackgroundStream) => {
+      followingRef.current = live
+      isSendingRef.current = true
+      abortControllerRef.current = live.controller
+      live.follower = {
+        onContent: onStreamingChunk,
+        onReasoning: (reasoning) =>
+          dispatch({ type: 'APPEND_STREAMING_REASONING', reasoning, conversationId: id }),
+        onPart: (delta) =>
+          afterReveal(() => dispatch({ type: 'APPLY_STREAMING_PART', delta, conversationId: id })),
+        onUsage: (usage) => dispatch({ type: 'SET_STREAMING_USAGE', usage, conversationId: id }),
+        onFinish: async (message) => {
+          if (streamingConversationIdRef.current === id) {
+            await drainReveal()
+            stopAnimationLoop()
+            streamingConversationIdRef.current = null
+          }
+          if (abortControllerRef.current === live.controller) {
+            abortControllerRef.current = null
+          }
+          if (message) {
+            dispatch({ type: 'ADD_MESSAGE', message, conversationId: id })
+          }
+          dispatch({ type: 'SET_STREAMING', isStreaming: false, conversationId: id })
+          dispatch({ type: 'CLEAR_STREAMING_CONTENT', conversationId: id })
+          if (followingRef.current !== live) {
+            return
+          }
+          followingRef.current = null
+          releaseSends(!!message)
+        },
+      }
+    },
+    [
+      onStreamingChunk,
+      afterReveal,
+      drainReveal,
+      stopAnimationLoop,
+      streamingConversationIdRef,
+      abortControllerRef,
+      releaseSends,
+    ],
+  )
+
+  const watchReply = useCallback(
+    (id: string, reply: GeneratingReply) => {
+      const watch = { id, reply }
+      watchingRef.current = watch
+      isSendingRef.current = true
+      streamingConversationIdRef.current = id
+      targetStreamContentRef.current = reply.content
+      streamActiveRef.current = true
+      dispatch({ type: 'RESTORE_BACKGROUND_STREAM', content: '', reasoning: reply.reasoning })
+      startStreaming(id)
+
+      const poll = async () => {
+        if (watchingRef.current !== watch) {
+          return
+        }
+        const conversations = adapter.conversations
+        const checked = conversations.generating
+          ? conversations.generating(id)
+          : conversations.get(id).then((conversation) => conversation.generating ?? null)
+        const next = await checked.catch((error: unknown) => {
+          console.error('Failed to check on the reply:', error)
+          return undefined
+        })
+        if (watchingRef.current !== watch) {
+          return
+        }
+        if (next === undefined || next?.messageId === watch.reply.messageId) {
+          if (next) {
+            const text = next.content.slice(watch.reply.content.length)
+            if (text) {
+              onStreamingChunk(text)
+            }
+            const reasoning = next.reasoning.slice(watch.reply.reasoning.length)
+            if (reasoning) {
+              dispatch({ type: 'APPEND_STREAMING_REASONING', reasoning, conversationId: id })
+            }
+            watch.reply = next
+          }
+          setTimeout(poll, WATCH_POLL_MS)
+          return
+        }
+        const conversation = await conversations.get(id).catch((error: unknown) => {
+          console.error('Failed to load the finished reply:', error)
+          return null
+        })
+        if (watchingRef.current !== watch) {
+          return
+        }
+        watchingRef.current = null
+        if (streamingConversationIdRef.current === id) {
+          await drainReveal()
+          stopAnimationLoop()
+          streamingConversationIdRef.current = null
+        }
+        dispatch({ type: 'SET_STREAMING', isStreaming: false, conversationId: id })
+        dispatch({ type: 'CLEAR_STREAMING_CONTENT', conversationId: id })
+        if (conversation && currentConversationIdRef.current === id) {
+          dispatch({ type: 'SET_CURRENT_CONVERSATION', conversation })
+        }
+        releaseSends(true)
+      }
+      setTimeout(poll, WATCH_POLL_MS)
+    },
+    [
+      adapter,
+      onStreamingChunk,
+      drainReveal,
+      stopAnimationLoop,
+      startStreaming,
+      streamingConversationIdRef,
+      targetStreamContentRef,
+      streamActiveRef,
+      releaseSends,
+    ],
+  )
+
+  useEffect(
+    () => () => {
+      watchingRef.current = null
+    },
+    [],
+  )
+
   const loadConversation = useCallback(
     async (id: string) => {
       // Skip reload while streaming to avoid losing unsaved streaming messages
       if (streamingToConversationRef.current === id && currentConversationIdRef.current === id) {
         return
+      }
+
+      if (watchingRef.current && watchingRef.current.id !== id) {
+        watchingRef.current = null
+        isSendingRef.current = false
       }
 
       // Stop UI animation when switching conversations; background stream keeps accumulating
@@ -474,10 +626,18 @@ export function ChatProvider({
         })
 
         startStreaming(id)
+        if (bgStream.owner !== streamOwner) {
+          followReply(id, bgStream)
+        }
+      } else if (conversation.generating) {
+        watchReply(id, conversation.generating)
       }
     },
     [
       adapter,
+      streamOwner,
+      followReply,
+      watchReply,
       resetAnimationRefs,
       streamingConversationIdRef,
       backgroundStreamsRef,
@@ -609,13 +769,20 @@ export function ChatProvider({
       routePart?: (delta: PartDelta) => boolean,
       onAccepted?: () => void,
     ): Promise<StreamOutcome> => {
-      backgroundStreamsRef.current.set(targetConversationId, {
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      const live: BackgroundStream = {
         content: '',
         reasoning: '',
         parts: [],
         messageId: null,
         isActive: true,
-      })
+        owner: streamOwner,
+        controller,
+        follower: null,
+      }
+      backgroundStreamsRef.current.set(targetConversationId, live)
+      let finished: Message | null = null
       dispatch({
         type: 'SET_STREAMING',
         isStreaming: true,
@@ -625,9 +792,6 @@ export function ChatProvider({
         type: 'CLEAR_STREAMING_CONTENT',
         conversationId: targetConversationId,
       })
-
-      const controller = new AbortController()
-      abortControllerRef.current = controller
 
       try {
         // Timed from the first streamed event, not the request, so the
@@ -668,7 +832,9 @@ export function ChatProvider({
               if (liveParts.length) {
                 liveParts = applyPartDelta(liveParts, { type: 'text', text: chunk })
               }
+              live.content += chunk
               onStreamingChunk(chunk)
+              live.follower?.onContent(chunk)
             },
             onReasoning: (reasoning: string) => {
               markStreamStart()
@@ -678,10 +844,8 @@ export function ChatProvider({
                 reasoning,
                 conversationId: targetConversationId,
               })
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.reasoning += reasoning
-              }
+              live.reasoning += reasoning
+              live.follower?.onReasoning(reasoning)
             },
             onUsage: (usage) => {
               dispatch({
@@ -689,13 +853,11 @@ export function ChatProvider({
                 usage,
                 conversationId: targetConversationId,
               })
+              live.follower?.onUsage(usage)
             },
             onMessageId: (messageId: string) => {
               markStreamStart()
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.messageId = messageId
-              }
+              live.messageId = messageId
             },
             onPart: (delta: PartDelta) => {
               markStreamStart()
@@ -714,10 +876,8 @@ export function ChatProvider({
                   conversationId: targetConversationId,
                 }),
               )
-              const bgStream = backgroundStreamsRef.current.get(targetConversationId)
-              if (bgStream) {
-                bgStream.parts = liveParts
-              }
+              live.parts = liveParts
+              live.follower?.onPart(delta)
             },
           },
           controller.signal,
@@ -753,6 +913,7 @@ export function ChatProvider({
           message: assistantMessage,
           conversationId: targetConversationId,
         })
+        finished = assistantMessage
         return 'sent'
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -775,7 +936,10 @@ export function ChatProvider({
 
         streamingConversationIdRef.current = null
 
-        backgroundStreamsRef.current.delete(targetConversationId)
+        if (backgroundStreamsRef.current.get(targetConversationId) === live) {
+          backgroundStreamsRef.current.delete(targetConversationId)
+        }
+        live.follower?.onFinish(finished)
 
         // Delay clear so any in-flight navigation can read the ref before it resets
         setTimeout(() => {
@@ -802,6 +966,7 @@ export function ChatProvider({
       streamingConversationIdRef,
       backgroundStreamsRef,
       abortControllerRef,
+      streamOwner,
     ],
   )
 
@@ -1272,18 +1437,32 @@ export function ChatProvider({
   )
 
   const stopStreaming = useCallback(() => {
+    const conversationId = streamingConversationIdRef.current
+    const bgStream = conversationId ? backgroundStreamsRef.current.get(conversationId) : null
+    if (bgStream) {
+      bgStream.follower = null
+    }
+    if (bgStream && followingRef.current === bgStream) {
+      followingRef.current = null
+      isSendingRef.current = false
+    }
+    const watched = watchingRef.current?.id === conversationId ? watchingRef.current : null
+    if (watched) {
+      watchingRef.current = null
+      isSendingRef.current = false
+    }
+    const stopped = conversationId ? adapter.conversations.stop?.(conversationId) : undefined
+
     // Backend detects cancellation and persists partial content via defer
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
 
-    const conversationId = streamingConversationIdRef.current
-    const bgStream = conversationId ? backgroundStreamsRef.current.get(conversationId) : null
-    const stoppedContent = bgStream?.content || ''
-    const stoppedReasoning = bgStream?.reasoning || ''
+    const stoppedContent = bgStream?.content || watched?.reply.content || ''
+    const stoppedReasoning = bgStream?.reasoning || watched?.reply.reasoning || ''
     const stoppedParts = bgStream?.parts ?? []
-    const stoppedMessageId = bgStream?.messageId || null
+    const stoppedMessageId = bgStream?.messageId || watched?.reply.messageId || null
     const hasContent = stoppedContent || stoppedReasoning || stoppedParts.length
 
     stopAnimationLoop()
@@ -1296,8 +1475,21 @@ export function ChatProvider({
     dispatch({ type: 'SET_STREAMING', isStreaming: false })
     dispatch({ type: 'CLEAR_STREAMING_CONTENT' })
 
+    if (!conversationId) {
+      return
+    }
+    const reload = () => {
+      if (currentConversationIdRef.current === conversationId) {
+        loadConversation(conversationId)
+      }
+    }
+    stopped?.then(reload, (error: unknown) => {
+      console.error('Failed to stop the reply:', error)
+      reload()
+    })
+
     // Backend persists via defer; we reload after to sync the server-assigned message ID
-    if (!conversationId || !hasContent) {
+    if (!hasContent) {
       return
     }
 
@@ -1325,12 +1517,11 @@ export function ChatProvider({
       conversationId,
     })
 
-    setTimeout(() => {
-      if (currentConversationIdRef.current === conversationId) {
-        loadConversation(conversationId)
-      }
-    }, 500)
+    if (!stopped) {
+      setTimeout(reload, 500)
+    }
   }, [
+    adapter,
     resetAnimationRefs,
     streamingConversationIdRef,
     abortControllerRef,
@@ -1422,6 +1613,8 @@ export function ChatProvider({
 
     pendingQueueRef.current = []
     isSendingRef.current = false
+    followingRef.current = null
+    watchingRef.current = null
     inputFocusPendingRef.current = null
 
     dispatch({ type: 'SET_CURRENT_CONVERSATION', conversation: null })

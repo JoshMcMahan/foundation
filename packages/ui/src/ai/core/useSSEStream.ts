@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { MessagePart } from '../types'
+import type { PartDelta } from '../adapter/types'
+import type { ChatMessage, MessagePart, TokenUsage } from '../types'
 import type { ChatAction } from './chatReducer'
 
-interface BackgroundStream {
+export interface ReplyFollower {
+  onContent: (chunk: string) => void
+  onReasoning: (reasoning: string) => void
+  onPart: (delta: PartDelta) => void
+  onUsage: (usage: TokenUsage) => void
+  onFinish: (message: ChatMessage | null) => void
+}
+
+export interface BackgroundStream {
   content: string
   reasoning: string
   parts: MessagePart[]
   messageId: string | null
   isActive: boolean
+  owner: object
+  controller: AbortController
+  follower: ReplyFollower | null
 }
+
+const backgroundStreams = new Map<string, BackgroundStream>()
 
 interface UseSSEStreamResult {
   /** Feed a chunk of text into the animation buffer */
@@ -87,7 +101,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
   const streamingConversationIdRef = useRef<string | null>(null)
 
   // Per-conversation streaming storage - allows resuming streams when returning to a conversation
-  const backgroundStreamsRef = useRef<Map<string, BackgroundStream>>(new Map())
+  const backgroundStreamsRef = useRef(backgroundStreams)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -146,16 +160,6 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
 
   const onStreamingChunk = useCallback(
     (chunk: string) => {
-      // Store in background stream regardless of whether UI is active
-      // This allows resuming the stream when user returns to the conversation
-      const convId = streamingConversationIdRef.current
-      if (convId) {
-        const bgStream = backgroundStreamsRef.current.get(convId)
-        if (bgStream) {
-          bgStream.content += chunk
-        }
-      }
-
       // Only update UI if streaming is still active for the current view
       // (user may have navigated away)
       if (!streamActiveRef.current) {
@@ -171,10 +175,16 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     [animateStreamContent],
   )
 
-  const startStreaming = useCallback((conversationId: string) => {
-    streamingConversationIdRef.current = conversationId
-    streamActiveRef.current = true
-  }, [])
+  const startStreaming = useCallback(
+    (conversationId: string) => {
+      streamingConversationIdRef.current = conversationId
+      streamActiveRef.current = true
+      if (targetStreamContentRef.current && streamRafRef.current === null) {
+        streamRafRef.current = requestAnimationFrame(animateStreamContent)
+      }
+    },
+    [animateStreamContent],
+  )
 
   const resetAnimationRefs = useCallback(() => {
     streamActiveRef.current = false
@@ -223,14 +233,7 @@ export function useSSEStream(dispatch: React.Dispatch<ChatAction>): UseSSEStream
     return { unrevealed }
   }, [resetAnimationRefs])
 
-  // Clean up pending rAF on unmount
-  useEffect(() => {
-    return () => {
-      if (streamRafRef.current !== null) {
-        cancelAnimationFrame(streamRafRef.current)
-      }
-    }
-  }, [])
+  useEffect(() => resetAnimationRefs, [resetAnimationRefs])
 
   return {
     onStreamingChunk,

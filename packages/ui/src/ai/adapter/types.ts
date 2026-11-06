@@ -6,6 +6,7 @@ import type {
   ChatModel,
   Conversation,
   ConversationSummary,
+  GeneratingReply,
   ProviderInfo,
   ProviderIssue,
   ShareGroup,
@@ -152,6 +153,8 @@ export interface ConversationsAdapter {
   create(title?: string): Promise<ConversationSummary>
   rename(id: string, title: string): Promise<void>
   remove(id: string): Promise<void>
+  stop?(id: string): Promise<void>
+  generating?(id: string): Promise<GeneratingReply | null>
 }
 
 export interface ProvidersAdapter {

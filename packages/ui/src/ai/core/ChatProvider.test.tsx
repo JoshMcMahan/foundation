@@ -1156,3 +1156,171 @@ describe('host tools', () => {
     expect(vi.mocked(adapter.streamCompletion).mock.calls[0]![0]).not.toHaveProperty('tools')
   })
 })
+
+describe('leaving the chat while a reply streams', () => {
+  it('shows the rest of the reply once the chat mounts again, and holds sends until it ends', async () => {
+    let handlers!: import('../adapter/types').StreamHandlers
+    const first = deferred<StreamResult>()
+    const adapter = makeAdapter({
+      streamCompletion: vi
+        .fn()
+        .mockImplementationOnce((_req, h) => {
+          handlers = h
+          return first.promise
+        })
+        .mockImplementation(async () => emptyStreamResult()),
+    })
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(
+        <ChatProvider adapter={adapter} currentUser={currentUser} navigation={navigation}>
+          <Probe />
+        </ChatProvider>,
+      )
+    })
+    await act(async () => {
+      void chat.sendMessage('count to three')
+      await flush()
+    })
+    await act(async () => {
+      handlers.onMessageId?.('reply-1')
+      handlers.onContent('one ')
+    })
+
+    view.unmount()
+    handlers.onContent('two ')
+
+    await renderProvider(adapter)
+    await act(async () => {
+      await chat.loadConversation('conv-new')
+    })
+    expect(chat.isStreaming).toBe(true)
+
+    await act(async () => {
+      await chat.sendMessage('and four?')
+    })
+    expect(chat.queuedMessages.map((m) => m.content)).toEqual(['and four?'])
+    expect(adapter.streamCompletion).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      handlers.onContent('three')
+      first.resolve({ ...emptyStreamResult(), content: 'one two three', messageId: 'reply-1' })
+    })
+
+    await waitFor(() => expect(chat.isStreaming).toBe(false))
+    const reply = chat.currentConversation?.messages.find((m) => m.id === 'reply-1')
+    expect(reply?.content).toBe('one two three')
+    await waitFor(() => expect(adapter.streamCompletion).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(adapter.streamCompletion).mock.calls[1]![0].messages.at(-1)?.content).toBe(
+      'and four?',
+    )
+  })
+})
+
+describe('a reply the server is still writing', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const question = {
+    id: 'q1',
+    parentId: null,
+    role: 'user' as const,
+    content: 'count to three',
+    timestamp: '2026-11-05T00:00:00Z',
+  }
+
+  it('shows it while it is written when the chat opens, holds sends, then shows the saved reply', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'c1',
+        messages: [question],
+        generating: { messageId: 'r1', content: 'one ', reasoning: 'counting' },
+      })
+      .mockResolvedValue({
+        id: 'c1',
+        messages: [
+          question,
+          {
+            id: 'r1',
+            parentId: 'q1',
+            role: 'assistant',
+            content: 'one two three',
+            timestamp: '2026-11-05T00:00:01Z',
+          },
+        ],
+      })
+    const generating = vi
+      .fn()
+      .mockResolvedValueOnce({ messageId: 'r1', content: 'one two ', reasoning: 'counting' })
+      .mockResolvedValue(null)
+    const adapter = makeAdapter()
+    adapter.conversations.get = get
+    adapter.conversations.generating = generating
+    await renderProvider(adapter)
+
+    await act(async () => {
+      await chat.loadConversation('c1')
+      await vi.advanceTimersByTimeAsync(500)
+    })
+    expect(chat.isStreaming).toBe(true)
+    expect(chat.streamingReasoning).toBe('counting')
+    expect(chat.streamingContent).toBe('one ')
+
+    await act(async () => {
+      await chat.sendMessage('and four?')
+    })
+    expect(chat.queuedMessages.map((m) => m.content)).toEqual(['and four?'])
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+    expect(chat.streamingContent).toBe('one two ')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    expect(chat.isStreaming).toBe(false)
+    expect(chat.currentConversation?.messages.find((m) => m.id === 'r1')?.content).toBe(
+      'one two three',
+    )
+    expect(generating).toHaveBeenCalledWith('c1')
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(adapter.streamCompletion).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(adapter.streamCompletion).mock.calls[0]![0].messages.at(-1)?.content).toBe(
+      'and four?',
+    )
+  })
+
+  it('stops it on the server, then shows what the server saved', async () => {
+    const stopped = deferred<void>()
+    const adapter = makeAdapter()
+    adapter.conversations.get = vi.fn(async (id: string) => ({
+      id,
+      messages: [question],
+      generating: { messageId: 'r1', content: 'one ', reasoning: '' },
+    }))
+    adapter.conversations.stop = vi.fn(() => stopped.promise)
+    await renderProvider(adapter)
+    await act(async () => {
+      await chat.loadConversation('c1')
+    })
+    expect(chat.isStreaming).toBe(true)
+
+    act(() => {
+      chat.stopStreaming()
+    })
+    expect(adapter.conversations.stop).toHaveBeenCalledWith('c1')
+    expect(chat.isStreaming).toBe(false)
+    expect(chat.currentConversation?.messages.find((m) => m.id === 'r1')?.stopped).toBe(true)
+    expect(adapter.conversations.get).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      stopped.resolve()
+      await flush()
+    })
+    expect(adapter.conversations.get).toHaveBeenCalledTimes(2)
+  })
+})

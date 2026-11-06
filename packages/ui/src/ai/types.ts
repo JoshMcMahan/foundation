@@ -313,6 +313,13 @@ export interface Conversation {
   createdAt?: string
   isOwner?: boolean
   updatedAt?: string | null
+  generating?: GeneratingReply | null
+}
+
+export interface GeneratingReply {
+  messageId: string
+  content: string
+  reasoning: string
 }
 
 export interface ConversationSummary {
