@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.118.0](https://github.com/parallelworks/foundation/compare/ui-v0.117.1...ui-v0.118.0) (2026-11-06)
+
+
+### Features
+
+* **ui:** a session transcript can fold every run of tool calls from its first call ([#664](https://github.com/parallelworks/foundation/issues/664)) ([e8d67d7](https://github.com/parallelworks/foundation/commit/e8d67d7cd287c943c704edc0601680c3c8b66aed))
+
 ## [0.117.1](https://github.com/parallelworks/foundation/compare/ui-v0.117.0...ui-v0.117.1) (2026-11-06)
 
 
