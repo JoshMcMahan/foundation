@@ -6,6 +6,8 @@ export {
 export {
   apiErrorMessage,
   errorMessageFromResponse,
+  type ResponseFailure,
+  responseFailure,
   statusFallbackMessage,
 } from './errors'
 export {

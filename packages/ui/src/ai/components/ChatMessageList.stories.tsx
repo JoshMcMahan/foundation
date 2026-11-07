@@ -227,6 +227,35 @@ export const FailedReply: StoryObj<{ retry: boolean }> = {
   ),
 }
 
+// A message the service refused until a limit resets says when to try again,
+// with the exact time on hover, and stops saying it once that time passes.
+function UntilResetExample({ hours, retry }: { hours: number; retry: boolean }) {
+  const messages = useMemo(
+    () => [
+      makeMessage({
+        role: 'user',
+        content: 'Summarize the last build log.',
+        error: 'The usage limit has been reached',
+        retryAt: new Date(Date.now() + hours * 3_600_000).toISOString(),
+      }),
+    ],
+    [hours],
+  )
+  return (
+    <MessageList
+      messages={messages}
+      allMessages={messages}
+      {...(retry ? { onRetryMessage: () => {} } : {})}
+    />
+  )
+}
+
+export const FailedUntilReset: StoryObj<{ hours: number; retry: boolean }> = {
+  args: { hours: 3, retry: true },
+  argTypes: { hours: { control: { type: 'number', min: -1, step: 0.5 } } },
+  render: (args) => <UntilResetExample {...args} />,
+}
+
 type AttachmentsStoryArgs = { preview: boolean }
 
 function AttachmentsExample({ preview }: AttachmentsStoryArgs) {

@@ -70,4 +70,9 @@ describe('formatTimeLeft', () => {
     expect(formatTimeLeft(125)).toBe('2m 5s')
     expect(formatTimeLeft(3_601)).toBe('1h 1m')
   })
+
+  it('reads in the host’s locale', () => {
+    expect(formatTimeLeft(10_013, 'de')).toBe(formatDuration(10_020_000, 'de'))
+    expect(formatTimeLeft(10_013, 'de')).not.toBe(formatTimeLeft(10_013, 'en'))
+  })
 })

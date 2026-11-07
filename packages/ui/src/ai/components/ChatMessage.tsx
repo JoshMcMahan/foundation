@@ -1,14 +1,15 @@
 import { DateTime } from 'luxon'
-import { type KeyboardEvent, memo, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, memo, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { Callout } from '../../components/Callout'
 import { CopyButton } from '../../components/CopyButton'
 import { IconButton } from '../../components/IconButton'
-import { useStrings } from '../../components/Provider'
-import { RelativeTime } from '../../components/relativeTime'
+import { useLocale, useStrings } from '../../components/Provider'
+import { RelativeTime, useClock } from '../../components/relativeTime'
+import { Tooltip } from '../../components/Tooltip'
 import { cx } from '../../cx'
-import { formatDuration } from '../../format'
+import { formatDateTime, formatDuration, formatTimeLeft, toDateTime } from '../../format'
 import { EditIcon, RetryIcon } from '../../icons'
 import { useChatModelName } from '../core/ChatProvider'
 import { useChatConfig } from '../core/config'
@@ -63,6 +64,30 @@ function parseTimestamp(iso: string | undefined): DateTime | null {
   }
   const dt = DateTime.fromISO(iso)
   return dt.isValid ? dt : null
+}
+
+// Says how long until a refused request can be sent again, with the exact time
+// on hover, until only seconds are left.
+function TryAgainAt({ at, say }: { at: string; say: (time: ReactNode) => ReactNode }) {
+  const locale = useLocale()
+  const time = toDateTime(at)
+  const until = time?.toMillis() ?? null
+  const left = useClock(
+    (now) => (until === null ? null : formatTimeLeft((until - now) / 1000, locale)),
+    until !== null,
+  )
+  if (!left || !time) {
+    return null
+  }
+  return (
+    <p className="mt-1">
+      {say(
+        <Tooltip content={formatDateTime(time, 'medium', locale)}>
+          <time dateTime={time.toISO() ?? undefined}>{left}</time>
+        </Tooltip>,
+      )}
+    </p>
+  )
 }
 
 function ChatMessage({
@@ -243,6 +268,7 @@ function ChatMessage({
         {hasError && (
           <Callout tone="error" size="sm" className="mt-2">
             {message.error}
+            {message.retryAt && <TryAgainAt at={message.retryAt} say={t.tryAgain} />}
           </Callout>
         )}
         {isStreaming && !isUser && <div aria-hidden className="mt-2 h-7" />}
@@ -464,6 +490,7 @@ function ChatMessage({
                 }
               >
                 {message.error}
+                {message.retryAt && <TryAgainAt at={message.retryAt} say={t.tryAgain} />}
               </Callout>
             )}
 

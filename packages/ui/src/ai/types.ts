@@ -293,6 +293,8 @@ export interface ChatMessage {
   author?: ChatUser | undefined
   conversationId?: string | undefined
   error?: string | null | undefined
+  // When the service said the failed request can be sent again, as an ISO time.
+  retryAt?: string | null | undefined
   // Ordered agent-transcript timeline; when present it replaces the flat
   // content rendering. See MessagePart.
   parts?: MessagePart[] | null | undefined

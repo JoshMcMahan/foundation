@@ -237,6 +237,101 @@ describe('createOpenAICompatibleStream', () => {
     })
   })
 
+  describe('a refused request says when it can be sent again', () => {
+    const NOW = Date.UTC(2026, 10, 6, 18, 44, 0)
+    const inSeconds = (seconds: number) => new Date(NOW + seconds * 1000).toISOString()
+
+    async function refusal(response: Response): Promise<ChatAdapterError> {
+      vi.useFakeTimers({ toFake: ['Date'], now: NOW })
+      try {
+        const stream = createOpenAICompatibleStream({
+          completionsUrl: '/v1/chat/completions',
+          fetch: async () => response,
+        })
+        return await stream(baseRequest(), { onContent: () => {} }).then(
+          () => expect.unreachable('the request succeeded'),
+          (error: ChatAdapterError) => error,
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    }
+
+    const json = (body: unknown, headers: Record<string, string> = {}) =>
+      new Response(JSON.stringify(body), {
+        status: 429,
+        headers: { 'content-type': 'application/json', ...headers },
+      })
+
+    it.each([
+      {
+        name: 'the gateway’s retry_after_seconds',
+        response: json({ error: { message: 'Slow down', retry_after_seconds: 42 } }),
+        message: 'Slow down',
+        retryAt: inSeconds(42),
+      },
+      {
+        name: 'a usage limit’s resets_in_seconds',
+        response: json({
+          error: {
+            type: 'usage_limit_reached',
+            message: 'The usage limit has been reached',
+            resets_at: NOW / 1000 + 9000,
+            resets_in_seconds: 10013,
+          },
+        }),
+        message: 'The usage limit has been reached',
+        retryAt: inSeconds(10013),
+      },
+      {
+        name: 'a usage limit’s resets_at alone',
+        response: json({
+          error: { message: 'The usage limit has been reached', resets_at: NOW / 1000 + 9000 },
+        }),
+        message: 'The usage limit has been reached',
+        retryAt: inSeconds(9000),
+      },
+      {
+        name: 'a Retry-After in seconds',
+        response: json({ error: { message: 'Slow down' } }, { 'retry-after': '120' }),
+        message: 'Slow down',
+        retryAt: inSeconds(120),
+      },
+      {
+        name: 'a Retry-After date',
+        response: json(
+          { error: { message: 'Slow down' } },
+          { 'retry-after': new Date(NOW + 600_000).toUTCString() },
+        ),
+        message: 'Slow down',
+        retryAt: inSeconds(600),
+      },
+      {
+        name: 'nothing, when the response gives no time',
+        response: json({ error: { message: 'Slow down' } }),
+        message: 'Slow down',
+        retryAt: undefined,
+      },
+    ])('from $name', async ({ response, message, retryAt }) => {
+      const error = await refusal(response)
+      expect(error).toBeInstanceOf(ChatAdapterError)
+      expect(error.message).toBe(message)
+      expect(error.status).toBe(429)
+      expect(error.retryAt).toBe(retryAt)
+    })
+
+    it('from an error sent as a stream event, whose message is shown rather than the event', async () => {
+      const error = await refusal(
+        new Response(
+          'event: error\ndata: {"error":{"message":"You have used your daily allowance.","type":"error","code":"rate_limit_exceeded","retry_after_seconds":42}}\n\n',
+          { status: 429, headers: { 'content-type': 'text/event-stream' } },
+        ),
+      )
+      expect(error.message).toBe('You have used your daily allowance.')
+      expect(error.retryAt).toBe(inSeconds(42))
+    })
+  })
+
   describe('the tools header', () => {
     async function headersFor(
       req: StreamRequest,

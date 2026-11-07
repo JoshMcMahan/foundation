@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ChatMessage as Message } from '../types'
 import ChatMessage from './ChatMessage'
 
@@ -187,6 +187,47 @@ describe('ChatMessage', () => {
 
       expect(screen.getByText('Network error')).toBeInTheDocument()
       expect(screen.queryByText('Retry')).not.toBeInTheDocument()
+    })
+
+    it('says when to try again while the service asks to wait, and stops once the wait is over', () => {
+      vi.useFakeTimers({ now: Date.UTC(2026, 10, 6, 18, 44, 0) })
+      try {
+        const message = createMockMessage({
+          role: 'user',
+          error: 'The usage limit has been reached',
+          retryAt: new Date(Date.now() + 3 * 3_600_000).toISOString(),
+        })
+        render(<ChatMessage {...defaultProps} message={message} onRetry={vi.fn()} />)
+
+        expect(screen.getByText('The usage limit has been reached')).toBeInTheDocument()
+        expect(screen.getByText(/^Try again/)).toHaveTextContent('Try again in 3h.')
+
+        act(() => {
+          vi.advanceTimersByTime(73 * 60_000)
+        })
+        expect(screen.getByText(/^Try again/)).toHaveTextContent('Try again in 1h 47m.')
+
+        act(() => {
+          vi.advanceTimersByTime(2 * 3_600_000)
+        })
+        expect(screen.queryByText(/^Try again/)).not.toBeInTheDocument()
+        expect(screen.getByText('The usage limit has been reached')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('says nothing of a wait that is already over', () => {
+      const message = createMockMessage({
+        role: 'user',
+        error: 'The usage limit has been reached',
+        retryAt: new Date(Date.now() - 60_000).toISOString(),
+      })
+      render(<ChatMessage {...defaultProps} message={message} />)
+
+      expect(screen.getByText('The usage limit has been reached')).toBeInTheDocument()
+      expect(screen.queryByText(/^Try again/)).not.toBeInTheDocument()
     })
   })
 

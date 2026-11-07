@@ -13,7 +13,13 @@ import {
 import { usePersistedState } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import type { CompletionMessage } from '../adapter/openai/wire'
-import type { ChatAdapter, ChatToolOption, PartDelta, StreamRequest } from '../adapter/types'
+import {
+  type ChatAdapter,
+  ChatAdapterError,
+  type ChatToolOption,
+  type PartDelta,
+  type StreamRequest,
+} from '../adapter/types'
 import type {
   ApprovalAnswerValue,
   AttachmentMeta,
@@ -68,6 +74,21 @@ function generateTitleFromMessage(content: string): string {
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
+
+// What a failed reply leaves on its message: why, and when to try again.
+interface ReplyFailure {
+  error: string
+  retryAt: string | null
+}
+
+function replyFailure(error: unknown): ReplyFailure {
+  return {
+    error: errorText(error),
+    retryAt: (error instanceof ChatAdapterError && error.retryAt) || null,
+  }
+}
+
+const NO_FAILURE = { error: null, retryAt: null } as const
 
 function attachmentRefs(
   ids: string[] | undefined,
@@ -765,7 +786,7 @@ export function ChatProvider({
       targetConversationId: string,
       request: StreamRequest,
       parentId: string,
-      onFailure: (message: string) => void,
+      onFailure: (failure: ReplyFailure) => void,
       routePart?: (delta: PartDelta) => boolean,
       onAccepted?: () => void,
     ): Promise<StreamOutcome> => {
@@ -920,7 +941,7 @@ export function ChatProvider({
           return 'aborted'
         }
         console.error('Failed to send message:', error)
-        onFailure(errorText(error))
+        onFailure(replyFailure(error))
         return 'failed'
       } finally {
         abortControllerRef.current = null
@@ -1124,11 +1145,11 @@ export function ChatProvider({
         conversationId: targetConversationId,
       })
 
-      const setMessageError = (errorMsg: string) => {
+      const setMessageError = (failure: ReplyFailure) => {
         dispatch({
           type: 'UPDATE_MESSAGE',
           messageId: userMessageId,
-          updates: { error: errorMsg },
+          updates: failure,
           conversationId: targetConversationId,
         })
       }
@@ -1249,7 +1270,7 @@ export function ChatProvider({
         updatePaused({ parts: pausedParts })
       }
       if (paused.error) {
-        updatePaused({ error: null })
+        updatePaused(NO_FAILURE)
       }
       applyToPaused({
         type: 'approval_resolved',
@@ -1312,7 +1333,7 @@ export function ChatProvider({
             },
           },
           paused.id,
-          (message) => updatePaused({ error: message }),
+          (failure) => updatePaused(failure),
           (delta) => {
             if (delta.type !== 'tool_end' || delta.id !== approvalId) {
               return false
@@ -1402,7 +1423,7 @@ export function ChatProvider({
         dispatch({
           type: 'UPDATE_MESSAGE',
           messageId,
-          updates: { error: null },
+          updates: NO_FAILURE,
           conversationId: currentConvId,
         })
 
@@ -1419,7 +1440,7 @@ export function ChatProvider({
           dispatch({
             type: 'UPDATE_MESSAGE',
             messageId,
-            updates: { error: null },
+            updates: NO_FAILURE,
             conversationId: currentConvId,
           })
 

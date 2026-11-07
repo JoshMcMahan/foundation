@@ -1,5 +1,5 @@
 import { ChatAdapterError, type StreamCompletion, type StreamRequest } from '../types'
-import { errorMessageFromResponse } from './errors'
+import { responseFailure } from './errors'
 import { buildResponsesRequestBody, parseResponsesSSELine } from './responses'
 import { processSSEStream } from './sse'
 
@@ -66,9 +66,8 @@ export function createOpenAICompatibleStream(config: OpenAIStreamConfig): Stream
     })
 
     if (!res.ok) {
-      throw new ChatAdapterError(await errorMessageFromResponse(res), {
-        status: res.status,
-      })
+      const { message, retryAt } = await responseFailure(res)
+      throw new ChatAdapterError(message, { status: res.status, retryAt })
     }
 
     const reader = res.body?.getReader()

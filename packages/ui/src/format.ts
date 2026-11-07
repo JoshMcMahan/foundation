@@ -114,11 +114,12 @@ export function formatDateTime(
 
 /** Time left, rounded the way a countdown reads: whole seconds under a minute,
  *  minutes and seconds under an hour, then hours and minutes. Null once only a
- *  few seconds remain, for the caller's "almost done". */
-export function formatTimeLeft(seconds: number): string | null {
+ *  few seconds remain, for the caller's "almost done". `locale`, such as
+ *  `useLocale()` gives, wins over luxon's default. */
+export function formatTimeLeft(seconds: number, locale?: string | undefined): string | null {
   if (seconds < 5) {
     return null
   }
   const whole = seconds < 3600 ? Math.round(seconds) : Math.ceil(seconds / 60) * 60
-  return formatDuration(whole * 1000)
+  return formatDuration(whole * 1000, locale)
 }

@@ -21,14 +21,20 @@ import type {
 import type { CompletionMessage } from './openai/wire'
 
 // Adapter methods throw ChatAdapterError with a user-facing message; the UI
-// renders `message` directly.
+// renders `message` directly, and with `retryAt` says when to try again.
 export class ChatAdapterError extends Error {
   status?: number | undefined
+  // When the service said the request can be sent again, as an ISO time.
+  retryAt?: string | undefined
 
-  constructor(message: string, options?: { status?: number; cause?: unknown }) {
+  constructor(
+    message: string,
+    options?: { status?: number; cause?: unknown; retryAt?: string | undefined },
+  ) {
     super(message, options?.cause === undefined ? {} : { cause: options.cause })
     this.name = 'ChatAdapterError'
     this.status = options?.status
+    this.retryAt = options?.retryAt
   }
 }
 

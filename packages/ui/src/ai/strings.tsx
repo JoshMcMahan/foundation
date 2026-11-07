@@ -228,6 +228,9 @@ export interface ChatStrings {
     edit: string
     regenerate: string
     editPlaceholder: string
+    /** Under a failed message while the service's wait lasts; `time` reads the
+     *  time left, "2h 47m", with the exact time on hover. */
+    tryAgain: (time: ReactNode) => ReactNode
   }
   permissions: {
     choose: string
@@ -570,6 +573,7 @@ export const defaultChatStrings: ChatStrings = {
     copyLabel: 'message',
     edit: 'Edit message',
     regenerate: 'Regenerate response',
+    tryAgain: (time) => <>Try again in {time}.</>,
     editPlaceholder: 'Edit your message\u2026',
   },
   permissions: {

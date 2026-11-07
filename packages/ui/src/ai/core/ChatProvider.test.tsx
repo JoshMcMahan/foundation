@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, waitFor } from '@testing-library/react'
 import { act } from 'react'
-import type { ChatAdapter, StreamResult } from '../adapter/types'
+import { type ChatAdapter, ChatAdapterError, type StreamResult } from '../adapter/types'
 import ChatMessageList from '../components/ChatMessageList'
 import type { ChatModel, ChatNavigation, Conversation } from '../types'
 import { ChatProvider, useChat, useChatStream } from './ChatProvider'
@@ -782,6 +782,33 @@ describe('streamed parts', () => {
       name: 'stop_cluster',
       status: 'ok',
       decision: { status: 'approved' },
+    })
+  })
+
+  it('keeps when the service said to try again on a refused message, until it is retried', async () => {
+    const retryAt = '2026-11-06T21:30:53.000Z'
+    let refuse = true
+    const streamCompletion = vi.fn<ChatAdapter['streamCompletion']>(async () => {
+      if (refuse) {
+        throw new ChatAdapterError('The usage limit has been reached', { status: 429, retryAt })
+      }
+      return emptyStreamResult()
+    })
+    await renderProvider(makeAdapter({ streamCompletion }))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await act(async () => {
+      await chat.sendMessage('summarize the build log')
+    })
+    const refused = chat.currentConversation?.messages.find((m) => m.role === 'user')
+    expect(refused).toMatchObject({ error: 'The usage limit has been reached', retryAt })
+
+    refuse = false
+    await act(async () => {
+      await chat.retryMessage(refused!.id)
+    })
+    expect(chat.currentConversation?.messages.find((m) => m.id === refused!.id)).toMatchObject({
+      error: null,
+      retryAt: null,
     })
   })
 
