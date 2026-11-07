@@ -153,6 +153,61 @@ describe('ChatInput focus handoff', () => {
     rerender(<ChatInput onSend={vi.fn()} conversationId="c1" />)
     expect(textarea()).toHaveFocus()
   })
+
+  // jsdom keeps focus on a box it disables, where a browser moves it to the body.
+  const dropFocusToBody = () => {
+    const spare = document.createElement('input')
+    document.body.append(spare)
+    spare.focus()
+    spare.remove()
+  }
+
+  it('takes focus back when a lock lifts while it was being typed in', () => {
+    const { rerender } = render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+    textarea().focus()
+
+    rerender(<ChatInput onSend={vi.fn()} conversationId="c1" disabled />)
+    dropFocusToBody()
+    expect(document.activeElement).toBe(document.body)
+    rerender(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+
+    expect(textarea()).toHaveFocus()
+  })
+
+  it('leaves focus where the reader moved it while locked', () => {
+    const { rerender } = render(
+      <>
+        <ChatInput onSend={vi.fn()} conversationId="c1" />
+        <button type="button">elsewhere</button>
+      </>,
+    )
+    textarea().focus()
+
+    rerender(
+      <>
+        <ChatInput onSend={vi.fn()} conversationId="c1" disabled />
+        <button type="button">elsewhere</button>
+      </>,
+    )
+    screen.getByRole('button', { name: 'elsewhere' }).focus()
+    rerender(
+      <>
+        <ChatInput onSend={vi.fn()} conversationId="c1" />
+        <button type="button">elsewhere</button>
+      </>,
+    )
+
+    expect(screen.getByRole('button', { name: 'elsewhere' })).toHaveFocus()
+  })
+
+  it('stays unfocused after a lock when it was not focused before', () => {
+    const { rerender } = render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+
+    rerender(<ChatInput onSend={vi.fn()} conversationId="c1" disabled />)
+    rerender(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+
+    expect(textarea()).not.toHaveFocus()
+  })
 })
 
 describe('ChatInput model availability', () => {

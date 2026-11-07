@@ -245,6 +245,25 @@ export default function ChatInput({
     }
   }, [disabled, conversationId, consumeInputFocus])
 
+  // A browser takes focus off a box it disables. When the lock lifts and
+  // nothing else took focus meanwhile, it comes back, so typing carries on.
+  const focusedWhenDisabled = useRef(false)
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) {
+      return
+    }
+    const active = el.ownerDocument.activeElement
+    if (disabled) {
+      focusedWhenDisabled.current = active === el
+      return
+    }
+    if (focusedWhenDisabled.current && (!active || active === el.ownerDocument.body)) {
+      el.focus()
+    }
+    focusedWhenDisabled.current = false
+  }, [disabled])
+
   // The box grows with its text. Measured before paint so a new line never
   // flashes a scrollbar.
   // biome-ignore lint/correctness/useExhaustiveDependencies: input is needed to trigger resize
