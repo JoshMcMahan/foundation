@@ -171,9 +171,16 @@ func controlFull(ctx context.Context, cfg Config, req controlRequest) (controlRe
 func controlAt(ctx context.Context, path string, req controlRequest) (controlResponse, error) {
 	conn, err := (&net.Dialer{Timeout: time.Second}).DialContext(ctx, "unix", path)
 	if err != nil {
+		// Giving up says nothing of the dev, and Instances removes the socket
+		// of one that is not running.
+		if ctx.Err() != nil {
+			return controlResponse{}, ctx.Err()
+		}
 		return controlResponse{}, errNotRunning
 	}
 	defer conn.Close()
+	// A stopped or wedged dev's socket still accepts, and then never answers.
+	defer context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Now()) })()
 	if err := json.NewEncoder(conn).Encode(req); err != nil {
 		return controlResponse{}, err
 	}

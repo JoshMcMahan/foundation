@@ -331,11 +331,14 @@ does, and runs with the default `--min-free`; `dev clean --install --every
 ]
 ```
 
-dev gives each its preferred port when nothing holds it, and the next free one
-otherwise, logging the move; Postgres and S3 do the same. `{port.<name>}`
-stands for the allocated port in `env`, `run`, `build`, `before`, `url` and
-`health`, and `{postgres}` and `{s3}` follow theirs, so a second checkout, or
-another app, runs beside the first without either changing its config.
+dev gives each its preferred port when nothing holds it and no other running
+dev claims it, and the next free one otherwise, logging the move; Postgres and
+S3 do the same. A running dev claims every port it allocated, including one for
+a service that is stopped or still building, so two checkouts do not share a
+port, whichever services each has started. `{port.<name>}` stands for the
+allocated port in `env`, `run`, `build`, `before`, `url` and `health`, and
+`{postgres}` and `{s3}` follow theirs, so a second checkout, or another app,
+runs beside the first without either changing its config.
 
 ## Profiles
 

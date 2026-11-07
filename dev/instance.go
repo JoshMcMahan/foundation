@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -91,6 +92,7 @@ func (s *supervisor) watchCheckout(ctx context.Context, stop context.CancelFunc,
 // Instances lists every running dev on this machine, from the sockets they
 // answer on, so an app's own tools can find a checkout's allocated ports. A
 // socket no dev answers on is left from one that was killed, and is removed.
+// A dev that has not answered when ctx ends is left out.
 func Instances(ctx context.Context) ([]Instance, error) {
 	dir, err := socketDir()
 	if err != nil {
@@ -103,22 +105,31 @@ func Instances(ctx context.Context) ([]Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	// All at once: in turn, one dev that never answers would use up ctx and
+	// leave out every dev after it.
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 	var out []Instance
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".sock") {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		resp, err := controlAt(ctx, path, controlRequest{Command: "info"})
-		if errors.Is(err, errNotRunning) {
-			_ = os.Remove(path)
-			continue
-		}
-		if err != nil || resp.Info == nil {
-			continue
-		}
-		out = append(out, *resp.Info)
+		wg.Go(func() {
+			resp, err := controlAt(ctx, path, controlRequest{Command: "info"})
+			if errors.Is(err, errNotRunning) {
+				_ = os.Remove(path)
+				return
+			}
+			if err != nil || resp.Info == nil {
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			out = append(out, *resp.Info)
+		})
 	}
+	wg.Wait()
 	slices.SortFunc(out, func(a, b Instance) int { return strings.Compare(a.Root, b.Root) })
 	return out, nil
 }

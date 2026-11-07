@@ -10,18 +10,28 @@ import (
 	"slices"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 // How far past a taken preferred port to look for a free one, before asking
 // the system for any.
 const portSearch = 100
 
+// claimsWait bounds asking running devs for their ports. A dev answers at
+// once; one that does not is stopped or wedged, and must not hold up a start.
+const claimsWait = 500 * time.Millisecond
+
+// runningInstances lists the devs whose ports allocate avoids; a variable so
+// that tests need not read the ones running on this machine.
+var runningInstances = Instances
+
 // allocate gives every port dev.json names, and the stack's, a free port:
-// the preferred one when nothing holds it, otherwise the next free one. Two
-// checkouts, or two apps, then run side by side; {port.<name>}, {postgres}
-// and {s3} follow wherever their port went.
+// the preferred one when nothing holds it and no other dev claims it,
+// otherwise the next free one. Two checkouts, or two apps, then run side by
+// side; {port.<name>}, {postgres} and {s3} follow wherever their port went.
 func (c Config) allocate(ctx context.Context, logger *slog.Logger) (Config, error) {
-	taken := map[int]bool{}
+	claimed := c.claimedPorts(ctx, logger)
+	taken := maps.Clone(claimed)
 	pick := func(what string, preferred int) (int, error) {
 		port, err := nextFreePort(ctx, preferred, taken)
 		if err != nil {
@@ -29,7 +39,13 @@ func (c Config) allocate(ctx context.Context, logger *slog.Logger) (Config, erro
 		}
 		taken[port] = true
 		if port != preferred {
-			logger.WarnContext(ctx, "port taken; using another", "for", what, "preferred", preferred, "port", port)
+			// Checkouts side by side move each other's ports on every start,
+			// which is no problem to hold in the view's status line.
+			level := slog.LevelWarn
+			if claimed[preferred] {
+				level = slog.LevelInfo
+			}
+			logger.Log(ctx, level, "port taken; using another", "for", what, "preferred", preferred, "port", port)
 		}
 		return port, nil
 	}
@@ -71,18 +87,52 @@ func (c Config) allocate(ctx context.Context, logger *slog.Logger) (Config, erro
 	return c, nil
 }
 
+// claimedPorts is every port another running dev has allocated, whether or
+// not anything listens on it: a service that is stopped, restarting or still
+// building holds its port without binding it. Not finding out only leaves a
+// port unprotected, so it never stops this dev starting.
+func (c Config) claimedPorts(ctx context.Context, logger *slog.Logger) map[int]bool {
+	ctx, cancel := context.WithTimeout(ctx, claimsWait)
+	defer cancel()
+	list, err := runningInstances(ctx)
+	if err == nil {
+		err = ctx.Err()
+	}
+	if err != nil {
+		logger.WarnContext(ctx, "could not list every running dev; a port one claims may be given out again", "error", err)
+	}
+	claimed := map[int]bool{}
+	for _, in := range list {
+		// This stack's own dev, still stopping, has ports this one may take
+		// back. Dir says which that is, as it does for the control socket:
+		// --dir runs a second stack under the same Root.
+		if in.Dir == c.Dir {
+			continue
+		}
+		for _, port := range in.Ports {
+			claimed[port] = true
+		}
+	}
+	return claimed
+}
+
 func nextFreePort(ctx context.Context, preferred int, taken map[int]bool) (int, error) {
 	for port := preferred; port < preferred+portSearch && port <= 65535; port++ {
 		if !taken[port] && portFree(ctx, port) {
 			return port, nil
 		}
 	}
-	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
+	for {
+		ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:0")
+		if err != nil {
+			return 0, err
+		}
+		// Open until this returns, so that the system offers another each time.
+		defer ln.Close()
+		if port := ln.Addr().(*net.TCPAddr).Port; !taken[port] { //nolint:forcetypeassert // a tcp listener
+			return port, nil
+		}
 	}
-	defer ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port, nil //nolint:forcetypeassert // a tcp listener
 }
 
 // portFree reports whether nothing listens on port, on any address: a dev
