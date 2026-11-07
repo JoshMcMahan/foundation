@@ -202,6 +202,17 @@ export const RailLinks: StoryObj<{ collapsed: boolean; fill: boolean; links: boo
   },
 }
 
+/** A row reached from the keyboard rings its whole highlight, not the smaller box of its link. */
+export const KeyboardFocus: StoryObj<{ collapsed: boolean; fill: boolean; links: boolean }> = {
+  ...Grouped,
+  args: { collapsed: false, fill: false, links: true },
+  play: async ({ canvasElement }) => {
+    const row = within(canvasElement).getByRole('link', { name: /Fix the flaky upload test/ })
+    row.focus()
+    await expect(row).toHaveFocus()
+  },
+}
+
 type InDrawerStoryArgs = { open: boolean }
 
 function InDrawerExample(args: InDrawerStoryArgs) {

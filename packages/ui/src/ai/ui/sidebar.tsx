@@ -29,6 +29,12 @@ const HIGHLIGHT_HOVER = 'hover:bg-[color-mix(in_oklab,var(--theme-app)_5%,transp
 const ROW_MENU_SHOWN_HIDE =
   'pointer-fine:group-hover/sidebar-row:invisible pointer-fine:group-data-[menu-open]/sidebar-row:invisible pointer-fine:group-has-[[aria-haspopup=menu]:focus-visible]/sidebar-row:invisible'
 
+// The row's link or button sits inside the row's padding, so its own ring
+// would be a smaller box inside the highlight; the row draws it on the
+// highlight's edge instead. The menu button keeps its own.
+const ROW_FOCUS_RING =
+  '[&>:not([aria-haspopup=menu])]:outline-none has-[>:not([aria-haspopup=menu]):focus-visible]:outline-2 has-[>:not([aria-haspopup=menu]):focus-visible]:-outline-offset-2 has-[>:not([aria-haspopup=menu]):focus-visible]:outline-(--theme-focus)'
+
 /** The column a conversation list lives in: it animates between its width
  *  and a rail, unless a drag is setting the width right now. */
 export function SidebarPanel({
@@ -237,6 +243,7 @@ export function SidebarRow({
       data-menu-open={active || undefined}
       className={cx(
         'group/sidebar-row group relative flex items-center justify-between rounded-lg px-2 py-[3px] transition-colors duration-150 pointer-coarse:pr-9',
+        ROW_FOCUS_RING,
         selected || active ? HIGHLIGHT_SELECTED : HIGHLIGHT_HOVER,
         className,
       )}
