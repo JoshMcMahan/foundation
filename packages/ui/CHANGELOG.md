@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.119.3](https://github.com/parallelworks/foundation/compare/ui-v0.119.2...ui-v0.119.3) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ui:** the chat input loses focus when its host disables it for a moment ([#676](https://github.com/parallelworks/foundation/issues/676)) ([492fe68](https://github.com/parallelworks/foundation/commit/492fe68502fc3effd7586dd837cf41fe57db7c1f))
+
 ## [0.119.2](https://github.com/parallelworks/foundation/compare/ui-v0.119.1...ui-v0.119.2) (2026-11-07)
 
 
