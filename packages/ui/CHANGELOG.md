@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.119.2](https://github.com/parallelworks/foundation/compare/ui-v0.119.1...ui-v0.119.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ui:** a focused sidebar row's ring sits inside its highlight instead of on it ([#671](https://github.com/parallelworks/foundation/issues/671)) ([cea705e](https://github.com/parallelworks/foundation/commit/cea705e1d12c820fc9ad1c3c99428f89fda13b48))
+* **ui:** a question form with one question sends the first option clicked instead of waiting for Send ([#672](https://github.com/parallelworks/foundation/issues/672)) ([90e8291](https://github.com/parallelworks/foundation/commit/90e82915af5f4200d9b48dce73fd8e768cb9b970))
+
 ## [0.119.1](https://github.com/parallelworks/foundation/compare/ui-v0.119.0...ui-v0.119.1) (2026-11-06)
 
 
