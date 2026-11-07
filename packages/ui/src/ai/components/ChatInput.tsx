@@ -23,15 +23,21 @@ import { clearDraft, readDraft, storeDraft, sweepDrafts } from './chatDraft'
 import DragOverlay from './DragOverlay'
 import { PasteFileCard } from './PastedText'
 import { SlashMenu, type SlashMenuConfig, useSlashMenu } from './SlashMenu'
-import { type ComposerPastes, usePasteCards } from './usePasteCards'
+import { type ComposerHistory, useComposerHistory } from './useComposerHistory'
+import { type ComposerPastes, type PasteCard, usePasteCards } from './usePasteCards'
 
 interface ChatInputProps {
+  /** The box empties at once. Answering false, or with a promise of false or
+   *  one that rejects, puts everything back so the person can try again. */
   onSend: (
     content: string,
     attachmentIds?: string[],
     attachmentMeta?: AttachmentMeta,
     pastes?: MessagePaste[],
-  ) => void
+  ) => unknown
+  /** ↑ and ↓ in an empty box step through what was sent in this tab, failed
+   *  sends included. Takes ↑ over from onEditLastMessage. */
+  history?: ComposerHistory | undefined
   disabled?: boolean
   placeholder?: string | undefined
   conversationId?: string
@@ -167,10 +173,19 @@ function fitToContent(el: HTMLTextAreaElement) {
   el.style.height = `${el.scrollHeight}px`
 }
 
+/** What left the box with a send, kept until the host answers. */
+interface SentInput {
+  conversationId: string | undefined
+  input: string
+  cards: PasteCard[]
+  attachments: Attachment[]
+}
+
 let draftsSwept = false
 
 export default function ChatInput({
   onSend,
+  history,
   disabled = false,
   placeholder,
   conversationId,
@@ -195,6 +210,13 @@ export default function ChatInput({
   ref,
 }: ChatInputProps) {
   const [input, setInput] = useState(() => readDraft(conversationId))
+  const saveDraft = (value: string) => {
+    if (history?.skip?.(value.trim())) {
+      clearDraft(conversationId)
+    } else {
+      storeDraft(conversationId, value)
+    }
+  }
   useEffect(() => {
     if (!draftsSwept) {
       draftsSwept = true
@@ -206,10 +228,11 @@ export default function ChatInput({
     handleTextPaste,
     removeCard,
     takeCards,
+    returnCards,
     blocking: pastesBlocking,
   } = usePasteCards(pastes, input, (value) => {
     setInput(value)
-    storeDraft(conversationId, value)
+    saveDraft(value)
   })
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showAttachments, setShowAttachments] = useState(false)
@@ -304,8 +327,59 @@ export default function ChatInput({
 
   const setInputAndPersist = (value: string) => {
     setInput(value)
-    storeDraft(conversationId, value)
+    saveDraft(value)
   }
+
+  const composerHistory = useComposerHistory(history, input, setInput)
+  // A send answers later, by when the box may hold something else or another
+  // conversation. A recalled entry is not typing, so it gives way.
+  const box = useRef({ conversationId, typed: input })
+  box.current = { conversationId, typed: composerHistory.recalled ? '' : input }
+  const [refocus, setRefocus] = useState(false)
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
+  const putBack = (sent: SentInput) => {
+    if (history?.skip?.(sent.input.trim())) {
+      return
+    }
+    const { typed, conversationId: showing } = box.current
+    if (!mounted.current || showing !== sent.conversationId) {
+      if (!readDraft(sent.conversationId)) {
+        storeDraft(sent.conversationId, sent.input)
+      }
+      return
+    }
+    const value = [sent.input, typed].filter((text) => text.trim()).join('\n\n')
+    setInput(value)
+    box.current.typed = value
+    saveDraft(value)
+    returnCards(sent.cards)
+    if (sent.attachments.length > 0) {
+      setAttachments((current) => [...sent.attachments, ...current])
+      setShowAttachments(true)
+    }
+    setRefocus(true)
+  }
+
+  // Waits on disabled because a host may hold the box while it sends, and a
+  // disabled box can't take focus. Focus moved elsewhere meanwhile stays there.
+  useEffect(() => {
+    if (!refocus || disabled) {
+      return
+    }
+    setRefocus(false)
+    const el = textareaRef.current
+    const focused = document.activeElement
+    if (!focused || focused === document.body || el?.closest('.chat-composer')?.contains(focused)) {
+      el?.focus()
+    }
+  }, [refocus, disabled])
 
   const uploadedCount = attachments.filter((a) => a.uploaded).length
   const pendingCount = attachments.length - uploadedCount
@@ -341,26 +415,49 @@ export default function ChatInput({
         size: a.size,
       }
     }
+    const sent: SentInput = { conversationId, input, cards, attachments }
     const sentPastes = takeCards()
     const content = [input.trim(), ...sentPastes.map((p) => p.placeholder)]
       .filter(Boolean)
       .join('\n\n')
     const ids = attachmentIds.length > 0 ? attachmentIds : undefined
     const attachmentMeta = attachmentIds.length > 0 ? meta : undefined
-    if (sentPastes.length > 0) {
-      onSend(content, ids, attachmentMeta, sentPastes)
-    } else {
-      onSend(content, ids, attachmentMeta)
-    }
+    composerHistory.record(input.trim())
+    const answer =
+      sentPastes.length > 0
+        ? onSend(content, ids, attachmentMeta, sentPastes)
+        : onSend(content, ids, attachmentMeta)
     setInput('')
+    // A host can answer before the render that empties the box.
+    box.current.typed = ''
     clearDraft(conversationId)
     setAttachments([])
     setShowAttachments(false)
+    void Promise.resolve(answer).then(
+      (result) => {
+        if (result === false) {
+          putBack(sent)
+        }
+      },
+      (error: unknown) => {
+        console.error('Failed to send message:', error)
+        putBack(sent)
+      },
+    )
   }
 
-  const slashMenu = useSlashMenu(input, slash, setInputAndPersist)
+  // A recalled command is being looked at, not typed, so it opens no menu.
+  const slashMenu = useSlashMenu(
+    input,
+    composerHistory.recalled ? undefined : slash,
+    setInputAndPersist,
+  )
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (composerHistory.handleKey(e)) {
+      e.preventDefault()
+      return
+    }
     if (slashMenu.handleKey(e)) {
       return
     }

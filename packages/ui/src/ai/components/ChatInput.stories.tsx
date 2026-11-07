@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
@@ -505,5 +505,85 @@ export const LargePastes: StoryObj<LargePastesStoryArgs> = {
     for (const lines of [412, 1_280, 96]) {
       pasteIntoComposer(canvasElement, makePasteText(lines))
     }
+  },
+}
+
+type FailedSendStoryArgs = { answerMs: number }
+
+function FailedSendExample({ answerMs }: FailedSendStoryArgs) {
+  const [failed, setFailed] = useState(false)
+  const onSend = async () => {
+    setFailed(false)
+    await new Promise((resolve) => setTimeout(resolve, answerMs))
+    setFailed(true)
+    return false
+  }
+  return (
+    <StoryChat>
+      <div>
+        <ChatInput
+          onSend={onSend}
+          conversationId="conv-failed-send"
+          notices={
+            failed ? <NoticeCard tone="danger">The message could not be sent.</NoticeCard> : null
+          }
+        />
+      </div>
+    </StoryChat>
+  )
+}
+
+// The host answers false, so what left the box comes back under its error,
+// ready to edit and send again. The play sends a message.
+export const FailedSend: StoryObj<FailedSendStoryArgs> = {
+  args: { answerMs: 300 },
+  argTypes: {
+    answerMs: {
+      control: { type: 'range', min: 0, max: 3_000, step: 100 },
+      description: 'How long the host takes to answer false',
+    },
+  },
+  render: (args) => <FailedSendExample {...args} />,
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByPlaceholderText('Ask anything')
+    await userEvent.clear(box)
+    await userEvent.type(box, "I'm sure this one goes through{Enter}")
+    await waitFor(() => expect(box).toHaveValue("I'm sure this one goes through"))
+  },
+}
+
+type HistoryStoryArgs = { steps: number }
+
+function HistoryExample() {
+  const history = useMemo(() => {
+    window.sessionStorage.removeItem('aiChatHistory:story-history')
+    return { name: 'story-history' }
+  }, [])
+  return (
+    <StoryChat>
+      <div>
+        <ChatInput onSend={send} conversationId="conv-history" history={history} />
+      </div>
+    </StoryChat>
+  )
+}
+
+// ↑ in the empty box recalls what was sent, newest first, and ↓ walks back to
+// the empty box. The play sends three messages, then steps back through them.
+export const History: StoryObj<HistoryStoryArgs> = {
+  args: { steps: 2 },
+  argTypes: {
+    steps: {
+      control: { type: 'range', min: 1, max: 3, step: 1 },
+      description: 'How many times the play presses ↑',
+    },
+  },
+  render: () => <HistoryExample />,
+  play: async ({ canvasElement, args }) => {
+    const box = within(canvasElement).getByPlaceholderText('Ask anything')
+    for (const message of ['Summarize the logs', 'Now the errors only', 'Group them by host']) {
+      await userEvent.type(box, `${message}{Enter}`)
+    }
+    await userEvent.keyboard('{ArrowUp}'.repeat(args.steps))
   },
 }

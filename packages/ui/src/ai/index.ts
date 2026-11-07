@@ -68,6 +68,7 @@ export {
   type SlashMenuConfig,
   slashMatches,
 } from './components/SlashMenu'
+export type { ComposerHistory } from './components/useComposerHistory'
 export type {
   ComposerPastes,
   PasteUploadResult,

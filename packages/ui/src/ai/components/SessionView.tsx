@@ -9,7 +9,7 @@ import {
 import { useChat } from '../core/ChatProvider'
 import useDragDrop from '../core/useDragDrop'
 import { escapeClosesLayer } from '../core/useKeyboardShortcuts'
-import type { ApprovalAnswerValue, AttachmentMeta, ChatMessage as Message } from '../types'
+import type { ApprovalAnswerValue, ChatMessage as Message } from '../types'
 import ChatActivity from './ChatActivity'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatMessageList from './ChatMessageList'
@@ -37,7 +37,7 @@ export interface SessionViewProps {
   /** A turn the chat provider does not run, such as an agent session's: it
    *  drives the composer's Stop and Escape in place of the provider's stream. */
   turn?: { running: boolean; onStop: () => void; stopping?: boolean }
-  onSend: (content: string, attachmentIds?: string[], attachmentMeta?: AttachmentMeta) => void
+  onSend: ComponentProps<typeof ChatInput>['onSend']
   /** Resends an edited user message as a new branch. Without it, messages
    *  cannot be edited. */
   onEdit?: (message: Message, content: string) => void

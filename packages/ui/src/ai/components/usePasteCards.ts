@@ -185,11 +185,22 @@ export function usePasteCards(
     return sent
   }, [])
 
+  /** Puts back cards taken for a send that failed. */
+  const returnCards = useCallback((taken: PasteCard[]) => {
+    for (const card of taken) {
+      if (card.paste) {
+        saved.current.set(card.text, card.paste)
+      }
+    }
+    setCards((current) => [...taken, ...current])
+  }, [])
+
   return {
     cards,
     handleTextPaste,
     removeCard,
     takeCards,
+    returnCards,
     blocking: cards.some((c) => !c.paste),
   }
 }
