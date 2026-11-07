@@ -8,7 +8,14 @@ import ProviderIssueBanner from './ProviderIssueBanner'
 import SessionView from './SessionView'
 import { ShareButton, ToolResultsSharedNote } from './ShareDialog'
 
-export default function ChatThread({ conversationId }: { conversationId: string }) {
+export default function ChatThread({
+  conversationId,
+  find,
+}: {
+  conversationId: string
+  /** Finds text in the conversation; see SessionView's `find`. */
+  find?: boolean
+}) {
   const {
     adapter,
     currentUser,
@@ -96,6 +103,7 @@ export default function ChatThread({ conversationId }: { conversationId: string 
       currentUsername={currentUser.username}
       loading={isLoadingConversation && !currentConversation}
       dropFiles={!!adapter.attachments}
+      {...(find ? { find } : {})}
       banners={
         <>
           <BlockedGroupBanner />

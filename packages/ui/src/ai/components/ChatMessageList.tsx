@@ -415,6 +415,7 @@ export default function ChatMessageList({
       <div ref={floorRef} className="flex-1">
         <div
           ref={contentRef}
+          data-transcript=""
           className="w-full max-w-[var(--chat-column,50rem)] mx-auto pt-4 pb-6 px-4"
         >
           <MessageRows
@@ -570,7 +571,7 @@ export default function ChatMessageList({
         </div>
       )}
       {inputElement && (
-        <div className="sticky bottom-0 z-10">
+        <div data-composer-dock="" className="sticky bottom-0 z-10">
           {/* Rides on the composer's top edge: on its own it would stick at the
               same bottom as the composer and sit underneath it. */}
           {!pinned && (

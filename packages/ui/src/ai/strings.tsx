@@ -147,6 +147,19 @@ export interface ChatStrings {
     /** Names the thread, a live log of the conversation, for assistive technology. */
     label: string
   }
+  /** The bar that finds text in the transcript. */
+  find: {
+    /** Names the field, and is its placeholder. */
+    label: string
+    /** Which match is current, of how many. */
+    count: (current: number, total: number) => string
+    /** The same when there are more matches than the bar counts. */
+    countCapped: (current: number, total: number) => string
+    none: string
+    previous: string
+    next: string
+    close: string
+  }
   sidebar: {
     groupToday: string
     groupYesterday: string
@@ -505,6 +518,15 @@ export const defaultChatStrings: ChatStrings = {
   thread: {
     viewOnly: 'You have view only access',
     label: 'Conversation',
+  },
+  find: {
+    label: 'Find in conversation',
+    count: (current, total) => `${current.toLocaleString()} of ${total.toLocaleString()}`,
+    countCapped: (current, total) => `${current.toLocaleString()} of ${total.toLocaleString()}+`,
+    none: 'No results',
+    previous: 'Previous match',
+    next: 'Next match',
+    close: 'Close find',
   },
   sidebar: {
     groupToday: 'Today',

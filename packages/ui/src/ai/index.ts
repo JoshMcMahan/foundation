@@ -93,7 +93,7 @@ export {
   resolveChatConfig,
   useChatConfig,
 } from './core/config'
-export { FOCUS_SIDEBAR_SEARCH_EVENT } from './core/events'
+export { FIND_IN_TRANSCRIPT_EVENT, FOCUS_SIDEBAR_SEARCH_EVENT } from './core/events'
 export { getGreeting } from './core/greeting'
 export { KeyboardShortcutsProvider } from './core/KeyboardShortcutsProvider'
 export { applyPartDelta, finalizeParts } from './core/parts'

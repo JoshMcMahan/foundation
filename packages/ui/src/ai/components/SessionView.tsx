@@ -14,6 +14,7 @@ import ChatActivity from './ChatActivity'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
 import ChatMessageList from './ChatMessageList'
 import DragOverlay from './DragOverlay'
+import { TranscriptFindBar, useTranscriptFind } from './TranscriptFind'
 
 type ComposerProps = Omit<
   ComponentProps<typeof ChatInput>,
@@ -65,6 +66,9 @@ export interface SessionViewProps {
   foldEveryRun?: boolean
   workingIndicator?: boolean
   composer?: ComposerProps
+  /** Finds text in the transcript: ⌘F, or FIND_IN_TRANSCRIPT_EVENT from the
+   *  host's own control, opens a bar above it. */
+  find?: boolean
 }
 
 /** One conversation or agent session: its transcript, with the composer at
@@ -98,8 +102,11 @@ export default function SessionView({
   foldEveryRun,
   workingIndicator,
   composer,
+  find = false,
 }: SessionViewProps) {
   const inputRef = useRef<ChatInputHandle>(null)
+  const viewRef = useRef<HTMLDivElement>(null)
+  const finder = useTranscriptFind(viewRef, find)
   const [editingId, setEditingId] = useState<string | null>(null)
   const { isStreaming: providerStreaming, stopStreaming } = useChat()
   const running = turn ? turn.running : providerStreaming
@@ -168,9 +175,14 @@ export default function SessionView({
 
   return (
     <div className="relative flex h-full bg-(--theme-panel-bg)">
-      <div className="flex min-w-0 flex-1 flex-col" {...(dropFiles ? dragHandlers : {})}>
+      <div
+        ref={viewRef}
+        className="flex min-w-0 flex-1 flex-col"
+        {...(dropFiles ? dragHandlers : {})}
+      >
         {isDragging && dropFiles && <DragOverlay className="rounded-lg" />}
         {banners}
+        <TranscriptFindBar find={finder} />
         {error ?? (
           <ChatMessageList
             messages={messages}

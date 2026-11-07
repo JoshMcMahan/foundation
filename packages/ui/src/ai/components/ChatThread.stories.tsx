@@ -3,12 +3,14 @@ import { type CSSProperties, useMemo, useState } from 'react'
 import { userEvent, within } from 'storybook/test'
 import { createMockChatAdapter } from '../adapter/mock'
 import type { ToolRendererProps } from '../core/config'
+import { FIND_IN_TRANSCRIPT_EVENT } from '../core/events'
 import {
   makeAgentTurn,
   makeConversation,
   makeHeldCallTurn,
   makeHybridTurn,
   makeLongConversation,
+  makeMessage,
   makeStaticAdapter,
   resumeHeldCall,
   StoryChat,
@@ -83,6 +85,69 @@ export const AgentConversation: StoryObj = {
       </StoryViewport>
     </StoryChat>
   ),
+}
+
+const findConversation = makeConversation({
+  id: 'conv-find',
+  title: 'Flaky sign-in test',
+  messages: [
+    makeMessage({
+      role: 'user',
+      content: 'The sign-in test fails about one run in five with a timeout. Why?',
+      conversationId: 'conv-find',
+    }),
+    makeMessage({
+      role: 'assistant',
+      content:
+        "The timeout comes from `waitForURL('/home', { timeout: 5_000 })`.\n\nThe redirect only happens once the session request answers, and on a cold runner that can take longer than five seconds:\n\n- **Passing runs:** the session request returns in about 1.2s.\n- **Failing runs:** it takes 5.4–7.1s, so the 5s timeout runs out first.",
+      conversationId: 'conv-find',
+    }),
+    makeMessage({
+      role: 'user',
+      content: 'Should we raise the timeout to 15 seconds?',
+      conversationId: 'conv-find',
+    }),
+    makeMessage({
+      role: 'assistant',
+      content:
+        "A bigger timeout only hides the slow request. Wait for the response the redirect depends on instead:\n\n```ts\nconst session = page.waitForResponse('**/session')\nawait page.getByRole('button', { name: 'Sign in' }).click()\nawait session\nawait expect(page).toHaveURL('/home')\n```\n\nThat keeps the default timeout, so a slow request makes the test slower rather than flaky.",
+      conversationId: 'conv-find',
+    }),
+  ],
+})
+
+type FindStoryArgs = { find: boolean; query: string }
+
+/** ⌘F, or the host's own control sending FIND_IN_TRANSCRIPT_EVENT, opens a bar
+ *  that finds text in the conversation: every match washed in the accent, the
+ *  current one filled, and Enter and Shift+Enter step between them. */
+export const Find: StoryObj<FindStoryArgs> = {
+  args: { find: true, query: 'timeout' },
+  argTypes: { find: { control: 'boolean' }, query: { control: 'text' } },
+  render: ({ find }) => (
+    <StoryChat
+      adapter={makeStaticAdapter({ conversations: [findConversation] })}
+      conversationId="conv-find"
+    >
+      <StoryViewport>
+        <ChatThread conversationId="conv-find" find={find} />
+      </StoryViewport>
+    </StoryChat>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText(/Should we raise the timeout/)
+    document.dispatchEvent(new Event(FIND_IN_TRANSCRIPT_EVENT))
+    const input = await canvas.findByRole('textbox', { name: 'Find in conversation' })
+    await userEvent.type(input, args.query)
+    await userEvent.keyboard('{Enter}')
+  },
+}
+
+/** A query the conversation doesn't hold: the bar says so and offers no steps. */
+export const FindNoMatches: StoryObj<FindStoryArgs> = {
+  ...Find,
+  args: { find: true, query: 'deadlock' },
 }
 
 type StreamingSimulationStoryArgs = {
