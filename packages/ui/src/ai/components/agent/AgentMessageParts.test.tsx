@@ -284,6 +284,7 @@ describe('approval parts', () => {
       { onApprovalAnswer: onAnswer },
     )
     fireEvent.click(screen.getByText('Mongo'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(onAnswer).toHaveBeenCalledWith('a3', {
       kind: 'ask',
       answers: [{ picked: ['Mongo'] }],

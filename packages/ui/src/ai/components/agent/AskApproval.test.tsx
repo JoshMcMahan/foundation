@@ -165,11 +165,22 @@ describe('AskApproval with several questions', () => {
 })
 
 describe('AskApproval with one question', () => {
-  it('sends a pick at once', () => {
+  it('sends a pick only with Send, focusing it, and takes a change of mind before then', () => {
     const onAnswer = renderAsk([database])
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.getByText('Relational')).toBeInTheDocument()
+    const send = screen.getByRole('button', { name: 'Send' })
+    expect(send).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: /Postgres/ }))
+    expect(onAnswer).not.toHaveBeenCalled()
+    expect(send).toHaveFocus()
     fireEvent.click(screen.getByRole('button', { name: /Mongo/ }))
+    expect(screen.getByRole('button', { name: /Postgres/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(onAnswer).not.toHaveBeenCalled()
+    fireEvent.click(send)
     expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', answers: [{ picked: ['Mongo'] }] })
   })
 
@@ -193,14 +204,21 @@ describe('AskApproval with one question', () => {
     })
   })
 
-  it('sends a typed answer, with Send shown once there is one', () => {
+  it('sends a typed answer with Send or Enter', () => {
     const onAnswer = renderAsk([database])
-    expect(screen.queryByRole('button', { name: 'Send' })).not.toBeInTheDocument()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Your answer' }), {
-      target: { value: 'SQLite' },
-    })
+    const field = screen.getByRole('textbox', { name: 'Your answer' })
+    fireEvent.change(field, { target: { value: 'SQLite' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', answers: [{ text: 'SQLite' }] })
+    expect(onAnswer).toHaveBeenLastCalledWith('q1', { kind: 'ask', answers: [{ text: 'SQLite' }] })
+    fireEvent.change(field, { target: { value: 'Redis' } })
+    fireEvent.submit(field)
+    expect(onAnswer).toHaveBeenLastCalledWith('q1', { kind: 'ask', answers: [{ text: 'Redis' }] })
+  })
+
+  it('sends a multi-select question with nothing ticked', () => {
+    const onAnswer = renderAsk([checks])
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(onAnswer).toHaveBeenCalledWith('q1', { kind: 'ask', answers: [{}] })
   })
 
   it('takes typed text for a question without options, never taking focus as it arrives', () => {
@@ -309,6 +327,8 @@ describe('AskApproval with option previews', () => {
       target: { value: ' narrower ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Tabs' }))
+    expect(onAnswer).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(onAnswer).toHaveBeenCalledWith('q1', {
       kind: 'ask',
       answers: [{ picked: ['Tabs'], notes: 'narrower' }],

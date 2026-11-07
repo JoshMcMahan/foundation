@@ -398,6 +398,12 @@ function AskRoundTrip({
   )
 }
 
+// A lone question: a pick only chooses, and Send sends it.
+export const AskQuestion: StoryObj<{ multiSelect: boolean }> = {
+  args: { multiSelect: false },
+  render: ({ multiSelect }) => <AskRoundTrip questions={1} multiSelect={multiSelect} />,
+}
+
 // Several questions, one tab each; a pick or Enter moves on.
 export const AskQuestions: StoryObj<{ questions: number; multiSelect: boolean }> = {
   args: { questions: 4, multiSelect: false },

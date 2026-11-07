@@ -137,8 +137,9 @@ function AskForm({
   const [active, setActive] = useState(0)
   const body = useRef<HTMLDivElement>(null)
   const submit = useRef<HTMLButtonElement>(null)
-  // The next question's panel isn't rendered yet, so focus moves in an effect.
-  const focusNext = useRef<number | null>(null)
+  // What an answer moves focus to isn't rendered (the next question) or enabled (a lone
+  // question's Send) until after it, so focus moves in an effect.
+  const focusNext = useRef<number | 'submit' | null>(null)
   const several = questions.length > 1
   const answers = questions.map((q, i) => answerOf(q, given[i]))
 
@@ -150,10 +151,11 @@ function AskForm({
     setActive(i)
   }
 
-  const done = (i: number, next: Given) => {
+  // Enter in a lone question's field sends it; a pick only chooses, so it can still be changed.
+  const done = (i: number, next: Given, entered: boolean) => {
     const all = given.map((g, j) => (j === i ? next : g))
     setGiven(all)
-    if (!several) {
+    if (!several && entered) {
       send(
         questions.map((q, j) => answerOf(q, all[j])),
         false,
@@ -161,16 +163,18 @@ function AskForm({
     } else if (i < questions.length - 1) {
       moveTo(i + 1)
     } else {
-      submit.current?.focus()
+      focusNext.current = 'submit'
     }
   }
 
   useEffect(() => {
-    if (focusNext.current === active) {
-      focusNext.current = null
+    if (focusNext.current === 'submit') {
+      submit.current?.focus()
+    } else if (focusNext.current === active) {
       body.current?.querySelector<HTMLElement>('button, input')?.focus()
     }
-  }, [active])
+    focusNext.current = null
+  })
 
   const fields = (q: ApprovalQuestion, i: number) => (
     <div ref={i === active ? body : undefined} className="space-y-2">
@@ -179,15 +183,14 @@ function AskForm({
         question={q}
         given={given[i] ?? unanswered}
         onChange={(next) => setGiven(given.map((g, j) => (j === i ? next : g)))}
-        onDone={(next) => done(i, next)}
+        onPick={(next) => done(i, next, false)}
+        onDone={(next) => done(i, next, true)}
       />
     </div>
   )
 
   const lone = questions[0]
   const loneKind = lone ? kindOf(lone) : 'text'
-  // A pick sends a lone single-select question, so Send is only for typed text.
-  const sendShown = several || loneKind !== 'single' || hasAnswer(answers[0])
   const onLast = active === questions.length - 1
   return (
     <>
@@ -226,17 +229,16 @@ function AskForm({
         >
           {t.chatAboutThis}
         </button>
-        {sendShown && (
-          <button
-            ref={submit}
-            type="button"
-            onClick={() => (onLast ? send(answers, false) : moveTo(active + 1))}
-            disabled={!several && loneKind === 'text' && !hasAnswer(answers[0])}
-            className={primaryButton}
-          >
-            {several ? (onLast ? t.submitAnswers : common.next) : common.send}
-          </button>
-        )}
+        <button
+          ref={submit}
+          type="button"
+          onClick={() => (onLast ? send(answers, false) : moveTo(active + 1))}
+          // Ticking none is an answer to a multi-select question.
+          disabled={!several && loneKind !== 'multi' && !hasAnswer(answers[0])}
+          className={primaryButton}
+        >
+          {several ? (onLast ? t.submitAnswers : common.next) : common.send}
+        </button>
       </div>
     </>
   )
@@ -246,11 +248,13 @@ function AskQuestionFields({
   question,
   given,
   onChange,
+  onPick,
   onDone,
 }: {
   question: ApprovalQuestion
   given: Given
   onChange: (next: Given) => void
+  onPick: (next: Given) => void
   onDone: (next: Given) => void
 }) {
   const { strings } = useChatConfig()
@@ -351,7 +355,7 @@ function AskQuestionFields({
             key={o.label}
             type="button"
             aria-pressed={picked}
-            onClick={() => onDone({ ...given, picked: [o.label], own: false })}
+            onClick={() => onPick({ ...given, picked: [o.label], own: false })}
             {...(previews
               ? {
                   onFocus: () => show(i),
