@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.120.0](https://github.com/parallelworks/foundation/compare/ui-v0.119.3...ui-v0.120.0) (2026-11-07)
+
+
+### Features
+
+* **ui:** a failed send returns to the composer, and arrow keys recall what was sent ([#675](https://github.com/parallelworks/foundation/issues/675)) ([39011b5](https://github.com/parallelworks/foundation/commit/39011b5acd89c91c12ff770f8df102b8be0ace7a))
+* **ui:** find text in a conversation's transcript ([#678](https://github.com/parallelworks/foundation/issues/678)) ([938213c](https://github.com/parallelworks/foundation/commit/938213c357dce81be205d20109d93b034f848763))
+
+
+### Bug Fixes
+
+* **ui:** a chat refused at a usage limit doesn't say when to try again ([#679](https://github.com/parallelworks/foundation/issues/679)) ([4245b4f](https://github.com/parallelworks/foundation/commit/4245b4f7611d252231bc6fa1a8ea7e50941eec64))
+
 ## [0.119.3](https://github.com/parallelworks/foundation/compare/ui-v0.119.2...ui-v0.119.3) (2026-11-07)
 
 
