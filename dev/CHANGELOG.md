@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.2](https://github.com/parallelworks/foundation/compare/dev/v0.18.1...dev/v0.18.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* **dev:** two checkouts can be handed the same port when a service isn't running ([#670](https://github.com/parallelworks/foundation/issues/670)) ([d2ba7c7](https://github.com/parallelworks/foundation/commit/d2ba7c7354610f710b0fa8c3a4f63ee9e9b53198))
+
 ## [0.18.1](https://github.com/parallelworks/foundation/compare/dev/v0.18.0...dev/v0.18.1) (2026-10-21)
 
 
