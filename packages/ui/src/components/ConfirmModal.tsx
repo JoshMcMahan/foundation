@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from './Button'
 import { ErrorText } from './Field'
+import { focusOnRemoval, planRemoval, type RemovalPlan, removalTarget } from './focusAfterRemoval'
 import { Modal, type ModalProps, type ModalSize } from './Modal'
 import { useStrings } from './Provider'
 
@@ -47,9 +48,16 @@ export interface ConfirmModalProps {
    *  destructive dialog, so a stray Enter destroys nothing, and the confirm button otherwise,
    *  so the keyboard answers at once. */
   initialFocus?: 'cancel' | 'confirm' | 'first-control' | undefined
-  /** What has focus once it closes: by default what opened it, or, once that is gone, the last
-   *  thing focused that is still there. A function runs as it closes, after the action, so it
-   *  can name what took the place of a row the action removed. */
+  /** What confirming may remove, such as the row it was asked from. Once that is gone, focus
+   *  moves to the same control in the row that took its place, else in the row before it, else
+   *  in the next group's rows when its group went with it, else to the list, rather than to the
+   *  page. While it's still there, as after Cancel, focus returns to what opened it. Resolve
+   *  `onConfirm` once the removal has rendered, by awaiting the refetch or removing the row at
+   *  once. A row that goes only after the dialog has closed still moves focus on, unless the
+   *  reader has moved it. */
+  removes?: Element | null | undefined
+  /** What has focus once it closes, and when set, it decides rather than `removes`: by default
+   *  what opened it, or, once that is gone, the last thing focused that is still there. */
   finalFocus?: ModalProps['finalFocus'] | undefined
   /** Work the host runs for it, such as a mutation already under way: the buttons wait, and
    *  the dialog can't be dismissed, as while its own handler runs. */
@@ -75,6 +83,7 @@ export function ConfirmModal({
   cancelLabel,
   closeOnConfirm = true,
   initialFocus,
+  removes,
   finalFocus,
   pending: pendingProp = false,
   error,
@@ -82,6 +91,19 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const { common } = useStrings()
   const [running, setRunning] = useState(false)
+  // Noted in the render that opens it, while what opened it still has focus: a screen reader's
+  // press moves focus into the dialog before any effect here runs.
+  const [opened, setOpened] = useState(false)
+  const [removal, setRemoval] = useState<RemovalPlan | null>(null)
+  if (open !== opened) {
+    setOpened(open)
+    if (open) {
+      setRemoval(removes ? planRemoval(removes) : null)
+    }
+  }
+  // Cancel, Escape or the backdrop, after which the row stays and so does focus.
+  const dismissed = useRef(false)
+  const letGo = useRef<(() => void) | null>(null)
   // A second press before the first settles, or a double click, confirms once. Once it has
   // confirmed and closed, it stays guarded through the closing animation until it reopens.
   const fired = useRef(false)
@@ -91,9 +113,29 @@ export function ConfirmModal({
   useEffect(() => {
     if (open) {
       fired.current = false
+      dismissed.current = false
+      letGo.current?.()
     }
   }, [open])
+  useEffect(() => () => letGo.current?.(), [])
   const pending = running || pendingProp
+
+  const dismiss = () => {
+    dismissed.current = true
+    onClose()
+  }
+
+  const returnFocus = (plan: RemovalPlan) => {
+    const target = removalTarget(plan)
+    if (target) {
+      return target
+    }
+    if (plan.row.isConnected && !dismissed.current) {
+      letGo.current?.()
+      letGo.current = focusOnRemoval(plan)
+    }
+    return plan.opener?.isConnected ? plan.opener : true
+  }
 
   const runConfirm = async () => {
     if (fired.current || pendingProp) {
@@ -132,7 +174,7 @@ export function ConfirmModal({
     <Modal
       alert={destructive}
       open={open}
-      onClose={onClose}
+      onClose={dismiss}
       align={align}
       dismissible={!pending}
       size={size}
@@ -149,10 +191,10 @@ export function ConfirmModal({
         }
         return bodyElement.current?.querySelector<HTMLElement>(FIELDS) ?? button ?? true
       }}
-      {...(finalFocus !== undefined && { finalFocus })}
+      finalFocus={finalFocus ?? (removal ? () => returnFocus(removal) : undefined)}
       footer={
         <>
-          <Button ref={cancelButton} variant="ghost" size="sm" onClick={onClose} disabled={pending}>
+          <Button ref={cancelButton} variant="ghost" size="sm" onClick={dismiss} disabled={pending}>
             {cancelLabel ?? common.cancel}
           </Button>
           <Button
