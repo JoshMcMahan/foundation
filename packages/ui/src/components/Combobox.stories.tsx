@@ -298,8 +298,8 @@ export const UnlistedValue: StoryObj<FieldArgs> = {
   render: (args) => <UnlistedDemo {...args} />,
 }
 
-function AutocompleteDemo(args: FieldArgs) {
-  const [value, setValue] = useState('')
+function AutocompleteDemo({ initial = '', ...args }: FieldArgs & { initial?: string }) {
+  const [value, setValue] = useState(initial)
   return (
     <Autocomplete
       aria-label="When to run"
@@ -319,6 +319,11 @@ function AutocompleteDemo(args: FieldArgs) {
 /** Free text with suggestions: any typed value is kept. */
 export const FreeText: StoryObj<FieldArgs> = {
   render: (args) => <AutocompleteDemo {...args} />,
+}
+
+/** A typed value no suggestion matches: the button still lists every suggestion. */
+export const FreeTextCustomValue: StoryObj<FieldArgs> = {
+  render: (args) => <AutocompleteDemo {...args} initial="success()" />,
 }
 
 interface TagsArgs extends FieldArgs {

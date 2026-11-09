@@ -748,16 +748,25 @@ export function Autocomplete({
   const t = useStrings().dropdown
   const list = useRef<VirtualListHandle>(null)
   const uid = useId()
+  // Opened from the button, the list shows every suggestion: the field's text is a value, not a
+  // query, and a custom one would match nothing. Typing filters again.
+  const [browsing, setBrowsing] = useState(false)
 
   return (
     <BaseAutocomplete.Root
       // Base UI types flat and grouped items as separate overloads of one runtime path.
       items={entries.items as readonly Entry<string>[]}
-      filter={filter}
+      filter={browsing ? null : filter}
       itemToStringValue={(entry: Entry<string>) => entry.value}
       value={value}
       defaultValue={defaultValue}
-      onValueChange={(next) => onValueChange?.(next)}
+      onOpenChange={(open, { reason }) => setBrowsing(open && reason === 'trigger-press')}
+      onValueChange={(next, { reason }) => {
+        if (reason === 'input-change') {
+          setBrowsing(false)
+        }
+        onValueChange?.(next)
+      }}
       onItemHighlighted={(_, { index, reason }) => list.current?.reveal(index, reason)}
       disabled={disabled}
       required={required}

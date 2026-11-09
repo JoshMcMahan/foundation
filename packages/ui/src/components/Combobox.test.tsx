@@ -319,8 +319,14 @@ describe('Combobox', () => {
 })
 
 describe('Autocomplete', () => {
-  function Field({ onValueChange }: { onValueChange: (value: string) => void }) {
-    const [value, setValue] = useState('')
+  function Field({
+    onValueChange,
+    initial = '',
+  }: {
+    onValueChange: (value: string) => void
+    initial?: string
+  }) {
+    const [value, setValue] = useState(initial)
     return (
       <Autocomplete
         aria-label="When to run"
@@ -350,6 +356,24 @@ describe('Autocomplete', () => {
     const popup = screen.getByRole('listbox').closest('[data-side]')
     await waitFor(() => expect(popup).toHaveAttribute('data-empty'))
     expect(popup).toHaveClass('data-empty:hidden')
+  })
+
+  it('shows every suggestion when opened from the button while holding a custom value', async () => {
+    const onValueChange = vi.fn()
+    render(<Field initial="a custom value" onValueChange={onValueChange} />)
+    await open()
+    expect(await screen.findByRole('option', { name: /Always/ })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'never' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'never' }))
+    expect(onValueChange).toHaveBeenLastCalledWith('never')
+  })
+
+  it('filters again once text is typed after opening from the button', async () => {
+    render(<Field initial="a custom value" onValueChange={() => {}} />)
+    await open()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'even after' } })
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'never' })).toBeNull())
+    expect(screen.getByRole('option', { name: /Always/ })).toBeInTheDocument()
   })
 
   it('fills the field with a suggestion value, found by its label', async () => {
