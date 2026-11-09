@@ -1160,10 +1160,11 @@ function UseConfirmDemo() {
   const [members, setMembers] = useState(['Ada Okafor', 'Lin Zhou'])
   // Counted outside render, so a retry from the same dialog sees the first try.
   const tries = useRef(0)
+  const list = useRef<HTMLUListElement>(null)
   return (
     <>
-      <ul className="w-72 space-y-1 text-sm">
-        {members.map((name) => (
+      <ul ref={list} className="w-72 space-y-1 text-sm">
+        {members.map((name, index) => (
           <li key={name} className="flex items-center justify-between gap-2">
             {name}
             <ActionMenu
@@ -1189,6 +1190,12 @@ function UseConfirmDemo() {
                       },
                       errorMessage: (failure) =>
                         failure instanceof Error ? failure.message : 'Something went wrong.',
+                      // What opened it is gone once the member is removed: focus moves on to
+                      // the row now in its place, or the one before when it was last.
+                      finalFocus: () => {
+                        const rows = list.current?.querySelectorAll<HTMLElement>('li button') ?? []
+                        return rows[Math.min(index, rows.length - 1)] ?? true
+                      },
                     }),
                 },
               ]}
@@ -1216,6 +1223,28 @@ export const UseConfirm: StoryObj = {
     const dialog = await screen.findByRole('alertdialog', { name: 'Remove Ada Okafor?' })
     await waitFor(() =>
       expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
+    )
+  },
+}
+
+/** Once a confirmed action removes what opened the dialog, `finalFocus` moves focus on to what
+ *  took its place, rather than leaving it to whatever had focus before. */
+export const UseConfirmFinalFocus: StoryObj = {
+  name: 'Confirm modal, focus after its row is gone',
+  render: () => <UseConfirmDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions for Ada Okafor' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove from workspace' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Remove Ada Okafor?' })
+    const remove = within(dialog).getByRole('button', { name: 'Remove' })
+    // The demo's first try fails; the second removes her.
+    await userEvent.click(remove)
+    await within(dialog).findByRole('alert')
+    await userEvent.click(remove)
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'More actions for Lin Zhou' })).toHaveFocus(),
     )
   },
 }

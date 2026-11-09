@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from './Button'
 import { ErrorText } from './Field'
-import { Modal, type ModalSize } from './Modal'
+import { Modal, type ModalProps, type ModalSize } from './Modal'
 import { useStrings } from './Provider'
 
 /** What the reader types or picks in, which takes focus ahead of the buttons. A checkbox or
@@ -47,6 +47,10 @@ export interface ConfirmModalProps {
    *  destructive dialog, so a stray Enter destroys nothing, and the confirm button otherwise,
    *  so the keyboard answers at once. */
   initialFocus?: 'cancel' | 'confirm' | 'first-control' | undefined
+  /** What has focus once it closes: by default what opened it, or, once that is gone, the last
+   *  thing focused that is still there. A function runs as it closes, after the action, so it
+   *  can name what took the place of a row the action removed. */
+  finalFocus?: ModalProps['finalFocus'] | undefined
   /** Work the host runs for it, such as a mutation already under way: the buttons wait, and
    *  the dialog can't be dismissed, as while its own handler runs. */
   pending?: boolean | undefined
@@ -71,6 +75,7 @@ export function ConfirmModal({
   cancelLabel,
   closeOnConfirm = true,
   initialFocus,
+  finalFocus,
   pending: pendingProp = false,
   error,
   size = 'md',
@@ -144,6 +149,7 @@ export function ConfirmModal({
         }
         return bodyElement.current?.querySelector<HTMLElement>(FIELDS) ?? button ?? true
       }}
+      {...(finalFocus !== undefined && { finalFocus })}
       footer={
         <>
           <Button ref={cancelButton} variant="ghost" size="sm" onClick={onClose} disabled={pending}>

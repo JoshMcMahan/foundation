@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
 import { ConfirmModal, useConfirm } from './ConfirmModal'
 import { Modal } from './Modal'
 import { useClosingValue } from './useClosingValue'
@@ -408,6 +409,46 @@ describe('useConfirm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(onAnswer).toHaveBeenLastCalledWith(false))
+  })
+
+  it('moves focus where finalFocus says as it closes, such as past a row the action removed', async () => {
+    function Rows() {
+      const [names, setNames] = useState(['Ada', 'Grace'])
+      const { confirm, dialog } = useConfirm()
+      return (
+        <>
+          <ul>
+            {names.map((name) => (
+              <li key={name}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void confirm({
+                      title: `Remove ${name}?`,
+                      confirmLabel: 'Remove',
+                      destructive: true,
+                      onConfirm: () => setNames((all) => all.filter((n) => n !== name)),
+                      finalFocus: () => document.querySelector<HTMLElement>('li button') ?? true,
+                    })
+                  }
+                >
+                  {`Remove ${name}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {dialog}
+        </>
+      )
+    }
+    render(<Rows />)
+    const ada = screen.getByRole('button', { name: 'Remove Ada' })
+    ada.focus()
+    fireEvent.click(ada)
+    const dialog = await screen.findByRole('alertdialog', { name: 'Remove Ada?' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Grace' })).toHaveFocus())
   })
 
   it('keeps the dialog open with the error when the action fails', async () => {
