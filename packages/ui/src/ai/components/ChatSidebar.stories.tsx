@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { makeStaticAdapter, makeSummaries, StoryChat, StoryViewport } from '../stories/harness'
 import ChatSidebar from './ChatSidebar'
 
@@ -63,4 +64,37 @@ export const FooterLinks: StoryObj = {
       </StoryViewport>
     </StoryChat>
   ),
+}
+
+/** Deleting a conversation from its menu moves focus on to the next one's menu button, into
+ *  the next group when it was the only one in its group. */
+export const DeleteMovesFocus: StoryObj = {
+  name: 'Delete, focus moves on',
+  render: () => (
+    <StoryChat
+      adapter={makeStaticAdapter({
+        summaries: makeSummaries({ count: 6, now: new Date().toISOString() }),
+      })}
+      conversationId="conv-1"
+    >
+      <StoryViewport>
+        <ChatSidebar />
+      </StoryViewport>
+    </StoryChat>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const more = async (title: string) =>
+      within((await canvas.findByText(title)).closest('li') as HTMLElement).getByRole('button', {
+        name: 'More actions',
+      })
+    // The only conversation from yesterday.
+    await userEvent.click(await more('Slurm sizing session 2'))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(canvas.queryByText('Slurm sizing session 2')).toBeNull())
+    const next = await more('Slurm sizing session 3')
+    await waitFor(() => expect(next).toHaveFocus())
+  },
 }

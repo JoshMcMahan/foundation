@@ -43,7 +43,7 @@ interface FileRowsWindowProps {
   rowIdPrefix: string
   scrollEl: HTMLElement | null
   loadMore?: LoadMoreState | undefined
-  getItems: (node: TreeNode) => MenuEntry[]
+  getItems: (node: TreeNode, row: Element | null) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void
@@ -114,7 +114,7 @@ export function FileRowsWindow({
             icon={icon}
             checked={checkedItems.has(node.path)}
             canPreview={canPreview(node)}
-            getItems={() => getItems(node)}
+            getItems={(row) => getItems(node, row)}
             openMenu={openMenu}
             onOpen={onOpen}
             onToggleCheck={onToggleCheck}

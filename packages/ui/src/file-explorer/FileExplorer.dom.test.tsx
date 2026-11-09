@@ -596,6 +596,26 @@ describe('FileExplorer mutations', () => {
     expect(treeItem('deep.txt')).toBeDefined()
     expect(script.callsFor('a/sub/')).toHaveLength(1)
   })
+
+  it('moves focus to the files grid, not the page, after a file is deleted from its row', async () => {
+    const { script } = await renderExplorer(FOLDER_A)
+    const one = (await screen.findByLabelText('Select one.txt')).closest('tr') as HTMLElement
+    const more = within(one).getByRole('button', { name: 'More actions' })
+    more.focus()
+    fireEvent.click(more)
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Confirm delete' })
+    // The re-list after the delete shows the skeleton in the table's place, as it does
+    // against a real store, so the table and its rows are drawn again.
+    script.hold('a/')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(script.callsFor('a/')).toHaveLength(2))
+    await waitFor(() => expect(screen.queryByRole('grid', { name: 'Files' })).toBeNull())
+    await script.release('a/')
+
+    await waitFor(() => expect(screen.queryByLabelText('Select one.txt')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('grid', { name: 'Files' })).toHaveFocus())
+  })
 })
 
 describe('FileExplorer storages prop', () => {
