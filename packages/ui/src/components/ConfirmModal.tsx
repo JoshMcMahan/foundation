@@ -126,6 +126,10 @@ export function ConfirmModal({
   }
 
   const returnFocus = (plan: RemovalPlan) => {
+    // Still open: the dialog's focus effect ran again without closing, and drops what it asks.
+    if (open) {
+      return true
+    }
     const target = removalTarget(plan)
     if (target) {
       return target
@@ -134,7 +138,9 @@ export function ConfirmModal({
       letGo.current?.()
       letGo.current = focusOnRemoval(plan)
     }
-    return plan.opener?.isConnected ? plan.opener : true
+    // While the row stays, focus goes back to what had it as the dialog opened. The row's
+    // expanded menu button is only a guess at the opener: after a right-click it never had focus.
+    return true
   }
 
   const runConfirm = async () => {

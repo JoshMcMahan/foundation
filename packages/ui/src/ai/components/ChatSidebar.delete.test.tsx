@@ -55,4 +55,21 @@ describe('ChatSidebar delete', () => {
     await deleteSession(2)
     await waitFor(() => expect(moreButton(3)).toHaveFocus())
   })
+
+  it('returns focus to where it was on Cancel after a right-click, not to the row’s button', async () => {
+    render(
+      <StoryChat adapter={makeStaticAdapter({ summaries: summaries() })} conversationId={null}>
+        <ChatSidebar />
+      </StoryChat>,
+    )
+    await screen.findByText('Slurm sizing session 1')
+    const search = screen.getByPlaceholderText('Search conversations')
+    search.focus()
+    fireEvent.contextMenu(screen.getByText('Slurm sizing session 1'))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    const dialog = await screen.findByRole('alertdialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() => expect(search).toHaveFocus())
+  })
 })

@@ -103,6 +103,8 @@ export function removalTarget(plan: RemovalPlan): HTMLElement | null {
       }
       if (!holder.matches(FOCUSABLE)) {
         holder.tabIndex = -1
+        // Only while it holds focus: left on, a click anywhere in it would focus it.
+        holder.addEventListener('blur', () => holder.removeAttribute('tabindex'), { once: true })
       }
       return holder
     }
@@ -136,7 +138,8 @@ export function focusOnRemoval(plan: RemovalPlan): () => void {
     // A removed element drops focus to the body; anything else the reader chose.
     const active = doc.activeElement
     if (active === null || active === doc.body) {
-      removalTarget(plan)?.focus()
+      // As the dialog returns focus, without scrolling a list the reader may be scrolling.
+      removalTarget(plan)?.focus({ preventScroll: true })
     }
   })
   const onFocusIn = (event: FocusEvent) => {
@@ -144,12 +147,25 @@ export function focusOnRemoval(plan: RemovalPlan): () => void {
       stop()
     }
   }
+  // A click on plain text moves focus to the body with no focusin. Checked once the event is
+  // done, since a row that goes can take focus with it, which the observer handles.
+  const onFocusOut = (event: FocusEvent) => {
+    if (event.target instanceof Node && plan.row.contains(event.target)) {
+      queueMicrotask(() => {
+        if (plan.row.isConnected && !plan.row.contains(doc.activeElement)) {
+          stop()
+        }
+      })
+    }
+  }
   const stop = () => {
     observer.disconnect()
     doc.removeEventListener('focusin', onFocusIn)
+    doc.removeEventListener('focusout', onFocusOut)
   }
   // The whole document, since the row can go with its list.
   observer.observe(doc.body, { childList: true, subtree: true })
   doc.addEventListener('focusin', onFocusIn)
+  doc.addEventListener('focusout', onFocusOut)
   return stop
 }

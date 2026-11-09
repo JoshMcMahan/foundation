@@ -495,7 +495,10 @@ describe('useConfirm removes', () => {
   it('moves focus to the list when the removed row was the only one', async () => {
     render(<Members initial={['Ada']} />)
     await answer('Ada', 'Remove')
-    await waitFor(() => expect(screen.getByRole('list', { name: 'Members' })).toHaveFocus())
+    const list = screen.getByRole('list', { name: 'Members' })
+    await waitFor(() => expect(list).toHaveFocus())
+    screen.getByRole('button', { name: 'Invite' }).focus()
+    expect(list).not.toHaveAttribute('tabindex')
   })
 
   it('returns focus to what opened it on Cancel, though the list changed while it was open', async () => {
@@ -543,6 +546,18 @@ describe('useConfirm removes', () => {
     act(() => setNames(['Grace']))
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(invite).toHaveFocus()
+  })
+
+  it('leaves focus on the page when the reader clicked away before the row goes', async () => {
+    render(<Members initial={['Ada', 'Grace']} onRemove={() => undefined} />)
+    await answer('Ada', 'Remove')
+    const opener = screen.getByRole('button', { name: 'Remove Ada' })
+    await waitFor(() => expect(opener).toHaveFocus())
+    act(() => opener.blur())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    act(() => setNames(['Grace']))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.body).toHaveFocus()
   })
 
   it('lets an explicit finalFocus decide over removes', async () => {
