@@ -725,7 +725,14 @@ const HOST_WORKSPACES_KEY = 'workshop-host-workspaces'
 /** A workspaces list as a host builds it: a checkbox before the columns, and the name's header
  *  with a share of the list as its own class at every width, as `w-[22%]`, rather than as
  *  `ColumnDef.width`. Every other column stacks under the name on a phone. */
-function HostWorkspacesDemo({ storageKey = HOST_WORKSPACES_KEY }: { storageKey?: string }) {
+function HostWorkspacesDemo({
+  storageKey = HOST_WORKSPACES_KEY,
+  fixed = false,
+}: {
+  storageKey?: string
+  /** A table of fixed layout, whose header row alone sizes the columns. */
+  fixed?: boolean
+}) {
   const goTo = useListNavigate()
   const { openMenu } = useContextMenu()
   const view = useListView<HostWorkspace>({
@@ -764,7 +771,7 @@ function HostWorkspacesDemo({ storageKey = HOST_WORKSPACES_KEY }: { storageKey?:
     })
   return (
     <ListPage view={view} total={HOST_WORKSPACES.length} matches={HOST_WORKSPACES.length}>
-      <Table {...listTableProps}>
+      <Table {...(fixed ? listTableFixedProps : listTableProps)}>
         <ListSelectAllHeader
           selected={selected.size}
           total={HOST_WORKSPACES.length}
@@ -857,6 +864,20 @@ async function expectCheckboxBesideIcon(canvasElement: HTMLElement) {
   await expect(icon.left - box.right).toBeLessThanOrEqual(name.left - icon.left)
 }
 
+// The header's and a row's checkbox show whole, and nothing over them takes a press meant for them.
+async function expectCheckboxesWhole(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  const row = canvas.getByText('workspace-jchen-gpu-notebooks').closest('tr') as HTMLElement
+  const header = canvasElement.querySelector('thead tr') as HTMLElement
+  for (const box of [within(header).getByRole('checkbox'), within(row).getByRole('checkbox')]) {
+    const at = box.getBoundingClientRect()
+    const cell = (box.closest('td, th') as HTMLElement).getBoundingClientRect()
+    await expect(cell.right).toBeGreaterThanOrEqual(at.right)
+    const hit = document.elementFromPoint(at.left + at.width / 2, at.top + at.height / 2)
+    await expect(box.contains(hit)).toBe(true)
+  }
+}
+
 /** A host's workspaces list at desktop width: the name keeps the host's 22%. */
 export const HostWidthClass: StoryObj = {
   render: () => <HostWorkspacesDemo />,
@@ -883,6 +904,20 @@ export const HostWidthClassPhone: StoryObj = {
   ),
   play: async ({ canvasElement }) => {
     await expectCheckboxBesideIcon(canvasElement)
+  },
+}
+
+/** The same phone list in a table of fixed layout, which takes the selection column's width as
+ *  given: its checkboxes show whole, beside the icon, and take a press. */
+export const HostWidthClassPhoneFixed: StoryObj = {
+  render: () => (
+    <div style={{ width: 390, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <HostWorkspacesDemo storageKey={`${HOST_WORKSPACES_KEY}:fixed`} fixed />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectCheckboxBesideIcon(canvasElement)
+    await expectCheckboxesWhole(canvasElement)
   },
 }
 
