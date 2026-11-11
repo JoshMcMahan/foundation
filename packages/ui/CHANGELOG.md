@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.122.0](https://github.com/parallelworks/foundation/compare/ui-v0.121.0...ui-v0.122.0) (2026-11-11)
+
+
+### Features
+
+* **ui:** arrow keys move between conversation sidebar rows, and a row can take keys such as Backspace to delete ([#695](https://github.com/parallelworks/foundation/issues/695)) ([f09e860](https://github.com/parallelworks/foundation/commit/f09e8603783a38e1de4dbaac847371f59c8b4631))
+* **ui:** typing the closing colon of an emoji shortcode in the composer turns it into its emoji ([#693](https://github.com/parallelworks/foundation/issues/693)) ([887656a](https://github.com/parallelworks/foundation/commit/887656a0dba9c587fda82a19f4e1229256daa3c4))
+
 ## [0.121.0](https://github.com/parallelworks/foundation/compare/ui-v0.120.0...ui-v0.121.0) (2026-11-11)
 
 
