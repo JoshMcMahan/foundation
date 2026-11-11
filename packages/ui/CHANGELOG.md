@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.122.1](https://github.com/parallelworks/foundation/compare/ui-v0.122.0...ui-v0.122.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **ui:** a band crosses the page behind the composer where a new conversation starts, when the panel color is translucent ([#696](https://github.com/parallelworks/foundation/issues/696)) ([90d79f5](https://github.com/parallelworks/foundation/commit/90d79f5a56fffae60cb691453538288af62d373e))
+
 ## [0.122.0](https://github.com/parallelworks/foundation/compare/ui-v0.121.0...ui-v0.122.0) (2026-11-11)
 
 
