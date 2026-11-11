@@ -7,7 +7,9 @@ import { Drawer } from '../../components/Drawer'
 import { EmptyState } from '../../components/EmptyState'
 import { useShortcutFormat } from '../../components/Kbd'
 import type { MenuEntry } from '../../components/MenuEntries'
+import { RunStatusIcon } from '../../components/RunStatusIcon'
 import { StatusDot } from '../../components/StatusBadge'
+import { cx } from '../../cx'
 import { StoryViewport } from '../stories/harness'
 import {
   ConversationSidebar,
@@ -70,7 +72,25 @@ const TASKS: Task[] = [
 
 const taskHref = (t: Task) => `/tasks/${t.id}?view=log#latest`
 
-const VARIANT = { waiting: 'warning', running: 'success', idle: 'muted' } as const
+/** Running takes the run status ring rather than a dot, so a host that also marks rows at rest
+ *  keeps the two apart by shape, which holds with reduced motion. */
+function TaskMark({ state, size }: { state: Exclude<State, 'idle'>; size: 'row' | 'rail' }) {
+  const row = size === 'row'
+  return (
+    <span
+      className={cx(
+        'flex items-center justify-center',
+        row ? 'size-3 text-xs' : 'size-3.5 text-sm',
+      )}
+    >
+      {state === 'running' ? (
+        <RunStatusIcon status="running" label="" />
+      ) : (
+        <StatusDot variant="warning" size={row ? 6 : 10} />
+      )}
+    </span>
+  )
+}
 
 function grouped(tasks: Task[]): ConversationSidebarGroup<Task>[] {
   return [
@@ -172,7 +192,7 @@ function TaskSidebar({
         renderRow={(t) => {
           const body = (
             <SidebarRowBody
-              leading={t.state !== 'idle' && <StatusDot variant={VARIANT[t.state]} size={6} />}
+              leading={t.state !== 'idle' && <TaskMark state={t.state} size="row" />}
               title={t.title}
               time={t.age}
               detail={
@@ -207,19 +227,20 @@ function TaskSidebar({
             </SidebarRow>
           )
         }}
-        rail={tasks
-          .filter((t) => t.state !== 'idle')
-          .map((t) => (
-            <SidebarRailItem
-              key={t.id}
-              label={t.title}
-              selected={t.id === openId}
-              href={links ? taskHref(t) : undefined}
-              onSelect={() => setOpenId(t.id)}
-            >
-              <StatusDot variant={VARIANT[t.state]} />
-            </SidebarRailItem>
-          ))}
+        rail={tasks.map(
+          (t) =>
+            t.state !== 'idle' && (
+              <SidebarRailItem
+                key={t.id}
+                label={t.title}
+                selected={t.id === openId}
+                href={links ? taskHref(t) : undefined}
+                onSelect={() => setOpenId(t.id)}
+              >
+                <TaskMark state={t.state} size="rail" />
+              </SidebarRailItem>
+            ),
+        )}
       >
         {contextMenu}
         {keyboard && actions.dialogs}
