@@ -1042,3 +1042,72 @@ describe('chatHistory', () => {
     expect(readHistory('h')).toEqual([])
   })
 })
+
+describe('ChatInput emoji shortcodes', () => {
+  const typeKeys = (keys: string) => {
+    for (const key of keys) {
+      const el = textarea()
+      const caret = el.selectionStart + key.length
+      fireEvent.change(el, {
+        target: {
+          value: el.value.slice(0, el.selectionStart) + key + el.value.slice(el.selectionEnd),
+          selectionStart: caret,
+          selectionEnd: caret,
+        },
+      })
+    }
+  }
+
+  it('turns a shortcode into its emoji as its closing colon is typed', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} conversationId="c1" />)
+    typeKeys('look :eyes:')
+    expect(textarea().value).toBe('look 👀')
+    expect(JSON.parse(storage.get('aiChatDraft:c1') ?? '').text).toBe('look 👀')
+    typeKeys(', ok')
+    expect(textarea().value).toBe('look 👀, ok')
+    pressEnter()
+    expect(onSend).toHaveBeenCalledWith('look 👀, ok', undefined, undefined)
+  })
+
+  it('keeps the text after the caret, and the caret beside the emoji', () => {
+    render(<ChatInput onSend={vi.fn()} />)
+    typeInBox('see :eyes later')
+    textarea().setSelectionRange('see :eyes'.length, 'see :eyes'.length)
+    typeKeys(':!')
+    expect(textarea().value).toBe('see 👀! later')
+    expect(textarea().selectionStart).toBe('see 👀!'.length)
+  })
+
+  it('completes a shortcode in a recalled prompt', () => {
+    render(<ChatInput onSend={vi.fn()} history={{ name: 'agents' }} />)
+    typeInBox(':eyes')
+    pressEnter()
+    pressUp()
+    typeKeys(':')
+    expect(textarea().value).toBe('👀')
+    expect(readHistory('agents')).toEqual([':eyes'])
+  })
+
+  it.each([
+    [true, ':eyes:'],
+    [false, '👀'],
+  ])('with an input method composing %s, the closing colon leaves %j', (isComposing, want) => {
+    render(<ChatInput onSend={vi.fn()} />)
+    typeInBox(':eyes')
+    fireEvent.input(textarea(), {
+      target: { value: ':eyes:', selectionStart: 6, selectionEnd: 6 },
+      isComposing,
+    })
+    expect(textarea().value).toBe(want)
+  })
+
+  it('leaves pasted, unknown and mid-word shortcodes as written', () => {
+    render(<ChatInput onSend={vi.fn()} />)
+    typeInBox(':eyes:')
+    expect(textarea().value).toBe(':eyes:')
+    typeInBox('')
+    typeKeys(':notanemoji: https://example.com/:eyes:')
+    expect(textarea().value).toBe(':notanemoji: https://example.com/:eyes:')
+  })
+})

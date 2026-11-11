@@ -1,4 +1,5 @@
 import {
+  type ChangeEvent,
   type ClipboardEvent,
   type KeyboardEvent,
   type ReactNode,
@@ -21,6 +22,7 @@ import ComposerAddMenu from './ComposerAddMenu'
 import { ComposerContext, ComposerControls, ComposerSettings } from './ComposerChrome'
 import { clearDraft, readDraft, storeDraft, sweepDrafts } from './chatDraft'
 import DragOverlay from './DragOverlay'
+import { closeShortcode } from './emojiShortcode'
 import { PasteFileCard } from './PastedText'
 import { SlashMenu, type SlashMenuConfig, useSlashMenu } from './SlashMenu'
 import { type ComposerHistory, useComposerHistory } from './useComposerHistory'
@@ -330,6 +332,20 @@ export default function ChatInput({
     saveDraft(value)
   }
 
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const el = e.currentTarget
+    // An input method still composing owns the text until it commits.
+    const composing = 'isComposing' in e.nativeEvent && e.nativeEvent.isComposing === true
+    const emoji = composing ? null : closeShortcode(input, el.value, el.selectionStart)
+    if (emoji) {
+      // Written to the box itself so the caret stays beside the emoji instead of jumping to the
+      // end when React applies the new value.
+      el.value = emoji.text
+      el.setSelectionRange(emoji.caret, emoji.caret)
+    }
+    setInputAndPersist(el.value)
+  }
+
   const composerHistory = useComposerHistory(history, input, setInput)
   // A send answers later, by when the box may hold something else or another
   // conversation. A recalled entry is not typing, so it gives way.
@@ -584,7 +600,7 @@ export default function ChatInput({
                   <textarea
                     ref={textareaRef}
                     value={input}
-                    onChange={(e) => setInputAndPersist(e.target.value)}
+                    onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
                     {...slashMenu.inputProps}
