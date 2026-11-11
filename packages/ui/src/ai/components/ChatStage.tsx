@@ -16,7 +16,7 @@ export default function ChatStage({
   children: ReactNode
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [container-type:size] [scrollbar-gutter:stable_both-edges]">
+    <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto [container-type:size] [scrollbar-gutter:stable_both-edges]">
       <div className="w-full pt-[max(2rem,24cqh)] pb-[12vh]">
         {heading && (
           <div className="mx-auto mb-6 max-w-[var(--chat-column,50rem)] px-8 text-center">
