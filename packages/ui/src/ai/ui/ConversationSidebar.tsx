@@ -2,7 +2,10 @@ import {
   Fragment,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  useCallback,
   useEffect,
+  useId,
+  useMemo,
   useRef,
 } from 'react'
 import { Drawer } from '../../components/Drawer'
@@ -43,10 +46,35 @@ function clampSidebarWidth(width: number): number {
 }
 
 export interface ConversationSidebarGroup<T> {
+  /** Also what remembers the group folded, so keep it the same across renders and visits. */
   key: string
   label: ReactNode
   tone?: 'default' | 'attention'
   items: T[]
+}
+
+// Lists that name no key of their own share one, as they share a width.
+const SHARED_COLLAPSED_GROUPS_STORAGE_KEY = 'aiChatSidebarCollapsedGroups'
+
+/** The keys of the groups the reader folded. A key stays while its group is gone, emptied or
+ *  filtered out, so the group comes back folded. */
+function useCollapsedGroups(storageKey: string) {
+  const [stored, setStored] = usePersistedState<string[]>(storageKey, [])
+  const collapsed = useMemo(() => new Set(storedKeys(stored)), [stored])
+  const toggle = useCallback(
+    (key: string) =>
+      setStored((prev) => {
+        const keys = storedKeys(prev)
+        return keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]
+      }),
+    [setStored],
+  )
+  return { collapsed, toggle }
+}
+
+// What was stored is only trusted as a list of keys.
+function storedKeys(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((k): k is string => typeof k === 'string') : []
 }
 
 /** Steps through the listed items in order and wraps, so moving between
@@ -123,7 +151,8 @@ const ROW_CONTROL = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="
 
 /** A list of conversations beside the thread: headed groups of rows that
  *  collapse to a rail, with an optional drag handle for the width. The host
- *  decides what is listed, how it is grouped and how each row reads. ↑ and ↓
+ *  decides what is listed, how it is grouped and how each row reads. A group's
+ *  heading folds its rows away, and the list remembers it folded. ↑ and ↓
  *  move focus between its rows. */
 export function ConversationSidebar<T>({
   label,
@@ -134,6 +163,7 @@ export function ConversationSidebar<T>({
   fill: fillProp = false,
   drawer,
   groups,
+  groupsStorageKey = SHARED_COLLAPSED_GROUPS_STORAGE_KEY,
   getKey,
   renderRow,
   loading = false,
@@ -159,6 +189,9 @@ export function ConversationSidebar<T>({
    *  the drawer. */
   drawer?: { open: boolean; onClose: () => void; label: string } | undefined
   groups: ConversationSidebarGroup<T>[]
+  /** Where the groups the reader folded are remembered. Lists without one share a key, so give
+   *  one to a list whose group keys another list might also use. */
+  groupsStorageKey?: string
   getKey: (item: T) => string
   /** One `SidebarRow`. */
   renderRow: (item: T) => ReactNode
@@ -191,8 +224,11 @@ export function ConversationSidebar<T>({
     defaultWidth: SIDEBAR_DEFAULT_WIDTH_PX,
     label: resize?.label,
   })
+  const collapsedGroups = useCollapsedGroups(groupsStorageKey)
+  const groupsId = useId()
+  // A folded group's rows are out of sight, so cycling passes them by too.
   useItemCycling(
-    groups.flatMap((g) => g.items),
+    groups.flatMap((g) => (collapsedGroups.collapsed.has(g.key) ? [] : g.items)),
     cycle,
   )
 
@@ -232,18 +268,34 @@ export function ConversationSidebar<T>({
           ) : groups.length === 0 ? (
             placeholder
           ) : (
-            groups.map((group) => (
-              <div key={group.key} className="mb-2">
-                <SidebarGroupHeading tone={group.tone ?? 'default'} testId={groupTestId}>
-                  {group.label}
-                </SidebarGroupHeading>
-                <ul className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <Fragment key={getKey(item)}>{renderRow(item)}</Fragment>
-                  ))}
-                </ul>
-              </div>
-            ))
+            groups.map((group, i) => {
+              const folded = collapsedGroups.collapsed.has(group.key)
+              const rowsId = `${groupsId}-${i}`
+              return (
+                <div key={group.key} className="mb-2">
+                  <SidebarGroupHeading
+                    tone={group.tone ?? 'default'}
+                    testId={groupTestId}
+                    toggle={{
+                      collapsed: folded,
+                      onToggle: () => collapsedGroups.toggle(group.key),
+                      controls: rowsId,
+                      count: group.items.length,
+                    }}
+                  >
+                    {group.label}
+                  </SidebarGroupHeading>
+                  {/* Folded, the rows unmount, and the list they leave is hidden, so nothing
+                      reads it. */}
+                  <ul id={rowsId} hidden={folded} className="space-y-0.5">
+                    {!folded &&
+                      group.items.map((item) => (
+                        <Fragment key={getKey(item)}>{renderRow(item)}</Fragment>
+                      ))}
+                  </ul>
+                </div>
+              )
+            })
           )}
         </div>
       )}

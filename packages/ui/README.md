@@ -995,7 +995,9 @@ inside its link (an optional `leading` mark such as a status dot, the title
 and time, and an optional `detail` line), `useSessionMenu` for the row menu
 (rename, share, download, then delete apart, each with an optional
 `disabledReason`), `useRowDialogs` for rename and delete, and `SidebarEmpty`
-for an empty list or a failed load.
+for an empty list or a failed load. A group's heading folds its rows away and
+shows their count instead, and the list remembers folded groups by `key`; pass
+`groupsStorageKey` to keep a list's folded groups apart from another's.
 
 `ChatLayout sidebarMode="auto"` shows the conversation list as a drawer over
 the thread when the chat is narrower than `drawerBelowPx` (`DRAWER_BELOW_PX`, 896, by default),

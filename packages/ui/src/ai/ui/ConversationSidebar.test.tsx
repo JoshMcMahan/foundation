@@ -136,6 +136,43 @@ describe('ConversationSidebar', () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  it('folds a group from its heading, counts its rows, and remembers it under its key', () => {
+    const { unmount } = render(<Sidebar groupsStorageKey="itemsGroups" />)
+    const rest = screen.getByRole('button', { name: 'Rest' })
+    expect(rest).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(rest)
+    expect(rest).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Item b')).not.toBeInTheDocument()
+    expect(document.getElementById(rest.getAttribute('aria-controls') ?? '')).not.toBeVisible()
+    expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual(['Waiting', 'Rest2'])
+    expect(JSON.parse(storage.get('itemsGroups') ?? '')).toEqual(['rest'])
+    unmount()
+
+    render(<Sidebar groupsStorageKey="itemsGroups" />)
+    expect(screen.queryByText('Item b')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Rest' }))
+    expect(screen.getByText('Item b')).toBeInTheDocument()
+    expect(JSON.parse(storage.get('itemsGroups') ?? '')).toEqual([])
+  })
+
+  it('ignores a stored value that is not a list of keys', () => {
+    storage.set('aiChatSidebarCollapsedGroups', JSON.stringify({ rest: true }))
+    render(<Sidebar />)
+    expect(screen.getByText('Item b')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Waiting' }))
+    expect(JSON.parse(storage.get('aiChatSidebarCollapsedGroups') ?? '')).toEqual(['waiting'])
+  })
+
+  it('cycles past the items of a folded group', () => {
+    const onSelect = vi.fn()
+    render(<Sidebar cycle={{ current: groups[0]?.items[0], onSelect }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Waiting' }))
+    keyDown('ArrowDown')
+    expect(onSelect).toHaveBeenLastCalledWith(groups[1]?.items[0])
+    keyDown('ArrowUp')
+    expect(onSelect).toHaveBeenLastCalledWith(groups[1]?.items[1])
+  })
+
   it('moves focus between rows with the arrows, across groups, and to either end', () => {
     render(
       <Sidebar

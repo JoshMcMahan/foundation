@@ -132,10 +132,12 @@ function TaskSidebar({
   links = false,
   fill = false,
   keyboard = false,
+  groupsStorageKey = 'storyTaskSidebarGroups',
   onToggle,
 }: {
   tasks: Task[]
   startCollapsed: boolean
+  groupsStorageKey?: string
   fill?: boolean
   onToggle?: () => void
   /** Rows and rail items are links to their task, as a routed list's are. */
@@ -163,6 +165,7 @@ function TaskSidebar({
           hint: 'Drag to resize; double-click to reset',
         }}
         groups={grouped(tasks)}
+        groupsStorageKey={groupsStorageKey}
         getKey={(t) => t.id}
         cycle={{ current: open, onSelect: (t) => setOpenId(t.id) }}
         placeholder={<EmptyState variant="bare" title="No tasks yet" />}
@@ -298,6 +301,46 @@ export const KeyboardActions: StoryObj<{ links: boolean }> = {
     await waitFor(() =>
       expect(within(dialog).getByRole('button', { name: 'Delete' })).toHaveFocus(),
     )
+  },
+}
+
+const FOLDED_GROUPS_KEY = 'storyTaskSidebarFoldedGroups'
+
+/** A group's heading folds its rows away and brings them back, and the list remembers which
+ *  groups are folded. A folded group shows how many rows it holds; an open one shows its chevron
+ *  on hover. Idle starts folded here. */
+export const FoldedGroups: StoryObj<{ folded: string[] }> = {
+  args: { folded: ['idle'] },
+  argTypes: {
+    folded: {
+      control: 'check',
+      options: ['waiting', 'running', 'idle'],
+      description: 'The groups the list remembers folded (`groupsStorageKey`)',
+    },
+  },
+  render: (args) => {
+    localStorage.setItem(FOLDED_GROUPS_KEY, JSON.stringify(args.folded))
+    return (
+      <TaskSidebar
+        key={args.folded.join()}
+        tasks={TASKS}
+        startCollapsed={false}
+        groupsStorageKey={FOLDED_GROUPS_KEY}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const idle = canvas.getByRole('button', { name: 'Idle' })
+    await expect(idle).toHaveAttribute('aria-expanded', 'false')
+    await expect(idle).toHaveTextContent('Idle2')
+    await expect(canvas.queryByText('Write release notes')).toBeNull()
+    const running = canvas.getByRole('button', { name: 'Running' })
+    await userEvent.click(running)
+    await expect(running).toHaveAttribute('aria-expanded', 'false')
+    await expect(canvas.queryByText('Fix the flaky upload test')).toBeNull()
+    await userEvent.click(running)
+    await expect(canvas.getByText('Fix the flaky upload test')).toBeVisible()
   },
 }
 

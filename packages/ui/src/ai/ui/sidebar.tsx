@@ -17,7 +17,14 @@ import { type MenuEntry, menuDivider } from '../../components/MenuEntries'
 import { useStrings } from '../../components/Provider'
 import { Tooltip } from '../../components/Tooltip'
 import { cx } from '../../cx'
-import { DownloadIcon, RenameIcon, ShareIcon, SidebarIcon, TrashIcon } from '../../icons'
+import {
+  ChevronRightIcon,
+  DownloadIcon,
+  RenameIcon,
+  ShareIcon,
+  SidebarIcon,
+  TrashIcon,
+} from '../../icons'
 import { MoreButton, rowContextMenuProps, useRowMenuActive } from '../../list/index'
 
 const SIDEBAR_RAIL_WIDTH_PX = 48
@@ -103,25 +110,70 @@ export function SidebarToggle({
   )
 }
 
+/** A group's heading. With `toggle` it is a button that folds the group's rows away and brings
+ *  them back, and a folded group shows how many rows it holds. */
 export function SidebarGroupHeading({
   children,
   tone = 'default',
   testId,
+  toggle,
 }: {
   children: ReactNode
   /** 'attention' is for the group the reader is being asked to act on. */
   tone?: 'default' | 'attention'
   testId?: string | undefined
+  toggle?:
+    | {
+        collapsed: boolean
+        onToggle: () => void
+        /** The id of the list it folds. */
+        controls: string
+        count: number
+      }
+    | undefined
 }) {
+  const color = tone === 'attention' ? 'text-(--theme-warning-text)' : 'theme-muted-text'
+  if (!toggle) {
+    return (
+      <h4
+        data-testid={testId}
+        className={cx('mt-5 mb-1 whitespace-nowrap px-2 text-xs font-medium', color)}
+      >
+        {children}
+      </h4>
+    )
+  }
   return (
-    <h4
-      data-testid={testId}
-      className={cx(
-        'mt-5 mb-1 whitespace-nowrap px-2 text-xs font-medium',
-        tone === 'attention' ? 'text-(--theme-warning-text)' : 'theme-muted-text',
-      )}
-    >
-      {children}
+    // Margins short by the button's padding, so the label sits where a plain heading's does.
+    <h4 data-testid={testId} className="mt-4.5 mb-0.5 text-xs font-medium">
+      <button
+        type="button"
+        aria-expanded={!toggle.collapsed}
+        aria-controls={toggle.controls}
+        onClick={toggle.onToggle}
+        className={cx(
+          'group/heading flex w-full cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-left',
+          'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--theme-focus)',
+          color,
+        )}
+      >
+        <span className="min-w-0 truncate">{children}</span>
+        {/* Out of the button's name, which would otherwise run the two together. */}
+        {toggle.collapsed && (
+          <span aria-hidden="true" className="shrink-0 font-normal tabular-nums opacity-70">
+            {toggle.count}
+          </span>
+        )}
+        {/* Folded, it always shows; open, a pointer that can hover finds it there, as it does a
+            row's menu button, and a touch screen shows it always. */}
+        <ChevronRightIcon
+          className={cx(
+            'h-3 w-3 shrink-0 transition-[transform,opacity] motion-reduce:transition-none',
+            !toggle.collapsed &&
+              'rotate-90 opacity-0 group-hover/heading:opacity-100 group-focus-visible/heading:opacity-100 pointer-coarse:opacity-100',
+          )}
+        />
+      </button>
     </h4>
   )
 }
