@@ -65,7 +65,15 @@ const ALIASES: Record<string, string> = {
 }
 
 const ARROWS: Record<string, string> = { up: '↑', down: '↓', left: '←', right: '→' }
-const APPLE: Record<string, string> = { meta: '⌘', alt: '⌥', shift: '⇧', ctrl: '⌃', enter: '↵' }
+const APPLE: Record<string, string> = {
+  meta: '⌘',
+  alt: '⌥',
+  shift: '⇧',
+  ctrl: '⌃',
+  enter: '↵',
+  backspace: '⌫',
+  delete: '⌦',
+}
 
 // The values `aria-keyshortcuts` takes, from the UI Events key names.
 const ARIA: Record<string, string> = {
@@ -160,6 +168,56 @@ export function ariaKeyShortcuts(keys: string, platform: KeyPlatform = currentPl
       return key.length === 1 ? key.toUpperCase() : key
     })
     .join('+')
+}
+
+/** The keys of a keyboard event a shortcut is matched against: a DOM event or React's. */
+export interface ShortcutKeyEvent {
+  key: string
+  code: string
+  metaKey: boolean
+  ctrlKey: boolean
+  altKey: boolean
+  shiftKey: boolean
+}
+
+/** Whether a key press is the combination, written as for `formatShortcut`: `Mod+K`,
+ *  `Shift+Enter`, `Backspace`, `A`. The modifiers must be exactly those named. */
+export function matchesShortcut(
+  event: ShortcutKeyEvent,
+  keys: string,
+  platform: KeyPlatform = currentPlatform(),
+): boolean {
+  const parts = splitCombo(keys)
+  const main = parts.at(-1)
+  if (main === undefined) {
+    return false
+  }
+  const held = new Set(parts.slice(0, -1).map((part) => canonical(part, platform)))
+  if (
+    event.metaKey !== held.has('meta') ||
+    event.ctrlKey !== held.has('ctrl') ||
+    event.altKey !== held.has('alt')
+  ) {
+    return false
+  }
+  const name = canonical(main, platform)
+  if (name) {
+    const key = name === 'space' ? ' ' : ARIA[name]
+    return event.shiftKey === held.has('shift') && event.key === key
+  }
+  if (/^[a-z]$/i.test(main)) {
+    if (event.shiftKey !== held.has('shift')) {
+      return false
+    }
+    const typed = event.key.toLowerCase()
+    // A layout without Latin letters, or Option on an Apple keyboard, types another character
+    // from the same key: the key's position decides there.
+    return /^[a-z]$/.test(typed)
+      ? typed === main.toLowerCase()
+      : event.code === `Key${main.toUpperCase()}`
+  }
+  // A symbol such as `?` takes Shift on some layouts and not on others.
+  return event.key === main
 }
 
 /** `formatShortcut` and `shortcutText` in the host's key names. */

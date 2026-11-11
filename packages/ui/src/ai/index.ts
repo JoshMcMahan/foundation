@@ -117,6 +117,7 @@ export {
 export { NoticeBar, NoticeCard, type NoticeTone, OutputCard } from './ui/Notice'
 export {
   RenameDialog,
+  type RowDeleteRequest,
   type RowDialogStrings,
   type SessionMenuAction,
   SidebarEmpty,
@@ -125,6 +126,7 @@ export {
   SidebarRailItem,
   SidebarRow,
   SidebarRowBody,
+  type SidebarRowShortcut,
   SidebarRowTitle,
   SidebarToggle,
   useRowDialogs,

@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { AppLink } from '../../components/AppLink'
 import { useContextMenu } from '../../components/ContextMenu'
 import { Drawer } from '../../components/Drawer'
 import { EmptyState } from '../../components/EmptyState'
+import { useShortcutFormat } from '../../components/Kbd'
+import type { MenuEntry } from '../../components/MenuEntries'
 import { StatusDot } from '../../components/StatusBadge'
 import { StoryViewport } from '../stories/harness'
 import {
@@ -12,7 +14,15 @@ import {
   type ConversationSidebarGroup,
   sidebarDrawerProps,
 } from './ConversationSidebar'
-import { SidebarRailItem, SidebarRow, SidebarRowBody, SidebarToggle } from './sidebar'
+import {
+  SidebarRailItem,
+  SidebarRow,
+  SidebarRowBody,
+  type SidebarRowShortcut,
+  SidebarToggle,
+  useRowDialogs,
+  useSessionMenu,
+} from './sidebar'
 
 const meta: Meta = {
   title: 'Chat/Conversation sidebar',
@@ -75,11 +85,53 @@ function grouped(tasks: Task[]): ConversationSidebarGroup<Task>[] {
   ].filter((g) => g.items.length > 0)
 }
 
+/** A row's Rename and Delete, and Backspace or Delete on the row to delete it, opening on Delete
+ *  so Enter answers. */
+function useTaskActions(setTasks: (update: (tasks: Task[]) => Task[]) => void) {
+  const sessionMenu = useSessionMenu()
+  const { text } = useShortcutFormat()
+  const { requestDelete, requestRename, dialogs } = useRowDialogs<Task>({
+    strings: {
+      deleteTitle: 'Delete task?',
+      deleteBody: (t) => `“${t.title}” and its history are deleted for good.`,
+      deleteAction: 'Delete',
+      renameTitle: 'Rename task',
+      renameLabel: 'Name',
+      renamePlaceholder: 'Task name',
+      renameAction: 'Rename',
+    },
+    nameOf: (t) => t.title,
+    onDelete: (t) => {
+      setTasks((all) => all.filter((other) => other.id !== t.id))
+      return true
+    },
+    onRename: (t, title) => {
+      setTasks((all) => all.map((other) => (other.id === t.id ? { ...other, title } : other)))
+      return true
+    },
+  })
+  return {
+    dialogs,
+    menuItems: (t: Task) => (row: HTMLLIElement) =>
+      sessionMenu({
+        rename: { onClick: () => requestRename(t) },
+        remove: { onClick: () => requestDelete(t, row), shortcut: text('Backspace') },
+      }),
+    shortcuts: (t: Task): SidebarRowShortcut[] => [
+      {
+        keys: ['Backspace', 'Delete'],
+        onPress: (row) => requestDelete(t, row, { initialFocus: 'confirm' }),
+      },
+    ],
+  }
+}
+
 function TaskSidebar({
-  tasks,
+  tasks: initialTasks,
   startCollapsed,
   links = false,
   fill = false,
+  keyboard = false,
   onToggle,
 }: {
   tasks: Task[]
@@ -88,10 +140,14 @@ function TaskSidebar({
   onToggle?: () => void
   /** Rows and rail items are links to their task, as a routed list's are. */
   links?: boolean
+  /** Rows rename and delete from their menu, and delete from the keyboard. */
+  keyboard?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(startCollapsed)
+  const [tasks, setTasks] = useState(initialTasks)
   const [openId, setOpenId] = useState<string | undefined>('t2')
   const { openMenu, contextMenu } = useContextMenu()
+  const actions = useTaskActions(setTasks)
   const open = tasks.find((t) => t.id === openId)
   return (
     <StoryViewport>
@@ -125,7 +181,8 @@ function TaskSidebar({
             <SidebarRow
               selected={t.id === openId}
               openMenu={openMenu}
-              menuItems={[{ label: 'Rename', onClick: () => {} }]}
+              menuItems={keyboard ? actions.menuItems(t) : RENAME_ONLY}
+              shortcuts={keyboard ? actions.shortcuts(t) : undefined}
             >
               {links ? (
                 <AppLink
@@ -162,10 +219,13 @@ function TaskSidebar({
           ))}
       >
         {contextMenu}
+        {keyboard && actions.dialogs}
       </ConversationSidebar>
     </StoryViewport>
   )
 }
+
+const RENAME_ONLY: MenuEntry[] = [{ label: 'Rename', onClick: () => {} }]
 
 export const Grouped: StoryObj<{ collapsed: boolean; fill: boolean; links: boolean }> = {
   args: { collapsed: false, fill: false, links: false },
@@ -210,6 +270,34 @@ export const KeyboardFocus: StoryObj<{ collapsed: boolean; fill: boolean; links:
     const row = within(canvasElement).getByRole('link', { name: /Fix the flaky upload test/ })
     row.focus()
     await expect(row).toHaveFocus()
+  },
+}
+
+/** ↑ and ↓ move between rows, across groups, and Home and End to either end. Backspace or Delete
+ *  on a row asks to delete it, opening on Delete so Enter answers, and once the row is gone focus
+ *  is on the row that took its place. The menu shows the key beside Delete. */
+export const KeyboardActions: StoryObj<{ links: boolean }> = {
+  args: { links: true },
+  argTypes: { links: { control: 'boolean' } },
+  render: (args) => (
+    <TaskSidebar
+      key={String(args.links)}
+      tasks={TASKS}
+      startCollapsed={false}
+      links={args.links}
+      keyboard
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    canvas.getByRole('link', { name: /Approve the schema migration/ }).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    await expect(canvas.getByRole('link', { name: /Fix the flaky upload test/ })).toHaveFocus()
+    await userEvent.keyboard('{Backspace}')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete task?' })
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Delete' })).toHaveFocus(),
+    )
   },
 }
 

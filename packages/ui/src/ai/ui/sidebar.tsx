@@ -1,4 +1,10 @@
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useRef,
+  useState,
+} from 'react'
 import { AppLink, isPlainClick } from '../../components/AppLink'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import type { OpenMenu } from '../../components/ContextMenu'
@@ -6,6 +12,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { fieldBox } from '../../components/fieldBox'
 import { focusOnMount } from '../../components/focus'
 import { IconButton } from '../../components/IconButton'
+import { matchesShortcut } from '../../components/Kbd'
 import { type MenuEntry, menuDivider } from '../../components/MenuEntries'
 import { useStrings } from '../../components/Provider'
 import { Tooltip } from '../../components/Tooltip'
@@ -177,6 +184,9 @@ export function SidebarRowBody({
 export interface SessionMenuAction {
   onClick: () => void
   disabledReason?: string | undefined
+  /** The key that does the same while the row has focus, as the menu shows it: bind it with
+   *  the row's `shortcuts`. */
+  shortcut?: string | undefined
 }
 
 /** A row's menu in one order wherever a list of conversations or sessions
@@ -193,6 +203,7 @@ export function useSessionMenu(): (actions: {
       label,
       icon,
       onClick: action.onClick,
+      ...(action.shortcut ? { shortcut: action.shortcut } : {}),
       ...(action.disabledReason ? { disabled: true, disabledReason: action.disabledReason } : {}),
     })
     const items: MenuEntry[] = [
@@ -222,12 +233,24 @@ export function SidebarEmpty({ title, error }: { title: string; error?: string |
   )
 }
 
+/** A key that acts on a row while focus is in it, such as Backspace to delete it. */
+export interface SidebarRowShortcut {
+  /** Any of these, written as for `Kbd`: `Backspace`, `A`, `Mod+Enter`. */
+  keys: string | readonly string[]
+  /** Given the row, as `menuItems` is, so a delete can move focus on once it's gone. */
+  onPress: (row: HTMLLIElement) => void
+}
+
+/** Rows carry `data-sidebar-row`, so the list can move between them with the arrow keys. */
+export const SIDEBAR_ROW_SELECTOR = '[data-sidebar-row]'
+
 /** One entry in the list: the row highlights while it is the open one or
  *  while its menu is up, and the menu opens from its button or a right-click. */
 export function SidebarRow({
   selected,
   menuItems,
   openMenu,
+  shortcuts,
   className,
   children,
 }: {
@@ -236,6 +259,9 @@ export function SidebarRow({
    *  it acts on, such as the row a delete removes. */
   menuItems: MenuEntry[] | ((row: HTMLLIElement) => MenuEntry[])
   openMenu: OpenMenu
+  /** Keys that act on the row while focus is in it. Show each beside its action in the menu,
+   *  with the entry's `shortcut`. A key held down acts once. */
+  shortcuts?: SidebarRowShortcut[] | undefined
   className?: string
   children: ReactNode
 }) {
@@ -243,9 +269,33 @@ export function SidebarRow({
   const row = useRef<HTMLLIElement>(null)
   const items = () =>
     typeof menuItems === 'function' ? (row.current ? menuItems(row.current) : []) : menuItems
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLLIElement>) => {
+    const at = row.current
+    if (
+      !shortcuts ||
+      !at ||
+      e.defaultPrevented ||
+      e.repeat ||
+      e.nativeEvent.isComposing ||
+      // A key pressed in what the row opened in a portal reaches it through React.
+      !at.contains(e.target as Node) ||
+      (e.target instanceof HTMLElement &&
+        (e.target.isContentEditable || e.target.matches('input, textarea, select')))
+    ) {
+      return
+    }
+    const shortcut = shortcuts.find(({ keys }) =>
+      (typeof keys === 'string' ? [keys] : keys).some((k) => matchesShortcut(e, k)),
+    )
+    if (shortcut) {
+      e.preventDefault()
+      shortcut.onPress(at)
+    }
+  }
   return (
     <li
       ref={row}
+      data-sidebar-row=""
       data-menu-open={active || undefined}
       className={cx(
         'group/sidebar-row group relative flex items-center justify-between rounded-lg px-2 py-[3px] transition-colors duration-150 pointer-coarse:pr-9',
@@ -253,6 +303,7 @@ export function SidebarRow({
         selected || active ? HIGHLIGHT_SELECTED : HIGHLIGHT_HOVER,
         className,
       )}
+      onKeyDown={shortcuts ? onKeyDown : undefined}
       {...rowContextMenuProps(openRowMenu, items)}
     >
       {children}
@@ -381,6 +432,13 @@ export interface RowDialogStrings<T> {
   renameAction: string
 }
 
+/** How a delete was asked for. */
+export interface RowDeleteRequest {
+  /** What the dialog opens on. Cancel by default, so a stray Enter deletes nothing; `confirm`
+   *  when a key pressed on the row asked for it, such as Backspace, so Enter answers it. */
+  initialFocus?: 'cancel' | 'confirm' | undefined
+}
+
 /** The delete confirmation and rename dialog every list of rows needs, with
  *  the item they are about. A handler that returns false keeps its dialog
  *  open, for a refusal the reader should see before trying again. Given the
@@ -396,12 +454,13 @@ export function useRowDialogs<T>({
   onDelete: (item: T) => Promise<boolean | undefined> | boolean | undefined
   onRename: (item: T, name: string) => Promise<boolean | undefined> | boolean | undefined
 }): {
-  requestDelete: (item: T, row?: Element | null) => void
+  requestDelete: (item: T, row?: Element | null, request?: RowDeleteRequest) => void
   requestRename: (item: T) => void
   dialogs: ReactNode
 } {
   const [toDelete, setToDelete] = useState<T | null>(null)
   const [deleteRow, setDeleteRow] = useState<Element | null>(null)
+  const [deleteFocus, setDeleteFocus] = useState<RowDeleteRequest['initialFocus']>(undefined)
   const [toRename, setToRename] = useState<T | null>(null)
   const [name, setName] = useState('')
 
@@ -438,6 +497,7 @@ export function useRowDialogs<T>({
         destructive
         closeOnConfirm={false}
         removes={deleteRow}
+        initialFocus={deleteFocus}
         title={strings.deleteTitle}
         description={toDelete === null ? null : strings.deleteBody(toDelete)}
         confirmLabel={strings.deleteAction}
@@ -458,8 +518,9 @@ export function useRowDialogs<T>({
   )
 
   return {
-    requestDelete: (item, row) => {
+    requestDelete: (item, row, request) => {
       setDeleteRow(row ?? null)
+      setDeleteFocus(request?.initialFocus)
       setToDelete(item)
     },
     requestRename: (item) => {

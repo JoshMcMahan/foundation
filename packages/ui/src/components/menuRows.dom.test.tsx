@@ -70,6 +70,8 @@ describe('menu rows', () => {
     expect(ariaKeyShortcut('⌘⇧P')).toBe('Meta+Shift+P')
     expect(ariaKeyShortcut('Ctrl+Enter')).toBe('Ctrl+Enter')
     expect(ariaKeyShortcut('a')).toBe('A')
+    expect(ariaKeyShortcut('⌫')).toBe('Backspace')
+    expect(ariaKeyShortcut('⌘↵')).toBe('Meta+Enter')
     expect(ariaKeyShortcut(undefined)).toBeUndefined()
   })
 

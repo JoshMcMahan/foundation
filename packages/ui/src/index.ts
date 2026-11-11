@@ -176,6 +176,8 @@ export {
   type KbdSize,
   type KbdVariant,
   type KeyPlatform,
+  matchesShortcut,
+  type ShortcutKeyEvent,
   shortcutText,
   useShortcutFormat,
 } from './components/Kbd'

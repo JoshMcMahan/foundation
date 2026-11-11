@@ -1,4 +1,10 @@
-import { Fragment, type ReactNode, useEffect, useRef } from 'react'
+import {
+  Fragment,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+} from 'react'
 import { Drawer } from '../../components/Drawer'
 import { positionKeys } from '../../components/keys'
 import { usePersistedState } from '../../components/Provider'
@@ -7,6 +13,7 @@ import { useSplitter } from '../../components/splitter'
 import { cx } from '../../cx'
 import {
   SIDEBAR_DEFAULT_WIDTH_PX,
+  SIDEBAR_ROW_SELECTOR,
   SidebarGroupHeading,
   SidebarPanel,
   SidebarToggle,
@@ -76,9 +83,48 @@ function useItemCycling<T>(
   }, [enabled])
 }
 
+/** ↑ and ↓ move focus to the row above or below, across groups, and Home and End to the first
+ *  and last, onto the row's first control, as a list read from the keyboard expects. */
+function moveBetweenRows(e: ReactKeyboardEvent<HTMLElement>) {
+  const step = ROW_STEPS[e.key]
+  if (
+    step === undefined ||
+    e.defaultPrevented ||
+    e.altKey ||
+    e.ctrlKey ||
+    e.metaKey ||
+    e.shiftKey
+  ) {
+    return
+  }
+  const from = (e.target as Element).closest(SIDEBAR_ROW_SELECTOR)
+  if (!from || !e.currentTarget.contains(from)) {
+    return
+  }
+  const rows = [...e.currentTarget.querySelectorAll(SIDEBAR_ROW_SELECTOR)]
+  const at = rows.indexOf(from)
+  const to = step === 'first' ? rows[0] : step === 'last' ? rows.at(-1) : rows[at + step]
+  const control = to?.querySelector<HTMLElement>(ROW_CONTROL)
+  if (!control) {
+    return
+  }
+  e.preventDefault()
+  control.focus()
+}
+
+const ROW_STEPS: Record<string, 1 | -1 | 'first' | 'last'> = {
+  ArrowDown: 1,
+  ArrowUp: -1,
+  Home: 'first',
+  End: 'last',
+}
+
+const ROW_CONTROL = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 /** A list of conversations beside the thread: headed groups of rows that
  *  collapse to a rail, with an optional drag handle for the width. The host
- *  decides what is listed, how it is grouped and how each row reads. */
+ *  decides what is listed, how it is grouped and how each row reads. ↑ and ↓
+ *  move focus between its rows. */
 export function ConversationSidebar<T>({
   label,
   collapsed: collapsedProp,
@@ -169,11 +215,13 @@ export function ConversationSidebar<T>({
           {rail}
         </ul>
       ) : (
+        // biome-ignore lint/a11y/noStaticElementInteractions: it only hears the arrows the rows' own controls let bubble
         <div
           className={cx(
             'min-h-0 flex-1 overflow-y-auto px-2 pb-2 transition-opacity duration-200',
             collapsed ? 'pointer-events-none opacity-0' : 'opacity-100',
           )}
+          onKeyDown={moveBetweenRows}
         >
           {loading ? (
             <LoadingRegion className="space-y-3 px-2 pt-2">

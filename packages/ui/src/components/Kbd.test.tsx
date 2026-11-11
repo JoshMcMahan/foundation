@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { render } from '@testing-library/react'
-import { ariaKeyShortcuts, formatShortcut, Kbd, shortcutText } from './Kbd'
+import {
+  ariaKeyShortcuts,
+  formatShortcut,
+  Kbd,
+  matchesShortcut,
+  type ShortcutKeyEvent,
+  shortcutText,
+} from './Kbd'
 import { UIProvider } from './Provider'
 
 describe('formatShortcut', () => {
@@ -13,6 +20,8 @@ describe('formatShortcut', () => {
   it('shows Apple symbols there and key names elsewhere', () => {
     expect(formatShortcut('Mod+Shift+Alt+Enter', undefined, 'apple')).toEqual(['⌘', '⇧', '⌥', '↵'])
     expect(formatShortcut('Ctrl+Shift+Esc', undefined, 'other')).toEqual(['Ctrl', 'Shift', 'Esc'])
+    expect(formatShortcut(['Backspace', 'Delete'], undefined, 'apple')).toEqual(['⌫', '⌦'])
+    expect(formatShortcut('Backspace', undefined, 'other')).toEqual(['Backspace'])
   })
 
   it('names keys in the host’s words', () => {
@@ -49,6 +58,43 @@ describe('ariaKeyShortcuts', () => {
     expect(ariaKeyShortcuts('Mod+K', 'apple')).toBe('Meta+K')
     expect(ariaKeyShortcuts('Mod+Shift+ArrowUp', 'other')).toBe('Control+Shift+ArrowUp')
     expect(ariaKeyShortcuts('/', 'other')).toBe('/')
+  })
+})
+
+describe('matchesShortcut', () => {
+  const press = (key: string, held: Partial<ShortcutKeyEvent> = {}): ShortcutKeyEvent => ({
+    key,
+    code: '',
+    metaKey: false,
+    ctrlKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...held,
+  })
+
+  it('takes a named key, a letter in either case and a symbol', () => {
+    expect(matchesShortcut(press('Backspace'), 'Backspace', 'apple')).toBe(true)
+    expect(matchesShortcut(press('Delete'), 'Backspace', 'apple')).toBe(false)
+    expect(matchesShortcut(press('ArrowUp'), 'Up', 'apple')).toBe(true)
+    expect(matchesShortcut(press(' '), 'Space', 'apple')).toBe(true)
+    expect(matchesShortcut(press('a'), 'A', 'apple')).toBe(true)
+    expect(matchesShortcut(press('?', { shiftKey: true }), '?', 'apple')).toBe(true)
+  })
+
+  it('needs exactly the modifiers named, with Mod the platform’s own', () => {
+    expect(matchesShortcut(press('k', { metaKey: true }), 'Mod+K', 'apple')).toBe(true)
+    expect(matchesShortcut(press('k', { ctrlKey: true }), 'Mod+K', 'apple')).toBe(false)
+    expect(matchesShortcut(press('k', { ctrlKey: true }), 'Mod+K', 'other')).toBe(true)
+    expect(matchesShortcut(press('a', { metaKey: true }), 'A', 'apple')).toBe(false)
+    expect(matchesShortcut(press('A', { shiftKey: true }), 'A', 'apple')).toBe(false)
+    expect(matchesShortcut(press('Backspace', { metaKey: true }), 'Backspace', 'apple')).toBe(false)
+  })
+
+  it('takes a letter by its key where the layout types another character', () => {
+    expect(matchesShortcut(press('ф', { code: 'KeyA' }), 'A', 'other')).toBe(true)
+    expect(matchesShortcut(press('å', { code: 'KeyA', altKey: true }), 'Alt+A', 'apple')).toBe(true)
+    // A Latin layout that puts another letter there types what it says.
+    expect(matchesShortcut(press('j', { code: 'KeyC' }), 'C', 'other')).toBe(false)
   })
 })
 

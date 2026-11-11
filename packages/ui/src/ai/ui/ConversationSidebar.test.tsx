@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
-import { SidebarRailItem } from './sidebar'
+import { SidebarRailItem, SidebarRow } from './sidebar'
 
 const storage = new Map<string, string>()
 Object.defineProperty(window, 'localStorage', {
@@ -134,6 +134,38 @@ describe('ConversationSidebar', () => {
     rerender(<Sidebar />)
     keyDown('ArrowDown')
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('moves focus between rows with the arrows, across groups, and to either end', () => {
+    render(
+      <Sidebar
+        renderRow={(i) => (
+          <SidebarRow selected={false} menuItems={[]} openMenu={vi.fn()}>
+            <button type="button">{i.title}</button>
+          </SidebarRow>
+        )}
+      />,
+    )
+    const row = (name: string) => screen.getByRole('button', { name })
+    row('Item a').focus()
+    fireEvent.keyDown(row('Item a'), { key: 'ArrowDown' })
+    expect(row('Item b')).toHaveFocus()
+    fireEvent.keyDown(row('Item b'), { key: 'ArrowUp' })
+    expect(row('Item a')).toHaveFocus()
+    fireEvent.keyDown(row('Item a'), { key: 'ArrowUp' })
+    expect(row('Item a')).toHaveFocus()
+    fireEvent.keyDown(row('Item a'), { key: 'End' })
+    expect(row('Item c')).toHaveFocus()
+    fireEvent.keyDown(row('Item c'), { key: 'Home' })
+    expect(row('Item a')).toHaveFocus()
+    // From the row's menu button too, onto the next row's own control.
+    fireEvent.keyDown(screen.getAllByRole('button', { name: 'More actions' })[0] as HTMLElement, {
+      key: 'ArrowDown',
+    })
+    expect(row('Item b')).toHaveFocus()
+    // Arrows with a modifier are another shortcut's.
+    fireEvent.keyDown(row('Item b'), { key: 'ArrowDown', shiftKey: true })
+    expect(row('Item b')).toHaveFocus()
   })
 })
 

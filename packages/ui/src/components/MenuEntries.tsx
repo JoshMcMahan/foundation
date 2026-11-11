@@ -351,8 +351,17 @@ export function ariaKeyShortcut(shortcut: string | undefined): string | undefine
     parts.push(names[rest[0] ?? ''] ?? '')
     rest = rest.slice(1)
   }
+  const keys: Record<string, string> = {
+    '↵': 'Enter',
+    '⌫': 'Backspace',
+    '⌦': 'Delete',
+    '↑': 'ArrowUp',
+    '↓': 'ArrowDown',
+    '←': 'ArrowLeft',
+    '→': 'ArrowRight',
+  }
   for (const part of rest.split('+').filter(Boolean)) {
-    parts.push(part.length === 1 ? part.toUpperCase() : part)
+    parts.push(keys[part] ?? (part.length === 1 ? part.toUpperCase() : part))
   }
   return parts.join('+')
 }
