@@ -375,6 +375,16 @@
   pointer-events: none;
 }
 
+/* On the stage the composer scrolls with the page and nothing runs under it,
+ * so the dock paints nothing: its second layer of a translucent panel color
+ * would show as a band across the page. */
+.chat-stage .chat-composer-dock {
+  background: none;
+}
+.chat-stage .chat-composer-dock::before {
+  content: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chat-composer {
     transition: none;
