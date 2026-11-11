@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useState } from 'react'
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 import { AppLink, isPlainClick } from '../../components/AppLink'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import type { OpenMenu } from '../../components/ContextMenu'
@@ -232,14 +232,20 @@ export function SidebarRow({
   children,
 }: {
   selected: boolean
-  menuItems: MenuEntry[]
+  /** Its menu. A function builds it as it opens, given the row, so an action can name the row
+   *  it acts on, such as the row a delete removes. */
+  menuItems: MenuEntry[] | ((row: HTMLLIElement) => MenuEntry[])
   openMenu: OpenMenu
   className?: string
   children: ReactNode
 }) {
   const { active, openMenu: openRowMenu } = useRowMenuActive(openMenu)
+  const row = useRef<HTMLLIElement>(null)
+  const items = () =>
+    typeof menuItems === 'function' ? (row.current ? menuItems(row.current) : []) : menuItems
   return (
     <li
+      ref={row}
       data-menu-open={active || undefined}
       className={cx(
         'group/sidebar-row group relative flex items-center justify-between rounded-lg px-2 py-[3px] transition-colors duration-150 pointer-coarse:pr-9',
@@ -247,12 +253,12 @@ export function SidebarRow({
         selected || active ? HIGHLIGHT_SELECTED : HIGHLIGHT_HOVER,
         className,
       )}
-      {...rowContextMenuProps(openRowMenu, menuItems)}
+      {...rowContextMenuProps(openRowMenu, items)}
     >
       {children}
       <MoreButton
         open={active}
-        onOpen={(button) => openRowMenu(button, menuItems)}
+        onOpen={(button) => openRowMenu(button, items())}
         className="absolute top-[3px] right-2"
       />
     </li>
@@ -377,7 +383,8 @@ export interface RowDialogStrings<T> {
 
 /** The delete confirmation and rename dialog every list of rows needs, with
  *  the item they are about. A handler that returns false keeps its dialog
- *  open, for a refusal the reader should see before trying again. */
+ *  open, for a refusal the reader should see before trying again. Given the
+ *  item's row, a delete moves focus on to the next row once the row is gone. */
 export function useRowDialogs<T>({
   strings,
   nameOf,
@@ -389,11 +396,12 @@ export function useRowDialogs<T>({
   onDelete: (item: T) => Promise<boolean | undefined> | boolean | undefined
   onRename: (item: T, name: string) => Promise<boolean | undefined> | boolean | undefined
 }): {
-  requestDelete: (item: T) => void
+  requestDelete: (item: T, row?: Element | null) => void
   requestRename: (item: T) => void
   dialogs: ReactNode
 } {
   const [toDelete, setToDelete] = useState<T | null>(null)
+  const [deleteRow, setDeleteRow] = useState<Element | null>(null)
   const [toRename, setToRename] = useState<T | null>(null)
   const [name, setName] = useState('')
 
@@ -429,6 +437,7 @@ export function useRowDialogs<T>({
         align="center"
         destructive
         closeOnConfirm={false}
+        removes={deleteRow}
         title={strings.deleteTitle}
         description={toDelete === null ? null : strings.deleteBody(toDelete)}
         confirmLabel={strings.deleteAction}
@@ -449,7 +458,10 @@ export function useRowDialogs<T>({
   )
 
   return {
-    requestDelete: setToDelete,
+    requestDelete: (item, row) => {
+      setDeleteRow(row ?? null)
+      setToDelete(item)
+    },
     requestRename: (item) => {
       setName(nameOf(item))
       setToRename(item)

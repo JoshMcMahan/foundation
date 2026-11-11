@@ -1155,48 +1155,75 @@ export const ConfirmModalError: StoryObj = {
   },
 }
 
-function UseConfirmDemo() {
+function MemberRow({
+  name,
+  onRemove,
+}: {
+  name: string
+  onRemove: (row: HTMLLIElement | null) => void
+}) {
+  const row = useRef<HTMLLIElement>(null)
+  return (
+    <li ref={row} className="flex items-center justify-between gap-2">
+      {name}
+      <ActionMenu
+        label={`More actions for ${name}`}
+        items={[
+          {
+            label: 'Remove from workspace',
+            destructive: true,
+            onClick: () => onRemove(row.current),
+          },
+        ]}
+      >
+        <MoreIcon />
+      </ActionMenu>
+    </li>
+  )
+}
+
+function UseConfirmDemo({
+  members: initial = ['Ada Okafor', 'Lin Zhou'],
+  failFirst = true,
+}: {
+  members?: string[]
+  /** The first try fails, to show the error in place. */
+  failFirst?: boolean
+}) {
   const { confirm, dialog } = useConfirm()
-  const [members, setMembers] = useState(['Ada Okafor', 'Lin Zhou'])
+  const [members, setMembers] = useState(initial)
   // Counted outside render, so a retry from the same dialog sees the first try.
   const tries = useRef(0)
   return (
     <>
-      <ul className="w-72 space-y-1 text-sm">
+      <ul aria-label="Members" className="w-72 space-y-1 rounded-md text-sm">
         {members.map((name) => (
-          <li key={name} className="flex items-center justify-between gap-2">
-            {name}
-            <ActionMenu
-              label={`More actions for ${name}`}
-              items={[
-                {
-                  label: 'Remove from workspace',
-                  destructive: true,
-                  onClick: () =>
-                    void confirm({
-                      title: `Remove ${name}?`,
-                      description: 'They lose access to every team in the workspace.',
-                      confirmLabel: 'Remove',
-                      destructive: true,
-                      // The first try fails, to show the error in place.
-                      onConfirm: async () => {
-                        await new Promise((resolve) => setTimeout(resolve, 400))
-                        tries.current += 1
-                        if (tries.current === 1) {
-                          throw new Error(`${name} owns a team. Hand it over first.`)
-                        }
-                        setMembers((all) => all.filter((m) => m !== name))
-                      },
-                      errorMessage: (failure) =>
-                        failure instanceof Error ? failure.message : 'Something went wrong.',
-                    }),
+          <MemberRow
+            key={name}
+            name={name}
+            onRemove={(row) =>
+              void confirm({
+                title: `Remove ${name}?`,
+                description: 'They lose access to every team in the workspace.',
+                confirmLabel: 'Remove',
+                destructive: true,
+                // Once the member is gone, focus moves on to the row in its place.
+                removes: row,
+                onConfirm: async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 400))
+                  tries.current += 1
+                  if (failFirst && tries.current === 1) {
+                    throw new Error(`${name} owns a team. Hand it over first.`)
+                  }
+                  setMembers((all) => all.filter((m) => m !== name))
                 },
-              ]}
-            >
-              <MoreIcon />
-            </ActionMenu>
-          </li>
+                errorMessage: (failure) =>
+                  failure instanceof Error ? failure.message : 'Something went wrong.',
+              })
+            }
+          />
         ))}
+        {members.length === 0 && <li className="theme-muted-text">No members</li>}
       </ul>
       {dialog}
     </>
@@ -1216,6 +1243,98 @@ export const UseConfirm: StoryObj = {
     const dialog = await screen.findByRole('alertdialog', { name: 'Remove Ada Okafor?' })
     await waitFor(() =>
       expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus(),
+    )
+  },
+}
+
+async function removeMember(canvasElement: HTMLElement, name: string, answer = 'Remove') {
+  await userEvent.click(
+    within(canvasElement).getByRole('button', { name: `More actions for ${name}` }),
+  )
+  await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove from workspace' }))
+  const dialog = await screen.findByRole('alertdialog', { name: `Remove ${name}?` })
+  await userEvent.click(within(dialog).getByRole('button', { name: answer }))
+  return dialog
+}
+
+/** With `removes`, focus moves on to the same button in the row that took the removed row's
+ *  place, rather than falling to the page. */
+export const UseConfirmRemovesRow: StoryObj = {
+  name: 'Confirm modal, removing a row',
+  render: () => (
+    <UseConfirmDemo members={['Ada Okafor', 'Lin Zhou', 'Sam Rivera']} failFirst={false} />
+  ),
+  play: async ({ canvasElement }) => {
+    await removeMember(canvasElement, 'Lin Zhou')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByRole('button', { name: 'More actions for Sam Rivera' }),
+      ).toHaveFocus(),
+    )
+  },
+}
+
+/** A retry after a failure moves focus on just the same once the row goes. */
+export const UseConfirmRemovesAfterFailure: StoryObj = {
+  name: 'Confirm modal, removing a row after a failed try',
+  render: () => <UseConfirmDemo />,
+  play: async ({ canvasElement }) => {
+    const dialog = await removeMember(canvasElement, 'Ada Okafor')
+    await within(dialog).findByRole('alert')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByRole('button', { name: 'More actions for Lin Zhou' }),
+      ).toHaveFocus(),
+    )
+  },
+}
+
+/** The last row has none after it, so focus moves to the one before. */
+export const UseConfirmRemovesLastRow: StoryObj = {
+  name: 'Confirm modal, removing the last row',
+  render: () => (
+    <UseConfirmDemo members={['Ada Okafor', 'Lin Zhou', 'Sam Rivera']} failFirst={false} />
+  ),
+  play: async ({ canvasElement }) => {
+    await removeMember(canvasElement, 'Sam Rivera')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByRole('button', { name: 'More actions for Lin Zhou' }),
+      ).toHaveFocus(),
+    )
+  },
+}
+
+/** With no row left, the list takes focus. */
+export const UseConfirmRemovesOnlyRow: StoryObj = {
+  name: 'Confirm modal, removing the only row',
+  render: () => <UseConfirmDemo members={['Ada Okafor']} failFirst={false} />,
+  play: async ({ canvasElement }) => {
+    await removeMember(canvasElement, 'Ada Okafor')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(within(canvasElement).getByRole('list', { name: 'Members' })).toHaveFocus(),
+    )
+  },
+}
+
+/** Cancel keeps the row, so focus returns to the button that opened the dialog. */
+export const UseConfirmRemovesCanceled: StoryObj = {
+  name: 'Confirm modal, canceling a removal',
+  render: () => (
+    <UseConfirmDemo members={['Ada Okafor', 'Lin Zhou', 'Sam Rivera']} failFirst={false} />
+  ),
+  play: async ({ canvasElement }) => {
+    await removeMember(canvasElement, 'Lin Zhou', 'Cancel')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByRole('button', { name: 'More actions for Lin Zhou' }),
+      ).toHaveFocus(),
     )
   },
 }

@@ -53,9 +53,10 @@ export function groupConversationsByDate<
 
 /** What a conversation row offers behind its menu (rename, share, download,
  *  delete) and the menu and dialogs that carry them out, for any list of
- *  conversations. Render `overlays` once beside the list. */
+ *  conversations. Render `overlays` once beside the list. Given the row, a
+ *  delete moves focus on to the next row. */
 export function useConversationActions(): {
-  menuItems: (conv: ConversationSummary) => MenuEntry[]
+  menuItems: (conv: ConversationSummary, row?: Element) => MenuEntry[]
   openMenu: OpenMenu
   overlays: ReactNode
 } {
@@ -90,7 +91,7 @@ export function useConversationActions(): {
   }
 
   const sessionMenu = useSessionMenu()
-  const menuItems = (conv: ConversationSummary): MenuEntry[] =>
+  const menuItems = (conv: ConversationSummary, row?: Element): MenuEntry[] =>
     sessionMenu({
       rename: { onClick: () => requestRename(conv) },
       // Only the owner can change who a conversation is shared with.
@@ -99,7 +100,7 @@ export function useConversationActions(): {
           ? { onClick: () => setSharing(conv.id) }
           : undefined,
       download: { onClick: () => void download(conv.id) },
-      remove: { onClick: () => requestDelete(conv) },
+      remove: { onClick: () => requestDelete(conv, row) },
     })
 
   const overlays = (

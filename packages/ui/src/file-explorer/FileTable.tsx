@@ -18,7 +18,8 @@ interface FileTableProps {
   allSelected: boolean
   someSelected: boolean
   onSelectAll: () => void
-  getItems: (node: TreeNode) => MenuEntry[]
+  /** A row's menu, given the row, so a delete can name the row it removes. */
+  getItems: (node: TreeNode, row: Element | null) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void

@@ -24,7 +24,7 @@ function ConversationRow({
 }: {
   conv: ConversationSummary
   isCurrent: boolean
-  menuItems: MenuEntry[]
+  menuItems: (row: HTMLLIElement) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: () => void
 }) {
@@ -173,7 +173,7 @@ export default function ChatSidebar({
         <ConversationRow
           conv={conv}
           isCurrent={activeConversationId === conv.id}
-          menuItems={menuItems(conv)}
+          menuItems={(row) => menuItems(conv, row)}
           openMenu={openMenu}
           onOpen={closeDrawer}
         />

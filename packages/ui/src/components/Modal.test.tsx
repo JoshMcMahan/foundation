@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
 import { ConfirmModal, useConfirm } from './ConfirmModal'
 import { Modal } from './Modal'
 import { useClosingValue } from './useClosingValue'
@@ -419,6 +420,155 @@ describe('useConfirm', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Ada owns a team.')
     expect(onAnswer).not.toHaveBeenCalled()
+  })
+})
+
+describe('useConfirm removes', () => {
+  let setNames: (names: string[]) => void = () => {}
+
+  // Each row holds a link and then the button that asks, so a match is by control, not the first.
+  function Members({
+    initial,
+    onRemove = (drop) => drop(),
+    finalFocus,
+  }: {
+    initial: string[]
+    onRemove?: (drop: () => void) => unknown
+    finalFocus?: () => HTMLElement | null
+  }) {
+    const [names, set] = useState(initial)
+    setNames = set
+    const { confirm, dialog } = useConfirm()
+    return (
+      <>
+        <ul aria-label="Members">
+          {names.map((name) => (
+            <li key={name}>
+              <a href={`#${name}`}>{name}</a>
+              <button
+                type="button"
+                onClick={(event) =>
+                  void confirm({
+                    title: `Remove ${name}?`,
+                    confirmLabel: 'Remove',
+                    destructive: true,
+                    removes: event.currentTarget.closest('li'),
+                    onConfirm: async () => {
+                      await onRemove(() => set((all) => all.filter((other) => other !== name)))
+                    },
+                    ...(finalFocus && { finalFocus }),
+                  })
+                }
+              >
+                {`Remove ${name}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button">Invite</button>
+        {dialog}
+      </>
+    )
+  }
+
+  async function answer(name: string, button: 'Remove' | 'Cancel') {
+    const opener = screen.getByRole('button', { name: `Remove ${name}` })
+    opener.focus()
+    fireEvent.click(opener)
+    const dialog = await screen.findByRole('alertdialog', { name: `Remove ${name}?` })
+    fireEvent.click(within(dialog).getByRole('button', { name: button }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+  }
+
+  it('moves focus to the same control in the row that took the removed row’s place', async () => {
+    render(<Members initial={['Ada', 'Grace', 'Lin']} />)
+    await answer('Grace', 'Remove')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Lin' })).toHaveFocus())
+  })
+
+  it('moves focus to the row before when the removed row was last', async () => {
+    render(<Members initial={['Ada', 'Grace', 'Lin']} />)
+    await answer('Lin', 'Remove')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Grace' })).toHaveFocus())
+  })
+
+  it('moves focus to the list when the removed row was the only one', async () => {
+    render(<Members initial={['Ada']} />)
+    await answer('Ada', 'Remove')
+    const list = screen.getByRole('list', { name: 'Members' })
+    await waitFor(() => expect(list).toHaveFocus())
+    screen.getByRole('button', { name: 'Invite' }).focus()
+    expect(list).not.toHaveAttribute('tabindex')
+  })
+
+  it('returns focus to what opened it on Cancel, though the list changed while it was open', async () => {
+    render(<Members initial={['Ada', 'Grace']} />)
+    const opener = screen.getByRole('button', { name: 'Remove Grace' })
+    opener.focus()
+    fireEvent.click(opener)
+    const dialog = await screen.findByRole('alertdialog', { name: 'Remove Grace?' })
+    act(() => setNames(['Grace']))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() => expect(opener).toHaveFocus())
+  })
+
+  it('moves focus on after an async onConfirm that awaits the removal', async () => {
+    render(
+      <Members
+        initial={['Ada', 'Grace']}
+        onRemove={async (drop) => {
+          await new Promise((resolve) => setTimeout(resolve, 20))
+          drop()
+          await new Promise((resolve) => setTimeout(resolve, 20))
+        }}
+      />,
+    )
+    await answer('Ada', 'Remove')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Grace' })).toHaveFocus())
+  })
+
+  it('moves focus on when the row goes only after the dialog has closed', async () => {
+    render(<Members initial={['Ada', 'Grace']} onRemove={() => undefined} />)
+    await answer('Ada', 'Remove')
+    const opener = screen.getByRole('button', { name: 'Remove Ada' })
+    await waitFor(() => expect(opener).toHaveFocus())
+    act(() => setNames(['Grace']))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Grace' })).toHaveFocus())
+  })
+
+  it('leaves focus where the reader moved it when the row goes later', async () => {
+    render(<Members initial={['Ada', 'Grace']} onRemove={() => undefined} />)
+    await answer('Ada', 'Remove')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Ada' })).toHaveFocus())
+    const invite = screen.getByRole('button', { name: 'Invite' })
+    invite.focus()
+    act(() => setNames(['Grace']))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(invite).toHaveFocus()
+  })
+
+  it('leaves focus on the page when the reader clicked away before the row goes', async () => {
+    render(<Members initial={['Ada', 'Grace']} onRemove={() => undefined} />)
+    await answer('Ada', 'Remove')
+    const opener = screen.getByRole('button', { name: 'Remove Ada' })
+    await waitFor(() => expect(opener).toHaveFocus())
+    act(() => opener.blur())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    act(() => setNames(['Grace']))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(document.body).toHaveFocus()
+  })
+
+  it('lets an explicit finalFocus decide over removes', async () => {
+    render(
+      <Members
+        initial={['Ada', 'Grace']}
+        finalFocus={() => screen.getByRole('button', { name: 'Invite' })}
+      />,
+    )
+    await answer('Ada', 'Remove')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Invite' })).toHaveFocus())
   })
 })
 

@@ -665,6 +665,40 @@ export const CodeFilePreview: StoryObj<{ file: string }> = {
   render: ({ file }) => <ExplorerDemo key={file} initialPath={`storybook/demo-bucket/${file}`} />,
 }
 
+/** Puts back what a story deleted from the in-memory store, so the other stories keep it. */
+function restoreObjects() {
+  const saved = { ...OBJECTS }
+  return () => {
+    for (const key of Object.keys(OBJECTS)) {
+      delete OBJECTS[key]
+    }
+    Object.assign(OBJECTS, saved)
+  }
+}
+
+/** Deleting a file from its row's menu moves focus to the files grid, where the arrow keys
+ *  move between rows, rather than leaving it on the page. The delete re-lists the folder
+ *  behind a skeleton, which draws the table again, so no row the dialog saw is left. */
+export const DeleteMovesFocus: StoryObj = {
+  name: 'Delete, focus moves on',
+  beforeEach: restoreObjects,
+  render: () => <ExplorerDemo initialPath="storybook/demo-bucket/results/run-002" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const row = await canvas.findByLabelText('Select metrics.json', {}, { timeout: 10000 })
+    await userEvent.click(
+      within(row.closest('tr') as HTMLElement).getByRole('button', { name: 'More actions' }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Confirm delete' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(canvas.queryByLabelText('Select metrics.json')).toBeNull(), {
+      timeout: 10000,
+    })
+    await waitFor(() => expect(canvas.getByRole('grid', { name: 'Files' })).toHaveFocus())
+  },
+}
+
 /** Checked rows take the theme's selection tint. */
 export const CheckedRows: StoryObj = {
   render: () => <ExplorerDemo initialPath="storybook/demo-bucket/results/run-002" />,

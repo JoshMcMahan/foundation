@@ -550,6 +550,9 @@ export default function FileExplorer({
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TreeNode[] | null>(null)
+  // The table row a single delete came from. The re-list after it draws the table again, so
+  // focus moves on to the grid rather than to the page.
+  const [pendingDeleteRow, setPendingDeleteRow] = useState<Element | null>(null)
 
   useEffect(() => clearPreviewCache, [])
   const { openMenu, contextMenu } = useContextMenu()
@@ -1144,11 +1147,12 @@ export default function FileExplorer({
     triggerBrowserDownload(presignedUrl, node.name)
   }
 
-  const deleteNode = (node: TreeNode) => {
+  const deleteNode = (node: TreeNode, row?: Element | null) => {
     if (!storageCanDelete(findStorage(node.storageId))) {
       toast.error(t.messages.noWriteAccess)
       return
     }
+    setPendingDeleteRow(row ?? null)
     setPendingDelete([node])
     setDeleteModalOpen(true)
   }
@@ -1178,7 +1182,7 @@ export default function FileExplorer({
   }
 
   // Order: lead → actions → Copy → delete last.
-  const buildRowMenu = (node: TreeNode): MenuEntry[] => {
+  const buildRowMenu = (node: TreeNode, row?: Element | null): MenuEntry[] => {
     const storage = findStorage(node.storageId)
     const nodeCanDelete = storageCanDelete(storage)
     const nodeCanShare = storage?.canShare !== false
@@ -1234,7 +1238,7 @@ export default function FileExplorer({
         label: common.delete,
         icon: <TrashIcon />,
         destructive: true,
-        onClick: () => deleteNode(node),
+        onClick: () => deleteNode(node, row),
       })
     }
 
@@ -1345,6 +1349,7 @@ export default function FileExplorer({
     } else if (selectedNode) {
       nodesToDelete = [selectedNode]
     }
+    setPendingDeleteRow(null)
     setPendingDelete(pruneNodesInsideSelectedDirectories(nodesToDelete))
     setDeleteModalOpen(true)
   }
@@ -2416,6 +2421,7 @@ export default function FileExplorer({
         }}
         align="center"
         destructive
+        removes={pendingDeleteRow}
         title={t.confirmDelete.title}
         description={t.confirmDelete.text}
         confirmLabel={common.delete}

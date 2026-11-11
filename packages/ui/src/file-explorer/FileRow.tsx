@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import type { ReactNode } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { AppLink, isPlainClick } from '../components/AppLink'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
@@ -77,7 +77,8 @@ interface FileRowProps {
   href?: string | undefined
   checked: boolean
   canPreview: boolean
-  getItems: () => MenuEntry[]
+  /** The row's menu, given the row, so an action can name it, as a delete does. */
+  getItems: (row: HTMLTableRowElement | null) => MenuEntry[]
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
   onToggleCheck: (node: TreeNode, checked: boolean) => void
@@ -159,12 +160,15 @@ export function FileRow({
 }: FileRowProps) {
   const t = useStrings().fileExplorer
   const { active: menuActive, openMenu: openRowMenu } = useRowMenuActive(openMenu)
+  const row = useRef<HTMLTableRowElement>(null)
+  const items = () => getItems(row.current)
   const isDir = node.type === 'directory'
   const modifiedDt = node.modified ? DateTime.fromISO(node.modified) : null
   const typeLabel = node.root ? (node.storageType ?? node.type) : node.type
 
   return (
     <tr
+      ref={row}
       id={rowId}
       aria-rowindex={rowIndex}
       // Selection, not the cursor: the grid reports the cursor through
@@ -188,7 +192,7 @@ export function FileRow({
       onClick={rowClickHandler(() => onOpen(node), href)}
       style={{ height: fileRowHeight(node) }}
       {...rowPressProps(href)}
-      {...rowContextMenuProps(openRowMenu, getItems)}
+      {...rowContextMenuProps(openRowMenu, items)}
     >
       <Table.Item className="py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -246,7 +250,7 @@ export function FileRow({
               </button>
             </Tooltip>
           )}
-          <MoreButton open={menuActive} onOpen={(button) => openRowMenu(button, getItems())} />
+          <MoreButton open={menuActive} onOpen={(button) => openRowMenu(button, items())} />
         </div>
       </Table.Item>
     </tr>
