@@ -122,6 +122,8 @@ export interface ChatStrings {
     stopGenerating: string
     sendMessage: string
     filesAttached: (count: number) => string
+    /** In the slash menu while the host is still loading its commands. */
+    loadingCommands: string
   }
   paste: {
     title: string
@@ -505,6 +507,7 @@ export const defaultChatStrings: ChatStrings = {
     stopGenerating: 'Stop generating (Escape)',
     sendMessage: 'Send message (Enter)',
     filesAttached: (count) => `${countOf(count, 'file', 'files')} attached`,
+    loadingCommands: 'Loading commands…',
   },
   paste: {
     title: 'Pasted text',

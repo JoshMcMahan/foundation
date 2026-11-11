@@ -398,6 +398,42 @@ describe('ChatInput slash commands', () => {
     expect(onSend).toHaveBeenCalledWith('/model', undefined, undefined)
   })
 
+  it('says more commands are coming while the host loads them', () => {
+    const { rerender } = render(
+      <ChatInput
+        onSend={vi.fn()}
+        slash={{ ...slash(), commands: [commands[2]!], loading: true }}
+      />,
+    )
+    fireEvent.change(textarea(), { target: { value: '/' } })
+    expect(options().map((o) => o.textContent)).toEqual(['/modelShow or change the current model'])
+    expect(screen.getByRole('status')).toHaveTextContent('Loading commands…')
+
+    rerender(<ChatInput onSend={vi.fn()} slash={slash()} />)
+    expect(options()).toHaveLength(3)
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('opens on a name nothing matches yet while loading, and Enter still sends it', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} slash={{ commands: [], label: 'Commands', loading: true }} />)
+    fireEvent.change(textarea(), { target: { value: '/st' } })
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    expect(options()).toHaveLength(0)
+    expect(screen.getByRole('status')).toHaveTextContent('Loading commands…')
+
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(onSend).toHaveBeenCalledWith('/st', undefined, undefined)
+  })
+
+  it('stays out of the way for prose while loading', () => {
+    render(
+      <ChatInput onSend={vi.fn()} slash={{ commands: [], label: 'Commands', loading: true }} />,
+    )
+    fireEvent.change(textarea(), { target: { value: '/status of the build?' } })
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
   it('stays out of the way for a host without commands and for prose', () => {
     const { rerender } = render(<ChatInput onSend={vi.fn()} />)
     fireEvent.change(textarea(), { target: { value: '/st' } })

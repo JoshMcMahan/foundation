@@ -167,15 +167,18 @@ const slashCommands = [
   { name: 'review', description: 'Review the current changes' },
 ]
 
+type SlashStoryArgs = { typed: string; loading: boolean }
+
 // The menu lists what matches the text and stays up once a whole name is typed,
 // so its description can still be read. Enter then sends the command, and Tab
 // adds a space for its arguments. The play types `typed`.
-export const SlashCommands: StoryObj<{ typed: string }> = {
-  args: { typed: '/re' },
+export const SlashCommands: StoryObj<SlashStoryArgs> = {
+  args: { typed: '/re', loading: false },
   argTypes: {
     typed: { control: 'text', description: 'Typed into the composer' },
+    loading: { control: 'boolean', description: 'The host is still loading its commands' },
   },
-  render: () => (
+  render: (args) => (
     <StoryChat>
       <div>
         <ChatInput
@@ -183,7 +186,12 @@ export const SlashCommands: StoryObj<{ typed: string }> = {
           attachments={false}
           requireModel={false}
           conversationId="conv-slash"
-          slash={{ commands: slashCommands, label: 'Commands' }}
+          slash={{
+            // A host that loads its list may know a command or two before it arrives.
+            commands: args.loading ? slashCommands.slice(0, 1) : slashCommands,
+            label: 'Commands',
+            loading: args.loading,
+          }}
         />
       </div>
     </StoryChat>
@@ -193,9 +201,15 @@ export const SlashCommands: StoryObj<{ typed: string }> = {
   },
 }
 
-export const SlashCommandTyped: StoryObj<{ typed: string }> = {
+export const SlashCommandTyped: StoryObj<SlashStoryArgs> = {
   ...SlashCommands,
-  args: { typed: '/recap' },
+  args: { typed: '/recap', loading: false },
+}
+
+// Until the host's list arrives, the menu shows what it has and says more are coming.
+export const SlashCommandsLoading: StoryObj<SlashStoryArgs> = {
+  ...SlashCommands,
+  args: { typed: '/', loading: true },
 }
 
 type SharedProvidersStoryArgs = {

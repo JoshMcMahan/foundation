@@ -1,5 +1,7 @@
 import { type KeyboardEvent, useEffect, useState } from 'react'
 import { ListboxOption, ListboxPanel, useListboxNavigation } from '../../components/Listbox'
+import { Loader } from '../../components/Loader'
+import { useChatConfig } from '../core/config'
 
 export interface SlashCommandOption {
   name: string
@@ -12,6 +14,9 @@ export interface SlashMenuConfig {
   label: string
   /** Called when the input first reads as a command, so a host can load the list lazily. */
   onOpen?: (() => void) | undefined
+  /** The host is still loading the list: the menu opens on the slash and says more are coming,
+   *  rather than showing the commands it has so far as all there are. */
+  loading?: boolean | undefined
 }
 
 const MAX_SHOWN = 8
@@ -39,7 +44,8 @@ export function useSlashMenu(
   const [dismissed, setDismissed] = useState(false)
   const matches = config ? slashMatches(input, config.commands) : []
   const exact = matches.length === 1 && `/${matches[0]?.name}` === input
-  const open = matches.length > 0 && !dismissed
+  const loading = !!config?.loading && TYPING_NAME.test(input)
+  const open = (matches.length > 0 || loading) && !dismissed
   const startsCommand = input.startsWith('/')
   const onOpen = config?.onOpen
 
@@ -74,6 +80,7 @@ export function useSlashMenu(
   return {
     open,
     matches,
+    loading,
     active: list.active,
     choose,
     handleKey,
@@ -92,9 +99,21 @@ export function SlashMenu({
   menu: ReturnType<typeof useSlashMenu>
   onChoose: (name: string) => void
 }) {
+  const { loadingCommands } = useChatConfig().strings.input
+  const loading = menu.loading && (
+    <span role="status" className="flex items-center gap-2">
+      <Loader inline decorative size={14} color="var(--theme-muted-text-color)" />
+      {loadingCommands}
+    </span>
+  )
   return (
     <div data-testid="slash-menu" className="absolute bottom-full left-0 right-0 z-20 mb-2">
-      <ListboxPanel listProps={menu.list.listProps} aria-label={label}>
+      <ListboxPanel
+        listProps={menu.list.listProps}
+        aria-label={label}
+        footer={menu.matches.length > 0 && loading}
+        empty={loading}
+      >
         {menu.matches.map((c, i) => {
           const option = menu.list.optionProps(i)
           return (
