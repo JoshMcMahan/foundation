@@ -266,6 +266,12 @@ export interface ChatStrings {
     failedWith: (reason: string) => string
     /** Consecutive calls to one tool, folded into one row. */
     callGroup: (tool: string, count: number) => string
+    /** A folded row of file edits, counting the ones that went through. */
+    editGroup: (count: number) => string
+    /** A folded row of file writes, counting the files written. */
+    writeGroup: (files: number) => string
+    /** A folded row whose calls all failed, named by the tool's label. */
+    failedGroup: (tool: string, count: number) => string
     /** Beside a folded row: how many of its calls failed. */
     failedCount: (count: number) => string
     interrupted: string
@@ -620,6 +626,9 @@ export const defaultChatStrings: ChatStrings = {
     failed: 'Failed',
     failedWith: (reason) => `Failed: ${reason}`,
     callGroup: (tool, count) => `Ran ${tool} ${countOf(count, 'time', 'times')}`,
+    editGroup: (count) => `Made ${countOf(count, 'edit', 'edits')}`,
+    writeGroup: (files) => `Wrote ${countOf(files, 'file', 'files')}`,
+    failedGroup: (tool, count) => `${tool} failed ${countOf(count, 'time', 'times')}`,
     failedCount: (count) => `${count} failed`,
     interrupted: 'Interrupted',
     noOutput: '(no output)',

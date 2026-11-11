@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ChatConfigProvider, resolveChatConfig } from '../../core/config'
 import type { ChatMessage, MessagePart, ToolCallPart, ToolDecision } from '../../types'
@@ -977,6 +977,71 @@ describe('call groups', () => {
     fireEvent.click(screen.getByRole('button', { name: /Ran cost_summary 3 times/ }))
     expect(screen.getAllByTestId('tool-call-part')).toHaveLength(3)
     expect(screen.getByText('Failed: StartDate is required')).toBeVisible()
+  })
+
+  const file = (
+    id: string,
+    name: string,
+    path: string,
+    status: 'ok' | 'error' = 'ok',
+  ): ToolCallPart => ({
+    kind: 'tool_call',
+    id,
+    name,
+    args: JSON.stringify({ path }),
+    status,
+    result: status === 'error' ? 'Error: no such file' : 'done',
+  })
+  /** The folded row's words, with the failure count beside them. */
+  const rowText = (label: string) => screen.getByText(label).textContent
+
+  it('counts the edits that went through, beside the ones that failed', () => {
+    renderParts([
+      file('a', 'EditFile', 'a.go'),
+      file('b', 'EditFile', 'a.go'),
+      file('c', 'EditFile', 'b.go', 'error'),
+    ])
+    expect(rowText('Made 2 edits')).toBe('Made 2 edits · 1 failed')
+  })
+
+  it('counts the files written and read, not the calls', () => {
+    renderParts([
+      file('a', 'WriteFile', 'a.go'),
+      file('b', 'WriteFile', 'a.go'),
+      file('c', 'WriteFile', 'b.go'),
+    ])
+    expect(rowText('Wrote 2 files')).toBe('Wrote 2 files')
+  })
+
+  it('names reads in words, counting only the files that were read', () => {
+    renderParts([file('a', 'ReadFile', 'a.go'), file('b', 'ReadFile', 'b.go', 'error')])
+    expect(rowText('Read 1 file')).toBe('Read 1 file · 1 failed')
+  })
+
+  it('says a tool failed when none of its calls went through, without counting twice', () => {
+    renderParts([file('a', 'EditFile', 'a.go', 'error'), file('b', 'EditFile', 'b.go', 'error')])
+    expect(rowText('Update failed 2 times')).toBe('Update failed 2 times')
+    cleanup()
+    renderParts([tc('a', 'Bash', 'error'), tc('b', 'Bash', 'error')])
+    expect(rowText('Bash failed 2 times')).toBe('Bash failed 2 times')
+  })
+
+  it('keeps counting every call where the words claim nothing was done', () => {
+    renderParts([tc('a', 'Bash', 'error'), tc('b', 'Bash', 'ok'), tc('c', 'Bash', 'error')])
+    expect(rowText('Ran Bash 3 times')).toBe('Ran Bash 3 times · 2 failed')
+  })
+
+  it('leaves a host’s own words and failure count alone when every call failed', () => {
+    renderParts(
+      [cost('a', 'error', 'x'), cost('b', 'error', 'y')],
+      {},
+      {
+        slots: {
+          toolPresentation: () => ({ label: 'Checked costs', group: (n) => `Checked ${n} costs` }),
+        },
+      },
+    )
+    expect(rowText('Checked 2 costs')).toBe('Checked 2 costs · 2 failed')
   })
 })
 

@@ -224,6 +224,83 @@ export const ToolCallRun: StoryObj<{ calls: number; failLast: boolean }> = {
   ),
 }
 
+const REPEATED_TOOLS = ['EditFile', 'WriteFile', 'ReadFile', 'Bash'] as const
+type RepeatedTool = (typeof REPEATED_TOOLS)[number]
+
+function repeatedCall(tool: RepeatedTool, i: number, failed: boolean, path: string): ToolCallPart {
+  const calls: Record<RepeatedTool, { args: object; ok: string; error: string }> = {
+    EditFile: {
+      args: { path, old_string: `const retries = ${i}`, new_string: `const retries = ${i + 1}` },
+      ok: `Edited ${path}`,
+      error: `Error: old_string not found in ${path}`,
+    },
+    WriteFile: {
+      args: { path, content: `package server\n\nconst retries = ${i + 1}\n` },
+      ok: `Wrote 3 lines to ${path}`,
+      error: `Error: permission denied: ${path}`,
+    },
+    ReadFile: {
+      args: { path },
+      ok: 'package server\n\nconst retries = 3',
+      error: `Error: no such file: ${path}`,
+    },
+    Bash: {
+      args: { command: `go test ./internal/server/ -run TestRetry${i + 1}` },
+      ok: 'ok  \tinternal/server\t0.41s',
+      error: 'FAIL\tinternal/server\t0.38s\nExit code: 1',
+    },
+  }
+  const call = calls[tool]
+  return {
+    kind: 'tool_call',
+    id: `repeated-${i}`,
+    name: tool,
+    args: JSON.stringify(call.args),
+    status: failed ? 'error' : 'ok',
+    result: failed ? call.error : call.ok,
+  }
+}
+
+export const RepeatedCalls: StoryObj<{
+  tool: RepeatedTool
+  calls: number
+  failed: number
+  samePath: boolean
+}> = {
+  name: 'Repeated calls to one tool',
+  args: { tool: 'EditFile', calls: 4, failed: 1, samePath: false },
+  argTypes: {
+    tool: { control: 'select', options: [...REPEATED_TOOLS] },
+    calls: { control: { type: 'range', min: 2, max: 12 } },
+    failed: {
+      control: { type: 'range', min: 0, max: 12 },
+      description:
+        'Failures land between successes first: reads and commands that succeed back to back fold into a summary of the run instead of this row. When every call failed, the row says the tool failed.',
+    },
+    samePath: { description: 'Writes and reads count files, so calls to one file count once' },
+  },
+  render: ({ tool, calls, failed, samePath }) => {
+    const odd = Array.from({ length: Math.floor(calls / 2) }, (_, i) => i * 2 + 1)
+    const even = Array.from({ length: Math.ceil(calls / 2) }, (_, i) => i * 2).reverse()
+    const failing = new Set([...odd, ...even].slice(0, failed))
+    return (
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: Array.from({ length: calls }, (_, i) =>
+            repeatedCall(
+              tool,
+              i,
+              failing.has(i),
+              samePath ? 'internal/server/server.go' : `internal/server/retry${i + 1}.go`,
+            ),
+          ),
+        })}
+      />
+    )
+  },
+}
+
 export const ReviewedRun: StoryObj = {
   name: 'Reviewed calls in a run',
   render: () => {

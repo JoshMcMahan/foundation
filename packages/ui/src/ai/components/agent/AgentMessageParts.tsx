@@ -1201,6 +1201,46 @@ function RollupGroup({
   )
 }
 
+/** Files a run of file calls named; a call that names none counts as its own. */
+function filesNamed(parts: ToolCallPart[]): number {
+  const paths = new Set<string>()
+  let unnamed = 0
+  for (const part of parts) {
+    const path = parseEditArgs(part.args)?.path
+    if (typeof path === 'string' && path !== '') {
+      paths.add(path)
+    } else {
+      unnamed++
+    }
+  }
+  return paths.size + unnamed
+}
+
+/** A folded row's words for a built-in tool. File tools count what went
+ *  through, since their words claim it was done; the rest count every call. */
+function callGroupLabel(
+  name: string,
+  parts: ToolCallPart[],
+  t: ChatStrings['agentTranscript'],
+  tools: ChatStrings['tools'],
+): string {
+  const done = parts.filter((p) => p.status !== 'error')
+  const tool = toolHeaderFor(name).label
+  if (done.length === 0) {
+    return t.failedGroup(tool, parts.length)
+  }
+  switch (name) {
+    case 'EditFile':
+      return t.editGroup(done.length)
+    case 'WriteFile':
+      return t.writeGroup(filesNamed(done))
+    case 'ReadFile':
+      return tools.rollup.sentence([tools.rollup.read(filesNamed(done))])
+    default:
+      return t.callGroup(tool, parts.length)
+  }
+}
+
 /** Calls to one tool in a row, folded into one line that counts them and their
  *  failures. Folded, it still shows what a host drew for each call, such as a
  *  table, so results stay in view; calls with nothing drawn show nothing. */
@@ -1227,7 +1267,19 @@ function CallGroup({
       })
     : []
   const failed = members.filter((m) => m.part.status === 'error').length
-  const status = failed === members.length ? 'error' : 'ok'
+  const allFailed = failed === members.length
+  const status = allFailed ? 'error' : 'ok'
+  const named = presentation?.group?.(members.length)
+  const label =
+    named ??
+    callGroupLabel(
+      name,
+      members.map((m) => m.part),
+      t,
+      strings.tools,
+    )
+  // A built-in row whose calls all failed says so in its label already.
+  const showFailed = failed > 0 && (!allFailed || named !== undefined)
   return (
     <div className="py-1.5 text-sm" data-testid="tool-call-group">
       <Disclosure
@@ -1244,8 +1296,8 @@ function CallGroup({
                 presentation?.group ? 'theme-text' : 'font-mono',
               )}
             >
-              {presentation?.group?.(members.length) ?? t.callGroup(header.label, members.length)}
-              {failed > 0 && (
+              {label}
+              {showFailed && (
                 <span className="text-(--theme-error-text)">
                   {' · '}
                   {t.failedCount(failed)}
