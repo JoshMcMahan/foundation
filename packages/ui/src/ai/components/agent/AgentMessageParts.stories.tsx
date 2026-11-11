@@ -224,6 +224,64 @@ export const ToolCallRun: StoryObj<{ calls: number; failLast: boolean }> = {
   ),
 }
 
+export const ReviewedRun: StoryObj = {
+  name: 'Reviewed calls in a run',
+  render: () => {
+    const allowed: ToolDecision = {
+      status: 'approved',
+      by: 'auto-reviewer',
+      at: minutesAgo(1),
+      reason: 'Read-only listing inside the workspace.',
+    }
+    return (
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: [
+            {
+              ...makeToolCallPart({ name: 'GrepSearch', resultLines: 3 }),
+              args: JSON.stringify({ pattern: 'retention' }),
+            },
+            { ...makeToolCallPart({ command: 'ls -la runs/', resultLines: 4 }), decision: allowed },
+            {
+              ...makeToolCallPart({ name: 'ReadFile', resultLines: 5 }),
+              args: JSON.stringify({ path: 'runs/README.md' }),
+            },
+            {
+              ...makeToolCallPart({ command: 'du -sh runs/*', resultLines: 2 }),
+              decision: allowed,
+            },
+            {
+              ...makeToolCallPart({ command: 'rm -rf /scratch/old-runs', status: 'error' }),
+              result: 'The call did not run.',
+              decision: {
+                status: 'denied',
+                by: 'auto-reviewer',
+                at: minutesAgo(1),
+                reason: 'Deleting shared scratch was not asked for.',
+              },
+            },
+            {
+              ...makeToolCallPart({ name: 'GlobSearch', resultLines: 2 }),
+              args: JSON.stringify({ pattern: 'runs/**/*.log' }),
+            },
+            {
+              ...makeToolCallPart({ name: 'ReadFile', resultLines: 3 }),
+              args: JSON.stringify({ path: 'runs/cleanup.sh' }),
+            },
+          ],
+        })}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Denied by the auto-reviewer')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /ran 2 shell commands/ }))
+    await expect(canvas.getAllByText('Allowed by the auto-reviewer')[0]).toBeVisible()
+  },
+}
+
 export const EveryRunFolded: StoryObj<{ failed: boolean; running: boolean }> = {
   name: 'Every run folded',
   args: { failed: true, running: false },

@@ -500,23 +500,32 @@ describe('tool decisions', () => {
     )
   })
 
-  it('keeps an answered call out of a folded run', () => {
-    const read = (id: string): ToolCallPart => ({
-      kind: 'tool_call',
-      id,
-      name: 'Read',
-      args: '{"file_path":"a.ts"}',
-      status: 'ok',
-      result: 'x',
-    })
-    const parts: MessagePart[] = [read('a'), read('b'), read('c')]
-    expect(buildRenderItems(parts).map((i) => i.kind)).toEqual(['rollup'])
-    const answered: MessagePart[] = [
-      read('a'),
-      { ...read('b'), decision: { status: 'approved', by: 'user', name: 'ana' } },
-      read('c'),
+  it('folds a plain approval into its run and keeps any other decision in view', () => {
+    const around = (decision: ToolDecision): MessagePart[] => [
+      tc('t1', 'ReadFile'),
+      { ...(tc('t2', 'Bash') as ToolCallPart), decision },
+      tc('t3', 'GrepSearch'),
     ]
-    expect(buildRenderItems(answered).map((i) => i.kind)).not.toContain('rollup')
+    const kinds = (parts: MessagePart[]) => buildRenderItems(parts).map((i) => i.kind)
+    const approved: ToolDecision = {
+      status: 'approved',
+      by: 'auto-reviewer',
+      reason: 'Lists files in the workspace.',
+    }
+    expect(kinds(around(approved))).toEqual(['rollup'])
+    expect(kinds(around({ ...approved, note: 'rules saved' }))).not.toContain('rollup')
+    expect(kinds(around({ status: 'denied', by: 'user', name: 'ana' }))).not.toContain('rollup')
+
+    renderParts(around(approved))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Searched for 1 pattern, read 1 file, ran 1 shell command',
+      }),
+    )
+    expect(screen.getByTestId('tool-decision')).toBeVisible()
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent(
+      'Allowed by the auto-reviewerLists files in the workspace.',
+    )
   })
 })
 
@@ -944,9 +953,8 @@ describe('call groups', () => {
     }
     const running: ToolCallPart = { ...cost('r', 'ok', ''), status: 'running' }
     for (const other of [waiting, decided, running]) {
-      expect(buildRenderItems([cost('a', 'ok', '{}'), other]).map((i) => i.kind)).not.toContain(
-        'calls',
-      )
+      const items = buildRenderItems([cost('a', 'ok', '{}'), other], (n) => n === 'cost_summary')
+      expect(items.map((i) => i.kind)).toEqual(['single', 'single'])
     }
   })
 

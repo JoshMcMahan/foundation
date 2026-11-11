@@ -964,14 +964,14 @@ function mergeReasoning(parts: ReasoningPart[]): ReasoningPart {
 }
 
 // Folds runs of two or more consecutive, finished, groupable tool calls into
-// one rollup row; failed, still-running and answered members never fold, and standalone
+// one rollup row; failed and still-running members never fold, a plain approval
+// folds while any other decision stays in view and ends the run, and standalone
 // kinds (edits, todos, subagents) break the run. A thought between two calls
 // folds into the run with the work it preceded; the thoughts before and after
 // a run keep their own line — mirrors the TUI.
 //
-// With foldEveryRun a run folds from its first call: failed and running calls
-// join it, and so does a plain approval, while any other decision stays in view
-// and ends the run. Calls to one tool are not grouped, so edits keep their diffs.
+// With foldEveryRun a run folds from its first call, and failed and running
+// calls join it. Calls to one tool are not grouped, so edits keep their diffs.
 export function buildRenderItems(
   parts: MessagePart[],
   hostDrawn: (toolName: string) => boolean = () => false,
@@ -1028,9 +1028,8 @@ export function buildRenderItems(
     ),
   )
   const joinsRun = (part: ToolCallPart) =>
-    foldEveryRun
-      ? part.status !== 'waiting' && (!part.decision || plainApproval(part.decision))
-      : part.status === 'ok' && !part.decision
+    (foldEveryRun ? part.status !== 'waiting' : part.status === 'ok') &&
+    (!part.decision || plainApproval(part.decision))
   parts.forEach((part, index) => {
     // An answered approval for a call that records its decision says nothing the call's own line doesn't.
     if (part.kind === 'approval' && part.resolved && decided.has(part.toolCallId ?? part.id)) {
