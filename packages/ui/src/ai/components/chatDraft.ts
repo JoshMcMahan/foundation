@@ -33,6 +33,7 @@ function parseDraft(raw: string): StoredDraft | { text: string; savedAt?: undefi
 
 const expired = (savedAt: number, now: number) => now - savedAt > DRAFT_TTL_MS
 
+/** What a composer keyed by this conversation, such as a SessionView's sessionKey, holds unsent; it's stored as typed. */
 export function readDraft(conversationId?: string): string {
   try {
     const raw = window.localStorage.getItem(draftKey(conversationId))

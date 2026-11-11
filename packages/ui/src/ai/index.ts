@@ -47,6 +47,7 @@ export {
   ConnectToolsLink,
   ManageProvidersLink,
 } from './components/ComposerChrome'
+export { readDraft } from './components/chatDraft'
 export {
   type ConversationGroupKey,
   groupConversationsByDate,

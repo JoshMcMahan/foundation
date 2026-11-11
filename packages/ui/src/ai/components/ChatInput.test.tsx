@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { forwardRef, useImperativeHandle } from 'react'
 import type { Attachment } from './AttachmentUpload'
 import ChatInput from './ChatInput'
-import { DRAFT_MAX_LENGTH, DRAFT_TTL_MS, sweepDrafts } from './chatDraft'
+import { DRAFT_MAX_LENGTH, DRAFT_TTL_MS, readDraft, sweepDrafts } from './chatDraft'
 import { appendHistory, HISTORY_MAX_CHARS, HISTORY_MAX_ENTRIES, readHistory } from './chatHistory'
 import type { PasteUploadResult } from './usePasteCards'
 
@@ -118,6 +118,15 @@ describe('ChatInput drafts', () => {
     expect(onSend).toHaveBeenCalledWith('ship it', undefined, undefined)
     expect(storage.has('aiChatDraft:c1')).toBe(false)
     expect(textarea().value).toBe('')
+  })
+
+  it('lets a host read what is typed until it is sent', () => {
+    render(<ChatInput onSend={vi.fn()} conversationId="c1" />)
+    fireEvent.change(textarea(), { target: { value: 'half-typed thought' } })
+    expect(readDraft('c1')).toBe('half-typed thought')
+    expect(readDraft('c2')).toBe('')
+    fireEvent.keyDown(textarea(), { key: 'Enter' })
+    expect(readDraft('c1')).toBe('')
   })
 
   it('ignores a draft older than its lifetime', () => {
