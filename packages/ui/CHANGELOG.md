@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.121.0](https://github.com/parallelworks/foundation/compare/ui-v0.120.0...ui-v0.121.0) (2026-11-11)
+
+
+### Features
+
+* **ui:** a confirmation moves focus on from the row it removes ([#684](https://github.com/parallelworks/foundation/issues/684)) ([f0e4e81](https://github.com/parallelworks/foundation/commit/f0e4e810840fb2d4fe61d6275e3f31e9a03da1e6))
+* **ui:** hosts can read the draft a composer holds ([#686](https://github.com/parallelworks/foundation/issues/686)) ([cc1878e](https://github.com/parallelworks/foundation/commit/cc1878ef314cbc062af07de3c82d795002fcd541))
+
+
+### Bug Fixes
+
+* **ui:** a free-text field holding a value no suggestion matches opens an empty list from its button ([#682](https://github.com/parallelworks/foundation/issues/682)) ([2aabc5d](https://github.com/parallelworks/foundation/commit/2aabc5d12bf391163a5559061b5a8dd85a95b870))
+* **ui:** a long chip label in a multiple Combobox ends in an ellipsis, its × in view ([#690](https://github.com/parallelworks/foundation/issues/690)) ([73f9746](https://github.com/parallelworks/foundation/commit/73f9746cfb576dd7287c4cec9404582d06ec54e6))
+* **ui:** an allowed tool call splits its run instead of folding into it ([#692](https://github.com/parallelworks/foundation/issues/692)) ([0dab277](https://github.com/parallelworks/foundation/commit/0dab277a7e6dac2a34e6b09ecd28d1db833b73bf))
+* **ui:** on a phone, a list of fixed table layout shows its selection checkboxes whole, and they take a press ([#691](https://github.com/parallelworks/foundation/issues/691)) ([2c7a583](https://github.com/parallelworks/foundation/commit/2c7a583c0ed1a6fef19c251d3e771e3117268d70))
+
 ## [0.120.0](https://github.com/parallelworks/foundation/compare/ui-v0.119.3...ui-v0.120.0) (2026-11-07)
 
 
