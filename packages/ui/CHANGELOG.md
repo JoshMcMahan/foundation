@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.122.2](https://github.com/parallelworks/foundation/compare/ui-v0.122.1...ui-v0.122.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* **deps:** Go 1.27.4 for the net/http server crash advisory, with the open Go and npm updates ([#705](https://github.com/parallelworks/foundation/issues/705)) ([a3a7067](https://github.com/parallelworks/foundation/commit/a3a7067014eadfb9596ff47d9b2a67cbcbddae89))
+* **ui:** a conversation sidebar or stage row cut short has no way to read its whole title ([#703](https://github.com/parallelworks/foundation/issues/703)) ([ddc59d7](https://github.com/parallelworks/foundation/commit/ddc59d780027a72857ffe3f64c46ea1756c1ff4b))
+
 ## [0.122.1](https://github.com/parallelworks/foundation/compare/ui-v0.122.0...ui-v0.122.1) (2026-11-11)
 
 
