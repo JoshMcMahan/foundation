@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import type { MenuAction, MenuEntry } from '../../components/MenuEntries'
+import { hoverTooltip } from '../../test/tooltip'
 import { SidebarRow, SidebarRowBody, useRowDialogs, useSessionMenu } from './sidebar'
 
 const labels = (entries: MenuEntry[]) =>
@@ -55,6 +56,15 @@ describe('SidebarRowBody', () => {
     expect(screen.getByText('Rate limit retries')).toBeInTheDocument()
     expect(screen.getByText('11m')).toBeInTheDocument()
     expect(screen.getByText('gpu-box')).toBeInTheDocument()
+  })
+
+  it('shows a clipped title whole on hover', async () => {
+    const name = 'Default title for sessions started from the composer'
+    render(<SidebarRowBody title={name} time="11m" />)
+    const title = screen.getByText(name)
+    Object.defineProperty(title, 'scrollWidth', { configurable: true, value: 400 })
+    Object.defineProperty(title, 'clientWidth', { configurable: true, value: 200 })
+    expect(await hoverTooltip(title)).toHaveTextContent(name)
   })
 })
 

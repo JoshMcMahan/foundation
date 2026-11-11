@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Tooltip } from '../../components/Tooltip'
 import { cx } from '../../cx'
 
 /** Where a new conversation starts: the heading and the composer together, a
@@ -75,7 +76,9 @@ export function StageListRowContent({
   return (
     <>
       {leading && <span className="flex shrink-0">{leading}</span>}
-      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <Tooltip content={label} overflowOnly>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+      </Tooltip>
       {meta && (
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">{meta}</span>
       )}

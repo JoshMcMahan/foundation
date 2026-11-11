@@ -110,7 +110,11 @@ export const HostStage: StoryObj<{ items: number }> = {
                   <a href={`#task-${n}`} className={stageListRowClassName}>
                     <StageListRowContent
                       leading={n === 1 && <StatusDot variant="success" size={6} pulse />}
-                      label={`Earlier task ${n}`}
+                      label={
+                        n === 2
+                          ? 'Profile the slow report query on the staging replica, compare its plan with production and add the index it is missing'
+                          : `Earlier task ${n}`
+                      }
                       meta={
                         <>
                           <span className="font-mono">gpu-box</span>

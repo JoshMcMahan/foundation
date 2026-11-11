@@ -190,7 +190,9 @@ export function SidebarRowTitle({
 }) {
   return (
     <span className="flex min-w-0 flex-1 items-baseline gap-2">
-      <span className="min-w-0 flex-1 truncate text-sm theme-text">{children}</span>
+      <Tooltip content={children} overflowOnly>
+        <span className="min-w-0 flex-1 truncate text-sm theme-text">{children}</span>
+      </Tooltip>
       {time && (
         <span
           className={cx(
