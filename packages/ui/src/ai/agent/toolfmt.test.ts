@@ -4,16 +4,84 @@ import {
   agentColorHex,
   bashExitCode,
   clip,
+  fullToolArgs,
   isGroupableTool,
+  isUserInterruptedTool,
+  parseRejection,
   resultFailed,
   rollupSentence,
   runClauses,
   sanitizeLabel,
   sanitizePanelText,
+  shownResult,
   summarizeToolArgs,
   toolHeaderFor,
   toolSummary,
 } from './toolfmt'
+
+// The results a coding agent records for a call it did not run.
+const REJECTED =
+  "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
+const REJECTED_WITH_FEEDBACK =
+  "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said:\nuse b.go"
+const UNATTENDED =
+  'Permission for this tool use was denied. It requires approval, and this session has no approval surface — nobody can answer a permission prompt here — so it was denied automatically. The action was NOT performed; do not claim it succeeded, and do not retry it: this action, and anything else that requires approval, will be denied the same way for the rest of this session. Tell the user what was blocked and why you needed it, then continue with the parts of the task that do not require approval. What required approval: rm -rf build'
+
+describe('calls that did not run', () => {
+  it('reads a declined call as the person who declined it, with what they said', () => {
+    expect(parseRejection(REJECTED)).toEqual({ feedback: '' })
+    expect(parseRejection(REJECTED_WITH_FEEDBACK)).toEqual({ feedback: 'use b.go' })
+    expect(parseRejection('Error: user denied Bash: not now')).toEqual({ feedback: 'not now' })
+    expect(parseRejection('ok')).toBeNull()
+    const edit = '{"path":"a.go","old_string":"a","new_string":"b"}'
+    expect(shownResult('EditFile', edit, REJECTED_WITH_FEEDBACK)).toBe(
+      'User rejected update to a.go: use b.go',
+    )
+    expect(shownResult('WriteFile', '{"path":"a.go"}', REJECTED)).toBe(
+      'User rejected write to a.go',
+    )
+    expect(toolSummary('ReadFile', '{"path":"a"}', REJECTED, false)).toBe('Tool use rejected')
+  })
+
+  it('says nobody could approve a call, and counts that as a failure', () => {
+    expect(toolSummary('Bash', '{"command":"rm"}', UNATTENDED, false)).toBe(
+      'Denied: nobody could approve it here',
+    )
+    expect(resultFailed('Bash', UNATTENDED)).toBe(true)
+    expect(resultFailed('Bash', REJECTED)).toBe(false)
+  })
+
+  it('says a stop cut a call off, by the tool’s own name as the terminal does', () => {
+    const stopped = 'The user interrupted ReadFile before it finished.'
+    expect(isUserInterruptedTool(stopped)).toBe(true)
+    expect(isUserInterruptedTool('Tool execution was interrupted by the user.')).toBe(true)
+    expect(toolSummary('ReadFile', '{"path":"a"}', stopped, false)).toBe(
+      'The user interrupted ReadFile before it finished.',
+    )
+    expect(resultFailed('ReadFile', stopped)).toBe(false)
+  })
+})
+
+describe('fullToolArgs', () => {
+  it('keeps the line breaks of a script, and gives a multi-line value its own rows', () => {
+    expect(fullToolArgs('command', '{"command":"cat <<EOF\\na\\nEOF\\n"}')).toBe(
+      'cat <<EOF\na\nEOF',
+    )
+    expect(fullToolArgs('command', '{"command":"cat <<EOF\\na\\nEOF","timeout":5}')).toBe(
+      'cat <<EOF\na\nEOF\ntimeout: 5',
+    )
+    expect(summarizeToolArgs('command', '{"command":"a\\nb"}')).toBe('a b')
+  })
+})
+
+describe('tool headers', () => {
+  it('names a call by the argument its tool leads with', () => {
+    expect(toolHeaderFor('SendMessage')).toEqual({ label: 'SendMessage', arg: 'message' })
+    expect(toolHeaderFor('BashOutput')).toEqual({ label: 'BashOutput', arg: 'bash_id' })
+    expect(toolHeaderFor('KillShell')).toEqual({ label: 'KillShell', arg: 'shell_id' })
+    expect(toolHeaderFor('NotebookRun')).toEqual({ label: 'Run in kernel', arg: 'code' })
+  })
+})
 
 describe('toolHeaderFor', () => {
   it('maps known tools and falls back to the wire name', () => {

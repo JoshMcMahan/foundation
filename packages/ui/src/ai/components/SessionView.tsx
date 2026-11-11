@@ -61,8 +61,9 @@ export interface SessionViewProps {
   footer?: ReactNode
   label?: string
   flush?: boolean
-  /** Folds tool calls as a terminal transcript does: every run from its first
-   *  call, failures and running calls included. */
+  /** Draws the transcript as a terminal does: every run of tool calls folds
+   *  from its first call, failures and running calls included, and a thought
+   *  shows whole while it streams. */
   foldEveryRun?: boolean
   workingIndicator?: boolean
   composer?: ComposerProps

@@ -135,8 +135,29 @@ describe('applyPartDelta', () => {
         agentType: 'Explore',
         actions: ['reading files'],
         summary: 'done',
+        reviewing: 0,
       },
     ])
+  })
+
+  it('keeps a child moved to the background on its card, and ends one the turn ended under', () => {
+    let parts = applyPartDelta([], { type: 'subagent_start', id: 's1' })
+    parts = applyPartDelta(parts, { type: 'subagent_reviewing', id: 's1', count: 2 })
+    expect(parts).toMatchObject([{ id: 's1', reviewing: 2 }])
+    parts = applyPartDelta(parts, { type: 'subagent_start', id: 's1', background: true })
+    expect(parts).toHaveLength(1)
+    expect(parts).toMatchObject([{ id: 's1', detached: true }])
+    parts = applyPartDelta(parts, { type: 'subagent_start', id: 's2' })
+    expect(finalizeParts(parts)).toMatchObject([
+      { id: 's1', status: 'running' },
+      { id: 's2', status: 'failed', interrupted: true },
+    ])
+  })
+
+  it('says a stop cut a child off', () => {
+    let parts = applyPartDelta([], { type: 'subagent_start', id: 's1' })
+    parts = applyPartDelta(parts, { type: 'subagent_end', id: 's1', ok: false, interrupted: true })
+    expect(parts).toMatchObject([{ status: 'failed', interrupted: true }])
   })
 
   it('appends approvals and resolves them in place', () => {

@@ -1,5 +1,14 @@
 import { DateTime } from 'luxon'
-import { memo, type ReactNode, useEffect, useId, useMemo, useState } from 'react'
+import {
+  createContext,
+  memo,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from 'react'
 import { Disclosure } from '../../../components/Disclosure'
 import { fieldBox } from '../../../components/fieldBox'
 import { focusOnMount } from '../../../components/focus'
@@ -22,11 +31,14 @@ import {
 import { type DiffToken, languageForPath, tokenizeDiffLines } from '../../agent/diffHighlight'
 import {
   agentColorHex,
-  bashExitCode,
   fullToolArgs,
   isGroupableTool,
+  isUserInterruptedTool,
+  parseRejection,
+  resultNotRun,
   rollupClauses,
   runClauses,
+  shownResult,
   summarizeToolArgs,
   toolHeaderFor,
   toolSummary,
@@ -47,10 +59,29 @@ import type {
 } from '../../types'
 import Markdown from '../../ui/Markdown'
 import { chatProseClasses } from '../../ui/prose'
+import MessageAttachments from '../MessageAttachments'
 import { Reasoning, ReasoningBody } from '../Reasoning'
 import { AskAnswered, AskApproval } from './AskApproval'
 
 const COLLAPSED_RESULT_LINES = 12
+
+const ExpandAllContext = createContext<boolean | undefined>(undefined)
+
+/** Opens, or closes, every block of the transcripts under it at once; each
+ *  still opens and closes on its own afterwards, and a block that appears
+ *  later starts the same way. */
+export const ExpandAllProvider = ExpandAllContext.Provider
+
+function useExpandable(): [boolean, (open: boolean) => void] {
+  const all = useContext(ExpandAllContext)
+  const [open, setOpen] = useState(all ?? false)
+  useEffect(() => {
+    if (all !== undefined) {
+      setOpen(all)
+    }
+  }, [all])
+  return [open, setOpen]
+}
 
 // Splits one line's syntax tokens (or the plain text) at the emphasis
 // boundaries so changed words get the brighter band without breaking colors.
@@ -105,19 +136,29 @@ function LineSpans({
   return <>{out}</>
 }
 
-function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
+function DiffRows({
+  rows,
+  lang,
+  dimmed = false,
+}: {
+  rows: DiffRow[]
+  lang: string | null
+  /** Drawn without color, for a change that was never written. */
+  dimmed?: boolean
+}) {
   const [tokens, setTokens] = useState<DiffToken[][] | null>(null)
   const lineKey = useMemo(
     () => rows.map((r) => (r.kind === 'gap' ? '' : r.text)).join('\n'),
     [rows],
   )
+  const highlight = dimmed ? null : lang
   useEffect(() => {
-    if (!lang) {
+    if (!highlight) {
       setTokens(null)
       return
     }
     let live = true
-    tokenizeDiffLines(lineKey.split('\n'), lang).then((t) => {
+    tokenizeDiffLines(lineKey.split('\n'), highlight).then((t) => {
       if (live) {
         setTokens(t)
       }
@@ -125,18 +166,24 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
     return () => {
       live = false
     }
-  }, [lang, lineKey])
+  }, [highlight, lineKey])
   const numbered = rows.some((r) => r.oldNo !== undefined || r.newNo !== undefined)
   return (
-    <div className="overflow-x-auto rounded-md border theme-border font-mono text-xs leading-5">
+    <div
+      className={cx(
+        'overflow-x-auto rounded-md border theme-border font-mono text-xs leading-5',
+        dimmed && 'theme-muted-text',
+      )}
+      data-dimmed={dimmed || undefined}
+    >
       {rows.map((row, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: rows are positional
           key={i}
           className={cx(
             'flex whitespace-pre',
-            row.kind === 'add' && 'bg-(--theme-success)/15',
-            row.kind === 'del' && 'bg-(--theme-error)/15',
+            !dimmed && row.kind === 'add' && 'bg-(--theme-success)/15',
+            !dimmed && row.kind === 'del' && 'bg-(--theme-error)/15',
             row.kind === 'gap' && 'theme-muted-text',
           )}
         >
@@ -155,7 +202,7 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
               <LineSpans
                 text={row.text}
                 tokens={tokens?.[i]}
-                emphasis={row.kind === 'add' ? row.emphasis : undefined}
+                emphasis={!dimmed && row.kind === 'add' ? row.emphasis : undefined}
               />
             )}
           </span>
@@ -165,7 +212,7 @@ function DiffRows({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
   )
 }
 
-function EditDiffBlock({ part }: { part: ToolCallPart }) {
+function EditDiffBlock({ part, showDiff = true }: { part: ToolCallPart; showDiff?: boolean }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
   // A streaming transcript re-renders this block on every token; the diff is
@@ -189,12 +236,35 @@ function EditDiffBlock({ part }: { part: ToolCallPart }) {
   if (!diff) {
     return null
   }
-  const { a, model, outcome } = diff
+  const { a, model } = diff
+  const result = part.result ?? ''
+  const done = part.status === 'ok' || part.status === 'error'
+  const notRun = done && resultNotRun(result)
+  // The outcome waits for the result, and a failure, or a change that was never written, reads in its place.
+  const outcome = !done
+    ? ''
+    : notRun || part.status === 'error'
+      ? toolSummary(part.name, part.args, result, part.status === 'error', {
+          strings: strings.tools,
+        })
+      : diff.outcome
   return (
     <div className="mt-1.5 space-y-1">
-      {outcome && <div className="text-xs theme-muted-text">{outcome}</div>}
-      <DiffRows rows={model.rows} lang={languageForPath(a.path)} />
-      {model.truncated && <div className="text-xs theme-muted-text">{t.diffTruncated}</div>}
+      {outcome && (
+        <div
+          className={cx(
+            'text-xs',
+            part.status === 'error' ? 'text-(--theme-error-text)' : 'theme-muted-text',
+          )}
+          data-testid="edit-outcome"
+        >
+          {outcome}
+        </div>
+      )}
+      {showDiff && <DiffRows rows={model.rows} lang={languageForPath(a.path)} dimmed={notRun} />}
+      {showDiff && model.truncated && (
+        <div className="text-xs theme-muted-text">{t.diffTruncated}</div>
+      )}
     </div>
   )
 }
@@ -204,16 +274,17 @@ function ResultBody({ part }: { part: ToolCallPart }) {
   const { common } = useStrings()
   const t = strings.agentTranscript
   const [showAll, setShowAll] = useState(false)
-  const result = part.result ?? ''
+  const raw = part.result ?? ''
+  const result = shownResult(part.name, part.args, raw, strings.tools)
   if (result.trim() === '') {
     return <div className="text-xs theme-muted-text">{t.noOutput}</div>
   }
-  if (part.name === 'Bash') {
-    const [out] = bashExitCode(result.replace(/\n+$/, ''))
+  // The exit code line stays: it is how a command that printed something says it failed.
+  if (part.name === 'Bash' && result === raw) {
     return (
       <div className="rounded-md overflow-hidden border theme-border">
         <LogViewer
-          log={out || result}
+          log={result.replace(/\n+$/, '')}
           width="100%"
           height="unset"
           inline
@@ -289,10 +360,60 @@ function ToolStatusDot({ part }: { part: ToolCallPart }) {
       </StatusMark>
     )
   }
+  // A call a person declined or stopped didn't fail, and didn't succeed either.
+  const result = part.result ?? ''
+  if (isUserInterruptedTool(result)) {
+    return <NeutralDot status={t.interrupted} />
+  }
+  if (parseRejection(result)) {
+    return <NeutralDot status={t.approvalDenied} />
+  }
   return (
     <StatusMark status={t.done}>
       <span className="leading-none text-(--theme-success)">●</span>
     </StatusMark>
+  )
+}
+
+function NeutralDot({ status }: { status: string }) {
+  return (
+    <StatusMark status={status}>
+      <span className="leading-none theme-muted-text">●</span>
+    </StatusMark>
+  )
+}
+
+/** A failed call's output under its row, as much as a folded block shows. */
+function FailedOutput({ part }: { part: ToolCallPart }) {
+  const { strings } = useChatConfig()
+  const text = shownResult(part.name, part.args, part.result ?? '', strings.tools).replace(
+    /\n+$/,
+    '',
+  )
+  if (text.trim() === '') {
+    return (
+      <div className="ml-5 mt-0.5 text-[13px] text-(--theme-error-text)">
+        {strings.agentTranscript.failedWith(strings.agentTranscript.noOutput)}
+      </div>
+    )
+  }
+  // Color can't be the only sign of a failure, so the first line says it in words; a verdict already does.
+  const [first = '', ...rest] = text.split('\n')
+  const hidden = rest.length + 1 - COLLAPSED_RESULT_LINES
+  return (
+    <div className="ml-5 mt-0.5 min-w-0 text-(--theme-error-text)" data-testid="failed-output">
+      <div className="text-[13px] break-words">
+        {resultNotRun(part.result ?? '') ? first : strings.agentTranscript.failedWith(first)}
+      </div>
+      {rest.length > 0 && (
+        <pre className="overflow-x-auto font-mono text-xs leading-5 whitespace-pre-wrap break-words">
+          {rest.slice(0, COLLAPSED_RESULT_LINES - 1).join('\n')}
+        </pre>
+      )}
+      {hidden > 0 && (
+        <div className="text-xs theme-muted-text">{strings.agentTranscript.moreLines(hidden)}</div>
+      )}
+    </div>
   )
 }
 
@@ -320,7 +441,7 @@ function ToolCallBlock({
 }) {
   const { strings, slots } = useChatConfig()
   const t = strings.agentTranscript
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useExpandable()
   const presentation = slots.toolPresentation?.(part, message)
   // A named call keeps its drawing behind the row unless the host keeps it
   // open; a call waiting on an answer always shows what it asks.
@@ -346,7 +467,8 @@ function ToolCallBlock({
       <Disclosure
         open={expanded}
         onOpenChange={setExpanded}
-        disabled={isDiff}
+        // An edit shows its whole diff, so only one whose diff is folded has anything to open.
+        disabled={isDiff && !part.foldDiff}
         summaryClassName={rowSummaryClasses}
         summary={
           <>
@@ -359,25 +481,26 @@ function ToolCallBlock({
               <span className="font-mono text-[13px] leading-5 min-w-0 truncate">
                 <span className="font-semibold">{header.label}</span>
                 {argSummary && <span className="theme-muted-text">({argSummary})</span>}
+                {part.argsRewritten && <span className="theme-muted-text"> {t.argsRewritten}</span>}
               </span>
             )}
           </>
         }
         panelClassName="ml-5 mt-1 space-y-1.5"
       >
-        {fullToolArgs(header.arg, part.args) && (
+        {!isDiff && fullToolArgs(header.arg, part.args) && (
           <pre className="overflow-x-auto rounded-md bg-(--theme-muted-panel-bg) p-2 font-mono text-xs whitespace-pre-wrap">
             {presentation && <span className="font-semibold">{header.label} </span>}
             {fullToolArgs(header.arg, part.args)}
           </pre>
         )}
-        {drawingInPanel ? <div className="min-w-0">{children}</div> : <ResultBody part={part} />}
+        {isDiff ? null : drawingInPanel ? (
+          <div className="min-w-0">{children}</div>
+        ) : (
+          <ResultBody part={part} />
+        )}
       </Disclosure>
-      {part.status === 'error' && !expanded && (
-        <div className="ml-5 mt-0.5 truncate text-[13px] text-(--theme-error-text)">
-          {t.failedWith(summary)}
-        </div>
-      )}
+      {part.status === 'error' && !expanded && !isDiff && <FailedOutput part={part} />}
       {children && !drawingInPanel && <div className="mt-1.5 min-w-0 sm:ml-5">{children}</div>}
       {!isDiff &&
         !expanded &&
@@ -395,7 +518,7 @@ function ToolCallBlock({
         )}
       {isDiff && (
         <div className="ml-5">
-          <EditDiffBlock part={part} />
+          <EditDiffBlock part={part} showDiff={!part.foldDiff || expanded} />
         </div>
       )}
       {part.decision && <DecisionLine decision={part.decision} />}
@@ -429,24 +552,37 @@ function decisionLabel(d: ToolDecision, t: ChatStrings['agentTranscript']): stri
 
 function DecisionLine({ decision }: { decision: ToolDecision }) {
   const { strings } = useChatConfig()
+  const approved = decision.status === 'approved'
+  // An approval needs no reason to read; a reviewer's no, or its failure to answer, does.
+  const showReason = !!decision.reason && decision.by === 'auto-reviewer' && !approved
   return (
     <div className="ml-5 mt-0.5 text-xs theme-muted-text" data-testid="tool-decision">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+        <span
+          aria-hidden="true"
+          className={cx('leading-none', approved && 'text-(--theme-success)')}
+        >
+          {approved ? '✓' : '✗'}
+        </span>
         <span>{decisionLabel(decision, strings.agentTranscript)}</span>
+        {decision.note && <span className="min-w-0 max-w-full truncate">({decision.note})</span>}
         {decision.at && (
           <>
             <span aria-hidden="true">·</span>
             <RelativeTime value={decision.at} className="shrink-0" />
           </>
         )}
-        {decision.note && (
-          <>
-            <span aria-hidden="true">·</span>
-            <span className="min-w-0 max-w-full truncate">{decision.note}</span>
-          </>
-        )}
       </div>
-      {decision.reason && <p className="mt-0.5 line-clamp-2">{decision.reason}</p>}
+      {decision.action && (
+        <div className="flex min-w-0 gap-1.5 pl-3">
+          {/* biome-ignore lint/style/noJsxLiterals: a gutter glyph, not words */}
+          <span aria-hidden="true">⎿</span>
+          <span className="min-w-0 truncate font-mono" data-testid="decision-action">
+            {decision.action}
+          </span>
+        </div>
+      )}
+      {showReason && <p className="mt-0.5 whitespace-pre-wrap pl-5">{decision.reason}</p>}
     </div>
   )
 }
@@ -457,16 +593,20 @@ function DecisionLine({ decision }: { decision: ToolDecision }) {
 function SubagentCard({ part }: { part: SubagentPart }) {
   const { strings } = useChatConfig()
   const t = strings.agentTranscript
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useExpandable()
   const color = agentColorHex(part.color)
   const label = part.agentType && part.agentType !== 'default' ? part.agentType : t.subagent
   const actions = part.actions ?? []
   const latest = actions[actions.length - 1]
   const canExpand = actions.length > 0 || !!part.report
+  const reviewing = part.status === 'running' && (part.reviewing ?? 0) > 0
+  const detail = part.interrupted ? t.interruptedReason : part.summary
   const outcome =
     part.status === 'running'
-      ? latest || t.running
-      : `${part.status === 'done' ? t.done : t.failed}${part.summary ? ` (${part.summary})` : ''}`
+      ? reviewing
+        ? t.reviewing(part.reviewing ?? 0)
+        : latest || t.running
+      : `${part.status === 'done' ? t.done : t.failed}${detail ? ` (${detail})` : ''}`
   return (
     <div className="py-1.5 text-sm" data-testid="subagent-part">
       <Disclosure
@@ -508,13 +648,15 @@ function SubagentCard({ part }: { part: SubagentPart }) {
           part.status === 'failed' ? 'text-(--theme-error-text)' : 'theme-muted-text',
         )}
       >
-        {actions.length > 0 && (
+        {(actions.length > 0 || part.status !== 'running' || reviewing) && (
           <ul className="space-y-0.5">
             {actions.map((a, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: feed is append-only
               <li key={i}>{a}</li>
             ))}
-            {part.status !== 'running' && <li>{outcome}</li>}
+            {(part.status !== 'running' || reviewing) && (
+              <li data-testid="subagent-outcome">{outcome}</li>
+            )}
           </ul>
         )}
         {part.report && (
@@ -672,6 +814,23 @@ export function ApprovalBlock({
   // A lone question is named by its header; several are named by their tabs.
   const lone = part.questions?.length === 1 ? part.questions[0] : undefined
   const heading = part.header ?? (part.approvalKind === 'ask' ? lone?.header : part.toolName)
+  if (part.resolved && part.approvalKind === 'plan' && part.plan) {
+    // An answered plan is still the plan the work follows, so it stays in view.
+    return (
+      <div className="my-1.5 space-y-1.5" data-testid="approval-part">
+        <div className={chatProseClasses}>
+          <Markdown isStreaming={false}>{part.plan}</Markdown>
+        </div>
+        <div className="flex items-center gap-2 text-xs theme-muted-text">
+          <CheckIcon className="w-3.5 h-3.5" />
+          <span>
+            {t.answered}
+            {part.answer ? `: ${part.answer}` : ''}
+          </span>
+        </div>
+      </div>
+    )
+  }
   if (part.resolved) {
     return (
       <div
@@ -770,7 +929,18 @@ function TodoSnapshotBlock({ part }: { part: TodoSnapshotPart }) {
 }
 
 function NoticeBlock({ part }: { part: NoticePart }) {
+  const [open, setOpen] = useExpandable()
   if (part.kind === 'notice') {
+    if (part.detail && part.open) {
+      return (
+        <div className="my-1.5" data-testid="notice-part">
+          <div className="whitespace-pre-wrap text-[13px] theme-muted-text">{part.text}</div>
+          <div className="ml-4 mt-1 text-sm theme-muted-text">
+            <Markdown>{part.detail}</Markdown>
+          </div>
+        </div>
+      )
+    }
     if (!part.detail) {
       return (
         <div
@@ -784,6 +954,8 @@ function NoticeBlock({ part }: { part: NoticePart }) {
     return (
       <div className="my-1.5" data-testid="notice-part">
         <Disclosure
+          open={open}
+          onOpenChange={setOpen}
           summary={<span className="min-w-0 flex-1 whitespace-pre-wrap">{part.text}</span>}
           summaryClassName="w-full text-[13px] theme-muted-text hover:theme-text"
           panelClassName="ml-4 mt-1 border-l-2 theme-border pl-3 text-sm theme-muted-text"
@@ -812,13 +984,16 @@ function NoticeBlock({ part }: { part: NoticePart }) {
 const ReasoningBlock = memo(function ReasoningBlock({
   part,
   isStreaming,
+  whole = false,
 }: {
   part: ReasoningPart
   isStreaming?: boolean
+  /** Shows all of a thought while it streams, not only its latest lines. */
+  whole?: boolean
 }) {
   const { strings } = useChatConfig()
   const t = strings.thinking
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useExpandable()
   const label =
     thinkingHeading(part.text) ||
     (part.durationMs ? t.thoughtFor(formatDuration(part.durationMs)) : t.label)
@@ -829,9 +1004,9 @@ const ReasoningBlock = memo(function ReasoningBlock({
       <div className="py-1.5" data-testid="reasoning-part">
         <div className="animate-shimmer text-shimmer text-sm">{label}</div>
         {hasBody && (
-          <ReasoningBody className="chat-reasoning-tail">
+          <ReasoningBody className={cx(!whole && 'chat-reasoning-tail')}>
             <div
-              className="flex max-h-20 flex-col justify-end overflow-hidden"
+              className={cx(!whole && 'flex max-h-20 flex-col justify-end overflow-hidden')}
               data-testid="reasoning-body"
             >
               {markdown}
@@ -928,6 +1103,8 @@ const BuiltinPart = memo(function BuiltinPart({
       return <NoticeBlock part={part} />
     case 'todo_snapshot':
       return <TodoSnapshotBlock part={part} />
+    case 'image':
+      return <MessageAttachments attachments={part.images} className="mt-1.5 sm:ml-5" />
     default:
       return null
   }
@@ -937,6 +1114,8 @@ type RunMember = { part: ToolCallPart | ReasoningPart; index: number }
 
 type RenderItem =
   | { kind: 'single'; part: MessagePart; index: number }
+  // Subagents started in the background one after another, drawn as one launch with their names.
+  | { kind: 'launch'; parts: SubagentPart[]; index: number }
   // Adjacent thoughts drawn as one line, labeled by the first.
   | { kind: 'reasoning'; parts: ReasoningPart[]; index: number }
   | { kind: 'rollup'; members: RunMember[] }
@@ -1049,10 +1228,54 @@ export function buildRenderItems(
       return
     }
     flush()
+    const last = items[items.length - 1]
+    if (part.kind === 'subagent' && part.background) {
+      if (last?.kind === 'launch') {
+        last.parts.push(part)
+      } else {
+        items.push({ kind: 'launch', parts: [part], index })
+      }
+      return
+    }
     items.push({ kind: 'single', part, index })
   })
   flush()
   return foldEveryRun ? items : groupRepeatedCalls(items)
+}
+
+/** Background subagents as they were launched: their names, with no state, as each reports back on its own line. */
+function LaunchGroup({ parts }: { parts: SubagentPart[] }) {
+  const t = useChatConfig().strings.agentTranscript
+  return (
+    <div className="py-1.5 text-sm" data-testid="subagent-launch">
+      <div className="flex min-h-6 items-start gap-2">
+        <span aria-hidden="true" className="leading-5 theme-muted-text">
+          ●
+        </span>
+        <span className="text-[13px] leading-5 font-semibold">
+          {t.backgroundLaunched(parts.length)}
+        </span>
+      </div>
+      <ul className="ml-5 font-mono text-[13px] leading-5">
+        {parts.map((p, i) => {
+          const color = agentColorHex(p.color)
+          return (
+            <li key={p.id} className="flex min-w-0 gap-1.5">
+              <span aria-hidden="true" className="theme-muted-text">
+                {i === parts.length - 1 ? '└' : '├'}
+              </span>
+              <span
+                className="min-w-0 truncate font-semibold"
+                style={color ? { color } : undefined}
+              >
+                {p.description || p.id}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 /** An allowed call with nothing more to say, which reads fine once its run is opened. */
@@ -1124,7 +1347,7 @@ function RollupGroup({
   foldEveryRun: boolean
 }) {
   const { strings, slots } = useChatConfig()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useExpandable()
   const live = members.filter(isRunningCall)
   const settled = members.filter((m) => !isRunningCall(m))
   const running = live.length > 0
@@ -1253,7 +1476,7 @@ function CallGroup({
 }) {
   const { strings, slots } = useChatConfig()
   const t = strings.agentTranscript
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useExpandable()
   const name = members[0]?.part.name ?? ''
   const Tool = slots.toolRenderers?.[name]
   const header = toolHeaderFor(name)
@@ -1339,8 +1562,9 @@ export default function AgentMessageParts({
   message: PartRendererProps['message']
   isStreaming?: boolean
   onApprovalAnswer?: PartRendererProps['onApprovalAnswer']
-  /** Folds tool calls as a terminal transcript does: every run from its first
-   *  call, failures and running calls included. */
+  /** Draws the transcript as a terminal does: every run of tool calls folds
+   *  from its first call, failures and running calls included, and a thought
+   *  shows whole while it streams. */
   foldEveryRun?: boolean | undefined
 }) {
   const parts = message.parts ?? []
@@ -1373,11 +1597,14 @@ export default function AgentMessageParts({
           />
         ) : item.kind === 'calls' ? (
           <CallGroup key={item.members[0]?.index ?? 0} members={item.members} message={message} />
+        ) : item.kind === 'launch' ? (
+          <LaunchGroup key={item.index} parts={item.parts} />
         ) : item.kind === 'reasoning' ? (
           <ReasoningBlock
             key={item.index}
             part={mergeReasoning(item.parts)}
             isStreaming={(isStreaming ?? false) && item.index + item.parts.length - 1 === lastIndex}
+            whole={foldEveryRun}
           />
         ) : (
           <PartDispatch

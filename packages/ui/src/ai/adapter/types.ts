@@ -116,12 +116,16 @@ export type PartDelta =
       description?: string
     }
   | { type: 'subagent_action'; id: string; action: string }
+  /** How many of the subagent's calls a reviewer is deciding on; 0 once none are. */
+  | { type: 'subagent_reviewing'; id: string; count: number }
   | {
       type: 'subagent_end'
       id: string
       ok: boolean
       summary?: string
       report?: string
+      /** A stop cut it off rather than it failing on its own. */
+      interrupted?: boolean
     }
   | { type: 'approval_request'; approval: ApprovalPart }
   | {

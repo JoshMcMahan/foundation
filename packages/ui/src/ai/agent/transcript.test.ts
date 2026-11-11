@@ -34,10 +34,23 @@ describe('parseSubagentNotice', () => {
       body: 'Key finding: none.',
       interim: false,
       silent: false,
+      failed: false,
+      elapsedMs: 0,
     })
-    expect(subagentDeliveryLine(n!)).toBe(
-      '↳ task-4 (Inventory (routes)) reported back: Key finding: none.',
+    expect(subagentDeliveryLine(n!)).toBe('Agent "Inventory (routes)" finished')
+  })
+
+  it('says how long an agent ran and whether it failed', () => {
+    const failed = parseSubagentNotice(
+      '[Background subagent task-5 (Audit) failed after 2m59.4s]\nNo access.',
     )
+    expect(failed).toMatchObject({ failed: true, elapsedMs: 179_400, body: 'No access.' })
+    expect(subagentDeliveryLine(failed!)).toBe('Agent "Audit" failed · 2m 59s')
+    expect(
+      subagentDeliveryLine(
+        parseSubagentNotice('[Background subagent task-6 () completed after 850ms]')!,
+      ),
+    ).toBe('Agent "task-6" finished · 1s')
   })
 
   it('marks an interim message and an interrupted child', () => {
@@ -45,7 +58,7 @@ describe('parseSubagentNotice', () => {
       '[Message from subagent task-3 (Coverage) — it is still working]\nHalf way.',
     )
     expect(interim?.interim).toBe(true)
-    expect(subagentDeliveryLine(interim!)).toBe('↳ message from task-3 (Coverage): Half way.')
+    expect(subagentDeliveryLine(interim!)).toBe('Message from Coverage')
     expect(
       parseSubagentNotice(
         '[Background subagent task-1 (x) was interrupted by the user and returned no result]\n(pass task-1 as task_id to resume it)',
@@ -54,9 +67,19 @@ describe('parseSubagentNotice', () => {
   })
 
   it('reads a background command exit and ignores other notices', () => {
+    const failed = parseSubagentNotice('[Background command bash-2 (npm test) exited with code 1]')
+    expect(failed).toMatchObject({ id: 'bash-2', shell: true, exitCode: 1 })
+    expect(subagentDeliveryLine(failed!)).toBe(
+      'Background command "npm test" failed with exit code 1',
+    )
     expect(
-      parseSubagentNotice('[Background command bash-2 (npm test) exited with code 1]'),
-    ).toMatchObject({ id: 'bash-2', preview: 'exited with code 1' })
+      subagentDeliveryLine(
+        parseSubagentNotice('[Background command bash-3 (ls) exited with code 0]')!,
+      ),
+    ).toBe('Background command "ls" completed (exit code 0)')
+    expect(
+      parseSubagentNotice('[Background command bash-4 (sleep 9) was stopped by the user]')?.silent,
+    ).toBe(true)
     expect(parseSubagentNotice('Goal set: ship it')).toBeNull()
   })
 })

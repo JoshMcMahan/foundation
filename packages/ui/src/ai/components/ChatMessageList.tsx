@@ -64,8 +64,9 @@ interface ChatMessageListProps {
   isStreaming?: boolean
   /** Rows without their own side padding, for a host that pads the column. */
   flush?: boolean
-  /** Folds tool calls as a terminal transcript does: every run from its first
-   *  call, failures and running calls included. */
+  /** Draws the transcript as a terminal does: every run of tool calls folds
+   *  from its first call, failures and running calls included, and a thought
+   *  shows whole while it streams. */
   foldEveryRun?: boolean
   /** Names the list, a live log, for assistive technology. Defaults to the
    *  chat strings' `thread.label`. */

@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo, useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
+import { parseSubagentNotice, subagentDeliveryLine } from '../../agent/transcript'
 import {
   makeAgentTurn,
   makeApprovalPart,
   makeEditDiffPart,
+  makeImageAttachments,
   makeMessage,
   makeSubagentParts,
   makeTodoSnapshot,
@@ -17,12 +19,13 @@ import { defaultChatStrings } from '../../strings'
 import type {
   ApprovalAnswerValue,
   ChatMessage,
+  MessagePart,
   ToolCallPart,
   ToolCallStatus,
   ToolDecision,
 } from '../../types'
 import ActivityLine from './ActivityLine'
-import AgentMessageParts from './AgentMessageParts'
+import AgentMessageParts, { ExpandAllProvider } from './AgentMessageParts'
 
 const meta: Meta = {
   title: 'Chat/Agent transcript',
@@ -156,6 +159,7 @@ export const Decisions: StoryObj = {
           by: 'auto-reviewer',
           at: minutesAgo(9),
           note: 'directory whitelisted for session',
+          action: 'ls /scratch/runs',
         },
       ],
       [
@@ -640,15 +644,18 @@ function LiveReasoning({
   text,
   live,
   streamMs,
+  foldEveryRun,
 }: {
   text: string
   live: boolean
   streamMs: number
+  foldEveryRun: boolean
 }) {
   const streamed = useStreamedText(text, live ? streamMs : 1)
   const streaming = live && !streamed.done
   return (
     <AgentMessageParts
+      foldEveryRun={foldEveryRun}
       message={makeMessage({
         role: 'assistant',
         content: null,
@@ -670,21 +677,210 @@ function LiveReasoning({
 
 // The thought streams in under a shimmering label, showing its latest lines,
 // then folds to the label once the answer starts. Remount to replay.
-export const Reasoning: StoryObj<{ live: boolean; headings: boolean; streamMs: number }> = {
-  args: { live: true, headings: true, streamMs: 6000 },
-  argTypes: { streamMs: { control: { type: 'range', min: 1000, max: 20000, step: 500 } } },
-  render: ({ live, headings, streamMs }) => (
+export const Reasoning: StoryObj<{
+  live: boolean
+  headings: boolean
+  streamMs: number
+  foldEveryRun: boolean
+}> = {
+  args: { live: true, headings: true, streamMs: 6000, foldEveryRun: false },
+  argTypes: {
+    streamMs: { control: { type: 'range', min: 1000, max: 20000, step: 500 } },
+    foldEveryRun: {
+      description: 'Drawn as a terminal does: the whole thought shows while it streams',
+    },
+  },
+  render: ({ live, headings, streamMs, foldEveryRun }) => (
     <LiveReasoning
       // Remounts on any change so the stream starts over.
-      key={`${live}-${headings}-${streamMs}`}
+      key={`${live}-${headings}-${streamMs}-${foldEveryRun}`}
       live={live}
       streamMs={streamMs}
+      foldEveryRun={foldEveryRun}
       text={
         headings
           ? longThought
           : 'The locator resolves but stays invisible. Checking what gates the form.'
       }
     />
+  ),
+}
+
+const REJECTED = (feedback: string) =>
+  `The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said:\n${feedback}`
+const UNATTENDED =
+  'Permission for this tool use was denied. It requires approval, and this session has no approval surface — nobody can answer a permission prompt here — so it was denied automatically. What required approval: rm -rf build'
+
+export const CallsThatDidNotRun: StoryObj<{ feedback: string; failedLines: number }> = {
+  name: 'Declined, unattended, stopped and failed calls',
+  args: { feedback: 'keep the old name', failedLines: 20 },
+  argTypes: { failedLines: { control: { type: 'range', min: 1, max: 40 } } },
+  render: ({ feedback, failedLines }) => {
+    const edit = makeEditDiffPart()
+    const editArgs = (path: string, oldText: string, newText: string) =>
+      JSON.stringify({ path, old_string: oldText, new_string: newText })
+    const blocks: MessagePart[] = [
+      {
+        ...edit,
+        args: editArgs('internal/server/server.go', 'idle = 60\n', 'idle = 90\n'),
+        result: REJECTED(feedback),
+      },
+      { ...makeToolCallPart({ name: 'ReadFile' }), result: REJECTED('') },
+      { ...makeToolCallPart({ command: 'rm -rf build' }), status: 'error', result: UNATTENDED },
+      {
+        ...makeToolCallPart({ command: 'sleep 600' }),
+        result: 'The user interrupted Bash before it finished.',
+      },
+      {
+        ...makeToolCallPart({ command: 'make test' }),
+        status: 'error',
+        result: `${Array.from({ length: failedLines }, (_, i) => `FAIL case_${i + 1}`).join('\n')}\nExit code: 2`,
+      },
+      {
+        ...edit,
+        args: editArgs('plans/rollout.md', '- [ ] ship\n', '- [x] ship\n'),
+        result: 'Edited plans/rollout.md',
+        foldDiff: true,
+      },
+      {
+        ...edit,
+        args: editArgs('internal/server/server.go', 'retries = 1\n', 'retries = 3\n'),
+        result: 'Edited internal/server/server.go',
+        argsRewritten: true,
+      },
+    ]
+    // One message each, so no block folds into its neighbors.
+    return (
+      <div>
+        {blocks.map((part, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
+          <AgentMessageParts key={i} message={makeMessage({ content: null, parts: [part] })} />
+        ))}
+      </div>
+    )
+  },
+}
+
+export const SubagentOutcomes: StoryObj<{ reviewing: number; launched: number }> = {
+  name: 'Subagent outcomes',
+  args: { reviewing: 1, launched: 3 },
+  argTypes: {
+    reviewing: { control: { type: 'range', min: 0, max: 4 } },
+    launched: { control: { type: 'range', min: 1, max: 6 } },
+  },
+  render: ({ reviewing, launched }) => (
+    <AgentMessageParts
+      message={makeMessage({
+        content: null,
+        parts: [
+          {
+            kind: 'subagent',
+            id: 'a1',
+            status: 'running',
+            description: 'Audit the config loader',
+            actions: ['Read config.go'],
+            reviewing,
+          },
+          {
+            kind: 'subagent',
+            id: 'a2',
+            status: 'failed',
+            description: 'Rerun the flaky suite',
+            interrupted: true,
+            summary: '4 tool uses',
+          },
+          {
+            kind: 'subagent',
+            id: 'a3',
+            status: 'done',
+            description: 'Summarize the PR',
+            summary: '1 tool use',
+            report: 'The PR changes the retry budget only.',
+          },
+          ...[
+            'Sweep logs',
+            'Profile startup',
+            'Check links',
+            'Scan deps',
+            'Lint docs',
+            'Map routes',
+          ]
+            .slice(0, launched)
+            .map(
+              (description, i): MessagePart => ({
+                kind: 'subagent',
+                id: `bg-${i}`,
+                status: 'running',
+                background: true,
+                description,
+                color:
+                  (['blue', 'green', 'purple', 'orange', 'cyan', 'pink'] as const)[i] ?? 'blue',
+              }),
+            ),
+        ],
+      })}
+    />
+  ),
+}
+
+const notice = (raw: string): MessagePart => {
+  const n = parseSubagentNotice(raw)
+  return n
+    ? { kind: 'notice', text: subagentDeliveryLine(n), ...(n.body ? { detail: n.body } : {}) }
+    : { kind: 'notice', text: raw }
+}
+
+export const TranscriptExtras: StoryObj = {
+  name: 'Images, command output, plans and background notices',
+  render: () => (
+    <AgentMessageParts
+      message={makeMessage({
+        content: null,
+        parts: [
+          { kind: 'image', images: makeImageAttachments().slice(0, 2) },
+          {
+            kind: 'notice',
+            text: '! git status --short',
+            detail: '```\n M go.mod\n?? notes.md\n```',
+            open: true,
+          },
+          {
+            kind: 'approval',
+            id: 'plan',
+            approvalKind: 'plan',
+            plan: '## Plan\n\n1. Raise the retry budget.\n2. Add a test for the second retry.',
+            resolved: true,
+            answer: 'Approved',
+            canAllowDirectory: false,
+          },
+          notice(
+            '[Background subagent task-2 (Audit the config loader) completed after 2m59s]\nNo issues found.',
+          ),
+          notice(
+            '[Background subagent task-3 (Rerun the flaky suite) failed after 41s]\nThe runner timed out.',
+          ),
+          notice(
+            '[Message from subagent task-4 (Map routes) — it is still working]\nHalf way through.',
+          ),
+          notice('[Background command bash-1 (npm test) exited with code 1]'),
+        ],
+      })}
+    />
+  ),
+}
+
+export const ExpandAll: StoryObj<{ expandAll: boolean }> = {
+  name: 'Every block opened at once',
+  args: { expandAll: true },
+  argTypes: {
+    expandAll: {
+      description: 'Opens or closes every block at once; each still toggles on its own',
+    },
+  },
+  render: ({ expandAll }) => (
+    <ExpandAllProvider value={expandAll}>
+      <AgentMessageParts message={makeAgentTurn()} foldEveryRun onApprovalAnswer={logAnswer} />
+    </ExpandAllProvider>
   ),
 }
 

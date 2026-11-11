@@ -130,6 +130,63 @@ export interface SubagentNotice {
   /** The interrupted form is written for the model alone; the child's own
    *  block already reads interrupted, so no line is drawn for it. */
   silent: boolean
+  /** A background command's, rather than a subagent's. */
+  shell?: boolean
+  exitCode?: number
+  failed?: boolean
+  /** How long the subagent ran; 0 when the notice doesn't say. */
+  elapsedMs?: number
+}
+
+/** The words of the line a background task's notice draws. */
+export interface SubagentNoticeStrings {
+  messageFrom: (name: string) => string
+  commandCompleted: (name: string) => string
+  commandFailed: (name: string, exitCode: number) => string
+  /** `elapsed` is empty when the notice doesn't say how long it ran. */
+  agentFinished: (name: string, elapsed: string) => string
+  agentFailed: (name: string, elapsed: string) => string
+}
+
+const withElapsed = (line: string, elapsed: string) => (elapsed ? `${line} · ${elapsed}` : line)
+
+export const defaultSubagentNoticeStrings: SubagentNoticeStrings = {
+  messageFrom: (name) => `Message from ${name}`,
+  commandCompleted: (name) => `Background command "${name}" completed (exit code 0)`,
+  commandFailed: (name, code) => `Background command "${name}" failed with exit code ${code}`,
+  agentFinished: (name, elapsed) => withElapsed(`Agent "${name}" finished`, elapsed),
+  agentFailed: (name, elapsed) => withElapsed(`Agent "${name}" failed`, elapsed),
+}
+
+// A Go duration as the notice writes it, such as "2m59.5s" or "850ms".
+const DURATION_UNITS: Record<string, number> = {
+  h: 3_600_000,
+  m: 60_000,
+  s: 1000,
+  ms: 1,
+  us: 0.001,
+  µs: 0.001,
+  ns: 0.000001,
+}
+
+function parseGoDuration(text: string): number {
+  const units = [...text.trim().matchAll(/(\d+(?:\.\d+)?)(ms|us|µs|ns|h|m|s)/g)]
+  if (units.length === 0 || units.map((u) => u[0]).join('') !== text.trim()) {
+    return 0
+  }
+  return units.reduce((ms, [, n, unit]) => ms + Number(n) * (DURATION_UNITS[unit ?? ''] ?? 0), 0)
+}
+
+/** How long a subagent ran: 42s, 2m 59s or 1h 4m. */
+export function formatAgentDuration(ms: number): string {
+  const s = Math.round(ms / 1000)
+  if (s < 60) {
+    return `${s}s`
+  }
+  if (s < 3600) {
+    return `${Math.floor(s / 60)}m ${s % 60}s`
+  }
+  return `${Math.floor(s / 3600)}h ${Math.floor(s / 60) % 60}m`
 }
 
 const SUBAGENT_NOTICE_HEADS = new Set(['Background subagent', 'Message from subagent'])
@@ -173,19 +230,32 @@ export function parseSubagentNotice(text: string): SubagentNotice | null {
   if (end === -1) {
     return null
   }
-  const tail = rest.slice(end + 1)
+  const tail = rest.slice(end + 1).trim()
   const notice: SubagentNotice = {
     id,
-    description: rest.slice(0, end),
+    description: rest.slice(0, end).replaceAll('\\[', '[').replaceAll('\\]', ']'),
     interim: kind === 'Message from',
-    silent: tail.includes('was interrupted'),
+    silent: tail.includes('was interrupted') || tail.includes('was stopped by the user'),
     preview: '',
     body: '',
   }
   if (shell) {
-    notice.preview = tail.trim()
+    notice.shell = true
+    notice.preview = tail
+    if (notice.silent) {
+      return notice
+    }
+    const code = /^exited with code (\d+)$/.exec(tail)
+    if (!code) {
+      return null
+    }
+    notice.exitCode = Number(code[1])
     return notice
   }
+  const after = tail.indexOf(' after ')
+  const verb = after === -1 ? tail : tail.slice(0, after)
+  notice.failed = verb === 'failed'
+  notice.elapsedMs = after === -1 ? 0 : parseGoDuration(tail.slice(after + ' after '.length))
   // The closing "(pass <id> as task_id …)" line is addressed to the model.
   const lines = body.split('\n')
   const last = lines[lines.length - 1] ?? ''
@@ -197,12 +267,19 @@ export function parseSubagentNotice(text: string): SubagentNotice | null {
   return notice
 }
 
-/** The line that marks a child's report entering the main conversation. */
-export function subagentDeliveryLine(n: SubagentNotice): string {
-  const name = n.description ? `${n.id} (${n.description})` : n.id
-  let label = n.interim ? `↳ message from ${name}` : `↳ ${name} reported back`
-  if (n.preview) {
-    label += `: ${sanitizeLabel(n.preview)}`
+/** The line that marks a child's report or a background command's end entering
+ *  the main conversation; what the child reported opens under it. */
+export function subagentDeliveryLine(
+  n: SubagentNotice,
+  t: SubagentNoticeStrings = defaultSubagentNoticeStrings,
+): string {
+  const name = sanitizeLabel(n.description) || n.id
+  if (n.interim) {
+    return t.messageFrom(name)
   }
-  return label
+  if (n.shell) {
+    return n.exitCode ? t.commandFailed(name, n.exitCode) : t.commandCompleted(name)
+  }
+  const elapsed = n.elapsedMs ? formatAgentDuration(n.elapsedMs) : ''
+  return n.failed ? t.agentFailed(name, elapsed) : t.agentFinished(name, elapsed)
 }

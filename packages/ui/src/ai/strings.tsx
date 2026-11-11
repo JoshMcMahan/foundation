@@ -277,6 +277,14 @@ export interface ChatStrings {
     /** Beside a folded row: how many of its calls failed. */
     failedCount: (count: number) => string
     interrupted: string
+    /** In a stopped subagent's outcome, "Failed (interrupted)". */
+    interruptedReason: string
+    /** While a reviewer decides on a subagent's calls, in place of its latest action. */
+    reviewing: (count: number) => string
+    /** A run of subagents started in the background, above their names. */
+    backgroundLaunched: (count: number) => string
+    /** After a call's arguments when a hook changed them before it ran. */
+    argsRewritten: string
     noOutput: string
     diffTruncated: string
     /** Under a long tool result, how many of its lines are folded away. */
@@ -634,6 +642,14 @@ export const defaultChatStrings: ChatStrings = {
     failedGroup: (tool, count) => `${tool} failed ${countOf(count, 'time', 'times')}`,
     failedCount: (count) => `${count} failed`,
     interrupted: 'Interrupted',
+    interruptedReason: 'interrupted',
+    reviewing: (count) =>
+      count === 1
+        ? 'Reviewing approval request'
+        : `Reviewing ${countOf(count, 'approval request', 'approval requests')}`,
+    backgroundLaunched: (count) =>
+      `${countOf(count, 'background agent', 'background agents')} launched`,
+    argsRewritten: '(args rewritten by hook)',
     noOutput: '(no output)',
     diffTruncated: 'Diff truncated',
     moreLines: (count) => `+${countOf(count, 'more line', 'more lines')}`,
@@ -649,18 +665,18 @@ export const defaultChatStrings: ChatStrings = {
     denyWithFeedback: 'No, and provide feedback to the agent',
     feedbackPlaceholder: 'Tell the agent what to do instead…',
     answered: 'Answered',
-    allowedBy: (name) => `Allowed by ${name}`,
-    allowedWithChangesBy: (name) => `Allowed with changes by ${name}`,
-    deniedBy: (name) => `Denied by ${name}`,
-    allowed: 'Allowed',
-    allowedWithChanges: 'Allowed with changes',
+    allowedBy: (name) => `${name} approved`,
+    allowedWithChangesBy: (name) => `${name} approved with changes`,
+    deniedBy: (name) => `${name} denied`,
+    allowed: 'Approved',
+    allowedWithChanges: 'Approved with changes',
     denied: 'Denied',
-    allowedByReviewer: 'Allowed by the auto-reviewer',
-    deniedByReviewer: 'Denied by the auto-reviewer',
+    allowedByReviewer: 'Auto-reviewer approved',
+    deniedByReviewer: 'Auto-reviewer denied',
     approvalExpired: 'Expired without an answer',
     approvalTimedOut: 'Denied: no answer in time',
-    reviewTimedOut: 'Denied: the auto-reviewer timed out',
-    reviewFailed: 'Denied: the auto-reviewer failed',
+    reviewTimedOut: 'Auto-review timed out',
+    reviewFailed: 'Auto-review failed',
     writeOwnAnswer: 'Write my own answer…',
     subagent: 'Task',
     tasks: 'Tasks',

@@ -59,6 +59,14 @@ export function applyPartDelta(parts: MessagePart[], delta: PartDelta): MessageP
         p.kind === 'tool_call' && p.id === delta.id ? { ...p, decision: delta.decision } : p,
       )
     case 'subagent_start': {
+      // A running child moved to the background starts again under the same id; its card stays.
+      if (parts.some((p) => p.kind === 'subagent' && p.id === delta.id)) {
+        return parts.map((p) =>
+          p.kind === 'subagent' && p.id === delta.id && delta.background
+            ? { ...p, detached: true }
+            : p,
+        )
+      }
       const part: SubagentPart = {
         kind: 'subagent',
         id: delta.id,
@@ -77,14 +85,20 @@ export function applyPartDelta(parts: MessagePart[], delta: PartDelta): MessageP
           ? { ...p, actions: [...(p.actions ?? []), delta.action] }
           : p,
       )
+    case 'subagent_reviewing':
+      return parts.map((p) =>
+        p.kind === 'subagent' && p.id === delta.id ? { ...p, reviewing: delta.count } : p,
+      )
     case 'subagent_end':
       return parts.map((p) =>
         p.kind === 'subagent' && p.id === delta.id
           ? {
               ...p,
               status: delta.ok ? ('done' as const) : ('failed' as const),
+              reviewing: 0,
               ...(delta.summary !== undefined ? { summary: delta.summary } : {}),
               ...(delta.report !== undefined ? { report: delta.report } : {}),
+              ...(delta.interrupted ? { interrupted: true } : {}),
             }
           : p,
       )
@@ -201,11 +215,16 @@ export function toolTurnMessages(
  *  running — the transport died before their tool_end arrived. A stored
  *  message must not spin forever, so close them out as interrupted. */
 export function finalizeParts(parts: MessagePart[]): MessagePart[] {
-  return parts.map((p) =>
-    p.kind === 'tool_call' && p.status === 'running'
-      ? { ...p, status: 'error' as const, result: p.result ?? 'interrupted' }
-      : p,
-  )
+  return parts.map((p) => {
+    if (p.kind === 'tool_call' && p.status === 'running') {
+      return { ...p, status: 'error' as const, result: p.result ?? 'interrupted' }
+    }
+    // A child the turn ended under ended with it, and its own end may never come. One in the background outlives it.
+    if (p.kind === 'subagent' && p.status === 'running' && !p.background && !p.detached) {
+      return { ...p, status: 'failed' as const, interrupted: true, reviewing: 0 }
+    }
+    return p
+  })
 }
 
 /** A finished reply whose text was streamed among its parts: the text after

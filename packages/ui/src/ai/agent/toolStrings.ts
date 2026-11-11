@@ -25,6 +25,14 @@ export interface ToolStrings {
   edited: (added: number, removed: number) => string
   /** `path` is empty when the call named none. */
   wrote: (lines: number, path: string) => string
+  /** A call the person declined; `feedback` is what they typed, empty when nothing. */
+  rejected: (feedback: string) => string
+  rejectedUpdate: (path: string, feedback: string) => string
+  rejectedWrite: (path: string, feedback: string) => string
+  /** A call that needed approval where nobody could give it. */
+  unattended: string
+  /** A call the person's stop cut off; `tool` is its name as the agent knows it. */
+  userInterrupted: (tool: string) => string
   /** One clause per kind of call in a run of quick calls, joined into a sentence. */
   rollup: {
     searched: (patterns: number) => string
@@ -95,6 +103,13 @@ export const defaultToolStrings: ToolStrings = {
     path
       ? `Wrote ${countOf(lines, 'line', 'lines')} to ${path}`
       : `Wrote ${countOf(lines, 'line', 'lines')}`,
+  rejected: (feedback) => (feedback ? `Tool use rejected: ${feedback}` : 'Tool use rejected'),
+  rejectedUpdate: (path, feedback) =>
+    feedback ? `User rejected update to ${path}: ${feedback}` : `User rejected update to ${path}`,
+  rejectedWrite: (path, feedback) =>
+    feedback ? `User rejected write to ${path}: ${feedback}` : `User rejected write to ${path}`,
+  unattended: 'Denied: nobody could approve it here',
+  userInterrupted: (tool) => `The user interrupted ${tool} before it finished.`,
   rollup: {
     searched: (n) => `searched for ${countOf(n, 'pattern', 'patterns')}`,
     read: (n) => `read ${countOf(n, 'file', 'files')}`,

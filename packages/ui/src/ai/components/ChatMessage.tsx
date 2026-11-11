@@ -46,8 +46,9 @@ interface ChatMessageProps {
   onApprovalAnswer?: ((id: string, answer: ApprovalAnswerValue) => void) | undefined
   /** Drops the row's horizontal padding, for hosts that constrain the column themselves. */
   flush?: boolean | undefined
-  /** Folds tool calls as a terminal transcript does: every run from its first
-   *  call, failures and running calls included. */
+  /** Draws the transcript as a terminal does: every run of tool calls folds
+   *  from its first call, failures and running calls included, and a thought
+   *  shows whole while it streams. */
   foldEveryRun?: boolean | undefined
 }
 

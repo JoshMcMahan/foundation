@@ -20,7 +20,12 @@ const TOOL_HEADERS: Record<string, ToolHeader> = {
   WebFetch: { label: 'WebFetch', arg: 'url' },
   Task: { label: 'Task', arg: 'description' },
   Skill: { label: 'Skill', arg: 'name' },
-  SendMessage: { label: 'SendMessage', arg: 'to' },
+  SendMessage: { label: 'SendMessage', arg: 'message' },
+  BashOutput: { label: 'BashOutput', arg: 'bash_id' },
+  KillShell: { label: 'KillShell', arg: 'shell_id' },
+  NotebookRead: { label: 'Read notebook', arg: 'notebook_path' },
+  NotebookEdit: { label: 'Update notebook', arg: 'notebook_path' },
+  NotebookRun: { label: 'Run in kernel', arg: 'code' },
   AskUserQuestion: { label: 'AskUserQuestion', arg: 'question' },
   TodoWrite: { label: 'TodoWrite' },
 }
@@ -79,6 +84,8 @@ export function sanitizePanelText(s: string): string {
 interface ArgStyle {
   valueClip: number
   totalClip: number
+  /** Keeps a value's line breaks, as a script or heredoc needs them to read. */
+  multiline?: boolean
 }
 
 const SALIENT_ARG_ORDER = [
@@ -98,16 +105,21 @@ const SALIENT_ARG_ORDER = [
 const ELIDED_ARGS = new Set(['content', 'new_string', 'old_string', 'edits', 'options'])
 
 function clipArg(s: string, style: ArgStyle): string {
-  const flat = s.replaceAll('\n', ' ')
+  // A script usually ends in a newline, which would read as a blank row before the closing parenthesis.
+  const shaped = style.multiline ? s.replace(/\n+$/, '') : s.replaceAll('\n', ' ')
   if (style.valueClip <= 0) {
-    return flat
+    return shaped
   }
-  return clip(flat, style.valueClip)
+  return clip(shaped, style.valueClip)
+}
+
+function sanitizeArg(s: string, style: ArgStyle): string {
+  return style.multiline ? sanitizePanelText(s) : sanitizeLabel(s)
 }
 
 function displayArg(v: unknown, style: ArgStyle): string {
   const s = typeof v === 'string' ? v : JSON.stringify(v)
-  return sanitizeLabel(clipArg(s ?? '', style))
+  return sanitizeArg(clipArg(s ?? '', style), style)
 }
 
 function formatToolArgs(primary: string | undefined, argsJSON: string, style: ArgStyle): string {
@@ -131,7 +143,7 @@ function formatToolArgs(primary: string | undefined, argsJSON: string, style: Ar
     const v = m[k]
     const rendered =
       typeof v === 'string'
-        ? `${k}: "${clipArg(sanitizeLabel(v), style)}"`
+        ? `${k}: "${clipArg(sanitizeArg(v, style), style)}"`
         : `${k}: ${displayArg(v, style)}`
     parts.push(rendered)
   }
@@ -150,7 +162,8 @@ function formatToolArgs(primary: string | undefined, argsJSON: string, style: Ar
     add(k)
   }
 
-  const joined = parts.join(', ')
+  // A multi-line value ends its own row, so a comma-joined tail would dangle off its last line.
+  const joined = parts.join(style.multiline && parts.some((p) => p.includes('\n')) ? '\n' : ', ')
   if (style.totalClip <= 0) {
     return joined
   }
@@ -166,9 +179,9 @@ export function summarizeToolArgs(primary: string | undefined, argsJSON: string)
   return formatToolArgs(primary, argsJSON, { valueClip: 0, totalClip: SUMMARY_MAX_CHARS })
 }
 
-// Unclipped form for an expanded block.
+// Unclipped form for an expanded block, line breaks kept.
 export function fullToolArgs(primary: string | undefined, argsJSON: string): string {
-  return formatToolArgs(primary, argsJSON, { valueClip: 0, totalClip: 0 })
+  return formatToolArgs(primary, argsJSON, { valueClip: 0, totalClip: 0, multiline: true })
 }
 
 // limitToolResult appends this to an oversized result; summaries cut it off
@@ -199,9 +212,113 @@ function isErrorResult(text: string): boolean {
 
 const RIPGREP_ERROR_PREFIX = 'ripgrep error (exit '
 
+// The results a coding agent records for a call it did not run, written for the
+// model to read. A person sees a verdict in their place.
+const REJECTED_TOOL_USE =
+  "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file)."
+const SUBAGENT_REJECTED_TOOL_USE =
+  'Permission for this tool use was denied. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file).'
+const REJECTED_FEEDBACK_PREFIXES = [
+  `${REJECTED_TOOL_USE} To tell you how to proceed, the user said:\n`,
+  `${SUBAGENT_REJECTED_TOOL_USE} The user said:\n`,
+]
+// Older sessions recorded a denial as an error naming what was denied.
+const USER_DENIED_PREFIX = 'Error: user denied '
+const UNATTENDED_TOOL_USE =
+  'Permission for this tool use was denied. It requires approval, and this session has no approval surface'
+const USER_INTERRUPTED_TOOL = 'The user interrupted '
+const USER_INTERRUPTED_TOOL_END = ' before it finished.'
+const LEGACY_USER_INTERRUPTED_TOOL = 'Tool execution was interrupted by the user.'
+
+/** The feedback a person gave when they declined the call, or null for a call they didn't decline. */
+export function parseRejection(result: string): { feedback: string } | null {
+  const body = result.trim()
+  for (const prefix of REJECTED_FEEDBACK_PREFIXES) {
+    if (body.startsWith(prefix)) {
+      return { feedback: body.slice(prefix.length) }
+    }
+  }
+  if (body.startsWith(REJECTED_TOOL_USE) || body.startsWith(SUBAGENT_REJECTED_TOOL_USE)) {
+    return { feedback: '' }
+  }
+  if (body.startsWith(USER_DENIED_PREFIX)) {
+    const rest = body.slice(USER_DENIED_PREFIX.length)
+    const colon = rest.indexOf(': ')
+    return { feedback: colon === -1 ? '' : rest.slice(colon + 2) }
+  }
+  return null
+}
+
+/** A call that needed approval in a session nobody could answer it in. */
+export function isUnattendedToolUse(result: string): boolean {
+  return result.trim().startsWith(UNATTENDED_TOOL_USE)
+}
+
+/** A call the person's stop cut off before it finished. */
+export function isUserInterruptedTool(result: string): boolean {
+  const body = result.trim()
+  return (
+    body === LEGACY_USER_INTERRUPTED_TOOL ||
+    (body.startsWith(USER_INTERRUPTED_TOOL) && body.endsWith(USER_INTERRUPTED_TOOL_END))
+  )
+}
+
+/** A call that didn't run, as the person declined it, nobody could approve it, or a stop cut it off. */
+export function resultNotRun(result: string): boolean {
+  return !!parseRejection(result) || isUnattendedToolUse(result) || isUserInterruptedTool(result)
+}
+
+/** The result as a person reads it: a verdict in place of the text written for the model. */
+export function shownResult(
+  name: string,
+  args: string,
+  result: string,
+  t: ToolStrings = defaultToolStrings,
+): string {
+  const rejection = parseRejection(result)
+  if (rejection) {
+    const path = editPath(name, args)
+    if (path && name === 'EditFile') {
+      return t.rejectedUpdate(path, rejection.feedback)
+    }
+    if (path && name === 'WriteFile') {
+      return t.rejectedWrite(path, rejection.feedback)
+    }
+    return t.rejected(rejection.feedback)
+  }
+  if (isUnattendedToolUse(result)) {
+    return t.unattended
+  }
+  if (isUserInterruptedTool(result)) {
+    // By the tool's own name, as the agent recorded it.
+    return t.userInterrupted(name)
+  }
+  return result
+}
+
+function editPath(name: string, args: string): string {
+  if (name !== 'EditFile' && name !== 'WriteFile') {
+    return ''
+  }
+  try {
+    const a: unknown = JSON.parse(args)
+    const path = a && typeof a === 'object' ? (a as Record<string, unknown>)['path'] : undefined
+    return typeof path === 'string' ? path : ''
+  } catch {
+    return ''
+  }
+}
+
 // Whether a recorded result is a failure, per tool-specific in-band formats.
 export function resultFailed(name: string, result: string): boolean {
   const body = result.trim()
+  // A person's no is their answer, not a failure; a call nobody could approve did fail.
+  if (parseRejection(body)) {
+    return false
+  }
+  if (isUnattendedToolUse(body)) {
+    return true
+  }
   switch (name) {
     case 'Bash': {
       if (bashExitCode(body)[2]) {
@@ -389,6 +506,9 @@ export function toolSummary(
   isError: boolean,
   { editSummary, strings: t = defaultToolStrings }: ToolSummaryOptions = {},
 ): string {
+  if (resultNotRun(result)) {
+    return summarizeToolResult(shownResult(name, args, result, t), t)
+  }
   const [body, spilled] = trimToolOutputNotice(result.replace(/\n+$/, ''))
   if (isError || body.trim() === '' || isErrorResult(body)) {
     return summarizeToolResult(result, t)

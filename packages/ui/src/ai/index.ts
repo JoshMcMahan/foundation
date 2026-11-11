@@ -11,6 +11,7 @@ export { default as ActivityLine } from './components/agent/ActivityLine'
 export {
   ApprovalBlock,
   default as AgentMessageParts,
+  ExpandAllProvider,
 } from './components/agent/AgentMessageParts'
 export { default as PermissionPicker } from './components/agent/PermissionPicker'
 export { default as BlockedGroupBanner } from './components/BlockedGroupBanner'

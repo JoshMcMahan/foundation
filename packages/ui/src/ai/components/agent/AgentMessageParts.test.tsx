@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ChatConfigProvider, resolveChatConfig } from '../../core/config'
 import type { ChatMessage, MessagePart, ToolCallPart, ToolDecision } from '../../types'
-import AgentMessageParts, { buildRenderItems } from './AgentMessageParts'
+import AgentMessageParts, { buildRenderItems, ExpandAllProvider } from './AgentMessageParts'
 
 vi.mock('../../ui/Markdown', () => ({
   __esModule: true,
@@ -394,7 +394,7 @@ describe('approval parts', () => {
       },
       { kind: 'approval', id: 'c1', approvalKind: 'confirm', resolved: true, answer: 'Allowed' },
     ])
-    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Allowed by Bob')
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Bob approved')
     expect(screen.queryByText('Answered: Allowed')).not.toBeInTheDocument()
   })
 
@@ -433,6 +433,213 @@ function tc(id: string, name: string, status: 'ok' | 'running' | 'error' = 'ok')
   }
 }
 
+describe('transcript features', () => {
+  it('shows the pictures a call returned', () => {
+    renderParts([
+      {
+        kind: 'image',
+        images: [
+          {
+            id: 'i1',
+            previewUrl: 'data:image/png;base64,AAAA',
+            filename: 'shot.png',
+            contentType: 'image/png',
+            size: 3,
+            uploadedAt: '',
+          },
+        ],
+      },
+    ])
+    expect(screen.getByRole('img', { name: 'shot.png' })).toBeInTheDocument()
+  })
+
+  it('shows a command’s output under its line without a toggle', () => {
+    renderParts([{ kind: 'notice', text: '! ls', detail: '```\na.go\n```', open: true }])
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByTestId('markdown')).toHaveTextContent('a.go')
+  })
+
+  it('keeps an answered plan in view', () => {
+    renderParts([
+      {
+        kind: 'approval',
+        id: 'p1',
+        approvalKind: 'plan',
+        plan: '1. Ship it',
+        resolved: true,
+        answer: 'Approved',
+        canAllowDirectory: false,
+      },
+    ])
+    expect(screen.getByText('1. Ship it')).toBeInTheDocument()
+    expect(screen.getByText('Answered: Approved')).toBeInTheDocument()
+  })
+
+  it('opens and closes every block at once, and each still toggles on its own', () => {
+    const parts = [tc('t1', 'ReadFile'), tc('t2', 'GrepSearch')]
+    const view = (all: boolean) => (
+      <ChatConfigProvider value={resolveChatConfig()}>
+        <ExpandAllProvider value={all}>
+          <AgentMessageParts message={msg(parts)} foldEveryRun />
+        </ExpandAllProvider>
+      </ChatConfigProvider>
+    )
+    const { rerender } = render(view(true))
+    const run = screen.getByRole('button', { name: /Searched for 1 pattern, read 1 file/ })
+    expect(run).toHaveAttribute('aria-expanded', 'true')
+    const calls = screen.getAllByRole('button', { name: /Read|Grep/ }).filter((b) => b !== run)
+    for (const call of calls) {
+      expect(call).toHaveAttribute('aria-expanded', 'true')
+    }
+    fireEvent.click(run)
+    expect(run).toHaveAttribute('aria-expanded', 'false')
+    rerender(view(false))
+    expect(run).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('shows all of a thought while it streams, only where the transcript draws as a terminal does', () => {
+    const text = Array.from({ length: 30 }, (_, i) => `step ${i}`).join('\n\n')
+    const { rerender } = renderParts([{ kind: 'reasoning', text }], {
+      isStreaming: true,
+      foldEveryRun: true,
+    })
+    expect(screen.getByTestId('reasoning-body')).not.toHaveClass('max-h-20')
+    rerender(
+      <ChatConfigProvider value={resolveChatConfig()}>
+        <AgentMessageParts message={msg([{ kind: 'reasoning', text }])} isStreaming />
+      </ChatConfigProvider>,
+    )
+    expect(screen.getByTestId('reasoning-body')).toHaveClass('max-h-20')
+  })
+})
+
+describe('subagents', () => {
+  it('says a stop cut a child off, in place of its tally', () => {
+    renderParts([
+      { kind: 'subagent', id: 's1', status: 'failed', interrupted: true, summary: '3 tool uses' },
+    ])
+    expect(screen.getByText('Failed (interrupted)')).toBeInTheDocument()
+  })
+
+  it('shows how a child ended when opened to its report', () => {
+    renderParts([
+      { kind: 'subagent', id: 's1', status: 'done', summary: 'ok', report: 'All good.' },
+    ])
+    fireEvent.click(screen.getByRole('button', { name: /Task/ }))
+    expect(screen.getByTestId('subagent-outcome')).toHaveTextContent('Done (ok)')
+  })
+
+  it('says a reviewer is deciding on a child’s calls, in place of its latest action', () => {
+    renderParts([
+      { kind: 'subagent', id: 's1', status: 'running', actions: ['Read a.go'], reviewing: 2 },
+    ])
+    expect(screen.getByText('Reviewing 2 approval requests')).toBeInTheDocument()
+  })
+
+  it('draws children started in the background as one launch, with no state', () => {
+    renderParts([
+      { kind: 'subagent', id: 's1', status: 'running', background: true, description: 'Audit' },
+      { kind: 'subagent', id: 's2', status: 'done', background: true, description: 'Lint' },
+    ])
+    expect(screen.getByTestId('subagent-launch')).toHaveTextContent(
+      '2 background agents launched├Audit└Lint',
+    )
+    expect(screen.queryByText(/^Done/)).toBeNull()
+  })
+})
+
+describe('edits', () => {
+  const REJECTED =
+    "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said:\nuse b"
+  const edit = (status: ToolCallPart['status'], result?: string): ToolCallPart => ({
+    kind: 'tool_call',
+    id: 'e1',
+    name: 'EditFile',
+    args: JSON.stringify({ path: 'a.go', old_string: 'x\n', new_string: 'y\n' }),
+    status,
+    ...(result !== undefined ? { result } : {}),
+  })
+
+  it('shows what was declined in place of a change never written, and dims its diff', () => {
+    const { container } = renderParts([edit('ok', REJECTED)])
+    expect(screen.getByTestId('edit-outcome')).toHaveTextContent(
+      'User rejected update to a.go: use b',
+    )
+    expect(screen.queryByText(/Added/)).toBeNull()
+    expect(container.querySelector('[data-dimmed]')).not.toBeNull()
+    expect(screen.getByText('Declined')).toBeInTheDocument()
+  })
+
+  it('waits for the result before saying what an edit changed', () => {
+    renderParts([edit('running')])
+    expect(screen.queryByTestId('edit-outcome')).toBeNull()
+  })
+
+  it('says a failed edit failed once, in place of what it would have changed', () => {
+    renderParts([edit('error', 'Error: old_string not found in a.go')])
+    expect(screen.getAllByText(/old_string not found/)).toHaveLength(1)
+    expect(screen.queryByText(/Added/)).toBeNull()
+  })
+
+  it('keeps an edit whose diff is shown elsewhere behind its row', () => {
+    renderParts([{ ...edit('ok', 'Edited a.go'), foldDiff: true }])
+    expect(screen.getByTestId('edit-outcome')).toHaveTextContent('Added 1 line, removed 1 line')
+    expect(screen.queryByText('y')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Update/ }))
+    expect(screen.getByText('y')).toBeInTheDocument()
+  })
+
+  it('says when a hook rewrote the arguments', () => {
+    renderParts([{ ...edit('ok', 'Edited a.go'), argsRewritten: true }])
+    expect(screen.getByText('(args rewritten by hook)')).toBeInTheDocument()
+  })
+})
+
+describe('failed and declined calls', () => {
+  const bash = (status: ToolCallPart['status'], result: string): ToolCallPart => ({
+    kind: 'tool_call',
+    id: 'b1',
+    name: 'Bash',
+    args: '{"command":"make"}',
+    status,
+    result,
+  })
+
+  it('shows a failed call’s output up to twelve lines without opening it', () => {
+    const out = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`).join('\n')
+    renderParts([bash('error', `${out}\nExit code: 2`)])
+    expect(screen.getByText('Failed: line 1')).toBeVisible()
+    expect(screen.getByTestId('failed-output')).toHaveTextContent('line 12')
+    expect(screen.getByTestId('failed-output')).not.toHaveTextContent('line 13')
+    // Twenty lines and the exit code line: twelve shown.
+    expect(screen.getByText('+9 more lines')).toBeInTheDocument()
+  })
+
+  it('keeps the exit code when an opened command printed something', () => {
+    renderParts([bash('ok', 'boom\nExit code: 2')])
+    fireEvent.click(screen.getByRole('button', { name: /Bash/ }))
+    expect(screen.getByTestId('logviewer')).toHaveTextContent('Exit code: 2')
+  })
+
+  it('says nobody could approve a call once, without calling the verdict a failure too', () => {
+    renderParts([
+      bash(
+        'error',
+        'Permission for this tool use was denied. It requires approval, and this session has no approval surface — nobody can answer a permission prompt here — so it was denied automatically. What required approval: make',
+      ),
+    ])
+    expect(screen.getByTestId('failed-output')).toHaveTextContent(
+      /^Denied: nobody could approve it here$/,
+    )
+  })
+
+  it('reads a call a stop cut off as neither failed nor done', () => {
+    renderParts([bash('ok', 'The user interrupted Bash before it finished.')])
+    expect(screen.getByText('Interrupted')).toBeInTheDocument()
+    expect(screen.getByText('The user interrupted Bash before it finished.')).toBeInTheDocument()
+  })
+})
+
 describe('tool decisions', () => {
   const call = (decision: ToolDecision): ToolCallPart => ({
     kind: 'tool_call',
@@ -445,14 +652,14 @@ describe('tool decisions', () => {
   })
 
   it.each<[ToolDecision, string]>([
-    [{ status: 'approved', by: 'user', name: 'ana' }, 'Allowed by ana'],
-    [{ status: 'denied', by: 'user', name: 'bob' }, 'Denied by bob'],
-    [{ status: 'approved', by: 'user' }, 'Allowed'],
-    [{ status: 'approved', by: 'auto-reviewer' }, 'Allowed by the auto-reviewer'],
-    [{ status: 'expired', by: 'user' }, 'Expired without an answer'],
-    [{ status: 'timed_out', by: 'user' }, 'Denied: no answer in time'],
-    [{ status: 'timed_out', by: 'auto-reviewer' }, 'Denied: the auto-reviewer timed out'],
-    [{ status: 'failed', by: 'auto-reviewer' }, 'Denied: the auto-reviewer failed'],
+    [{ status: 'approved', by: 'user', name: 'ana' }, '✓ana approved'],
+    [{ status: 'denied', by: 'user', name: 'bob' }, '✗bob denied'],
+    [{ status: 'approved', by: 'user' }, '✓Approved'],
+    [{ status: 'approved', by: 'auto-reviewer' }, '✓Auto-reviewer approved'],
+    [{ status: 'expired', by: 'user' }, '✗Expired without an answer'],
+    [{ status: 'timed_out', by: 'user' }, '✗Denied: no answer in time'],
+    [{ status: 'timed_out', by: 'auto-reviewer' }, '✗Auto-review timed out'],
+    [{ status: 'failed', by: 'auto-reviewer' }, '✗Auto-review failed'],
   ])('says who settled the call: %o', (decision, label) => {
     renderParts([call(decision)])
     expect(screen.getByTestId('tool-decision')).toHaveTextContent(label)
@@ -469,7 +676,7 @@ describe('tool decisions', () => {
         decision: { status: 'approved', by: 'user', name: 'Bob', edited: true },
       },
     ])
-    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Allowed with changes by Bob')
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Bob approved with changes')
   })
 
   it('shows when and the note', () => {
@@ -495,9 +702,25 @@ describe('tool decisions', () => {
         reason: 'Deleting shared scratch was not asked for.',
       }),
     ])
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Auto-reviewer denied')
+    expect(screen.getByText('Deleting shared scratch was not asked for.')).toBeInTheDocument()
+  })
+
+  it('keeps an approval to who approved it and what, without the reviewer’s reason', () => {
+    renderParts([
+      call({
+        status: 'approved',
+        by: 'auto-reviewer',
+        reason: 'Lists files in the workspace.',
+        action: 'sbatch run.sh',
+        note: 'rules saved',
+      }),
+    ])
     expect(screen.getByTestId('tool-decision')).toHaveTextContent(
-      'Denied by the auto-reviewerDeleting shared scratch was not asked for.',
+      'Auto-reviewer approved(rules saved)',
     )
+    expect(screen.getByTestId('decision-action')).toHaveTextContent('sbatch run.sh')
+    expect(screen.queryByText('Lists files in the workspace.')).toBeNull()
   })
 
   it('folds a plain approval into its run and keeps any other decision in view', () => {
@@ -523,9 +746,7 @@ describe('tool decisions', () => {
       }),
     )
     expect(screen.getByTestId('tool-decision')).toBeVisible()
-    expect(screen.getByTestId('tool-decision')).toHaveTextContent(
-      'Allowed by the auto-reviewerLists files in the workspace.',
-    )
+    expect(screen.getByTestId('tool-decision')).toHaveTextContent('Auto-reviewer approved')
   })
 })
 
