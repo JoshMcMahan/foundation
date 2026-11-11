@@ -412,10 +412,11 @@ export function ListSelectAllHeader({
   const all = total > 0 && selected >= total
   return (
     // On a narrow list, as in a row's selection cell, the box keeps only the name's own 10px from
-    // what follows it, so the sort line under the header starts where the rows' names do.
+    // what follows it, so the sort line under the header starts where the rows' names do. Its
+    // column is the row's 16px inset and the box, which a table of fixed layout takes as given.
     <Table.Header
       caps={false}
-      className="w-10 @max-[36rem]:w-px @max-[36rem]:pr-0 @max-[36rem]:[&+th]:pl-2.5"
+      className="w-10 @max-[36rem]:w-8 @max-[36rem]:pr-0 @max-[36rem]:[&+th]:pl-2.5"
     >
       <Checkbox
         aria-label={t.selectAll}

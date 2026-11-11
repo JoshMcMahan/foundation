@@ -363,7 +363,9 @@ const STACKED_LINES_LINE =
   'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 not-has-[>:not(:empty)]:hidden'
 
 // A row's selection checkbox on a narrow list, where its row grows lines under the name: it
-// keeps the 10px an icon keeps from its name, rather than a column's 24px, and it sits at the
+// keeps the 10px an icon keeps from its name, rather than a column's 24px, in a column as wide as
+// the row's 16px inset and the box, so a table of fixed layout, which takes a cell's width as
+// given, holds the box whole as one sized by its content does; and it sits at the
 // row's top, centered on the name's first line, or on a name and subtitle, the line an icon tile
 // centers on, rather than floating in the middle of the lines under them. The name's cell keeps
 // to the top too, as a column beside the stack does, so the two line up in a row of any height. A name's line is 16px,
@@ -371,7 +373,7 @@ const STACKED_LINES_LINE =
 // 16px.
 const LEADING_SELECT = {
   className:
-    '@max-[36rem]:has-[[data-row-select]]:w-px @max-[36rem]:has-[[data-row-select]]:pr-0 @max-[36rem]:has-[[data-row-select]]:align-top @max-[36rem]:has-[[data-row-select]]:pt-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:pl-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:align-top @max-[36rem]:has-[[data-row-select]]:group-has-[[data-name-subtitle]]:pt-[17.625px]',
+    '@max-[36rem]:has-[[data-row-select]]:w-8 @max-[36rem]:has-[[data-row-select]]:pr-0 @max-[36rem]:has-[[data-row-select]]:align-top @max-[36rem]:has-[[data-row-select]]:pt-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:pl-2.5 @max-[36rem]:has-[[data-row-select]]:[&+td]:align-top @max-[36rem]:has-[[data-row-select]]:group-has-[[data-name-subtitle]]:pt-[17.625px]',
 }
 
 // A cell given straight to a row, whose content is there to see, rather than through a component.
