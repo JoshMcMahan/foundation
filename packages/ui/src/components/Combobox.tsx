@@ -588,10 +588,12 @@ export function Combobox<Value = string>(props: ComboboxProps<Value>) {
                       'pr-0.5 outline-none data-highlighted:bg-(--theme-hover)',
                     )}
                   >
-                    {entry.label}
+                    {/* In its own span, as a Tag's, so a label longer than the field ends in an
+                        ellipsis and the × stays in view. */}
+                    <span className="min-w-0 truncate py-px">{entry.label}</span>
                     <BaseCombobox.ChipRemove
                       aria-label={t.removeValue(entry.label)}
-                      className="flex size-4 cursor-pointer items-center justify-center rounded-full text-(--theme-muted-text-color) hover:bg-(--theme-hover) hover:text-(--theme-app)"
+                      className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full text-(--theme-muted-text-color) hover:bg-(--theme-hover) hover:text-(--theme-app)"
                     >
                       <RemoveIcon aria-hidden="true" className="size-2.5" />
                     </BaseCombobox.ChipRemove>

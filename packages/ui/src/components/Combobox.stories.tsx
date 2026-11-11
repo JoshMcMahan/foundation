@@ -250,6 +250,43 @@ export const Multiple: StoryObj<FieldArgs> = {
   render: (args) => <MultipleDemo {...args} />,
 }
 
+const longLabel = 'Research and Development Laboratory for Computational Fluid Dynamics, Building 4'
+
+function LongChipDemo(args: FieldArgs) {
+  const [value, setValue] = useState<string[]>(['lab', 'short'])
+  return (
+    <Combobox
+      multiple
+      aria-label="Sites"
+      items={[
+        { label: longLabel, value: 'lab' },
+        { label: 'Annex', value: 'short' },
+      ]}
+      value={value}
+      onValueChange={setValue}
+      disabled={args.disabled}
+      aria-invalid={args.invalid}
+      placeholder={args.placeholder}
+    />
+  )
+}
+
+/** A chosen label longer than the field ends in an ellipsis, its × still in view. */
+export const MultipleLongLabel: StoryObj<FieldArgs> = {
+  decorators: [(Story) => <div className="w-64">{Story()}</div>],
+  render: (args) => <LongChipDemo {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('group')
+    const remove = canvas.getByRole('button', { name: `Remove ${longLabel}` })
+    const label = canvas.getByText(longLabel)
+    await expect(label.scrollWidth).toBeGreaterThan(label.clientWidth)
+    await expect(remove.getBoundingClientRect().right).toBeLessThanOrEqual(
+      field.getBoundingClientRect().right,
+    )
+  },
+}
+
 /** A report's user filter searches names without offering to save or fill credentials. */
 export const UserFilter: StoryObj<FieldArgs> = {
   args: { placeholder: 'All users' },

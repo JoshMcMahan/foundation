@@ -185,6 +185,17 @@ describe('Combobox', () => {
       expect(onValueChange).toHaveBeenLastCalledWith([])
     })
 
+    // A label longer than the field ends in an ellipsis with the × in view: the text alone
+    // truncates, in its own element, and the × never shrinks.
+    it('truncates a long chip label apart from its remove button', () => {
+      render(<Multiple />)
+      const remove = screen.getByRole('button', { name: 'Remove Small' })
+      const label = screen.getByText('Small')
+      expect(label).toHaveClass('truncate')
+      expect(label).not.toContainElement(remove)
+      expect(remove).toHaveClass('shrink-0')
+    })
+
     it('keeps its values on Escape with the list closed, and lets the key through', () => {
       const onValueChange = vi.fn()
       const onKeyDown = vi.fn()
