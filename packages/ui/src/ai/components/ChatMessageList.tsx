@@ -163,6 +163,7 @@ export default function ChatMessageList({
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const floorRef = useRef<HTMLDivElement>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
   const reasoningScrollRef = useRef<HTMLDivElement>(null)
 
   const messageCount = messages.length
@@ -369,38 +370,14 @@ export default function ChatMessageList({
     }
   }, [messageCount])
 
-  // Auto-scroll during streaming — runs before paint so there's no visible jump.
-  // Queued messages render below the reply, so following it is what keeps them
-  // on screen: a reply left to grow pushes them out of view.
+  // Follows new content before it paints, streamed or not. Not animated: the
+  // rest of a transcript a host catches up on after the list opened would
+  // otherwise glide in over the reader's first look at it. Queued messages
+  // render below the reply, so following it is what keeps them on screen.
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on content/message changes
   useLayoutEffect(() => {
-    if (isStreaming) {
-      followBottom()
-    }
+    followBottom()
   }, [streamingText, streamingParts, streamingMessageParts, messageCount, isStreaming, queuedCount])
-
-  // Auto-scroll on new messages (non-streaming) — smooth scroll after paint.
-  // A reply that just finished streaming is already in view and followed by
-  // the resize observer; a smooth scroll on top of it would fight that.
-  const wasStreamingRef = useRef(isStreaming)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message count change
-  useEffect(() => {
-    const streamFinished = wasStreamingRef.current && !isStreaming
-    wasStreamingRef.current = isStreaming
-    if (
-      !containerRef.current ||
-      !isNearBottomRef.current ||
-      isStreaming ||
-      streamFinished ||
-      !hadMessagesRef.current
-    ) {
-      return
-    }
-    // Scrolls the list alone: scrollIntoView would also scroll every clipped
-    // ancestor, shifting the page around the chat.
-    const el = containerRef.current
-    el.scrollTo({ top: el.scrollHeight, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
-  }, [messageCount, isStreaming])
 
   // Follows content that grows after its reply finished, such as a card that
   // keeps showing what a tool is doing, while the reader sits at the bottom.
@@ -416,6 +393,7 @@ export default function ChatMessageList({
   useEffect(() => {
     const content = contentRef.current
     const floor = floorRef.current
+    const dock = dockRef.current
     if (!content || !floor || typeof ResizeObserver === 'undefined') {
       return
     }
@@ -435,6 +413,11 @@ export default function ChatMessageList({
       findAnchor()
     })
     observer.observe(content)
+    // The composer sticks to the list's bottom edge, so as it grows, with a
+    // line typed or a row of chips, it would cover the last lines.
+    if (dock) {
+      observer.observe(dock)
+    }
     return () => {
       observer.disconnect()
       content.removeEventListener('click', touched, true)
@@ -446,7 +429,7 @@ export default function ChatMessageList({
   // first message comes and goes: a send it is waiting on puts its text back
   // into the box it came from.
   const dock = inputElement && (
-    <div key="composer" data-composer-dock="" className="sticky bottom-0 z-10">
+    <div key="composer" ref={dockRef} data-composer-dock="" className="sticky bottom-0 z-10">
       {/* Rides on the composer's top edge: on its own it would stick at the
           same bottom as the composer and sit underneath it. */}
       {hasContent && !pinned && (

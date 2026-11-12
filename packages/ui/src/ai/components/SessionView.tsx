@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { preloadMarkdown } from '../../components/Markdown'
 import { useChat } from '../core/ChatProvider'
 import useDragDrop from '../core/useDragDrop'
 import { escapeClosesLayer } from '../core/useKeyboardShortcuts'
@@ -116,6 +117,13 @@ export default function SessionView({
   const { isStreaming: providerStreaming, stopStreaming } = useChat()
   const running = turn ? turn.running : providerStreaming
   const stop = turn ? turn.onStop : stopStreaming
+
+  // While the host still fetches the transcript, so its replies render as
+  // markdown from their first frame rather than reflowing once it loads. A
+  // failed load is left to the first reply that renders.
+  useEffect(() => {
+    preloadMarkdown().catch(() => {})
+  }, [])
 
   // Escape stops the turn, wherever the turn runs.
   useEffect(() => {

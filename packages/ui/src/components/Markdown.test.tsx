@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import Markdown from './Markdown'
 import { withoutUnfinishedTable } from './MarkdownImpl'
 
@@ -43,6 +43,21 @@ describe('Markdown mermaid', () => {
       expect(container.querySelector('[data-streamdown="mermaid-block"]')).toBeInTheDocument(),
     )
     expect(container.querySelector('[data-code-block]')).toBe(block)
+  })
+})
+
+describe('Markdown once its renderer has loaded', () => {
+  // A fresh module: one this file has already rendered resolves its lazy
+  // renderer on its own, which would pass without the preload.
+  it('renders as markdown from its first frame, not as plain text', async () => {
+    vi.resetModules()
+    const fresh = await import('./Markdown')
+    await fresh.preloadMarkdown()
+
+    const { container } = render(<fresh.default>{'**ready**'}</fresh.default>)
+
+    expect(container).toHaveTextContent('ready')
+    expect(container).not.toHaveTextContent('**')
   })
 })
 

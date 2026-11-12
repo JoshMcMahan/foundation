@@ -370,6 +370,7 @@ describe('ChatMessageList with a message queued behind a reply', () => {
 
 describe('ChatMessageList after a reply', () => {
   let resized: (() => void) | undefined
+  let observed: Element[] = []
 
   beforeEach(() => {
     mockChat.isStreaming = false
@@ -379,7 +380,9 @@ describe('ChatMessageList after a reply', () => {
         constructor(callback: () => void) {
           resized = callback
         }
-        observe() {}
+        observe(el: Element) {
+          observed.push(el)
+        }
         disconnect() {}
       },
     )
@@ -388,6 +391,7 @@ describe('ChatMessageList after a reply', () => {
   afterEach(() => {
     mockChat.isStreaming = true
     resized = undefined
+    observed = []
     vi.unstubAllGlobals()
   })
 
@@ -410,19 +414,60 @@ describe('ChatMessageList after a reply', () => {
     return { container, addMessage }
   }
 
-  it('scrolls only the list to a new message, never the page around it', () => {
+  // A host that shows the transcript it has, then the rest once it has fetched
+  // it: the reader lands on the newest turn without watching the list glide.
+  it('lands on turns that arrive after it opened before they paint, moving only the list', () => {
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
-    const { container, addMessage } = renderDone()
+    const first = createMockMessage({ id: 'm1' })
+    const result = render(<ChatMessageList messages={[first]} allMessages={[]} />)
+    const container = result.container.firstElementChild as HTMLElement
     const scrollTo = vi.fn()
     container.scrollTo = scrollTo as typeof container.scrollTo
     armAtBottom(container)
 
+    setDimensions(container, { scrollHeight: 4000, clientHeight: 400 })
+    result.rerender(
+      <ChatMessageList
+        messages={[first, createMockMessage({ id: 'm2' }), createMockMessage({ id: 'm3' })]}
+        allMessages={[]}
+      />,
+    )
+
+    expect(container.scrollTop).toBe(4000)
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('leaves a reader who scrolled up where they are as a message arrives', () => {
+    const { container, addMessage } = renderDone()
+    armAtBottom(container)
+    fireEvent.wheel(container, { deltaY: -40 })
+    container.scrollTop = 200
+    fireEvent.scroll(container)
+
     setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
     addMessage()
 
-    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1200 }))
-    expect(scrollIntoView).not.toHaveBeenCalled()
+    expect(container.scrollTop).toBe(200)
+  })
+
+  it('follows the composer as it grows, so it never covers the last lines', () => {
+    const result = render(
+      <ChatMessageList
+        messages={[createMockMessage({ id: 'm1' })]}
+        allMessages={[]}
+        inputElement={<textarea aria-label="Message" />}
+      />,
+    )
+    const container = result.container.firstElementChild as HTMLElement
+    expect(observed).toContain(container.querySelector('[data-composer-dock]'))
+    armAtBottom(container)
+
+    setDimensions(container, { scrollHeight: 1040, clientHeight: 400 })
+    resized?.()
+
+    expect(container.scrollTop).toBe(1040)
   })
 
   it('lets a reply that finished streaming take its row without entering again', () => {

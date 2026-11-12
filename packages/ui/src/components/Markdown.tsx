@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { Components, ControlsConfig } from 'streamdown'
 import { cx } from '../cx'
 
@@ -18,11 +18,35 @@ export interface MarkdownProps {
 // Streamdown pulls in the whole shiki + katex stack (~230KB compressed), so it
 // only loads when markdown actually renders instead of riding the layout chunk
 // onto every page.
-const MarkdownImpl = lazy(() => import('./MarkdownImpl'))
+type Impl = typeof import('./MarkdownImpl')
+let loaded: Impl | undefined
+let loading: Promise<Impl> | undefined
+
+/** Starts loading the renderer ahead of the markdown that needs it. A failed
+ *  load is forgotten, so the next render tries again. */
+export function preloadMarkdown(): Promise<Impl> {
+  loading ??= import('./MarkdownImpl').then(
+    (impl) => {
+      loaded = impl
+      return impl
+    },
+    (error: unknown) => {
+      loading = undefined
+      throw error
+    },
+  )
+  return loading
+}
+
+const LazyMarkdownImpl = lazy(preloadMarkdown)
 
 /** Markdown, with highlighted code, math and mermaid diagrams. Links leave in a
  *  new tab, and inline code breaks after path separators. */
 export default function Markdown(props: MarkdownProps) {
+  // A lazy component shows its fallback on its first render even once its
+  // module has loaded, so markdown that mounts after the load skips it. Picked
+  // once per instance: switching would remount it.
+  const [MarkdownImpl] = useState(() => loaded?.default ?? LazyMarkdownImpl)
   return (
     <Suspense
       fallback={

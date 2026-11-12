@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useEffect, useState } from 'react'
 import { within } from 'storybook/test'
 import {
   makeAgentTurn,
+  makeLongConversation,
   makeMessage,
   makeToolCallPart,
   StoryChat,
@@ -98,6 +100,102 @@ export const PinnedPrompt: StoryObj<PinnedPromptArgs> = {
   args: { pinPrompt: true },
   argTypes: { pinPrompt: { control: 'boolean' } },
   render: (args) => <PinnedPromptExample {...args} />,
+}
+
+const OPENABLE = [
+  {
+    id: 'opening-sign-in',
+    title: 'Flaky sign-in test',
+    messages: [...makeLongConversation(30, 'opening-sign-in').messages, ...session],
+  },
+  {
+    id: 'opening-partitions',
+    title: 'Partition limits',
+    messages: makeLongConversation(40, 'opening-partitions').messages,
+  },
+]
+
+type OpeningSessionArgs = { fetchMs: number }
+
+function OpenedSession({
+  id,
+  messages,
+  cached,
+  fetchMs,
+}: OpeningSessionArgs & { id: string; messages: ChatMessage[]; cached: boolean }) {
+  const [shown, setShown] = useState<ChatMessage[] | null>(() =>
+    cached ? messages.slice(0, -4) : null,
+  )
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(messages), fetchMs)
+    return () => clearTimeout(timer)
+  }, [messages, fetchMs])
+  return (
+    <SessionView
+      sessionKey={id}
+      messages={shown ?? []}
+      loading={shown === null}
+      onSend={async () => true}
+      flush
+      foldEveryRun
+      workingIndicator={false}
+    />
+  )
+}
+
+function OpeningSessionExample({ fetchMs }: OpeningSessionArgs) {
+  const [open, setOpen] = useState<{ id: string; cached: boolean } | null>(null)
+  const [visited, setVisited] = useState<ReadonlySet<string>>(new Set())
+  const session = OPENABLE.find((s) => s.id === open?.id)
+  const openSession = (id: string) => {
+    if (id === open?.id) {
+      return
+    }
+    setOpen({ id, cached: visited.has(id) })
+    setVisited((current) => new Set(current).add(id))
+  }
+  return (
+    <StoryChat>
+      <StoryViewport>
+        <div className="flex h-full">
+          <nav
+            aria-label="Sessions"
+            className="flex shrink-0 flex-col gap-1 p-2"
+            style={{ width: 220, borderInlineEnd: '1px solid var(--theme-border)' }}
+          >
+            {OPENABLE.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                aria-current={s.id === open?.id || undefined}
+                onClick={() => openSession(s.id)}
+                className="rounded-md px-2 py-1.5 text-start text-sm theme-text theme-hover"
+                style={{ fontWeight: s.id === open?.id ? 600 : undefined }}
+              >
+                {s.title}
+              </button>
+            ))}
+          </nav>
+          <div className="min-w-0 flex-1">
+            {session && open && (
+              <OpenedSession key={session.id} {...session} cached={open.cached} fetchMs={fetchMs} />
+            )}
+          </div>
+        </div>
+      </StoryViewport>
+    </StoryChat>
+  )
+}
+
+/** Sessions opened from a list, as an agent host opens them. A first visit
+ *  waits for the transcript; a return visit shows the copy the host kept at
+ *  once, and the turns since land below it when its fetch answers, fetchMs
+ *  later. Either way the view opens on the newest turn, already rendered as
+ *  markdown, and stays there rather than scrolling down to it. */
+export const OpeningSession: StoryObj<OpeningSessionArgs> = {
+  args: { fetchMs: 600 },
+  argTypes: { fetchMs: { control: { type: 'range', min: 0, max: 3000, step: 100 } } },
+  render: (args) => <OpeningSessionExample {...args} />,
 }
 
 /** Scrolled back into the first turn, the pin shows that turn's prompt. */
