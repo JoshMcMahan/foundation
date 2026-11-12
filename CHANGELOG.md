@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/parallelworks/foundation/compare/v0.18.0...v0.18.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **deps:** Go 1.27.4 for the net/http server crash advisory, with the open Go and npm updates ([#705](https://github.com/parallelworks/foundation/issues/705)) ([a3a7067](https://github.com/parallelworks/foundation/commit/a3a7067014eadfb9596ff47d9b2a67cbcbddae89))
+
 ## [0.18.0](https://github.com/parallelworks/foundation/compare/v0.17.0...v0.18.0) (2026-11-03)
 
 
