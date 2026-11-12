@@ -19,6 +19,7 @@ import * as layout from './components/ChatLayout.stories'
 import * as messageList from './components/ChatMessageList.stories'
 import * as sidebar from './components/ChatSidebar.stories'
 import * as thread from './components/ChatThread.stories'
+import * as sessionView from './components/SessionView.stories'
 import * as shareDialog from './components/ShareDialog.stories'
 import { useChatConfig } from './core/config'
 import { StoryChat } from './stories/harness'
@@ -34,6 +35,7 @@ const SUITES = {
   imageViewer,
   thread,
   messageList,
+  sessionView,
   sidebar,
   composer,
   emptyState,

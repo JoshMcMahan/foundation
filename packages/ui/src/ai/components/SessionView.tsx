@@ -66,6 +66,8 @@ export interface SessionViewProps {
    *  shows whole while it streams. */
   foldEveryRun?: boolean
   workingIndicator?: boolean
+  /** Pins the prompt of the turn in view over the transcript once it scrolls away. */
+  pinPrompt?: boolean
   composer?: ComposerProps
   /** Finds text in the transcript: ⌘F, or FIND_IN_TRANSCRIPT_EVENT from the
    *  host's own control, opens a bar above it. */
@@ -102,6 +104,7 @@ export default function SessionView({
   flush,
   foldEveryRun,
   workingIndicator,
+  pinPrompt,
   composer,
   find = false,
 }: SessionViewProps) {
@@ -214,6 +217,7 @@ export default function SessionView({
             {...(label ? { label } : {})}
             {...(flush ? { flush } : {})}
             {...(foldEveryRun ? { foldEveryRun } : {})}
+            {...(pinPrompt ? { pinPrompt } : {})}
             workingIndicator={workingIndicator ?? !activity}
             inputElement={input}
           />

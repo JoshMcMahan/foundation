@@ -76,6 +76,9 @@ interface ChatMessageListProps {
   /** Off for a host that shows the turn's activity elsewhere, so the wait
    *  for the first frame is not announced twice. */
   workingIndicator?: boolean
+  /** Pins the prompt of the turn in view to the top once it scrolls out of
+   *  sight, as a terminal transcript does; a click returns to it. */
+  pinPrompt?: boolean
 }
 
 export default function ChatMessageList({
@@ -104,6 +107,7 @@ export default function ChatMessageList({
   label,
   footer,
   workingIndicator = true,
+  pinPrompt,
 }: ChatMessageListProps) {
   const { adapter, isStreaming: providerStreaming } = useChat()
   const { isThinking, streamingContent, streamingReasoning, streamingParts, thinkingStartTime } =
@@ -284,6 +288,55 @@ export default function ChatMessageList({
     }
   }, [handleScroll, hasContent])
 
+  // The prompt the pin shows, and the scrollbar's width so the pin lines up
+  // with the column it overlays.
+  const [anchor, setAnchor] = useState<string | null>(null)
+  const [gutter, setGutter] = useState(0)
+  const anchorFrameRef = useRef(0)
+  const findAnchor = useCallback(() => {
+    if (!pinPrompt) {
+      return
+    }
+    cancelAnimationFrame(anchorFrameRef.current)
+    anchorFrameRef.current = requestAnimationFrame(() => {
+      const el = containerRef.current
+      setAnchor(el ? promptAbove(el) : null)
+      setGutter(el ? el.offsetWidth - el.clientWidth : 0)
+    })
+  }, [pinPrompt])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hasContent re-attaches once the container mounts; it is absent in the empty state.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !pinPrompt) {
+      return
+    }
+    findAnchor()
+    container.addEventListener('scroll', findAnchor, { passive: true })
+    return () => {
+      container.removeEventListener('scroll', findAnchor)
+      cancelAnimationFrame(anchorFrameRef.current)
+    }
+  }, [findAnchor, hasContent, pinPrompt])
+
+  const jumpToPrompt = useCallback(() => {
+    const el = containerRef.current
+    const row = el
+      ? [...el.querySelectorAll<HTMLElement>('[data-prompt]')].find(
+          (r) => r.dataset['prompt'] === anchor,
+        )
+      : undefined
+    if (!el || !row) {
+      return
+    }
+    isNearBottomRef.current = false
+    setPinned(false)
+    const top = el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top
+    el.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    // The pin goes once its prompt shows, so focus moves to the prompt rather than to the page.
+    row.focus({ preventScroll: true })
+  }, [anchor])
+
   // Scroll to bottom on initial load / conversation switch — runs before paint
   const hadMessagesRef = useRef(false)
   useLayoutEffect(() => {
@@ -368,6 +421,7 @@ export default function ChatMessageList({
       if (performance.now() - touchedAt > READER_GROWTH_MS) {
         followBottom()
       }
+      findAnchor()
     })
     observer.observe(content)
     return () => {
@@ -375,7 +429,7 @@ export default function ChatMessageList({
       content.removeEventListener('click', touched, true)
       content.removeEventListener('keydown', touched, true)
     }
-  }, [hasContent])
+  }, [hasContent, findAnchor])
 
   // One keyed dock in both states, so the composer is not remounted as the
   // first message comes and goes: a send it is waiting on puts its text back
@@ -416,7 +470,9 @@ export default function ChatMessageList({
     )
   }
 
-  return (
+  const pinnedText = pinPrompt && anchor ? promptLine(messages.find((m) => m.id === anchor)) : ''
+
+  const list = (
     <div
       ref={containerRef}
       // A live log: each new message is announced as it is added. Busy while a
@@ -445,6 +501,7 @@ export default function ChatMessageList({
             messages={messages}
             allMessages={allMessages}
             streaming={!!streamingMessage}
+            prompts={!!pinPrompt}
             flush={flush}
             foldEveryRun={foldEveryRun}
             editingMessageId={editingMessageId}
@@ -596,6 +653,87 @@ export default function ChatMessageList({
       {dock}
     </div>
   )
+
+  if (!pinPrompt) {
+    return list
+  }
+  // The pin lies over the log rather than in it, so its coming and going is
+  // not announced as a new message. It comes first so the tab order meets it
+  // where it shows, at the top.
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {anchor && pinnedText && (
+        <PinnedPrompt
+          text={pinnedText}
+          label={strings.thread.jumpToPrompt(pinnedText)}
+          gutter={gutter}
+          flush={flush}
+          onJump={jumpToPrompt}
+        />
+      )}
+      {list}
+    </div>
+  )
+}
+
+/** The prompt whose turn the top of the view is in, once all of it has
+ *  scrolled above; null while any of it still shows. A prompt at the very top
+ *  edge opens the turn in view, so the one before it is not pinned. */
+function promptAbove(container: HTMLElement): string | null {
+  const top = container.getBoundingClientRect().top
+  const prompts = [...container.querySelectorAll<HTMLElement>('[data-prompt]')]
+  for (const row of prompts.reverse()) {
+    if (row.getBoundingClientRect().top <= top + 1) {
+      const bubble = row.querySelector('.chat-bubble-user') ?? row
+      return bubble.getBoundingClientRect().bottom <= top ? (row.dataset['prompt'] ?? null) : null
+    }
+  }
+  return null
+}
+
+/** The prompt's first line, marked when more follows, as the terminal pins it. */
+function promptLine(message: Message | undefined): string {
+  const [head = '', ...rest] = (message?.content ?? '').trim().split('\n')
+  return rest.some((line) => line.trim()) ? `${head}…` : head
+}
+
+/** Floats over the thread like the jump pill, with its edge, shadow and focus
+ *  ring, in the wash of the reader's own bubble. */
+function PinnedPrompt({
+  text,
+  label,
+  gutter,
+  flush,
+  onJump,
+}: {
+  text: string
+  label: string
+  gutter: number
+  flush: boolean | undefined
+  onJump: () => void
+}) {
+  return (
+    <div
+      className="chat-prompt-pin pointer-events-none absolute inset-x-0 top-0 z-20"
+      style={{ right: gutter }}
+    >
+      <div
+        className={cx(
+          'mx-auto flex w-full max-w-[var(--chat-column,50rem)] justify-end px-4 py-2',
+          !flush && 'sm:px-8',
+        )}
+      >
+        <button
+          type="button"
+          aria-label={label}
+          onClick={onJump}
+          className="chat-composer pointer-events-auto flex min-w-0 max-w-[80%] cursor-pointer items-center rounded-full px-4 py-1.5 text-sm leading-5 chat-ink"
+        >
+          <span className="min-w-0 truncate">{text}</span>
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function prefersReducedMotion(): boolean {
@@ -647,6 +785,8 @@ type MessageRowsProps = Pick<ChatMessageListProps, 'messages' | 'allMessages'> &
   > & {
     /** A reply is being written below these, so none of them is the latest. */
     streaming: boolean
+    /** Marks each prompt for the pin to find and return to. */
+    prompts: boolean
     attachmentDownloadUrl: ((id: string) => string) | undefined
     onOpenAttachment: ComponentProps<typeof ChatMessage>['onOpenAttachment']
   }
@@ -657,6 +797,7 @@ const MessageRows = memo(function MessageRows({
   messages,
   allMessages,
   streaming,
+  prompts,
   flush,
   foldEveryRun,
   editingMessageId,
@@ -699,8 +840,15 @@ const MessageRows = memo(function MessageRows({
     }
     const isNew =
       appended && !shown.has(message.id) && !(streamFinished && message.role === 'assistant')
+    // Every prompt marks its turn, text or not: a turn opened by a picture
+    // alone hides the pin rather than leaving the previous turn's prompt there.
+    const prompt = prompts && message.role === 'user'
     return (
-      <div key={message.id} className={isNew ? 'animate-chat-enter' : undefined}>
+      <div
+        key={message.id}
+        className={cx(isNew && 'animate-chat-enter', prompt && 'outline-none') || undefined}
+        {...(prompt ? { 'data-prompt': message.id, tabIndex: -1 } : {})}
+      >
         <ChatMessage
           message={message}
           allMessages={allMessages}

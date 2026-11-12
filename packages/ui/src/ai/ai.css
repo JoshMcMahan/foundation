@@ -363,6 +363,48 @@
     var(--theme-muted-panel-bg, #f3f4f6);
 }
 
+/* The prompt of the turn in view, pinned once it scrolls out of sight. It
+ * floats on the thread like the jump pill, with the composer's edge, shadow
+ * and focus ring (.chat-composer). Its wash is laid on the panel so it hides
+ * the lines scrolling under it. The transparent outline shows only in forced
+ * colors, where the ring's shadow is dropped. */
+.chat-prompt-pin {
+  animation: chat-pin-enter 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chat-prompt-pin button {
+  --chat-pin-wash: color-mix(
+    in oklab,
+    var(--theme-accent, #06354f) 9%,
+    var(--theme-panel-bg, #fff)
+  );
+  background:
+    linear-gradient(var(--chat-pin-wash), var(--chat-pin-wash)), var(--theme-panel-bg, #fff);
+}
+.chat-prompt-pin button:hover {
+  --chat-pin-wash: color-mix(
+    in oklab,
+    var(--theme-accent, #06354f) 16%,
+    var(--theme-panel-bg, #fff)
+  );
+}
+.chat-prompt-pin button:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+@keyframes chat-pin-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-prompt-pin {
+    animation: none;
+  }
+}
+
 /* The thread runs under the docked composer and fades out above it, so the
  * last lines dissolve rather than cut off at the dock's edge. */
 .chat-composer-dock::before {

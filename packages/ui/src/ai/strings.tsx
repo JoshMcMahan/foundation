@@ -148,6 +148,8 @@ export interface ChatStrings {
     viewOnly: string
     /** Names the thread, a live log of the conversation, for assistive technology. */
     label: string
+    /** Names the pinned prompt, which returns to the message it shows. */
+    jumpToPrompt: (text: string) => string
   }
   /** The bar that finds text in the transcript. */
   find: {
@@ -535,6 +537,7 @@ export const defaultChatStrings: ChatStrings = {
   thread: {
     viewOnly: 'You have view only access',
     label: 'Conversation',
+    jumpToPrompt: (text) => `Go to message: ${text}`,
   },
   find: {
     label: 'Find in conversation',
