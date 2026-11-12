@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.122.3](https://github.com/parallelworks/foundation/compare/ui-v0.122.2...ui-v0.122.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* **ui:** agent transcripts show a declined, unattended or stopped call as one, and read like the terminal ([#711](https://github.com/parallelworks/foundation/issues/711)) ([8795c5a](https://github.com/parallelworks/foundation/commit/8795c5a1badb0b8632cda19c1cf04d0cfdb1ed68))
+
 ## [0.122.2](https://github.com/parallelworks/foundation/compare/ui-v0.122.1...ui-v0.122.2) (2026-11-11)
 
 
