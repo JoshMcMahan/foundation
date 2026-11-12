@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/parallelworks/foundation/compare/problem-v0.6.1...problem-v0.6.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **deps:** Go 1.27.4 for the net/http server crash advisory, with the open Go and npm updates ([#705](https://github.com/parallelworks/foundation/issues/705)) ([a3a7067](https://github.com/parallelworks/foundation/commit/a3a7067014eadfb9596ff47d9b2a67cbcbddae89))
+
 ## [0.6.1](https://github.com/parallelworks/foundation/compare/problem-v0.6.0...problem-v0.6.1) (2026-11-03)
 
 
