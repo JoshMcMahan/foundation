@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.125.0](https://github.com/parallelworks/foundation/compare/ui-v0.124.1...ui-v0.125.0) (2026-11-12)
+
+
+### Features
+
+* **ui:** an effort picker sets how hard the model thinks, on a slider from faster to smarter ([#725](https://github.com/parallelworks/foundation/issues/725)) ([f1b808b](https://github.com/parallelworks/foundation/commit/f1b808ba38005c7a3073a2b1912ba904e2559eb8))
+
+
+### Bug Fixes
+
+* **ui:** a command that only opens a picker moves a reader scrolled up to an earlier turn to the newest message ([#727](https://github.com/parallelworks/foundation/issues/727)) ([944016e](https://github.com/parallelworks/foundation/commit/944016e675d96ea96d6ef0204891c4e4bf8ce4ae))
+* **ui:** a transcript scrolls itself to the newest turn a moment after it opens ([#723](https://github.com/parallelworks/foundation/issues/723)) ([cedc9eb](https://github.com/parallelworks/foundation/commit/cedc9eb45ddbacb804b44d565d27cf744d6912a2))
+* **ui:** nested sidebar items lose width to a deep indent ([#722](https://github.com/parallelworks/foundation/issues/722)) ([bb7dc27](https://github.com/parallelworks/foundation/commit/bb7dc27755d710af2ccf033f8962aaf637ed6f19))
+* **ui:** sending a message while scrolled up to an earlier turn leaves the view there ([#724](https://github.com/parallelworks/foundation/issues/724)) ([b9aed4b](https://github.com/parallelworks/foundation/commit/b9aed4bf193f122eef9597212df7bd8ac268ac29))
+
 ## [0.124.1](https://github.com/parallelworks/foundation/compare/ui-v0.124.0...ui-v0.124.1) (2026-11-12)
 
 
