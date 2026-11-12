@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo, useState } from 'react'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 import {
   makeAttachments,
   makeImageAttachments,
@@ -12,6 +13,8 @@ import {
   useStreamedText,
 } from '../stories/harness'
 import type { ChatMessage } from '../types'
+import { NoticeCard } from '../ui/Notice'
+import ChatInput from './ChatInput'
 import ChatMessageList from './ChatMessageList'
 
 const meta: Meta = {
@@ -140,6 +143,56 @@ function SendWhileReplyingList() {
 // it in view, picture and all, and it stays put as the reply grows above it.
 export const SendWhileReplying: StoryObj = {
   render: () => <SendWhileReplyingList />,
+}
+
+type FailedFirstSendStoryArgs = { answerMs: number }
+
+function FailedFirstSendList({ answerMs }: FailedFirstSendStoryArgs) {
+  const [shown, setShown] = useState<ChatMessage[]>([])
+  const [failed, setFailed] = useState(false)
+  const send = async (content: string) => {
+    setFailed(false)
+    setShown([makeMessage({ id: 'first', role: 'user', content })])
+    await new Promise((resolve) => setTimeout(resolve, answerMs))
+    setShown([])
+    setFailed(true)
+    return false
+  }
+  return (
+    <MessageList
+      messages={shown}
+      allMessages={shown}
+      inputElement={
+        <ChatInput
+          onSend={send}
+          conversationId="conv-failed-first-send"
+          notices={
+            failed ? <NoticeCard tone="danger">The message could not be sent.</NoticeCard> : null
+          }
+        />
+      }
+    />
+  )
+}
+
+// The first message of a conversation shows as it is sent, and goes when the
+// host answers false, leaving the list empty again. Its text returns to the
+// box under the error, as it does for a later message. The play sends one.
+export const FailedFirstSend: StoryObj<FailedFirstSendStoryArgs> = {
+  args: { answerMs: 600 },
+  argTypes: {
+    answerMs: {
+      control: { type: 'range', min: 0, max: 3_000, step: 100 },
+      description: 'How long the host takes to answer false',
+    },
+  },
+  render: (args) => <FailedFirstSendList {...args} />,
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByPlaceholderText('Ask anything')
+    await userEvent.clear(box)
+    await userEvent.type(box, 'Start the build on compute only{Enter}')
+    await waitFor(() => expect(box).toHaveValue('Start the build on compute only'))
+  },
 }
 
 const LINK =

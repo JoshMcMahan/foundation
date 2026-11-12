@@ -377,6 +377,28 @@ export default function ChatMessageList({
     }
   }, [hasContent])
 
+  // One keyed dock in both states, so the composer is not remounted as the
+  // first message comes and goes: a send it is waiting on puts its text back
+  // into the box it came from.
+  const dock = inputElement && (
+    <div key="composer" data-composer-dock="" className="sticky bottom-0 z-10">
+      {/* Rides on the composer's top edge: on its own it would stick at the
+          same bottom as the composer and sit underneath it. */}
+      {hasContent && !pinned && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className={cx(jumpClasses, 'pointer-events-auto')}
+          >
+            {strings.chrome.jumpToLatest}
+          </button>
+        </div>
+      )}
+      {inputElement}
+    </div>
+  )
+
   // If no messages and no streaming, just return empty scrollable container
   // The parent page handles the welcome/empty state UI. Queued messages still
   // render — a canceled first turn must keep them visible.
@@ -389,7 +411,7 @@ export default function ChatMessageList({
             {footer}
           </div>
         )}
-        {inputElement && <div className="sticky bottom-0 z-10">{inputElement}</div>}
+        {dock}
       </div>
     )
   }
@@ -571,24 +593,7 @@ export default function ChatMessageList({
           </button>
         </div>
       )}
-      {inputElement && (
-        <div data-composer-dock="" className="sticky bottom-0 z-10">
-          {/* Rides on the composer's top edge: on its own it would stick at the
-              same bottom as the composer and sit underneath it. */}
-          {!pinned && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
-              <button
-                type="button"
-                onClick={jumpToLatest}
-                className={cx(jumpClasses, 'pointer-events-auto')}
-              >
-                {strings.chrome.jumpToLatest}
-              </button>
-            </div>
-          )}
-          {inputElement}
-        </div>
-      )}
+      {dock}
     </div>
   )
 }

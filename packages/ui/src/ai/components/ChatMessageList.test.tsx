@@ -660,6 +660,25 @@ describe('ChatMessageList queued messages', () => {
   })
 })
 
+describe('ChatMessageList composer', () => {
+  it('keeps the composer it docks as the first message comes and goes', () => {
+    const composer = <textarea aria-label="Message" />
+    const { getByRole, rerender } = render(
+      <ChatMessageList messages={[]} allMessages={[]} inputElement={composer} />,
+    )
+    const box = getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement
+    fireEvent.change(box, { target: { value: 'still here' } })
+
+    const first = createMockMessage({ id: 'm1' })
+    rerender(<ChatMessageList messages={[first]} allMessages={[first]} inputElement={composer} />)
+    expect(getByRole('textbox', { name: 'Message' })).toBe(box)
+
+    rerender(<ChatMessageList messages={[]} allMessages={[]} inputElement={composer} />)
+    expect(getByRole('textbox', { name: 'Message' })).toBe(box)
+    expect(box.value).toBe('still here')
+  })
+})
+
 describe('ChatMessageList as a log', () => {
   it('is a labeled live log, busy while a reply streams', () => {
     const { getByRole, rerender } = render(
