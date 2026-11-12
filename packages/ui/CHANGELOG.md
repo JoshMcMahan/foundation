@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.124.0](https://github.com/parallelworks/foundation/compare/ui-v0.123.0...ui-v0.124.0) (2026-11-12)
+
+
+### Features
+
+* **ui:** session transcripts can pin the prompt of the turn in view ([#717](https://github.com/parallelworks/foundation/issues/717)) ([bf9c520](https://github.com/parallelworks/foundation/commit/bf9c520950de5c90521e3b4b1c44ae48407f5f74))
+
 ## [0.123.0](https://github.com/parallelworks/foundation/compare/ui-v0.122.3...ui-v0.123.0) (2026-11-12)
 
 
