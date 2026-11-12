@@ -445,6 +445,7 @@ export const Approvals: StoryObj<{
   resolved: boolean
   multiSelect: boolean
   subject: 'command' | 'code' | 'path' | 'call'
+  namedDirectory: boolean
   questions: number
   chat: boolean
 }> = {
@@ -453,12 +454,14 @@ export const Approvals: StoryObj<{
     resolved: false,
     multiSelect: false,
     subject: 'command',
+    namedDirectory: false,
     questions: 1,
     chat: false,
   },
   argTypes: {
     kind: { control: 'inline-radio', options: ['confirm', 'ask'] },
     subject: { control: 'inline-radio', options: ['command', 'code', 'path', 'call'] },
+    namedDirectory: { control: 'boolean', if: { arg: 'subject', eq: 'path' } },
     questions: { control: { type: 'range', min: 1, max: 4 } },
   },
   render: (args) => (
@@ -470,6 +473,12 @@ export const Approvals: StoryObj<{
       onApprovalAnswer={logAnswer}
     />
   ),
+}
+
+// A path confirm whose directory option says which directory it opens.
+export const ApprovalNamingItsDirectory: typeof Approvals = {
+  ...Approvals,
+  args: { ...Approvals.args, subject: 'path', namedDirectory: true },
 }
 
 // Denying with a reason: the field takes focus, says what it is for, and Enter

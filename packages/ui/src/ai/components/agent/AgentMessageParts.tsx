@@ -752,7 +752,7 @@ function ConfirmApproval({
               onClick={() => answer({ kind: 'confirm', allowed: true, allowDir: true })}
               className="px-3 py-1 text-xs font-medium rounded-full border theme-border hover:theme-hover"
             >
-              {t.allowDirectory}
+              {part.allowDirectoryLabel || t.allowDirectory}
             </button>
           )}
           <button
