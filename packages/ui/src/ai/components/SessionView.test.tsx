@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import type { ComponentProps } from 'react'
+import { type ComponentProps, useImperativeHandle } from 'react'
 import type { ChatMessage as Message } from '../types'
+import type ChatInput from './ChatInput'
 import type ChatMessageList from './ChatMessageList'
 import SessionView from './SessionView'
 
 const chat = { isStreaming: false, stopStreaming: vi.fn() }
+const jumpToLatest = vi.fn()
 let listProps: ComponentProps<typeof ChatMessageList> | undefined
+let composerProps: ComponentProps<typeof ChatInput> | undefined
 
 vi.mock('../core/ChatProvider', () => ({
   useChat: () => chat,
@@ -17,6 +20,7 @@ vi.mock('./ChatMessageList', () => ({
   __esModule: true,
   default: (props: ComponentProps<typeof ChatMessageList>) => {
     listProps = props
+    useImperativeHandle(props.ref, () => ({ jumpToLatest }), [])
     return (
       <div data-testid="list">
         {props.footer}
@@ -28,19 +32,18 @@ vi.mock('./ChatMessageList', () => ({
 
 vi.mock('./ChatInput', () => ({
   __esModule: true,
-  default: (props: {
-    disabled?: boolean
-    onEditLastMessage?: () => void
-    activity?: React.ReactNode
-  }) => (
-    <div
-      data-testid="composer"
-      data-disabled={String(!!props.disabled)}
-      data-edits-last={String(!!props.onEditLastMessage)}
-    >
-      {props.activity}
-    </div>
-  ),
+  default: (props: ComponentProps<typeof ChatInput>) => {
+    composerProps = props
+    return (
+      <div
+        data-testid="composer"
+        data-disabled={String(!!props.disabled)}
+        data-edits-last={String(!!props.onEditLastMessage)}
+      >
+        {props.activity}
+      </div>
+    )
+  },
 }))
 
 vi.mock('./ChatActivity', () => ({
@@ -54,7 +57,9 @@ const reply: Message = { id: 'a1', role: 'assistant', content: 'done', parentId:
 beforeEach(() => {
   chat.isStreaming = false
   chat.stopStreaming.mockReset()
+  jumpToLatest.mockReset()
   listProps = undefined
+  composerProps = undefined
 })
 
 function pressEscape(target: Element | Window = window) {
@@ -146,6 +151,22 @@ describe('SessionView', () => {
 
     expect(onEdit).toHaveBeenCalledWith(ask, 'stop it now')
     expect(listProps?.editingMessageId).toBeNull()
+  })
+
+  it('returns the list to the latest message before it sends, and hands back what the host answers', () => {
+    const order: string[] = []
+    jumpToLatest.mockImplementation(() => order.push('jump'))
+    const onSend = vi.fn(() => {
+      order.push('send')
+      return false
+    })
+    render(<SessionView sessionKey="s1" messages={[ask, reply]} onSend={onSend} />)
+
+    const answer = composerProps?.onSend('hello again')
+
+    expect(order).toEqual(['jump', 'send'])
+    expect(onSend).toHaveBeenCalledWith('hello again')
+    expect(answer).toBe(false)
   })
 
   it('offers no editing without onEdit', () => {

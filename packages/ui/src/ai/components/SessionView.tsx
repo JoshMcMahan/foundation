@@ -12,7 +12,7 @@ import { escapeClosesLayer } from '../core/useKeyboardShortcuts'
 import type { ApprovalAnswerValue, ChatMessage as Message } from '../types'
 import ChatActivity from './ChatActivity'
 import ChatInput, { type ChatInputHandle } from './ChatInput'
-import ChatMessageList from './ChatMessageList'
+import ChatMessageList, { type ChatMessageListHandle } from './ChatMessageList'
 import DragOverlay from './DragOverlay'
 import { TranscriptFindBar, useTranscriptFind } from './TranscriptFind'
 
@@ -109,6 +109,7 @@ export default function SessionView({
   find = false,
 }: SessionViewProps) {
   const inputRef = useRef<ChatInputHandle>(null)
+  const listRef = useRef<ChatMessageListHandle>(null)
   const viewRef = useRef<HTMLDivElement>(null)
   const finder = useTranscriptFind(viewRef, find)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -151,6 +152,15 @@ export default function SessionView({
   }, [])
   const { isDragging, dragHandlers } = useDragDrop({ onFilesDropped })
 
+  // A reader who scrolled up to read earlier turns still sees what they send and the reply to it.
+  const send = useCallback<typeof onSend>(
+    (...args) => {
+      listRef.current?.jumpToLatest()
+      return onSend(...args)
+    },
+    [onSend],
+  )
+
   // A turn the provider runs gets the same working line an agent session's host passes in.
   const activity = composer?.activity ?? (!turn && running ? <ChatActivity /> : undefined)
 
@@ -159,7 +169,7 @@ export default function SessionView({
       ref={inputRef}
       {...composer}
       activity={activity}
-      onSend={onSend}
+      onSend={send}
       conversationId={sessionKey}
       disabled={loading || !!composer?.disabled}
       {...(turn ? { turn } : {})}
@@ -189,6 +199,7 @@ export default function SessionView({
         <TranscriptFindBar find={finder} />
         {error ?? (
           <ChatMessageList
+            ref={listRef}
             messages={messages}
             allMessages={allMessages ?? messages}
             {...(streamingMessage !== undefined ? { streamingMessage } : {})}

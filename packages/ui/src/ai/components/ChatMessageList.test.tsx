@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render } from '@testing-library/react'
+import { act, fireEvent, render } from '@testing-library/react'
+import { createRef, type Ref } from 'react'
 import type { useChat, useChatStream } from '../core/ChatProvider'
 import type { ApprovalPart, ChatMessage as Message, ToolCallPart } from '../types'
-import ChatMessageList from './ChatMessageList'
+import ChatMessageList, { type ChatMessageListHandle } from './ChatMessageList'
 
 type ChatState = ReturnType<typeof useChat> & ReturnType<typeof useChatStream>
 
@@ -49,10 +50,15 @@ const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
   ...overrides,
 })
 
-function renderStreaming(content: string, queuedMessages?: Message[]) {
+function renderStreaming(
+  content: string,
+  queuedMessages?: Message[],
+  ref?: Ref<ChatMessageListHandle>,
+) {
   const props = {
     messages: [createMockMessage({ id: 'm1' })],
     allMessages: [] as Message[],
+    ref,
   }
   const result = render(
     <ChatMessageList
@@ -215,6 +221,26 @@ describe('ChatMessageList stick-to-bottom', () => {
     fireEvent.scroll(container)
 
     expect(container).not.toHaveClass('[overflow-anchor:none]')
+  })
+})
+
+describe('ChatMessageList jumpToLatest', () => {
+  it('returns a reader who scrolled up to the bottom and follows from there', () => {
+    const list = createRef<ChatMessageListHandle>()
+    const { container, rerenderStreaming } = renderStreaming('a', undefined, list)
+    armAtBottom(container)
+    fireEvent.wheel(container, { deltaY: -40 })
+    container.scrollTop = 200
+    fireEvent.scroll(container)
+
+    act(() => list.current?.jumpToLatest())
+    expect(container.scrollTop).toBe(1000)
+    expect(container).toHaveClass('[overflow-anchor:none]')
+
+    setDimensions(container, { scrollHeight: 1200, clientHeight: 400 })
+    rerenderStreaming('ab')
+
+    expect(container.scrollTop).toBe(1200)
   })
 })
 

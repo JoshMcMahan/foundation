@@ -2,8 +2,10 @@ import {
   type ComponentProps,
   memo,
   type ReactNode,
+  type Ref,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -79,6 +81,12 @@ interface ChatMessageListProps {
   /** Pins the prompt of the turn in view to the top once it scrolls out of
    *  sight, as a terminal transcript does; a click returns to it. */
   pinPrompt?: boolean
+  ref?: Ref<ChatMessageListHandle> | undefined
+}
+
+export interface ChatMessageListHandle {
+  /** Returns to the newest content and follows it again. */
+  jumpToLatest: () => void
 }
 
 export default function ChatMessageList({
@@ -108,6 +116,7 @@ export default function ChatMessageList({
   footer,
   workingIndicator = true,
   pinPrompt,
+  ref,
 }: ChatMessageListProps) {
   const { adapter, isStreaming: providerStreaming } = useChat()
   const { isThinking, streamingContent, streamingReasoning, streamingParts, thinkingStartTime } =
@@ -250,6 +259,8 @@ export default function ChatMessageList({
       setPinned(true)
     }
   }, [])
+
+  useImperativeHandle(ref, () => ({ jumpToLatest }), [jumpToLatest])
 
   // Attach listeners once the container exists (it is absent in the empty state)
   const queuedCount = queuedMessages?.length ?? 0
