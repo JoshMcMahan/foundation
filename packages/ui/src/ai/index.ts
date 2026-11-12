@@ -13,6 +13,7 @@ export {
   default as AgentMessageParts,
   ExpandAllProvider,
 } from './components/agent/AgentMessageParts'
+export { default as EffortPicker } from './components/agent/EffortPicker'
 export { default as PermissionPicker } from './components/agent/PermissionPicker'
 export { default as BlockedGroupBanner } from './components/BlockedGroupBanner'
 export { default as BranchNavigator } from './components/BranchNavigator'

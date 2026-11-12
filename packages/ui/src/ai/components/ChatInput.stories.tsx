@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useMemo, useState } from 'react'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { StatusBadge } from '../../components/StatusBadge'
+import { EFFORT_LEVELS, type EffortLevel } from '../agent/effort'
 import {
   DEFAULT_PERMISSION_MODE,
   NAMED_PERMISSION_MODES,
@@ -18,6 +19,7 @@ import {
 } from '../stories/harness'
 import type { MessagePaste } from '../types'
 import { NoticeCard } from '../ui/Notice'
+import EffortPicker from './agent/EffortPicker'
 import PermissionPicker from './agent/PermissionPicker'
 import ChatInput from './ChatInput'
 import { ComposerControls, ComposerUsage, ConnectToolsLink } from './ComposerChrome'
@@ -104,6 +106,7 @@ export const AgentComposer: StoryObj<{
   mode: NamedPermissionMode
   ceiling: NamedPermissionMode
   listsModes: boolean
+  effort: EffortLevel | ''
 }> = {
   args: {
     notice: true,
@@ -111,6 +114,7 @@ export const AgentComposer: StoryObj<{
     mode: DEFAULT_PERMISSION_MODE,
     ceiling: 'auto',
     listsModes: true,
+    effort: 'high',
   },
   argTypes: {
     mode: { control: 'select', options: NAMED_PERMISSION_MODES },
@@ -122,6 +126,11 @@ export const AgentComposer: StoryObj<{
     listsModes: {
       control: 'boolean',
       description: 'The machine lists the modes it accepts; off is one that predates auto',
+    },
+    effort: {
+      control: 'select',
+      options: ['', ...EFFORT_LEVELS],
+      description: "The session's effort; empty leaves it to the model's default",
     },
   },
   render: (args) => (
@@ -154,6 +163,7 @@ export const AgentComposer: StoryObj<{
               onPick={() => {}}
             />
           }
+          settingsRight={<EffortPicker effort={args.effort} onPick={() => {}} />}
           hint={args.hint || undefined}
         />
       </div>

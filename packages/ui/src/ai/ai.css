@@ -542,3 +542,34 @@
   background-color: var(--theme-accent, #06354f);
   color: var(--theme-accent-text, #fff);
 }
+
+/* The effort slider's scale turns from the theme's accent: one way round the
+ * hue circle for faster, the other way and a little deeper for smarter. Each
+ * stop takes a set lightness per scheme, so the fill reads on the panel
+ * whatever the accent's own lightness, and a gray accent keeps a gray scale
+ * rather than inventing a hue. */
+.effort-scale {
+  --effort-fast: light-dark(
+    oklch(from var(--theme-accent, #06354f) 0.6 min(calc(c * 2), 0.15) calc(h - 70)),
+    oklch(from var(--theme-accent, #5b9ccf) 0.75 min(calc(c * 2), 0.15) calc(h - 70))
+  );
+  --effort-mid: light-dark(
+    oklch(from var(--theme-accent, #06354f) 0.56 min(calc(c * 2), 0.15) h),
+    oklch(from var(--theme-accent, #5b9ccf) 0.72 min(calc(c * 2), 0.15) h)
+  );
+  --effort-smart: light-dark(
+    oklch(from var(--theme-accent, #06354f) 0.52 min(calc(c * 2), 0.15) calc(h + 50)),
+    oklch(from var(--theme-accent, #5b9ccf) 0.7 min(calc(c * 2), 0.15) calc(h + 50))
+  );
+  /* Light in either scheme, so the thumb stands off the fill under it. */
+  --effort-thumb: light-dark(var(--theme-panel-bg, #fcfeff), var(--theme-app, #e9f1fa));
+}
+
+.effort-scale-fill {
+  background: linear-gradient(
+    to right in oklch,
+    var(--effort-fast),
+    var(--effort-mid),
+    var(--effort-smart)
+  );
+}

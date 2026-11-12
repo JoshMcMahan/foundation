@@ -262,6 +262,22 @@ export interface ChatStrings {
     bypassPermissionsHint: string
     planHint: string
   }
+  effort: {
+    /** Names the picker, its panel and its slider for assistive technology. */
+    choose: string
+    /** The chip and the panel's heading at each stop; `default` leaves the level to the model. */
+    default: string
+    none: string
+    minimal: string
+    low: string
+    medium: string
+    high: string
+    xhigh: string
+    max: string
+    /** Under the slider's two ends. */
+    faster: string
+    smarter: string
+  }
   agentTranscript: {
     running: string
     done: string
@@ -633,6 +649,19 @@ export const defaultChatStrings: ChatStrings = {
     bypassPermissionsHint:
       'Every action is taken without asking, including commands that change the system.',
     planHint: 'The workspace is left unchanged while a plan is drafted.',
+  },
+  effort: {
+    choose: 'Effort',
+    default: 'Default effort',
+    none: 'No reasoning',
+    minimal: 'Minimal effort',
+    low: 'Low effort',
+    medium: 'Medium effort',
+    high: 'High effort',
+    xhigh: 'Extra high effort',
+    max: 'Max effort',
+    faster: 'Faster',
+    smarter: 'Smarter',
   },
   agentTranscript: {
     running: 'Running…',

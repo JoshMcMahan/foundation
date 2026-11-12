@@ -13,6 +13,7 @@ import * as imageViewer from './components/AttachmentImageViewer.stories'
 import * as attachments from './components/AttachmentManager.stories'
 import * as attachmentUpload from './components/AttachmentUpload.stories'
 import * as agentParts from './components/agent/AgentMessageParts.stories'
+import * as effortPicker from './components/agent/EffortPicker.stories'
 import * as emptyState from './components/ChatEmptyState.stories'
 import * as composer from './components/ChatInput.stories'
 import * as layout from './components/ChatLayout.stories'
@@ -30,6 +31,7 @@ import * as notices from './ui/Notice.stories'
 
 const SUITES = {
   agentParts,
+  effortPicker,
   attachments,
   attachmentUpload,
   imageViewer,
