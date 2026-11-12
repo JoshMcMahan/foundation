@@ -19,8 +19,8 @@ import { useReducedMotion } from '../reducedMotion'
 // transition is armed only for this Reveal's own open/close (via `open` flipping);
 // when a nested Reveal (a matrix member's steps) widens the content, we track it
 // instantly instead of re-transitioning, else the outer box trails the inner
-// reveal by its own 200ms. Off (the summary sidebar) leaves width to normal flow
-// so long names/icons wrap.
+// reveal by its own 200ms. Off (the summary sidebar) holds the content to the
+// sidebar's width, which cuts long names short.
 const EASE = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
 const ROWS_TRANSITION = `grid-template-rows 200ms ${EASE}`
 const FULL_TRANSITION = `${ROWS_TRANSITION}, width 200ms ${EASE}`
@@ -104,7 +104,7 @@ export function Reveal({
     >
       <div
         ref={contentRef}
-        className="min-h-0"
+        className="min-h-0 min-w-0"
         {...(growWidth ? { style: { width: 'max-content' } } : {})}
       >
         {renderChildren ? children : null}
