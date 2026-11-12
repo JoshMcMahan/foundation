@@ -99,15 +99,15 @@ export function thinkingHeading(raw: string): string {
   return clip(sanitizeLabel(line), 60)
 }
 
-const INTERRUPTED_MARKER = '[Request interrupted by the user.]'
+/** How a turn the user cut short reads, whether replayed or watched live. */
+export const INTERRUPTED_NOTICE = 'Request interrupted by the user.'
 
-/** How a turn cut short reads, whether replayed or watched live. */
-export const INTERRUPTED_NOTICE = INTERRUPTED_MARKER.slice(1, -1)
-
-/** The line the daemon files as the assistant's when a turn is cut short;
- *  it is a status, not something the model said. */
+/** The line the daemon files as the assistant's when a turn is cut short, by
+ *  the user or for a reason it names ("[Request interrupted because …]"); it
+ *  is a status, not something the model said. */
 export function interruptionNotice(text: string): string | null {
-  return text.trim() === INTERRUPTED_MARKER ? INTERRUPTED_NOTICE : null
+  const line = text.trim()
+  return line.startsWith('[Request interrupted ') && line.endsWith('.]') ? line.slice(1, -1) : null
 }
 
 export function firstNonEmptyLine(text: string, max: number): string {

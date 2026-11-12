@@ -1,10 +1,33 @@
 import {
   askQuestionsFromArgs,
   hiddenTranscriptTool,
+  INTERRUPTED_NOTICE,
+  interruptionNotice,
   parseSubagentNotice,
   subagentDeliveryLine,
   taskCallFromArgs,
 } from './transcript'
+
+describe('interruptionNotice', () => {
+  it("reads the user's stop as the live notice does", () => {
+    expect(interruptionNotice('[Request interrupted by the user.]\n')).toBe(INTERRUPTED_NOTICE)
+  })
+
+  it('reads a stop the user did not make with the reason the daemon gave', () => {
+    expect(interruptionNotice('[Request interrupted because the server stopped.]')).toBe(
+      'Request interrupted because the server stopped.',
+    )
+    expect(interruptionNotice('[Request interrupted because its deadline expired.]')).toBe(
+      'Request interrupted because its deadline expired.',
+    )
+  })
+
+  it("leaves the model's own words alone", () => {
+    expect(interruptionNotice('Request interrupted by the user.')).toBeNull()
+    expect(interruptionNotice('[Request interrupted] the build, then retried it.')).toBeNull()
+    expect(interruptionNotice('Done.')).toBeNull()
+  })
+})
 
 describe('taskCallFromArgs', () => {
   it('prefers the description and drops the default agent type', () => {
