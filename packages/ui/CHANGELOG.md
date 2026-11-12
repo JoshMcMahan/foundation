@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.127.0](https://github.com/parallelworks/foundation/compare/ui-v0.126.0...ui-v0.127.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** icons, the visual editors' text and the file explorer's defaults load with the pages that show them ([#732](https://github.com/parallelworks/foundation/issues/732))
+
+### Bug Fixes
+
+* **ui:** a run's graph zooms back out at each update after you zoom in ([#713](https://github.com/parallelworks/foundation/issues/713)) ([ceee330](https://github.com/parallelworks/foundation/commit/ceee33072853c6bd70b6b21f622c663352b79aaa))
+
+
+### Performance Improvements
+
+* **ui:** icons, the visual editors' text and the file explorer's defaults load with the pages that show them ([#732](https://github.com/parallelworks/foundation/issues/732)) ([fa0dd55](https://github.com/parallelworks/foundation/commit/fa0dd5597cfeb42a0fd7527bd5914f5afb80f66f))
+
 ## [0.126.0](https://github.com/parallelworks/foundation/compare/ui-v0.125.0...ui-v0.126.0) (2026-11-12)
 
 
