@@ -8,6 +8,7 @@ import {
   makeEditDiffPart,
   makeImageAttachments,
   makeMessage,
+  makeStaticAdapter,
   makeSubagentParts,
   makeTodoSnapshot,
   makeToolCallPart,
@@ -841,41 +842,49 @@ const notice = (raw: string): MessagePart => {
 
 export const TranscriptExtras: StoryObj = {
   name: 'Images, command output, plans and background notices',
-  render: () => (
-    <AgentMessageParts
-      message={makeMessage({
-        content: null,
-        parts: [
-          { kind: 'image', images: makeImageAttachments().slice(0, 2) },
-          {
-            kind: 'notice',
-            text: '! git status --short',
-            detail: '```\n M go.mod\n?? notes.md\n```',
-            open: true,
-          },
-          {
-            kind: 'approval',
-            id: 'plan',
-            approvalKind: 'plan',
-            plan: '## Plan\n\n1. Raise the retry budget.\n2. Add a test for the second retry.',
-            resolved: true,
-            answer: 'Approved',
-            canAllowDirectory: false,
-          },
-          notice(
-            '[Background subagent task-2 (Audit the config loader) completed after 2m59s]\nNo issues found.',
-          ),
-          notice(
-            '[Background subagent task-3 (Rerun the flaky suite) failed after 41s]\nThe runner timed out.',
-          ),
-          notice(
-            '[Message from subagent task-4 (Map routes) — it is still working]\nHalf way through.',
-          ),
-          notice('[Background command bash-1 (npm test) exited with code 1]'),
-        ],
-      })}
-    />
-  ),
+  render: () => <TranscriptExtrasExample />,
+}
+
+function TranscriptExtrasExample() {
+  // A chat whose adapter serves attachments, so a call's pictures open at full size.
+  const adapter = useMemo(() => makeStaticAdapter({ attachments: true }), [])
+  return (
+    <StoryChat adapter={adapter}>
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: [
+            { kind: 'image', images: makeImageAttachments().slice(0, 2) },
+            {
+              kind: 'notice',
+              text: '! git status --short',
+              detail: '```\n M go.mod\n?? notes.md\n```',
+              open: true,
+            },
+            {
+              kind: 'approval',
+              id: 'plan',
+              approvalKind: 'plan',
+              plan: '## Plan\n\n1. Raise the retry budget.\n2. Add a test for the second retry.',
+              resolved: true,
+              answer: 'Approved',
+              canAllowDirectory: false,
+            },
+            notice(
+              '[Background subagent task-2 (Audit the config loader) completed after 2m59s]\nNo issues found.',
+            ),
+            notice(
+              '[Background subagent task-3 (Rerun the flaky suite) failed after 41s]\nThe runner timed out.',
+            ),
+            notice(
+              '[Message from subagent task-4 (Map routes) — it is still working]\nHalf way through.',
+            ),
+            notice('[Background command bash-1 (npm test) exited with code 1]'),
+          ],
+        })}
+      />
+    </StoryChat>
+  )
 }
 
 export const ExpandAll: StoryObj<{ expandAll: boolean }> = {

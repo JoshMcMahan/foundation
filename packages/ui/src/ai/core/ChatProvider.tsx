@@ -14,6 +14,7 @@ import { usePersistedState } from '../../components/Provider'
 import { toast } from '../../components/Toast'
 import type { CompletionMessage } from '../adapter/openai/wire'
 import {
+  type AttachmentsAdapter,
   type ChatAdapter,
   ChatAdapterError,
   type ChatToolOption,
@@ -279,6 +280,12 @@ export function useChat() {
  *  menu offers; false outside a ChatProvider. */
 export function useHasChatTools(): boolean {
   return (useContext(ChatContext)?.tools.length ?? 0) > 0
+}
+
+/** The adapter's attachments; undefined outside a ChatProvider or when the
+ *  adapter has none. */
+export function useChatAttachments(): AttachmentsAdapter | undefined {
+  return useContext(ChatContext)?.adapter.attachments
 }
 
 /** The reply being streamed. A component that reads it re-renders on every

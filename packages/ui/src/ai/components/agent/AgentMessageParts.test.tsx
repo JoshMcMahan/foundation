@@ -15,6 +15,14 @@ vi.mock('../../../logviewer/index', () => ({
   LogViewer: ({ log }: { log: string }) => <div data-testid="logviewer">{log}</div>,
 }))
 
+const chatAttachments = vi.hoisted(() => ({
+  current: undefined as { downloadUrl(id: string): string } | undefined,
+}))
+vi.mock('../../core/ChatProvider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../core/ChatProvider')>()),
+  useChatAttachments: () => chatAttachments.current,
+}))
+
 function msg(parts: MessagePart[]): ChatMessage {
   return { id: 'm1', role: 'assistant', parts }
 }
@@ -480,6 +488,44 @@ describe('transcript features', () => {
       },
     ])
     expect(screen.getByRole('img', { name: 'shot.png' })).toBeInTheDocument()
+  })
+
+  it('opens a picture a call returned at full size, not as its preview', async () => {
+    chatAttachments.current = { downloadUrl: (id) => `/full/${id}` }
+    const loads: string[] = []
+    vi.stubGlobal(
+      'Image',
+      class {
+        set src(value: string) {
+          loads.push(value)
+        }
+      },
+    )
+    try {
+      renderParts([
+        {
+          kind: 'image',
+          images: [
+            {
+              id: 'i1',
+              previewUrl: 'data:image/png;base64,AAAA',
+              filename: 'shot.png',
+              contentType: 'image/png',
+              size: 4096,
+              uploadedAt: '',
+            },
+          ],
+        },
+      ])
+      const thumbnail = screen.getByRole('link', { name: 'shot.png' })
+      expect(thumbnail).toHaveAttribute('href', '/full/i1')
+      fireEvent.click(thumbnail)
+      await screen.findByRole('dialog', { name: 'shot.png' })
+      expect(loads).toContain('/full/i1')
+    } finally {
+      chatAttachments.current = undefined
+      vi.unstubAllGlobals()
+    }
   })
 
   it('shows a command’s output under its line without a toggle', () => {

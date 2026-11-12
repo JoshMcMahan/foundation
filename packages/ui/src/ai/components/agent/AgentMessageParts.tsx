@@ -44,10 +44,12 @@ import {
   toolSummary,
 } from '../../agent/toolfmt'
 import { thinkingHeading } from '../../agent/transcript'
+import { useChatAttachments } from '../../core/ChatProvider'
 import { type PartRendererProps, useChatConfig } from '../../core/config'
 import type { ChatStrings } from '../../strings'
 import type {
   ApprovalPart,
+  AttachmentRef,
   MessagePart,
   NoticePart,
   ReasoningPart,
@@ -1104,11 +1106,24 @@ const BuiltinPart = memo(function BuiltinPart({
     case 'todo_snapshot':
       return <TodoSnapshotBlock part={part} />
     case 'image':
-      return <MessageAttachments attachments={part.images} className="mt-1.5 sm:ml-5" />
+      return <CallImages images={part.images} />
     default:
       return null
   }
 })
+
+/** The pictures a call returned. Each opens at full size through the
+ *  adapter, as a message's own attachments do, not as its inline preview. */
+function CallImages({ images }: { images: AttachmentRef[] }) {
+  const attachments = useChatAttachments()
+  const downloadUrl = useMemo(
+    () => (attachments ? (id: string) => attachments.downloadUrl(id) : undefined),
+    [attachments],
+  )
+  return (
+    <MessageAttachments attachments={images} downloadUrl={downloadUrl} className="mt-1.5 sm:ml-5" />
+  )
+}
 
 type RunMember = { part: ToolCallPart | ReasoningPart; index: number }
 
