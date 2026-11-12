@@ -34,6 +34,7 @@
     "./ai": "./src/ai/index.ts",
     "./ai/openai": "./src/ai/adapter/openai/index.ts",
     "./ai/mock": "./src/ai/adapter/mock/index.ts",
+    "./ai/session": "./src/ai/session/index.ts",
     "./ai.css": "./src/ai/ai.css",
     "./app-frame": "./src/app-frame/index.tsx",
     "./app-frame.css": "./src/app-frame/app-frame.css",
@@ -105,6 +106,10 @@
       "./ai/mock": {
         "types": "./dist/ai/adapter/mock/index.d.ts",
         "import": "./dist/ai/adapter/mock/index.js"
+      },
+      "./ai/session": {
+        "types": "./dist/ai/session/index.d.ts",
+        "import": "./dist/ai/session/index.js"
       },
       "./ai.css": "./dist/ai/ai.css",
       "./app-frame": {
