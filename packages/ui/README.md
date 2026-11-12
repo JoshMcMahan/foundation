@@ -1445,6 +1445,31 @@ Frame styles use the `pw-ui` cascade layer. Put broad host element defaults
 (such as anchor colors and scrollbar styling) in a lower-priority layer declared
 before the package styles, so they do not replace navigation states.
 
+On a narrow screen a page's own list, such as its conversations, can take the
+place of the app's navigation instead of opening a second drawer. The host owns
+the frame and the page owns the list, so the host holds the handoff:
+
+```tsx
+const takeover = useAppFrameTakeover(narrow && pageHasList)
+
+;<AppFrameTakeover value={takeover.takeover}>
+  <AppFrame
+    brand={takeover.active ? <AppFrameTakeoverBack onBack={takeover.showNavigation} /> : <Brand />}
+    navigation={takeover.active ? takeover.navigation : <MainNavigation />}
+  >
+    {page}
+  </AppFrame>
+</AppFrameTakeover>
+```
+
+The page renders `AppFrameListTakeover` with its groups of rows, which appear
+in the frame's navigation while the takeover is active. A row is a link
+(`href`) or, in an app with no addresses, a button (`onClick`), and carries
+its menu behind a button that is always shown, since a touch screen has no
+hover to reveal it. Closing the drawer on the app's navigation returns it to
+the list for next time. Pass `label` to `AppFrameTakeoverBack` and `moreLabel`
+to the list in the app's language.
+
 Applications that supply their own navigation items can load only the layout:
 
 ```tsx

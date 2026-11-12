@@ -738,3 +738,13 @@ export function AppFrameNavGroup({
     </Collapsible.Root>
   )
 }
+
+export {
+  AppFrameListTakeover,
+  AppFrameTakeover,
+  AppFrameTakeoverBack,
+  type AppFrameTakeoverGroup,
+  type AppFrameTakeoverRow,
+  type AppFrameTakeoverState,
+  useAppFrameTakeover,
+} from './takeover'
