@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.123.0](https://github.com/parallelworks/foundation/compare/ui-v0.122.3...ui-v0.123.0) (2026-11-12)
+
+
+### Features
+
+* **ui:** a command the person ran keeps its answer under their message, with a plan it showed in a box ([#714](https://github.com/parallelworks/foundation/issues/714)) ([d7f4cdc](https://github.com/parallelworks/foundation/commit/d7f4cdc36d2aca61f1e33909e3f8a787a063a6db))
+
+
+### Bug Fixes
+
+* **ui:** a first message that fails to send leaves the composer empty ([#715](https://github.com/parallelworks/foundation/issues/715)) ([3c90a89](https://github.com/parallelworks/foundation/commit/3c90a896d77cd627fb92a39a13e842277cc89317))
+* **ui:** deleting a sidebar group's last row from the keyboard moves focus to the next group's heading, not its first row ([#710](https://github.com/parallelworks/foundation/issues/710)) ([8d1dcbb](https://github.com/parallelworks/foundation/commit/8d1dcbbf063e9645ca02ab405efeeaa609a79b9e))
+
 ## [0.122.3](https://github.com/parallelworks/foundation/compare/ui-v0.122.2...ui-v0.122.3) (2026-11-11)
 
 
