@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.126.0](https://github.com/parallelworks/foundation/compare/ui-v0.125.0...ui-v0.126.0) (2026-11-12)
+
+
+### Features
+
+* **ui:** an approval's directory option can name the directory it opens ([#731](https://github.com/parallelworks/foundation/issues/731)) ([e0c3fd3](https://github.com/parallelworks/foundation/commit/e0c3fd30eab8aa3a45a45abfea24db906c1b4767))
+* **ui:** hosts can start loading the markdown renderer before any markdown shows ([#728](https://github.com/parallelworks/foundation/issues/728)) ([27885b1](https://github.com/parallelworks/foundation/commit/27885b1fb9978d27cbdd53ebe411391685dd391b))
+
+
+### Bug Fixes
+
+* **ui:** a picture a tool call returned opens as its blurry preview, not the full image ([#730](https://github.com/parallelworks/foundation/issues/730)) ([0d13ca3](https://github.com/parallelworks/foundation/commit/0d13ca371365b3b7c3c3eb980b6af37cbcdefeeb))
+
 ## [0.125.0](https://github.com/parallelworks/foundation/compare/ui-v0.124.1...ui-v0.125.0) (2026-11-12)
 
 
