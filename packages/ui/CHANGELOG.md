@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.124.1](https://github.com/parallelworks/foundation/compare/ui-v0.124.0...ui-v0.124.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ui:** a turn stopped for a reason other than the user reads as the model's words, in brackets ([#720](https://github.com/parallelworks/foundation/issues/720)) ([a8ffa99](https://github.com/parallelworks/foundation/commit/a8ffa99a06eb5dfac4d8939f77d9899fcbe2e955))
+
 ## [0.124.0](https://github.com/parallelworks/foundation/compare/ui-v0.123.0...ui-v0.124.0) (2026-11-12)
 
 
