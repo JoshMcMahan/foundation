@@ -2,7 +2,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
-import { useStrings } from '../components/Provider'
 import { Table } from '../components/Table'
 import { cx } from '../cx'
 import { listTableFixedProps } from '../list/index'
@@ -11,6 +10,7 @@ import { FileRowsWindow, spacerHeights } from './FileRowsWindow'
 import { FileTableHeaders } from './FileTableHeaders'
 import { LOAD_MORE_ROW_HEIGHT, type LoadMoreState } from './LoadMoreRow'
 import type { TreeNode } from './lib/types'
+import { useFileExplorerStrings } from './strings'
 
 interface FileTableProps {
   nodes: TreeNode[]
@@ -56,7 +56,7 @@ export function FileTable({
   // Rows start below the <thead>, not at scrollTop 0.
   const [theadHeight, setTheadHeight] = useState(0)
   const rowIdPrefix = useId()
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
 
   useLayoutEffect(() => {
     const thead = scrollEl?.querySelector('thead')

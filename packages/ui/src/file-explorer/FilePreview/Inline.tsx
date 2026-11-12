@@ -1,9 +1,9 @@
 import { Button } from '../../components/Button'
-import { useStrings } from '../../components/Provider'
 import { formatBytes } from '../../format'
 import { ExpandIcon } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
 import { exceededTransferLimit } from '../lib/utils'
+import { useFileExplorerStrings } from '../strings'
 import { getPreviewKind } from './previewType'
 import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
@@ -27,7 +27,7 @@ export function FilePreviewInline({
   onDownload,
   active = true,
 }: FilePreviewInlineProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { url, loading, error, errorDetail } = usePresignedUrl(node, getPresignedUrl, {
     enabled: active,
     linkErrorMessage: t.preview.linkError,

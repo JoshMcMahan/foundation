@@ -16,6 +16,7 @@ import {
 } from '../../icons'
 import type { TreeNode, TStorage } from '../lib/types'
 import { exceededTransferLimit } from '../lib/utils'
+import { useFileExplorerStrings } from '../strings'
 import { getPreviewKind, type PreviewKind } from './previewType'
 import { StreamedBadge } from './StreamedBadge'
 import { usePresignedUrl } from './usePresignedUrl'
@@ -54,7 +55,7 @@ export function FilePreview({
   onDownload,
   onCopyUri,
 }: FilePreviewProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { common } = useStrings()
   const [style, setStyle] = usePersistedState<PreviewStyle>('fileExplorer.previewStyle', 'compact')
   const [zoom, setZoom] = useState(ZOOM_FIT)

@@ -4,7 +4,6 @@ import { Callout } from '../components/Callout'
 import { ProgressBar } from '../components/Meter'
 import {
   type UIData,
-  type UIStrings,
   usePersistedState,
   useProvisionCorsRules,
   useSlots,
@@ -37,6 +36,7 @@ import { FailureDetail } from './errorText'
 import { CorsError } from './lib/errors'
 import type { TreeNode, TStorage, UploadNode } from './lib/types'
 import { carriesFiles, getFileExtension } from './lib/utils'
+import { type FileExplorerText, useFileExplorerStrings } from './strings'
 
 const SIDEBAR_WIDTH_STORAGE_KEY = 'fileExplorerSidebarWidth'
 const SIDEBAR_WIDTH_DEFAULT = 300
@@ -105,7 +105,7 @@ const extensionIconMap = [
 // A storage's own image, else its fallback or the host's for its type, which also stands in if its own fails.
 function StorageImage({ node }: { node: TreeNode }) {
   const { storageIconUrl } = useSlots()
-  const alt = useStrings().fileExplorer.chrome.storageIconAlt
+  const alt = useFileExplorerStrings().chrome.storageIconAlt
   const fallbackSrc =
     node.storageFallbackImageUrl ??
     (node.storageNodeIcon ? storageIconUrl?.({ type: node.storageNodeIcon }) : undefined)
@@ -219,7 +219,7 @@ function renderUploadNodes(uploadNodes: UploadNode[]) {
 }
 
 function NoFileSelectedPreview() {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="flex flex-col items-center max-w-sm text-center">
@@ -235,7 +235,7 @@ function NoFileSelectedPreview() {
 
 /** Shown instead of a skeleton that has nothing left to wait for. */
 function NotFoundPreview({ path, onRetry }: { path: string; onRetry: () => void }) {
-  const t = useStrings().fileExplorer.notFound
+  const t = useFileExplorerStrings().notFound
   const { common } = useStrings()
   const name = path.replace(/\/$/, '').split('/').pop() || path
   return (
@@ -266,8 +266,8 @@ function CorsIssuePreview({
   selectedStorage: TStorage | null
   onRefresh?: CorsAwareRefresh | undefined
 }) {
-  const t = useStrings().fileExplorer.cors
-  const messages = useStrings().fileExplorer.messages
+  const t = useFileExplorerStrings().cors
+  const messages = useFileExplorerStrings().messages
   const { common } = useStrings()
   const provisionCorsRules = useProvisionCorsRules()
   const [isPending, startTransition] = useTransition()
@@ -323,7 +323,7 @@ function CorsIssuePreview({
 const CORS_PROPAGATION_BUDGET_MS = 60_000
 
 function CorsPropagatingPreview() {
-  const t = useStrings().fileExplorer.cors.propagating
+  const t = useFileExplorerStrings().cors.propagating
   const [start] = useState(Date.now)
   const elapsedMs = useElapsed(start) ?? 0
 
@@ -473,7 +473,7 @@ function NoDataAvailablePreview({
   className?: string
   canWrite?: boolean
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { common } = useStrings()
   if (error instanceof CorsError) {
     return (
@@ -592,7 +592,7 @@ interface IShareFileButtonProps {
 }
 
 function ShareFileButton({ node, onShare }: IShareFileButtonProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const [isPending, startTransition] = useTransition()
 
   return (
@@ -623,7 +623,7 @@ async function addCorsRules({
   onRefresh,
 }: {
   provision: NonNullable<UIData['provisionCorsRules']>
-  strings: UIStrings['fileExplorer']['messages']
+  strings: FileExplorerText['messages']
   csp: string | undefined
   type?: string | undefined
   username: string | undefined

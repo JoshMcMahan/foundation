@@ -29,3 +29,4 @@ export {
   isClientValid,
   removeLeadingAndTrailingSlashes,
 } from './lib/utils'
+export { FILE_EXPLORER_STRINGS, type FileExplorerText, useFileExplorerStrings } from './strings'

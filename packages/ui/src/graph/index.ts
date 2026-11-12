@@ -3,13 +3,14 @@ export {
   default as DependencyGraph,
   type ViewMode,
 } from './DependencyGraph'
+export { EditorTextProvider } from './EditorTextProvider'
 export type {
   DependencyGraphEditor,
   EditorProblem,
   RevealTarget,
 } from './editorApi'
 export { trackDrag } from './editorPrimitives'
-export { GRAPH_EDITOR_STRINGS, INPUTS_EDITOR_STRINGS } from './editorStrings'
+export { type EditorText, GRAPH_EDITOR_STRINGS, INPUTS_EDITOR_STRINGS } from './editorStrings'
 export {
   JOB_FIELDS,
   RETRY_FIELDS,

@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Loader } from '../components/Loader'
 import { useStrings } from '../components/Provider'
 import { Tooltip } from '../components/Tooltip'
+import { useFileExplorerStrings } from './strings'
 import { useNearEnd } from './useNearEnd'
 
 /** The virtualizer sizes this row from the constant, never by measuring it. */
@@ -41,7 +42,7 @@ export function LoadMoreRow({
   root,
   onLoadMore,
 }: LoadMoreRowProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { common } = useStrings()
   const ref = useRef<HTMLTableRowElement>(null)
 

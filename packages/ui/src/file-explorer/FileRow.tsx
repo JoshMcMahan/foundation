@@ -3,7 +3,6 @@ import { type ReactNode, useRef } from 'react'
 import { AppLink, isPlainClick } from '../components/AppLink'
 import type { OpenMenu } from '../components/ContextMenu'
 import type { MenuEntry } from '../components/MenuEntries'
-import { useStrings } from '../components/Provider'
 import { RelativeTime } from '../components/relativeTime'
 import { Table } from '../components/Table'
 import { Tooltip } from '../components/Tooltip'
@@ -20,6 +19,7 @@ import {
   STRETCHED_LINK_ROW,
 } from '../list/ListTable'
 import type { TreeNode } from './lib/types'
+import { useFileExplorerStrings } from './strings'
 
 // Measured row pitch, hairline included. `height` on a `<tr>` is only a minimum,
 // so a value under the natural height is silently ignored and the virtualizer's
@@ -105,7 +105,7 @@ export function UserRow({
   openMenu: OpenMenu
   onOpen: (node: TreeNode) => void
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { active: menuActive, openMenu: openRowMenu } = useRowMenuActive(openMenu)
   return (
     <tr
@@ -158,7 +158,7 @@ export function FileRow({
   onToggleCheck,
   onPreview,
 }: FileRowProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { active: menuActive, openMenu: openRowMenu } = useRowMenuActive(openMenu)
   const row = useRef<HTMLTableRowElement>(null)
   const items = () => getItems(row.current)

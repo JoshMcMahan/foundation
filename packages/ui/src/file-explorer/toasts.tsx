@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Callout } from '../components/Callout'
 import { IconButton } from '../components/IconButton'
 import { type BarTone, ProgressBar } from '../components/Meter'
-import { type UIStrings, useStrings } from '../components/Provider'
+import { useStrings } from '../components/Provider'
 import { toneIcon } from '../components/tone'
 import { cx } from '../cx'
 import { formatBytes, formatTimeLeft } from '../format'
@@ -18,8 +18,9 @@ import {
   WarningIcon,
 } from '../icons'
 import type { UploadFileProgress, UploadSession } from './lib/types'
+import { type FileExplorerText, useFileExplorerStrings } from './strings'
 
-type UploadStrings = UIStrings['fileExplorer']['upload']
+type UploadStrings = FileExplorerText['upload']
 
 // The badge is a graphic, so the icon takes the status's vivid shade over its tint.
 function getSessionStatusInfo(session: UploadSession, queueLength: number, strings: UploadStrings) {
@@ -94,7 +95,8 @@ interface FileProgressBarProps {
 }
 
 function FileProgressBar({ fileProgress, fileName, onCancelFile }: FileProgressBarProps) {
-  const { common, fileExplorer } = useStrings()
+  const { common } = useStrings()
+  const fileExplorer = useFileExplorerStrings()
   const strings = fileExplorer.upload
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
@@ -188,7 +190,8 @@ export function UploadSessionToast({
   onCancel,
   onCancelFile,
 }: UploadSessionToastProps) {
-  const { common, fileExplorer } = useStrings()
+  const { common } = useStrings()
+  const fileExplorer = useFileExplorerStrings()
   const strings = fileExplorer.upload
   const [isToastExpanded, setIsToastExpanded] = useState(false)
   const [isFileListExpanded, setIsExpanded] = useState(session.uploadNodes.length <= 3)
