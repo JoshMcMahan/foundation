@@ -40,6 +40,10 @@ export interface SessionViewProps {
    *  drives the composer's Stop and Escape in place of the provider's stream. */
   turn?: { running: boolean; onStop: () => void; stopping?: boolean }
   onSend: ComponentProps<typeof ChatInput>['onSend']
+  /** Whether a send adds to the transcript, which returns the list to its
+   *  newest message first. A command that only opens a picker does not, and
+   *  leaves the reader where they are. Every send does when unset. */
+  addsToTranscript?: (content: string) => boolean
   /** Resends an edited user message as a new branch. Without it, messages
    *  cannot be edited. */
   onEdit?: (message: Message, content: string) => void
@@ -89,6 +93,7 @@ export default function SessionView({
   queueDelivery,
   turn,
   onSend,
+  addsToTranscript,
   onEdit,
   onRegenerate,
   onRetry,
@@ -163,10 +168,12 @@ export default function SessionView({
   // A reader who scrolled up to read earlier turns still sees what they send and the reply to it.
   const send = useCallback<typeof onSend>(
     (...args) => {
-      listRef.current?.jumpToLatest()
+      if (addsToTranscript?.(args[0]) ?? true) {
+        listRef.current?.jumpToLatest()
+      }
       return onSend(...args)
     },
-    [onSend],
+    [onSend, addsToTranscript],
   )
 
   // A turn the provider runs gets the same working line an agent session's host passes in.

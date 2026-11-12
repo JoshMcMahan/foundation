@@ -10,6 +10,7 @@ import {
   StoryViewport,
 } from '../stories/harness'
 import type { ChatMessage } from '../types'
+import { NoticeCard } from '../ui/Notice'
 import SessionView from './SessionView'
 
 const meta: Meta = {
@@ -196,6 +197,58 @@ export const OpeningSession: StoryObj<OpeningSessionArgs> = {
   args: { fetchMs: 600 },
   argTypes: { fetchMs: { control: { type: 'range', min: 0, max: 3000, step: 100 } } },
   render: (args) => <OpeningSessionExample {...args} />,
+}
+
+type PickerCommandArgs = { pickerCommand: string }
+
+const PICKER_SESSION = makeLongConversation(30, 'picker-command').messages
+
+function PickerCommandExample({ pickerCommand }: PickerCommandArgs) {
+  const [messages, setMessages] = useState(PICKER_SESSION)
+  const [picking, setPicking] = useState(false)
+  const opensPicker = (content: string) => content.trim() === pickerCommand
+  return (
+    <StoryChat>
+      <StoryViewport>
+        <SessionView
+          sessionKey="story-picker-command"
+          messages={messages}
+          onSend={(content) => {
+            if (opensPicker(content)) {
+              setPicking(true)
+              return true
+            }
+            setMessages((current) => [
+              ...current,
+              makeMessage({ role: 'user', content }),
+              makeMessage({ content: 'On it.' }),
+            ])
+            return true
+          }}
+          addsToTranscript={(content) => !opensPicker(content)}
+          flush
+          foldEveryRun
+          workingIndicator={false}
+          composer={{
+            notices: picking && (
+              <NoticeCard onDismiss={() => setPicking(false)}>
+                Pick a model for this session.
+              </NoticeCard>
+            ),
+          }}
+        />
+      </StoryViewport>
+    </StoryChat>
+  )
+}
+
+/** Scrolled up to an earlier turn, a send returns the view to the newest
+ *  message, unless the host says it adds nothing to the transcript: here
+ *  pickerCommand opens a picker by the composer, and the view stays put. */
+export const PickerCommand: StoryObj<PickerCommandArgs> = {
+  args: { pickerCommand: '/model' },
+  argTypes: { pickerCommand: { control: 'text' } },
+  render: (args) => <PickerCommandExample {...args} />,
 }
 
 /** Scrolled back into the first turn, the pin shows that turn's prompt. */

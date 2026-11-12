@@ -169,6 +169,25 @@ describe('SessionView', () => {
     expect(answer).toBe(false)
   })
 
+  it('leaves the list where it is for a send the host says adds nothing to the transcript', () => {
+    const onSend = vi.fn()
+    render(
+      <SessionView
+        sessionKey="s1"
+        messages={[ask, reply]}
+        onSend={onSend}
+        addsToTranscript={(content) => content !== '/model'}
+      />,
+    )
+
+    composerProps?.onSend('/model')
+    expect(jumpToLatest).not.toHaveBeenCalled()
+    expect(onSend).toHaveBeenCalledWith('/model')
+
+    composerProps?.onSend('hello again')
+    expect(jumpToLatest).toHaveBeenCalledTimes(1)
+  })
+
   it('offers no editing without onEdit', () => {
     render(<SessionView sessionKey="s1" messages={[ask]} onSend={vi.fn()} />)
     expect(listProps?.onEditMessage).toBeUndefined()
