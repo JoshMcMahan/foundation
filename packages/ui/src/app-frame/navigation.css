@@ -207,9 +207,10 @@
     /* An auto column grows to the longest label, pushing each row's action out of the sidebar. */
     grid-template-columns: minmax(0, 1fr);
   }
-  /* Nested items start under their group's label. */
+  /* Nested items keep their group's icon column, as top-level items do, so nesting costs
+     the sidebar no width; --pw-frame-nav-indent steps them in where a tree needs it. */
   .pw-frame-nav-group-nested {
-    margin-inline-start: var(--pw-frame-nav-indent, 26px);
+    margin-inline-start: var(--pw-frame-nav-indent, 0px);
   }
   .pw-frame-nav-group {
     padding-block: 4px;
