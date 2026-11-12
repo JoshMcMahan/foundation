@@ -36,6 +36,17 @@ function controls(element: Element): HTMLElement[] {
   return [...element.querySelectorAll<HTMLElement>(FOCUSABLE)]
 }
 
+/** Above the rows, the controls in rows like the removed one, so a run's own control, such as
+ *  the button in a group's heading that folds it, is passed by while a row is left to land on. */
+function rowControls(plan: RemovalPlan, run: Element): HTMLElement[] {
+  const found = controls(run)
+  const inRows = found.filter((control) => {
+    const row = control.closest(plan.row.localName)
+    return row !== null && run.contains(row)
+  })
+  return inRows.length > 0 ? inRows : found
+}
+
 /** Notes, as the dialog opens, where focus goes if `row` is gone once it closes. */
 export function planRemoval(row: Element): RemovalPlan {
   const active = row.ownerDocument.activeElement
@@ -74,7 +85,7 @@ function pick(plan: RemovalPlan, neighbor: Element, row: boolean, last: boolean)
   if (row && plan.opener === plan.row && neighbor.matches(FOCUSABLE)) {
     return neighbor as HTMLElement
   }
-  const found = controls(neighbor)
+  const found = row ? controls(neighbor) : rowControls(plan, neighbor)
   const matches = plan.popup
     ? found.filter((control) => control.getAttribute('aria-haspopup') === plan.popup)
     : row && found[plan.slot]

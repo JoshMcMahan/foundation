@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { planRemoval, removalTarget } from '../../components/focusAfterRemoval'
 import { ConversationSidebar, type ConversationSidebarGroup } from './ConversationSidebar'
 import { SidebarRailItem, SidebarRow } from './sidebar'
 
@@ -43,6 +44,12 @@ function Sidebar(
     />
   )
 }
+
+const linked = (i: Item) => (
+  <li>
+    <a href={`#${i.id}`}>{i.title}</a>
+  </li>
+)
 
 const panel = () => screen.getByRole('complementary', { name: 'Items' })
 const keyDown = (key: string) => fireEvent.keyDown(document, { key, metaKey: true, altKey: true })
@@ -161,6 +168,21 @@ describe('ConversationSidebar', () => {
     expect(screen.getByText('Item b')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Waiting' }))
     expect(JSON.parse(storage.get('aiChatSidebarCollapsedGroups') ?? '')).toEqual(['waiting'])
+  })
+
+  it('moves focus on from a removed group’s last row to the next group’s row, past its heading', () => {
+    const { rerender } = render(<Sidebar renderRow={linked} />)
+    const plan = planRemoval(screen.getByRole('link', { name: 'Item a' }).closest('li') as Element)
+    rerender(<Sidebar renderRow={linked} groups={groups.slice(1)} />)
+    expect(removalTarget(plan)).toBe(screen.getByRole('link', { name: 'Item b' }))
+  })
+
+  it('moves focus on to the next group’s heading when that group is folded', () => {
+    const { rerender } = render(<Sidebar renderRow={linked} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Rest' }))
+    const plan = planRemoval(screen.getByRole('link', { name: 'Item a' }).closest('li') as Element)
+    rerender(<Sidebar renderRow={linked} groups={groups.slice(1)} />)
+    expect(removalTarget(plan)).toBe(screen.getByRole('button', { name: 'Rest' }))
   })
 
   it('cycles past the items of a folded group', () => {
