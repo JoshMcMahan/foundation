@@ -205,6 +205,40 @@ export const ReasoningOpened: StoryObj<{ open: boolean }> = {
   },
 }
 
+const commands: ChatMessage[] = [
+  makeMessage({
+    role: 'user',
+    content: '/goal the retry suite passes',
+    commandAnswer: { text: 'Goal set: the retry suite passes' },
+  }),
+  makeMessage({
+    role: 'assistant',
+    content: 'The second retry fires before its backoff. Fixing the delay now.',
+  }),
+  makeMessage({
+    role: 'user',
+    content: '/plan',
+    commandAnswer: {
+      text: '/Users/demo/development/core/plans/retry.md',
+      document: '## Plan\n\n1. Apply the backoff once per attempt.\n2. Rerun the retry suite.',
+    },
+  }),
+  makeMessage({
+    role: 'user',
+    content: '/compact',
+    commandAnswer: {
+      text: 'Compacted',
+      detail: 'The retry test fails because the backoff is applied twice on the second attempt.',
+    },
+  }),
+]
+
+// A command the person ran keeps its answer under their message, as a
+// terminal draws it, instead of a reply; a plan it showed sits in a box.
+export const CommandAnswers: StoryObj = {
+  render: () => <MessageList messages={commands} allMessages={commands} />,
+}
+
 const failed: ChatMessage[] = [
   makeMessage({ role: 'user', content: 'Summarize the last build log.' }),
   makeMessage({

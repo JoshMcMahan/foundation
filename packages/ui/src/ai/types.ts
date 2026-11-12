@@ -324,6 +324,17 @@ export interface ChatMessage {
   pseudo?: PseudoUserKind | null | undefined
   // Placeholders in content that stand for saved pastes.
   pastes?: MessagePaste[] | null | undefined
+  /** What a command the person ran answered, drawn under their message rather than as a reply. */
+  commandAnswer?: CommandAnswer | undefined
+}
+
+/** A command's answer: a line, more behind it, and a document it showed. */
+export interface CommandAnswer {
+  text: string
+  /** More behind the line, such as a compaction's summary, opened on request. */
+  detail?: string
+  /** A document the command showed, such as a plan, drawn in a box under the line. */
+  document?: string
 }
 
 export interface Conversation {

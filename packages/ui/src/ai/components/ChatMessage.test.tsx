@@ -123,6 +123,55 @@ describe('ChatMessage', () => {
     })
   })
 
+  describe('command answers', () => {
+    it('hangs what a command answered under the person’s message, not as a reply', () => {
+      render(
+        <ChatMessage
+          {...defaultProps}
+          message={createMockMessage({
+            content: '/goal the retry suite passes',
+            commandAnswer: { text: 'Goal set: the retry suite passes' },
+          })}
+        />,
+      )
+      expect(screen.getByTestId('command-answer')).toHaveTextContent(
+        '⎿Goal set: the retry suite passes',
+      )
+      expect(screen.queryByTestId('command-document')).toBeNull()
+    })
+
+    it('boxes a document the command showed, such as a plan', () => {
+      render(
+        <ChatMessage
+          {...defaultProps}
+          message={createMockMessage({
+            content: '/plan',
+            commandAnswer: { text: 'plans/retry.md', document: '## Plan\n\n1. Ship it' },
+          })}
+        />,
+      )
+      expect(screen.getByTestId('command-answer')).toHaveTextContent('plans/retry.md')
+      // A long path wraps after a separator, never mid-name.
+      expect(screen.getByTestId('command-answer').querySelectorAll('wbr')).toHaveLength(1)
+      expect(screen.getByTestId('command-document')).toHaveTextContent('1. Ship it')
+    })
+
+    it('opens to more behind the line on request', () => {
+      render(
+        <ChatMessage
+          {...defaultProps}
+          message={createMockMessage({
+            content: '/compact',
+            commandAnswer: { text: 'Compacted', detail: 'Summary of the conversation.' },
+          })}
+        />,
+      )
+      expect(screen.queryByText('Summary of the conversation.')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: /Compacted/ }))
+      expect(screen.getByText('Summary of the conversation.')).toBeInTheDocument()
+    })
+  })
+
   describe('error display', () => {
     it('displays error message when message has error', () => {
       const message = createMockMessage({

@@ -19,6 +19,7 @@ import Markdown from '../ui/Markdown'
 import { chatProseClasses } from '../ui/prose'
 import AgentMessageParts from './agent/AgentMessageParts'
 import BranchNavigator from './BranchNavigator'
+import CommandAnswer from './CommandAnswer'
 import MessageAttachments from './MessageAttachments'
 import { UserMessageText } from './PastedText'
 import { Reasoning } from './Reasoning'
@@ -458,6 +459,10 @@ function ChatMessage({
                 </div>
               )
             ) : null}
+
+            {isUser && message.commandAnswer && (
+              <CommandAnswer answer={message.commandAnswer} alignEnd={isRightAligned} />
+            )}
 
             {!isUser && collapsible && !isStreaming && !latest && (
               <button
