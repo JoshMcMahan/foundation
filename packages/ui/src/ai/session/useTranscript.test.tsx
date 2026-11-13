@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react'
-import type { StreamEffect, TranscriptState } from './transcript'
+import { type StreamEffect, type TranscriptState, turnRunning } from './transcript'
 import type { SessionDetail, SessionHistoryItem, SessionImageRef } from './types'
 import {
   type SessionSendResult,
@@ -62,6 +62,29 @@ describe('useSessionTranscript', () => {
     })
     expect(refusal).toBe('machine said no')
     expect(hook.result.current.transcript?.messages).toEqual([])
+    expect(turnRunning(hook.result.current.transcript)).toBe(false)
+  })
+
+  it('runs the turn while the daemon has yet to take the message', async () => {
+    let accept: (result: SessionSendResult) => void = () => {}
+    const { hook } = setup(
+      () =>
+        new Promise((resolve) => {
+          accept = resolve
+        }),
+    )
+    let sent: Promise<string | null> | undefined
+    await act(async () => {
+      sent = hook.result.current.sendMessage('hello')
+    })
+    expect(hook.result.current.sending).toBe(true)
+    expect(turnRunning(hook.result.current.transcript)).toBe(true)
+
+    await act(async () => {
+      accept({ turnId: 't1' })
+      await sent
+    })
+    expect(turnRunning(hook.result.current.transcript)).toBe(true)
   })
 
   it('reports the last applied seq as the resume cursor', () => {

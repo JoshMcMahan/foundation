@@ -12,6 +12,7 @@ import {
   historyToMessages,
   initialTranscript,
   liveSessionStatus,
+  markQueued,
   pendingApprovals,
   pendingMessages,
   type RecapNotice,
@@ -1566,20 +1567,35 @@ describe('approval mapping', () => {
     expect(part.toolName).toBeUndefined()
   })
 
-  it('never offers the directory grant, because the daemon strips it remotely', () => {
-    const part = approvalToPart({
-      id: 'ap1',
-      kind: 'confirm',
-      createdAt: '2026-09-10T00:00:00Z',
-      command: 'rm -rf build',
-    })
-    expect(part.canAllowDirectory).toBe(false)
-    expect(part.approvalKind).toBe('confirm')
+  it('offers the directory grant only on a file outside the workspace', () => {
+    expect(
+      confirm({
+        tool: 'ReadFile',
+        command: 'ReadFile /etc/hosts',
+        reason: 'file is outside the workspace',
+      }).canAllowDirectory,
+    ).toBe(true)
+    expect(confirm({ command: 'rm -rf build' }).canAllowDirectory).toBe(false)
+    expect(confirm({ tool: 'NotebookRun', command: 'df.head()' }).canAllowDirectory).toBe(false)
+    expect(
+      approvalToPart({
+        id: 'ap1',
+        kind: 'ask',
+        createdAt: '2026-09-10T00:00:00Z',
+      }).canAllowDirectory,
+    ).toBe(false)
   })
 
-  it('sends a confirm as allowed plus the deny message, without the directory grant', () => {
+  it('sends a confirm as allowed plus the directory grant or the deny message', () => {
     expect(approvalAnswerBody({ kind: 'confirm', allowed: true, allowDir: true })).toEqual({
       allowed: true,
+      allowDir: true,
+    })
+    expect(approvalAnswerBody({ kind: 'confirm', allowed: true })).toEqual({
+      allowed: true,
+    })
+    expect(approvalAnswerBody({ kind: 'confirm', allowed: false, allowDir: true })).toEqual({
+      allowed: false,
     })
     expect(
       approvalAnswerBody({
@@ -1798,6 +1814,47 @@ describe('sending while a turn runs', () => {
     ).state
     expect(started.queued).toHaveLength(0)
     expect(started.messages.map((m) => m.id)).toEqual([ended.messages[0]?.id, 'own-1'])
+  })
+})
+
+describe('a message sent while nothing runs', () => {
+  const idle: TranscriptState = {
+    messages: [],
+    streaming: null,
+    cursor: 0,
+    turnEnded: true,
+    queued: [],
+    steered: [],
+    notes: [],
+    turnStartedAt: null,
+  }
+
+  it('runs its turn from the send, through the echo, to the turn end', () => {
+    let state = appendOwnMessage(idle, 'go', 'own-1')
+    expect(turnRunning(state)).toBe(true)
+    expect(liveSessionStatus('idle', state)).toBe('running')
+
+    state = applyStreamEvent(state, ev(1, 'user_message', { content: 'go', turnId: 't1' }), {
+      echoOf: 'own-1',
+    }).state
+    expect(turnRunning(state)).toBe(true)
+
+    state = applyStreamEvent(state, ev(2, 'done', { turnId: 't1' })).state
+    expect(turnRunning(state)).toBe(false)
+  })
+
+  it('leaves nothing running when the machine refuses it', () => {
+    const refused = dropMessage(appendOwnMessage(idle, 'go', 'own-1'), 'own-1')
+    expect(refused.messages).toHaveLength(0)
+    expect(turnRunning(refused)).toBe(false)
+    expect(liveSessionStatus('running', refused)).toBe('idle')
+  })
+
+  it('leaves the turn it queued behind running when it is taken back', () => {
+    const queued = markQueued(appendOwnMessage(idle, 'go', 'own-1'), 'own-1')
+    const withdrawn = dropMessage(queued, 'own-1')
+    expect(withdrawn.queued).toHaveLength(0)
+    expect(turnRunning(withdrawn)).toBe(true)
   })
 })
 

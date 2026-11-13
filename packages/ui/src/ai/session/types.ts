@@ -123,6 +123,8 @@ export interface SessionState {
   model: string
   /** The names to show in place of model IDs; an ID it leaves out has none. */
   modelNames?: Record<string, string>
+  /** Empty for the model's own default. */
+  effort?: string
   allocation?: string
   permissionMode?: string
   inputTokens?: number
@@ -131,6 +133,10 @@ export interface SessionState {
    *  cannot store pastes. */
   pasteInlineMaxBytes?: number
   goal?: SessionGoalStatus
+  /** The directories open to the file tools besides the working directory. */
+  addDirs?: string[] | null
+  /** The session's directory in the git worktree it moved into; unset while it works where it launched. */
+  worktree?: string
 }
 
 /** Where a session's /goal loop stands; unset when it has no goal. */
@@ -211,11 +217,13 @@ export interface SessionDetail {
   /** When that usage limit resets. */
   usageLimitResumeAt?: string
   goal?: SessionGoalStatus
+  addDirs?: string[] | null
 }
 
 /** The body the daemon accepts as the answer to an approval. */
 export interface SessionApprovalAnswer {
   allowed?: boolean
+  allowDir?: boolean
   denyMessage?: string
   /** One per question, its picks, text and notes only: a host may filter request bodies, and these fields are the ones it has to let through. */
   answers?: Pick<SessionAskAnswer, 'picked' | 'text' | 'notes'>[]

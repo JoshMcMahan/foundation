@@ -66,6 +66,9 @@ export interface TranscriptState {
   // When the running turn began: the fetch's word for a turn already in flight,
   // otherwise the frame that opened it. Null while nothing runs or nobody knows.
   turnStartedAt: string | null
+  // The own message sent while nothing ran, whose turn runs from the send until
+  // a frame says otherwise; refused, it leaves nothing running.
+  opening?: string | null
   // The running turn is sending nothing until a usage limit resets.
   waitingForUsageLimit?: boolean
   // When it resets, if the daemon said.
@@ -227,11 +230,12 @@ function approvalSubject(req: SessionApprovalRequest): ApprovalSubject {
 }
 
 export function approvalToPart(req: SessionApprovalRequest): ApprovalPart {
+  const subject = req.kind === 'confirm' ? approvalSubject(req) : undefined
   return {
     kind: 'approval',
     id: req.id,
     approvalKind: req.kind,
-    ...(req.kind === 'confirm' ? { subject: approvalSubject(req) } : {}),
+    ...(subject !== undefined ? { subject } : {}),
     ...(req.tool !== undefined ? { toolName: req.tool } : {}),
     ...(req.command !== undefined ? { command: req.command } : {}),
     ...(req.reason !== undefined ? { reason: req.reason } : {}),
@@ -241,8 +245,7 @@ export function approvalToPart(req: SessionApprovalRequest): ApprovalPart {
     ...(req.kind === 'ask' ? { questions: askQuestions(req.questions) } : {}),
     ...(req.callId !== undefined ? { toolCallId: req.callId } : {}),
     ...(req.plan !== undefined ? { plan: req.plan } : {}),
-    // The daemon clears AllowDir for answers arriving over the tunnel.
-    canAllowDirectory: false,
+    canAllowDirectory: subject === 'path',
   }
 }
 
@@ -267,6 +270,7 @@ export function approvalAnswerBody(answer: ApprovalAnswerValue): SessionApproval
   if (answer.kind === 'confirm') {
     return {
       allowed: answer.allowed,
+      ...(answer.allowed && answer.allowDir ? { allowDir: true } : {}),
       ...(answer.denyMessage !== undefined ? { denyMessage: answer.denyMessage } : {}),
     }
   }
@@ -793,11 +797,14 @@ export function appendOwnMessage(
   if (turnRunning(state)) {
     return { ...state, queued: [...state.queued, message] }
   }
+  // Running before the machine echoes it, so the turn can be stopped from the send on, as in the terminal.
   return {
     ...state,
     messages: [...state.messages, message],
     seededTerminal: null,
     turnEnded: false,
+    turnStartedAt: nowIso(),
+    opening: message.id,
   }
 }
 
@@ -850,17 +857,21 @@ export function markQueued(state: TranscriptState, id: string): TranscriptState 
     ...state,
     messages: state.messages.filter((m) => m.id !== id),
     queued: [...state.queued, message],
+    ...(state.opening === id ? { opening: null } : {}),
   }
 }
 
 /** Left in place, a message the machine refused reads as one the session received. */
 export function dropMessage(state: TranscriptState, id: string): TranscriptState {
-  return {
+  const dropped = {
     ...state,
     messages: state.messages.filter((m) => m.id !== id),
     queued: state.queued.filter((m) => m.id !== id),
     steered: state.steered.filter((m) => m.id !== id),
   }
+  return state.opening === id
+    ? { ...dropped, opening: null, turnEnded: true, turnStartedAt: null }
+    : dropped
 }
 
 /** Everything sent that the transcript has not placed yet, in the order it
@@ -1416,6 +1427,7 @@ function finishTurn(state: TranscriptState): TranscriptState {
     ...placeNotes(done),
     turnEnded: true,
     turnStartedAt: null,
+    opening: null,
     waitingForUsageLimit: false,
     usageLimitResumeAt: null,
     // The turn's reviews end with it; a background subagent's go on.
