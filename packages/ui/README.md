@@ -17,7 +17,6 @@ so an application ships only what it imports:
 | `./file-explorer`                                                                                            | object storage explorer over a host-supplied provider                                                                                                                 |
 | `./access`                                                                                                   | `AccessDrawer`: who has access to a resource, and granting roles to people and groups                                                                                 |
 | `./ai`, `./ai/openai`, `./ai/mock`                                                                           | chat interface and adapters                                                                                                                                           |
-| `./ai/session`                                                                                               | an agent session's replayed history and live event stream as chat messages                                                                                            |
 | `./theme.css`, `./base.css`, `./fonts.css`, `./styles.css`, `./logviewer.css`, `./ai.css`, `./app-frame.css` | stylesheets                                                                                                                                                           |
 
 Hosts bind strings, navigation, data hooks and the workflow engine through
@@ -1043,69 +1042,6 @@ call lands on the reply that paused, and the model's answer streams as a new
 reply under it. In a shared conversation only the person whose message
 started the turn may answer; others see whom it waits on, and a turn someone
 else started says whose access its tools ran with.
-
-### Agent session transcripts
-
-`@parallelworks/ui/ai/session` maps what an agent session daemon serves, its
-replayed history and its live event stream, onto the chat's messages and
-parts, so `SessionView` can show a session that runs somewhere else. The host
-owns the fetch and the socket: it loads a `SessionDetail`, hands each
-`SessionStreamEvent` to `onEvent`, and posts messages and approval answers
-itself. `useSessionTranscript` holds the React state between them, and the
-reducers it is built from (`initialTranscript`, `applyStreamEvent`,
-`historyToMessages` and the rest) are exported for a host that keeps its own.
-A host that types its API from a spec asserts that its types extend
-`SessionDetail` and `SessionStreamEvent`.
-
-```tsx
-import { SessionView } from '@parallelworks/ui/ai'
-import {
-  approvalAnswerBody,
-  pendingMessages,
-  turnRunning,
-  useSessionTranscript,
-} from '@parallelworks/ui/ai/session'
-
-export function AgentSession({ sessionId }: { sessionId: string }) {
-  // The host's own fetch of the session: its status, history and last seq.
-  const { detail, refetch } = useSessionDetail(sessionId)
-  const { transcript, onEvent, cursor, sendMessage, resolveApproval } = useSessionTranscript({
-    sessionId,
-    detail,
-    // Resolves to { turnId, queued } once accepted, or { error } with the refusal to show.
-    send: (text, pastes, images) => postMessage(sessionId, text, pastes, images),
-    onEffect: (effect) => {
-      // What a frame asks of the host: 'refetch', 'cleared', 'state' or 'notice'.
-      if (effect.type === 'refetch') {
-        refetch()
-      }
-    },
-  })
-  // The host's own socket: it reconnects from cursor(), the last seq applied.
-  useSessionEvents(sessionId, cursor, onEvent)
-
-  return (
-    <SessionView
-      messages={transcript?.messages ?? []}
-      streamingMessage={transcript?.streaming ?? null}
-      queuedMessages={transcript ? pendingMessages(transcript) : []}
-      turn={{ running: turnRunning(transcript), onStop: () => stopTurn(sessionId) }}
-      onSend={(text, _ids, _meta, pastes) => sendMessage(text, { pastes })}
-      onApprovalAnswer={async (id, answer) => {
-        await postApproval(sessionId, id, approvalAnswerBody(answer))
-        resolveApproval(id)
-      }}
-    />
-  )
-}
-```
-
-`steer` hands text to the turn that is running and `withdraw` takes a queued
-message back; without them every message sent during a turn waits for it to
-end. `goalNotice`, `compactionNotice`, `recapNotice` and `words` supply the
-transcript's own lines in the reader's language, and `imageUrl` turns an
-image's `ref` into the URL the host serves it from. `sessionStatusVariant`
-gives a `SessionStatus` its badge color.
 
 Tailwind v4 consumers add the chat rules (markdown rendering, streaming
 animations) and streamdown's classes next to the theme contract:

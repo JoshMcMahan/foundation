@@ -79,7 +79,6 @@ export default defineConfig({
         'ai/index': 'src/ai/index.ts',
         'ai/adapter/openai/index': 'src/ai/adapter/openai/index.ts',
         'ai/adapter/mock/index': 'src/ai/adapter/mock/index.ts',
-        'ai/session/index': 'src/ai/session/index.ts',
       },
     },
     rollupOptions: {

@@ -270,7 +270,6 @@ try {
       "import * as ai from '@parallelworks/ui/ai'",
       "import * as openai from '@parallelworks/ui/ai/openai'",
       "import * as mock from '@parallelworks/ui/ai/mock'",
-      "import * as session from '@parallelworks/ui/ai/session'",
       'const need = (mod, name, key) => {',
       // biome-ignore lint/suspicious/noTemplateCurlyInString: this line is source for the generated script, which interpolates
       '  if (!(key in mod)) throw new Error(`${name} is missing export ${key}`)',
@@ -335,8 +334,6 @@ try {
       "need(ai, 'ai', 'chatReducer')",
       "need(openai, 'ai/openai', 'createOpenAICompatibleStream')",
       "need(mock, 'ai/mock', 'createMockChatAdapter')",
-      "need(session, 'ai/session', 'useSessionTranscript')",
-      "need(session, 'ai/session', 'applyStreamEvent')",
       "if (typeof mock.createMockChatAdapter().streamCompletion !== 'function') {",
       "  throw new Error('mock adapter is not usable')",
       '}',
@@ -379,13 +376,10 @@ try {
       'export const icons: IconType[] = [AddIcon, TrashIcon, GitHubIcon]',
       "import type { ChatAdapter, ChatMessage, Conversation } from '@parallelworks/ui/ai'",
       "import { createMockChatAdapter } from '@parallelworks/ui/ai/mock'",
-      "import { initialTranscript, type SessionDetail } from '@parallelworks/ui/ai/session'",
       'const adapter: ChatAdapter = createMockChatAdapter()',
       'export const ids = (c: Conversation): string[] =>',
       '  c.messages.map((m: ChatMessage) => m.id)',
       'export const models = () => adapter.models.list()',
-      "const detail: SessionDetail = { status: 'idle', history: [], lastSeq: 0 }",
-      'export const transcript = initialTranscript(detail)',
     ].join('\n'),
   )
   writeFileSync(
