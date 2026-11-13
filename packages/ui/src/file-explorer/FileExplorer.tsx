@@ -128,11 +128,12 @@ import {
   pruneNodesInsideSelectedDirectories,
   removeLeadingAndTrailingSlashes,
 } from './lib/utils'
+import { useFileExplorerStrings } from './strings'
 import { TreeView } from './TreeView'
 
 // The URI stays selectable text; its own button copies it whole.
 function UriCard({ value }: { value: string }) {
-  const { fileExplorer: t } = useStrings()
+  const t = useFileExplorerStrings()
   const scheme = getUriScheme(value)
   return (
     <div className="flex items-stretch overflow-hidden rounded-lg border theme-border bg-(--theme-input-bg)">
@@ -318,7 +319,7 @@ export default function FileExplorer({
     }
   }, [selectedPath, narrow, foldersPath])
   const copySubmenu = useCopySubmenu()
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { common } = useStrings()
   const locale = useLocale()
   const { copy } = useCopy()

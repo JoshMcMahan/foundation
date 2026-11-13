@@ -735,6 +735,8 @@ export function makeApprovalPart(options?: {
   chat?: boolean
   /** On the first question's options. */
   previews?: boolean
+  /** A path confirm's directory option names the directory it opens. */
+  namedDirectory?: boolean
 }): ApprovalPart {
   const kind = options?.kind ?? 'confirm'
   const count = Math.min(Math.max(options?.questions ?? 1, 0), askSamples.length)
@@ -755,15 +757,22 @@ export function makeApprovalPart(options?: {
         : {}),
     }
   })
+  const subject = options?.subject ?? 'command'
   const base: ApprovalPart =
     kind === 'confirm'
       ? {
           kind: 'approval',
           id: nextId('appr'),
           approvalKind: 'confirm',
-          ...confirmSamples[options?.subject ?? 'command'],
+          ...confirmSamples[subject],
           agent: 'main',
           mode: 'accept-edits',
+          ...(options?.namedDirectory && subject === 'path'
+            ? {
+                allowDirectoryLabel:
+                  'Yes, and allow /etc/slurm and everything under it for the session',
+              }
+            : {}),
         }
       : { kind: 'approval', id: nextId('appr'), approvalKind: 'ask', questions }
   if (options?.resolved) {

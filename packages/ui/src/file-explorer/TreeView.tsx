@@ -11,6 +11,7 @@ import { canPreview } from './FilePreview/previewType'
 import { getNodeIcon } from './helpers'
 import type { TreeNode } from './lib/types'
 import { carriesFiles, getParentPath } from './lib/utils'
+import { useFileExplorerStrings } from './strings'
 import {
   edgeRow,
   findRowIndex,
@@ -92,7 +93,7 @@ export function TreeView({
   paging,
 }: TreeViewProps) {
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null)
-  const treeLabel = useStrings().fileExplorer.chrome.folders
+  const treeLabel = useFileExplorerStrings().chrome.folders
   // Purely how much of an already-loaded folder to show, so it lives here rather
   // than beside the listing state.
   const [fileLimits, setFileLimits] = useState<ReadonlyMap<string, number>>(() => new Map())
@@ -384,7 +385,7 @@ function TreeMoreRow({
   failed: boolean
   onReveal: () => void
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const { common } = useStrings()
 
   const label = () => {

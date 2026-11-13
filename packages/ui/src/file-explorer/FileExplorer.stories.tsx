@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
 import { expect, fireEvent, screen, userEvent, waitFor, within } from 'storybook/test'
 import { Button } from '../components/Button'
-import { type UILinkComponent, UIProvider, useStrings } from '../components/Provider'
+import { type UILinkComponent, UIProvider } from '../components/Provider'
 import { toast } from '../components/Toast'
 import { BucketIcon, ClusterIcon } from '../icons'
 import { FailureLine, FailureText } from './errorText'
@@ -11,6 +11,7 @@ import { FileExplorerProvider } from './FileExplorerContext'
 import { CorsPropagatingPreview, NoDataAvailablePreview } from './helpers'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
 import type { TStorage, TStorageGroup, TStorageObject, UploadSession } from './lib/types'
+import { useFileExplorerStrings } from './strings'
 import { UploadSessionToast } from './toasts'
 
 const meta: Meta = {
@@ -344,7 +345,7 @@ export const FailureToasts: StoryObj = {
 }
 
 function FailureToastsDemo() {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <div className="flex flex-wrap gap-2 p-8">
       <Button

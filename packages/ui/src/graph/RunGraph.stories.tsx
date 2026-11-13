@@ -1,6 +1,6 @@
 import { createWorkflowEngine } from '@parallelworks/workflow-parser'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { type ProblemMessage, UIProvider } from '../components/Provider'
 import DependencyGraph, { type ViewMode } from './DependencyGraph'
@@ -13,7 +13,7 @@ import {
   RUNNING_WARNED_JOBS,
   WARNED_JOBS,
 } from './stories/runFixtures'
-import type { WorkflowJob } from './types'
+import type { WorkflowJob, WorkflowStep } from './types'
 
 interface RunGraphArgs {
   jobs: Record<string, WorkflowJob>
@@ -142,6 +142,82 @@ export const SubworkflowStep: Story = {
   },
   play: follow('Release › publish › Upload › roll back', 'subworkflows/release/step_1/upload:1'),
 }
+
+const at = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 9, minutes)).toISOString()
+const CASE_STEPS = ['mesh', 'decompose', 'solve', 'reconstruct', 'sample']
+
+/** A level of the run: `job` under way, running the subworkflow `inner` in its one step `step`, or
+ *  running `inner`'s steps, and `next` waiting on it. */
+function level(
+  job: string,
+  step: string,
+  inner: Record<string, WorkflowJob> | WorkflowStep[],
+  next: string,
+  needs: string[] = [],
+): Record<string, WorkflowJob> {
+  const steps: WorkflowStep[] = Array.isArray(inner)
+    ? inner
+    : [
+        {
+          name: step,
+          uses: `workflow/${job}`,
+          status: 'running',
+          startedAt: at(4),
+          subworkflow: { jobs: inner },
+        },
+      ]
+  return {
+    [job]: { status: 'running', needs, startedAt: at(4), steps },
+    [next]: { status: '', needs: [job], steps: [{ name: next, status: '' }] },
+  }
+}
+
+/** The run after `tick` updates: five subworkflows deep, its innermost steps finish one at a time,
+ *  then start over. */
+function updatingJobs(tick: number): Record<string, WorkflowJob> {
+  const done = tick % CASE_STEPS.length
+  const steps: WorkflowStep[] = CASE_STEPS.map((name, i) => ({
+    name,
+    status: i < done ? 'completed' : i === done ? 'running' : '',
+    ...(i <= done ? { startedAt: at(4 + i) } : {}),
+    ...(i < done ? { completedAt: at(5 + i) } : {}),
+  }))
+  const solve = level('solver', '', steps, 'report')
+  const allocate = level('allocation', 'run the solver', solve, 'release')
+  const submit = level('submit', 'run on the cluster', allocate, 'collect')
+  const runCase = level('case', 'run case', submit, 'results')
+  const iterate = level('workers', 'evaluate the design', runCase, 'decide')
+  return {
+    prepare: {
+      status: 'completed',
+      startedAt: at(0),
+      completedAt: at(3),
+      steps: [{ name: 'stage inputs', status: 'completed', startedAt: at(0), completedAt: at(3) }],
+    },
+    ...level('optimize', 'iterate', iterate, 'publish', ['prepare']),
+  }
+}
+
+function UpdatingRun() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((n) => n + 1), 2000)
+    return () => window.clearInterval(timer)
+  }, [])
+  return (
+    <RunGraph
+      jobs={updatingJobs(tick)}
+      status="running"
+      warnings={[]}
+      viewMode="dag"
+      workflowName="parameter-sweep"
+    />
+  )
+}
+
+/** A run under way, which its page gets again every two seconds. A view the reader zoomed or panned
+ *  stays through the updates until Reset view fits the graph again. */
+export const AnUpdatingRun: Story = { render: () => <UpdatingRun /> }
 
 const engine = createWorkflowEngine()
 

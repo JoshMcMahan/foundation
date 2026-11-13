@@ -4,7 +4,6 @@ import { ImageStage, ZOOM_FIT } from '../../components/ImageStage'
 import { positionKeys, withPositionKeys } from '../../components/keys'
 import { Loader } from '../../components/Loader'
 import Markdown from '../../components/Markdown'
-import { useStrings } from '../../components/Provider'
 import { cx } from '../../cx'
 import { Editor } from '../../editor/Editor'
 import { formatBytes } from '../../format'
@@ -12,6 +11,7 @@ import { DownloadIcon, FileIcon, LockIcon, MusicIcon, ZipIcon } from '../../icon
 import { FailureDetail } from '../errorText'
 import { type CorsAwareRefresh, CorsIssuePreview } from '../helpers'
 import type { TreeNode, TStorage } from '../lib/types'
+import { useFileExplorerStrings } from '../strings'
 import { joinSource, type NotebookOutput, parseDelimited, parseNotebook, stripAnsi } from './parse'
 import {
   getFileExtension,
@@ -55,7 +55,7 @@ export function FilePreviewViewer({
   onDownload,
   storage = null,
 }: FilePreviewViewerProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const [reloadNonce, setReloadNonce] = useState(0)
   const onCorsRetry = useCallback<CorsAwareRefresh>(
     async (opts) => {
@@ -278,7 +278,7 @@ function AudioView({
 
 // Shared fallback for media load errors and fetch failures (e.g. a CORS-blocked object).
 function PreviewError({ onDownload }: { onDownload?: (() => void) | undefined }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <NotPreviewable
       icon={<FileIcon className="h-9 w-9 theme-muted-text" />}
@@ -328,7 +328,7 @@ function PdfView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps
 }
 
 function CodeView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const language = getMonacoLanguage(node)
   const [tail, setTail] = useState(false)
   const limits = previewLimitsFor(storage)
@@ -452,7 +452,7 @@ function CsvView({ node, url, onDownload, storage, onCorsRetry }: FetchViewProps
 }
 
 function CsvTable({ node, text, maxRows }: { node: TreeNode; text: string; maxRows: number }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const delimiter = getFileExtension(node.name) === 'tsv' ? '\t' : ','
   const rows = parseDelimited(text, delimiter, maxRows + 2)
   const header = rows[0] ?? []
@@ -530,7 +530,7 @@ function NotebookBody({
   text: string
   onDownload?: (() => void) | undefined
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const notebook = parseNotebook(text)
   if (!notebook) {
     return <InlineError message={t.preview.notebookParseError} onDownload={onDownload} />
@@ -577,7 +577,7 @@ function NotebookBody({
 }
 
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const [imgError, setImgError] = useState(false)
   const png = output.data?.['image/png']
   if ((typeof png === 'string' || Array.isArray(png)) && !imgError) {
@@ -683,7 +683,7 @@ function NotPreviewable({
   detail?: string | undefined
   onDownload?: (() => void) | undefined
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <div className="flex h-full w-full items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
@@ -716,7 +716,7 @@ function TooLargeInline({
   size?: number | undefined
   onDownload?: (() => void) | undefined
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <div className="flex h-full items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-3 text-center">
@@ -742,7 +742,7 @@ function InlineError({
   message: string
   onDownload?: (() => void) | undefined
 }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <div className="flex h-full items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-3 text-center">

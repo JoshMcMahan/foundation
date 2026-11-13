@@ -225,6 +225,8 @@ export interface ApprovalPart {
   plan?: string
   // Set false by producers whose backend refuses standing directory grants.
   canAllowDirectory?: boolean
+  // The directory option's own wording, such as one naming the directory it opens, in place of the shared string.
+  allowDirectoryLabel?: string
   // When an unanswered confirm stops being answerable, as an ISO time.
   expiresAt?: string
   // Who has to answer, when it is someone other than the reader.

@@ -1,7 +1,7 @@
 import { createContext, use, useCallback } from 'react'
 import { CopyButton } from '../components/CopyButton'
-import { useStrings } from '../components/Provider'
 import { cx } from '../cx'
+import { useFileExplorerStrings } from './strings'
 
 /** A failure the explorer describes itself, so its message is already in the reader's words. */
 export class ShownError extends Error {
@@ -129,7 +129,7 @@ function ownText(error: unknown): string | undefined {
  */
 export function useErrorText(): (error: unknown) => Failure {
   const errorMessage = use(ErrorMessageContext)
-  const t = useStrings().fileExplorer.messages.cloudErrors
+  const t = useFileExplorerStrings().messages.cloudErrors
   return useCallback(
     (error: unknown): Failure => {
       if (error instanceof ShownError) {
@@ -178,7 +178,7 @@ export function FailureLine({
   failure: Failure
   sentence: (reason: string) => string
 }) {
-  const t = useStrings().fileExplorer.messages
+  const t = useFileExplorerStrings().messages
   return (
     <FailureText
       summary={sentence(failure.reason ?? t.cloudErrors.other)}
@@ -189,7 +189,7 @@ export function FailureLine({
 
 /** The error's own text: muted, monospace and wrapped, with a button that copies it. */
 export function FailureDetail({ detail }: { detail: string }) {
-  const t = useStrings().fileExplorer.messages
+  const t = useFileExplorerStrings().messages
   return (
     <span className="flex min-w-0 items-start gap-1 text-left">
       <span className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed theme-muted-text">

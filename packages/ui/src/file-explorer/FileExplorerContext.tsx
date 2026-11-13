@@ -1,6 +1,5 @@
 import { createContext, use, useRef } from 'react'
 import { keyedByContent } from '../components/keys'
-import { useStrings } from '../components/Provider'
 import { toast } from '../components/Toast'
 import {
   type ErrorMessage,
@@ -14,6 +13,7 @@ import { mapWithConcurrency } from './lib/batch'
 import type { IFileExplorerClient, IFileExplorerProvider } from './lib/fileExplorer'
 import type { TreeNode, UploadFileProgress, UploadNode, UploadSession } from './lib/types'
 import { calculateUploadNodesTotalSize, getUploadSessionETA, removeLeadingSlash } from './lib/utils'
+import { useFileExplorerStrings } from './strings'
 import { UploadSessionToast } from './toasts'
 
 interface IFileExplorerContextValue {
@@ -84,7 +84,7 @@ export function FileExplorerProvider({ children, errorMessage }: IFileExplorerPr
 }
 
 function UploadSessions({ children }: { children: React.ReactNode }) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   const errorText = useErrorText()
   const uploadSessionMapRef = useRef<Map<string, UploadSession>>(new Map())
   const uploadQueueRef = useRef<string[]>([])

@@ -1,6 +1,7 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type ProblemMessage, UIProvider } from '../components/Provider'
+import { EditorTextProvider } from './EditorTextProvider'
 import { ProblemsButton } from './ProblemsButton'
 
 const meta: Meta<typeof ProblemsButton> = {
@@ -82,6 +83,31 @@ export const CodedProblemsOpen: StoryObj<typeof ProblemsButton> = {
     await waitFor(() => expect(list).toBeVisible())
     await expect(within(list).getByText(/deploy lee needs\.build/)).toBeInTheDocument()
     await expect(within(list).getAllByRole('link', { name: /About this problem/ })).toHaveLength(1)
+  },
+}
+
+// A host that translates the editor on the page that shows it, not app-wide.
+const withPageText: Decorator = (Story) => (
+  <EditorTextProvider
+    graphEditor={{
+      problemCount: (count) => (count === 1 ? '1 problema' : `${count} problemas`),
+      problemLine: (line) => `Línea ${line}`,
+      problemAbout: 'Acerca de este problema',
+    }}
+  >
+    <Story />
+  </EditorTextProvider>
+)
+
+/** Open, in the language the page's EditorTextProvider supplies. */
+export const TranslatedByThePage: StoryObj<typeof ProblemsButton> = {
+  decorators: [withPageText],
+  args: { problems: CODED },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button'))
+    const list = await screen.findByRole('dialog', { name: '2 problemas' })
+    await waitFor(() => expect(list).toBeVisible())
+    await expect(within(list).getByText('Línea 43')).toBeInTheDocument()
   },
 }
 

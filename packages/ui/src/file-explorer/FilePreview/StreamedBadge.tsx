@@ -1,11 +1,11 @@
 import { InfoTip } from '../../components/InfoTip'
-import { useStrings } from '../../components/Provider'
 import { toneSurface } from '../../components/tone'
 import { cx } from '../../cx'
 import { LockIcon } from '../../icons'
+import { useFileExplorerStrings } from '../strings'
 
 export function StreamedBadge() {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <InfoTip
       text={t.preview.streamedTooltip}

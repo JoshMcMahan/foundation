@@ -8,6 +8,7 @@ import {
   makeEditDiffPart,
   makeImageAttachments,
   makeMessage,
+  makeStaticAdapter,
   makeSubagentParts,
   makeTodoSnapshot,
   makeToolCallPart,
@@ -445,6 +446,7 @@ export const Approvals: StoryObj<{
   resolved: boolean
   multiSelect: boolean
   subject: 'command' | 'code' | 'path' | 'call'
+  namedDirectory: boolean
   questions: number
   chat: boolean
 }> = {
@@ -453,12 +455,14 @@ export const Approvals: StoryObj<{
     resolved: false,
     multiSelect: false,
     subject: 'command',
+    namedDirectory: false,
     questions: 1,
     chat: false,
   },
   argTypes: {
     kind: { control: 'inline-radio', options: ['confirm', 'ask'] },
     subject: { control: 'inline-radio', options: ['command', 'code', 'path', 'call'] },
+    namedDirectory: { control: 'boolean', if: { arg: 'subject', eq: 'path' } },
     questions: { control: { type: 'range', min: 1, max: 4 } },
   },
   render: (args) => (
@@ -470,6 +474,12 @@ export const Approvals: StoryObj<{
       onApprovalAnswer={logAnswer}
     />
   ),
+}
+
+// A path confirm whose directory option says which directory it opens.
+export const ApprovalNamingItsDirectory: typeof Approvals = {
+  ...Approvals,
+  args: { ...Approvals.args, subject: 'path', namedDirectory: true },
 }
 
 // Denying with a reason: the field takes focus, says what it is for, and Enter
@@ -832,41 +842,49 @@ const notice = (raw: string): MessagePart => {
 
 export const TranscriptExtras: StoryObj = {
   name: 'Images, command output, plans and background notices',
-  render: () => (
-    <AgentMessageParts
-      message={makeMessage({
-        content: null,
-        parts: [
-          { kind: 'image', images: makeImageAttachments().slice(0, 2) },
-          {
-            kind: 'notice',
-            text: '! git status --short',
-            detail: '```\n M go.mod\n?? notes.md\n```',
-            open: true,
-          },
-          {
-            kind: 'approval',
-            id: 'plan',
-            approvalKind: 'plan',
-            plan: '## Plan\n\n1. Raise the retry budget.\n2. Add a test for the second retry.',
-            resolved: true,
-            answer: 'Approved',
-            canAllowDirectory: false,
-          },
-          notice(
-            '[Background subagent task-2 (Audit the config loader) completed after 2m59s]\nNo issues found.',
-          ),
-          notice(
-            '[Background subagent task-3 (Rerun the flaky suite) failed after 41s]\nThe runner timed out.',
-          ),
-          notice(
-            '[Message from subagent task-4 (Map routes) — it is still working]\nHalf way through.',
-          ),
-          notice('[Background command bash-1 (npm test) exited with code 1]'),
-        ],
-      })}
-    />
-  ),
+  render: () => <TranscriptExtrasExample />,
+}
+
+function TranscriptExtrasExample() {
+  // A chat whose adapter serves attachments, so a call's pictures open at full size.
+  const adapter = useMemo(() => makeStaticAdapter({ attachments: true }), [])
+  return (
+    <StoryChat adapter={adapter}>
+      <AgentMessageParts
+        message={makeMessage({
+          content: null,
+          parts: [
+            { kind: 'image', images: makeImageAttachments().slice(0, 2) },
+            {
+              kind: 'notice',
+              text: '! git status --short',
+              detail: '```\n M go.mod\n?? notes.md\n```',
+              open: true,
+            },
+            {
+              kind: 'approval',
+              id: 'plan',
+              approvalKind: 'plan',
+              plan: '## Plan\n\n1. Raise the retry budget.\n2. Add a test for the second retry.',
+              resolved: true,
+              answer: 'Approved',
+              canAllowDirectory: false,
+            },
+            notice(
+              '[Background subagent task-2 (Audit the config loader) completed after 2m59s]\nNo issues found.',
+            ),
+            notice(
+              '[Background subagent task-3 (Rerun the flaky suite) failed after 41s]\nThe runner timed out.',
+            ),
+            notice(
+              '[Message from subagent task-4 (Map routes) — it is still working]\nHalf way through.',
+            ),
+            notice('[Background command bash-1 (npm test) exited with code 1]'),
+          ],
+        })}
+      />
+    </StoryChat>
+  )
 }
 
 export const ExpandAll: StoryObj<{ expandAll: boolean }> = {

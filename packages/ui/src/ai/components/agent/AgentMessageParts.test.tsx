@@ -15,6 +15,14 @@ vi.mock('../../../logviewer/index', () => ({
   LogViewer: ({ log }: { log: string }) => <div data-testid="logviewer">{log}</div>,
 }))
 
+const chatAttachments = vi.hoisted(() => ({
+  current: undefined as { downloadUrl(id: string): string } | undefined,
+}))
+vi.mock('../../core/ChatProvider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../core/ChatProvider')>()),
+  useChatAttachments: () => chatAttachments.current,
+}))
+
 function msg(parts: MessagePart[]): ChatMessage {
   return { id: 'm1', role: 'assistant', parts }
 }
@@ -243,6 +251,35 @@ describe('approval parts', () => {
     expect(onAnswer).toHaveBeenLastCalledWith('s1', { kind: 'confirm', allowed: true })
   })
 
+  it('names the directory a confirm would open when the producer words it, and the shared wording otherwise', () => {
+    const onAnswer = vi.fn()
+    const confirm = (id: string, label?: string) => ({
+      kind: 'approval' as const,
+      id,
+      approvalKind: 'confirm' as const,
+      subject: 'path' as const,
+      command: 'ReadFile /srv/data/notes.md',
+      ...(label !== undefined ? { allowDirectoryLabel: label } : {}),
+    })
+    renderParts(
+      [
+        confirm('d1', 'Yes, and allow /srv/data and everything under it for the session'),
+        confirm('d2', ''),
+      ],
+      { onApprovalAnswer: onAnswer },
+    )
+    fireEvent.click(
+      screen.getByText('Yes, and allow /srv/data and everything under it for the session'),
+    )
+    expect(onAnswer).toHaveBeenCalledWith('d1', { kind: 'confirm', allowed: true, allowDir: true })
+    fireEvent.click(screen.getByText('Yes, and allow this directory for the session'))
+    expect(onAnswer).toHaveBeenLastCalledWith('d2', {
+      kind: 'confirm',
+      allowed: true,
+      allowDir: true,
+    })
+  })
+
   it('collects deny feedback before answering', () => {
     const onAnswer = vi.fn()
     renderParts(
@@ -451,6 +488,44 @@ describe('transcript features', () => {
       },
     ])
     expect(screen.getByRole('img', { name: 'shot.png' })).toBeInTheDocument()
+  })
+
+  it('opens a picture a call returned at full size, not as its preview', async () => {
+    chatAttachments.current = { downloadUrl: (id) => `/full/${id}` }
+    const loads: string[] = []
+    vi.stubGlobal(
+      'Image',
+      class {
+        set src(value: string) {
+          loads.push(value)
+        }
+      },
+    )
+    try {
+      renderParts([
+        {
+          kind: 'image',
+          images: [
+            {
+              id: 'i1',
+              previewUrl: 'data:image/png;base64,AAAA',
+              filename: 'shot.png',
+              contentType: 'image/png',
+              size: 4096,
+              uploadedAt: '',
+            },
+          ],
+        },
+      ])
+      const thumbnail = screen.getByRole('link', { name: 'shot.png' })
+      expect(thumbnail).toHaveAttribute('href', '/full/i1')
+      fireEvent.click(thumbnail)
+      await screen.findByRole('dialog', { name: 'shot.png' })
+      expect(loads).toContain('/full/i1')
+    } finally {
+      chatAttachments.current = undefined
+      vi.unstubAllGlobals()
+    }
   })
 
   it('shows a command’s output under its line without a toggle', () => {

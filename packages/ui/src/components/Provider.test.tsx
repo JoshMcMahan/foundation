@@ -2,12 +2,13 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import { useState } from 'react'
+import { useFileExplorerStrings } from '../file-explorer/strings'
 import { UIProvider, useNavigation, useRunFile, useStrings } from './Provider'
 
 describe('UIProvider strings', () => {
   it('takes one string of a nested group and keeps the rest in English', () => {
     function Read() {
-      const { fileExplorer } = useStrings()
+      const fileExplorer = useFileExplorerStrings()
       return (
         <p>
           {fileExplorer.preview.open} / {fileExplorer.preview.viewDetails}

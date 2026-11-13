@@ -1,7 +1,7 @@
 import { Checkbox } from '../components/Checkbox'
-import { useStrings } from '../components/Provider'
 import { Table } from '../components/Table'
 import { ListActionsHeader } from '../list/index'
+import { useFileExplorerStrings } from './strings'
 
 interface FileTableHeadersProps {
   allSelected: boolean
@@ -17,7 +17,7 @@ export function FileTableHeaders({
   someSelected,
   onSelectAll,
 }: FileTableHeadersProps) {
-  const t = useStrings().fileExplorer
+  const t = useFileExplorerStrings()
   return (
     <>
       <Table.Header caps={false} className="py-2" style={{ minWidth: 200 }}>

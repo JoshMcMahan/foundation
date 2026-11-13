@@ -1,6 +1,7 @@
-// English defaults for the workflow editor; a host supplies translations through UIProvider.
+// English defaults for the workflow editor; a host supplies translations through UIProvider,
+// or EditorTextProvider around the page that shows an editor.
 
-import { useMemo } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { type UIStrings, useStrings } from '../components/Provider'
 import type { EditRefusalReason } from '../editing'
 
@@ -761,14 +762,30 @@ export type InputsEditorText = typeof INPUTS_EDITOR_STRINGS
 /** The input form editor's text with the shared words beside it. */
 export type InputsEditorStrings = InputsEditorText & { common: UIStrings['common'] }
 
+/** The editors' text a host supplies around the page that shows one. */
+export interface EditorText {
+  graphEditor?: Partial<GraphEditorText> | undefined
+  inputsEditor?: Partial<InputsEditorText> | undefined
+}
+
+export const EditorTextContext = createContext<EditorText>({})
+
 /** The graph editor's strings: the host's translations over the English defaults. */
 export function useGraphEditorStrings(): GraphEditorStrings {
   const { graphEditor: overrides, common } = useStrings()
-  return useMemo(() => ({ ...GRAPH_EDITOR_STRINGS, ...overrides, common }), [overrides, common])
+  const { graphEditor: local } = useContext(EditorTextContext)
+  return useMemo(
+    () => ({ ...GRAPH_EDITOR_STRINGS, ...overrides, ...local, common }),
+    [overrides, local, common],
+  )
 }
 
 /** The input form editor's strings: the host's translations over the English defaults. */
 export function useInputsEditorStrings(): InputsEditorStrings {
   const { inputsEditor: overrides, common } = useStrings()
-  return useMemo(() => ({ ...INPUTS_EDITOR_STRINGS, ...overrides, common }), [overrides, common])
+  const { inputsEditor: local } = useContext(EditorTextContext)
+  return useMemo(
+    () => ({ ...INPUTS_EDITOR_STRINGS, ...overrides, ...local, common }),
+    [overrides, local, common],
+  )
 }

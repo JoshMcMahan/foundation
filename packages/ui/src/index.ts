@@ -194,7 +194,7 @@ export {
 } from './components/Listbox'
 export { Loader, type LoaderProps } from './components/Loader'
 export type { MarkdownProps } from './components/Markdown'
-export { default as Markdown } from './components/Markdown'
+export { default as Markdown, preloadMarkdown } from './components/Markdown'
 export {
   MenuCheckboxItem,
   MenuGroupLabel,

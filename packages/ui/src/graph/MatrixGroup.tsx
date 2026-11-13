@@ -44,7 +44,7 @@ export function MatrixGroupSummaryItem({
         className="cursor-pointer flex items-center gap-x-1.5 w-full text-left"
       >
         <RunStatusIcon status={status} />
-        <div className="font-semibold">
+        <div className="font-semibold truncate" title={t.matrixOf(matrixGroup.originaljob)}>
           {t.matrixOf(matrixGroup.originaljob)}
           <span className="font-normal text-sm ml-1">
             ({t.jobCount(matrixGroup.members.length)})

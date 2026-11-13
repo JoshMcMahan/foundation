@@ -62,8 +62,8 @@ export function Joblist(
   inputs: JobHandlers & {
     jobs: Record<string, WorkflowJob>
     jobNames: string[]
-    // Graph only: animate box width as steps reveal; off in the sidebar so long
-    // names and icons wrap instead.
+    // Graph only: animate box width as steps reveal. Off in the sidebar, whose width is fixed, so a
+    // long name stays on one line, cut short, with the full name on hover.
     growWidth?: boolean
     preview?: boolean
     editable?: boolean
@@ -75,6 +75,7 @@ export function Joblist(
   const engine = useWorkflowEngine()
   const marks = useWarningMarks()
   const prefix = inputs.pathPrefix
+  const oneLine = !inputs.growWidth
   let rows = 0
   return inputs.jobNames.map((jobName) => {
     // Skip synthetic matrix group nodes — rendered by the caller, not Joblist
@@ -99,7 +100,12 @@ export function Joblist(
         )}
       >
         {!inputs.preview && <RunStatusIcon status={jobStatus} />}
-        <div className="font-medium">{label}</div>
+        <div
+          className={cx('font-medium', oneLine && 'truncate')}
+          title={oneLine ? label : undefined}
+        >
+          {label}
+        </div>
         <WarningMark warnings={marks.under(rowKey(prefix, jobName))} />
       </button>
     )
@@ -108,9 +114,11 @@ export function Joblist(
         key={`job-${jobName}`}
         data-tone={runStatusTone(jobStatus)}
         // Jobs that share a box are ruled apart, so two read as two rather than as one name on two
-        // lines.
+        // lines. The rule runs to the box's edges; in the sidebar that bleed would make the list
+        // wider than the sidebar, so it could scroll sideways.
         className={cx(
-          '-mx-8 px-8 py-1 select-none',
+          'py-1 select-none',
+          !oneLine && '-mx-8 px-8',
           !first && 'border-t-2 border-solid border-(--theme-border)',
         )}
       >
@@ -134,14 +142,21 @@ export function Joblist(
                   type="button"
                   data-run-row={rowKey(prefix, jobName, i)}
                   onClick={() => inputs.onStepClick(jobName, i)}
+                  // The sidebar's narrower indent leaves room for names five subworkflows deep.
                   className={cx(
-                    inputs.preview ? 'ml-1.5' : 'ml-4',
+                    inputs.preview || oneLine ? 'ml-1.5' : 'ml-4',
                     'gap-x-1.5 flex items-center text-left',
+                    oneLine && 'min-w-0',
                   )}
                   data-testid={stepLabel}
                 >
                   {inputs.preview ? '↳' : <RunStatusIcon status={step.status} />}
-                  <div>{stepLabel}</div>
+                  <div
+                    className={cx(oneLine && 'truncate')}
+                    title={oneLine ? stepLabel : undefined}
+                  >
+                    {stepLabel}
+                  </div>
                   <WarningMark warnings={marks.under(rowKey(prefix, jobName, i))} />
                 </button>
               )
